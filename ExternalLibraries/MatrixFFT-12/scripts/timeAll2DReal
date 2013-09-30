@@ -1,0 +1,108 @@
+#! /bin/csh -f
+#
+# Time 2-D real FFT for all supported library configurations: vDSP, FFTW, MatrixFFT. 
+#
+set SCRIPT_NAME=timeAll2DReal
+set BASE_FILE=Real2D
+
+source timeAllCommon
+
+# exit doesn't work when sourcing
+if($ERR_EXIT == YES) then
+	exit(1)
+endif
+
+# hard coded for MFFT: always want best performance
+set SKIP_TRANS=-k
+
+#
+# Set runtime limits
+#
+set MINSIZE=64
+if($PRECISION == Single) then
+	set MAXSIZE=2k
+else
+	set MAXSIZE=2k
+endif
+if($LARGE == YES) then
+	if($PRECISION == Single) then
+		set MAXSIZE=4k
+	else
+		set MAXSIZE=4k
+	endif
+endif
+if($HUGE == YES) then
+	if($PRECISION == Single) then
+		set MAXSIZE=2^15
+	else
+		set MAXSIZE=2^14
+	endif
+endif
+if($QUICK == YES) then
+	# PPC can't even do a 1k x 1k!
+	set MAXSIZE=512
+endif
+
+
+echo ""
+echo "======================= Timing 2-dimension Real FFT ======================="
+echo ""
+
+set CMD_ARGS = "$CMD_ARGS -s $MINSIZE -S $MAXSIZE"
+
+# MatrixFFT
+if($MFFT_ENABLE == YES) then
+	set CMD="$LOCAL_BUILD_DIR/mtime2DReal $SKIP_TRANS $CMD_ARGS"
+	echo $CMD
+	echo ""
+	echo $CMD >> $LOGFILE
+	$CMD > $MFFT_FILE || exit(1)
+    cat $MFFT_FILE
+	echo ""
+endif
+
+# Accelerate
+if($VDSP_ENABLE == YES) then
+	set CMD="$LOCAL_BUILD_DIR/mtime2DReal -V $CMD_ARGS"
+	echo $CMD
+	echo ""
+	echo $CMD >> $LOGFILE
+	$CMD > $VSDP_FILE || exit(1)
+    cat $VSDP_FILE
+	echo ""
+endif
+
+# FFTW
+if($FFTW_ENABLE == YES) then
+	set CMD="$LOCAL_BUILD_DIR/fftwTime2D $PLAN_FLAG $CMD_ARGS"
+	echo $CMD
+	echo ""
+	echo $CMD >> $LOGFILE
+	$CMD > $FFTW_FILE || exit(1)
+    cat $FFTW_FILE
+	echo ""
+endif
+
+# 
+# Collate the output - use all the output files we have, if some are missing, OK
+# MFFT has to be first to get the correct Split/Interleaved format in the collated
+# output.
+#
+set SOURCE_FILES=
+if(-e $MFFT_FILE) then
+	set SOURCE_FILES="${SOURCE_FILES} $MFFT_FILE"
+endif
+if(-e $VSDP_FILE) then
+	set SOURCE_FILES="${SOURCE_FILES} $VSDP_FILE"
+endif
+if(-e $FFTW_FILE) then
+	set SOURCE_FILES="${SOURCE_FILES} $FFTW_FILE"
+endif
+
+if($COLLATE_ENABLE == YES) then
+	set CMD="$LOCAL_BUILD_DIR/compareFFT ${SOURCE_FILES}"
+	echo $CMD
+	echo ""
+	echo $CMD >> $LOGFILE
+	$CMD | tee $SUMM_FILE || exit(1)
+endif

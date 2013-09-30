@@ -1,0 +1,134 @@
+#! /bin/csh -f
+#
+# Time 2-D real convolution for MatrixFFT and vImage.
+#
+
+set VDSP_ENABLE=YES
+set MFFT_ENABLE=YES
+set COLLATE_ENABLE=YES
+set PRECISION=`$LOCAL_BUILD_DIR/getFftConfig -p`
+set COMP_FORM=`$LOCAL_BUILD_DIR/getFftConfig -c`
+set DSTDIR=/tmp
+set CMD_ARGS=
+set THREAD_ARG=
+set PLACE_STR=IP
+
+while ( $#argv > 0 )
+    switch ( "$argv[1]" )
+		case -l:
+			set CMD_ARGS = "$CMD_ARGS -l"
+            shift
+            breaksw
+		case -g:
+			set CMD_ARGS = "$CMD_ARGS -g"
+            shift
+            breaksw
+		case -q:
+			set CMD_ARGS = "$CMD_ARGS -q"
+            shift
+            breaksw
+		case -p:
+			set CMD_ARGS = "$CMD_ARGS -p"
+            shift
+            breaksw
+		case -d:
+			if($#argv == 1) then
+				echo "Illegal directory specification"
+				exit(1)
+			endif
+			set DSTDIR="$argv[2]"
+            shift
+            shift
+            breaksw
+		case -T:
+			if($#argv == 1) then
+				echo "Illegal numThreads specification"
+				exit(1)
+			endif
+			set THREAD_ARG="-T $argv[2]"
+            shift
+            shift
+            breaksw
+		case -D:
+			set VDSP_ENABLE=NO
+			shift
+			breaksw
+		case -M:
+			set MFFT_ENABLE=NO
+			shift
+			breaksw
+		case -n:
+			set COLLATE_ENABLE=NO
+			shift
+			breaksw
+		default:
+			echo "Usage: timeAllConvolve [option...]"
+			echo "  Options:"
+			echo "     -l          -- enable large FFTs"
+			echo "     -g          -- enable huge FFTs"
+			echo "     -q          -- quick test"
+			echo "     -D          -- disable vDSP"
+			echo "     -M          -- disable MatrixFFT"
+			echo "     -p          -- precalculate kernel FFT"
+			echo "     -d dstDir   -- destination directory; default is /tmp"
+			echo "     -T numThreads"
+			exit(1)
+    endsw
+end
+
+#
+# Accelerate can't do double precision convolve
+#
+if($PRECISION == Double) then
+	set VDSP_ENABLE = NO
+endif
+
+set EXEC=./timeConvolveREC
+mkdir -p ${DSTDIR}/summaries || exit(1)
+
+set BASE_FILE=Convolve2D
+set FULL_BASE=${PRECISION}_${PLACE_STR}_${BASE_FILE}
+set FULL_BASE_COMP=${PRECISION}_${PLACE_STR}_${COMP_FORM}_${BASE_FILE}
+set VSDP_FILE=${DSTDIR}/vDSP_${FULL_BASE}
+set MFFT_FILE=${DSTDIR}/MFFT_${FULL_BASE_COMP}
+set SUMM_FILE=${DSTDIR}/summaries/${FULL_BASE_COMP}
+
+echo ""
+echo "======================= Timing 2-dimension Real Convolution ======================="
+echo ""
+
+# MatrixFFT
+if($MFFT_ENABLE == YES) then
+	set CMD="$EXEC -f $CMD_ARGS $THREAD_ARG"
+	echo $CMD
+	echo ""
+	$CMD > $MFFT_FILE || exit(1)
+    cat $MFFT_FILE
+	echo ""
+endif
+
+# Accelerate
+if($VDSP_ENABLE == YES) then
+	set CMD="$EXEC $CMD_ARGS"
+	echo $CMD
+	echo ""
+	$CMD > $VSDP_FILE || exit(1)
+    cat $VSDP_FILE
+	echo ""
+endif
+
+# 
+# Collate the output if running both libraries
+#
+if(($VDSP_ENABLE == NO) || ($MFFT_ENABLE == NO)) then
+	set COLLATE_ENABLE=NO
+endif
+
+
+if($COLLATE_ENABLE == YES) then
+	set SOURCE_FILES="$MFFT_FILE $VSDP_FILE"
+	set CMD="$LOCAL_BUILD_DIR/compareFFT ${SOURCE_FILES}"
+	echo $CMD
+	echo ""
+	$CMD | tee $SUMM_FILE || exit(1)
+endif

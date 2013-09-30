@@ -1,0 +1,23 @@
+                        MatrixFFT 'C' sample code
+                        Last update Oct. 29 2009
+                          
+This directory contains sample code illustrating how to use the MatrixFFT
+package from standard ANSI 'C' code. Four types of FFTs are illustrated - 
+1- and 2-dimension, complex and real-signal. There is one program for
+each of these four types of FFT. 
+
+To build all four examples, just type 'make' in the cExamples program. This
+uses a standard GNU-style Makefile to build.
+
+
+Installing libMatrixFFT
+-----------------------
+
+This sample code assumes that the libMatrixFFT binary and its associated headers
+have been installed on your machine. To do this, use the xcodebuild command line 
+program, run as root (or via sudo) in the root MatrixFFT directory, as follows:
+
+  # /usr/bin/xcodebuild install DSTROOT=/
+  
+That places the MatrixFFT library binary in /usr/local/lib/libMatrixFFT.a and 
+the associated public headers in /usr/local/include/libMatrixFFT/*.h.

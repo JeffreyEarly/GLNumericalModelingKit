@@ -1,0 +1,131 @@
+#! /bin/csh -f
+#
+# runHugeFTT - perform single runs of the largest MatrixFFT-based operations which
+# can be performed on a 64-bit Mac with 32 GB of RAM. There is no way this script can
+# successfully run with 32-bit binaries. 
+#
+# This basically documents how to invoke the commands that perform those max-sized 
+# operations, and can be used to verify that they operated without undue memory swapping. 
+# It would be very difficult to programmatically verify that these operations are
+# performing as intended - i.e. without undue swapping - so here's what you do 
+# to verify manually:
+#
+# 1. Run the Activity Monitor app, with both the main window and the Floating CPU
+#    window visible, and the main window showing Disk Activity. 
+# 2. Run this script.
+# 3. At any given time, either one CPU should be running full blast (this is the 
+#    FFT setup time), or all CPUs should be running full blast (this is the 
+#    FFT execution step). You should be seeing very little Disk Activity. 
+#
+
+set PRECISION=`$LOCAL_BUILD_DIR/getFftConfig -p`
+
+set LOOPS="-l 1"
+set THREADS=
+
+while ( $#argv > 0 )
+    switch ( "$argv[1]" )
+		case -l:
+			if($#argv == 1) then
+				echo "Illegal loop specification"
+				exit(1)
+			endif
+			set LOOPS="-l $argv[2]"
+            shift
+            shift
+            breaksw
+		case -T:
+			if($#argv == 1) then
+				echo "Illegal numThreads specification" 
+				exit(1)
+			endif
+			set THREADS="-T $argv[2]"
+            shift
+            shift
+            breaksw
+		default:
+			echo "Usage: runHugeRowFFT [option...]"
+			echo "  Options:"
+			echo "     -l loops       -- default is 1"
+			echo "     -T numThreads  -- default is # of host cores"
+			exit(1)
+    endsw
+end
+
+set COM_FLAGS="$LOOPS $THREADS"
+
+if($PRECISION == Double) then
+	echo""
+	echo "===================================================="
+	echo "=== 1-D in-place complex double; size = 2^30 ==="
+	echo "===================================================="
+	echo""
+	set cmd = "$LOCAL_BUILD_DIR/mtime1DComplex $COM_FLAGS -s 2^30 -S 2^30 -k"
+	echo $cmd
+	$cmd || exit(1)
+	
+	echo""
+	echo "===================================================="
+	echo "=== 2-D in-place complex double; size = 2^30 ==="
+	echo "===================================================="
+	echo""
+	set cmd = "$LOCAL_BUILD_DIR/mtime2DComplex $COM_FLAGS -s 2^15 -S 2^15 -k"
+	echo $cmd
+	$cmd || exit(1)
+
+	echo""
+	echo "===================================================="
+	echo "=== 1-D in-place real double; size = 2^31 ==="
+	echo "===================================================="
+	echo""
+	set cmd = "$LOCAL_BUILD_DIR/mtime1DReal $COM_FLAGS -s 2^31 -S 2^31 -k"
+	echo $cmd
+	$cmd || exit(1)
+
+	echo""
+	echo "===================================================="
+	echo "=== 2-D in-place real double; size = 2^31 ==="
+	echo "===================================================="
+	echo""
+	set cmd = "$LOCAL_BUILD_DIR/mtime2DReal $COM_FLAGS -s 2^15 -c 2^16 -k"
+	echo $cmd
+	$cmd || exit(1)
+
+else
+	echo""
+	echo "===================================================="
+	echo "=== 1-D in-place complex single; size = 2^31 ==="
+	echo "===================================================="
+	echo""
+	set cmd = "$LOCAL_BUILD_DIR/mtime1DComplex $COM_FLAGS -s 2^31 -S 2^31 -k"
+	echo $cmd
+	$cmd || exit(1)
+	
+	echo""
+	echo "===================================================="
+	echo "=== 2-D in-place complex single; size = 2^31 ==="
+	echo "===================================================="
+	echo""
+	set cmd = "$LOCAL_BUILD_DIR/mtime2DComplex $COM_FLAGS -s 2^15 -c 2^16 -k"
+	echo $cmd
+	$cmd || exit(1)
+
+	echo""
+	echo "===================================================="
+	echo "=== 1-D in-place real single; size = 2^32 ==="
+	echo "===================================================="
+	echo""
+	set cmd = "$LOCAL_BUILD_DIR/mtime1DReal $COM_FLAGS -s 2^32 -S 2^32 -k"
+	echo $cmd
+	$cmd || exit(1)
+
+	echo""
+	echo "===================================================="
+	echo "=== 2-D in-place real single; size = 2^32 ==="
+	echo "===================================================="
+	echo""
+	set cmd = "$LOCAL_BUILD_DIR/mtime2DReal $COM_FLAGS -s 2^16 -c 2^16 -k"
+	echo $cmd
+	$cmd || exit(1)
+
+endif

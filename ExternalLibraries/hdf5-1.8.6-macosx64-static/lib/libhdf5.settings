@@ -1,0 +1,69 @@
+	    SUMMARY OF THE HDF5 CONFIGURATION
+	    =================================
+
+General Information:
+-------------------
+		   HDF5 Version: 1.8.6
+		  Configured on: Tue Feb 15 09:42:42 CST 2011
+		  Configured by: epourmal@dubna.hdfgroup.uiuc.edu
+		 Configure mode: production
+		    Host system: i386-apple-darwin10.6.0
+	      Uname information: Darwin dubna.hdfgroup.uiuc.edu 10.6.0 Darwin Kernel Version 10.6.0: Wed Nov 10 18:13:17 PST 2010; root:xnu-1504.9.26~3/RELEASE_I386 i386
+		       Byte sex: little-endian
+		      Libraries: 
+	     Installation point: /Users/epourmal/Working/_tmp_static/hdf5
+
+Compiling Options:
+------------------
+               Compilation Mode: production
+                     C Compiler: /usr/bin/gcc ( (GCC) 4.2.1 (Apple Inc. build 5659))
+                         CFLAGS: 
+                      H5_CFLAGS: -std=c99 -pedantic -Wall -Wextra -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wfloat-equal -Wmissing-format-attribute -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wformat=2 -Wunreachable-code -Wendif-labels -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch -Wvariadic-macros -Wnonnull -Winit-self -Wmissing-include-dirs -Wswitch-default -Wswitch-enum -Wunused-macros -Wunsafe-loop-optimizations -Wc++-compat -Wvolatile-register-var -Wstrict-overflow -O3 -fomit-frame-pointer -finline-functions
+                      AM_CFLAGS: 
+                       CPPFLAGS: 
+                    H5_CPPFLAGS:   -DNDEBUG -UH5_DEBUG_API
+                    AM_CPPFLAGS: -I/Users/epourmal/Working/lib/SZIP-U/include -I/Users/epourmal/Working/lib/ZLIB-U/include 
+               Shared Libraries: no
+               Static Libraries: yes
+  Statically Linked Executables: yes
+                        LDFLAGS: 
+                     AM_LDFLAGS:  -L/Users/epourmal/Working/lib/ZLIB-U/lib -L/Users/epourmal/Working/lib/SZIP-U/lib
+ 	 	Extra libraries:  -lsz -lz -lm 
+ 		       Archiver: ar
+ 		 	 Ranlib: ranlib
+ 	      Debugged Packages: 
+		    API Tracing: no
+
+Languages:
+----------
+                        Fortran: yes
+               Fortran Compiler: /usr/local/bin/gfortran ( GNU Fortran (GCC) 4.5.0 20090910 )
+                  Fortran Flags: 
+               H5 Fortran Flags:  -pedantic -Wall -Wconversion -Wunderflow -Wimplicit-interface -W -O2 -s
+               AM Fortran Flags:  
+                            C++: yes
+                   C++ Compiler: /usr/bin/g++
+                      C++ Flags: 
+                   H5 C++ Flags:  
+                   AM C++ Flags: 
+
+Features:
+---------
+                  Parallel HDF5: no
+             High Level library: yes
+                   Threadsafety: no
+            Default API Mapping: v18
+ With Deprecated Public Symbols: yes
+         I/O filters (external): deflate(zlib),szip(encoder)
+         I/O filters (internal): shuffle,fletcher32,nbit,scaleoffset
+                            MPE: no
+                     Direct VFD: no
+                        dmalloc: no
+Clear file buffers before write: yes
+           Using memory checker: no
+         Function Stack Tracing: no
+                           GPFS: no
+      Strict File Format Checks: no
+   Optimization Instrumentation: no
+       Large File Support (LFS): yes
+             H5dump Packed Bits: yes

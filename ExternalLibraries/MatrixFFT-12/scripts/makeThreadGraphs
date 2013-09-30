@@ -1,0 +1,105 @@
+#! /bin/csh -f
+#
+# Make multithread graphs.
+# Assumes presence of either 3 or 4 thread-specified data sets, each with single precision (only),
+# split and interleaved MFFT, and single and double FFTW data. Also the baseline, with full
+# threads (either 8 or 16, per the machine) contains the same data sets. 
+#
+# Produces collated text files and PDFs in threadResultsDir/summaries and 
+# threadResultsDir/summaries/PDFs. 
+#
+if( $#argv != 2) then
+	echo "Usage: makeThreadGraphs threadResultsDir baselineResultsDir"
+	echo "Example:"
+	echo "makeGraphs ../results/64bitThreads ../results/64bit"
+	exit(1)
+endif
+
+set THR_DIR=$argv[1]
+set BASE_DIR=$argv[2]
+
+set T1=$THR_DIR/oneThread
+set T2=$THR_DIR/twoThreads
+set T4=$THR_DIR/fourThreads
+set T8=$THR_DIR/eightThreads
+
+#
+# Allow for max of either 8 or 16 threads
+# 8 virtual cores --> 8 threads is the baseline
+# 16 virtual cores --> 16 threads is the baseline and we have an eightThreads directory
+#
+set T16=$BASE_DIR
+set HAVE_16=YES
+
+set SUMM_DIR="$THR_DIR/summaries"
+set PDF_DIR="$SUMM_DIR/PDFs"
+
+set cmd="mkdir -p $SUMM_DIR"
+echo $cmd
+$cmd || exit(1)
+
+if(! -e $T1) then
+	echo "$T1 does not exist. Aborting."
+	exit(1)
+endif
+if(! -e $T2) then
+	echo "$T2 does not exist. Aborting."
+	exit(1)
+endif
+if(! -e $T4) then
+	echo "$T4 does not exist. Aborting."
+	exit(1)
+endif
+if(! -e $T8) then
+    # no eightThreads....T8 is baseline. 
+    set T8=$BASE_DIR
+    if(! -e $T8) then
+        echo "$T8 does not exist. Aborting."
+        exit(1)
+    endif
+    set HAVE_16=NO
+else
+    # baseline is T16 - make sure it's there
+    if(! -e $T16) then
+        echo "$T16 does not exist. Aborting."
+        exit(1)
+    endif
+endif
+
+set cmd="mkdir -p $PDF_DIR"
+echo $cmd
+$cmd || exit(1)
+
+set RAW_FILES = (	\
+	MFFT_Single_IP_Intrlv_Complex1D \
+	MFFT_Single_IP_Intrlv_Complex2D \
+	MFFT_Single_IP_Intrlv_Real1D \
+	MFFT_Single_IP_Intrlv_Real2D \
+	FFTW_Single_IP_Complex1D \
+	FFTW_Single_IP_Complex2D \
+	FFTW_Single_IP_Real1D \
+	FFTW_Single_IP_Real2D )
+	
+set COLLATE="$LOCAL_BUILD_DIR/compareFFT"
+set FPD="$LOCAL_BUILD_DIR/fftPlotData"
+
+set NUM_LINES=4
+if($HAVE_16 == YES) then
+    set NUM_LINES=5
+endif
+
+foreach RF ($RAW_FILES)
+	set INF="$T1/$RF $T2/$RF $T4/$RF $T8/$RF"
+    if($HAVE_16 == YES) then
+        set INF="$INF $T16/$RF"
+    endif
+	set OUTF="$SUMM_DIR/$RF"
+	set cmd="$COLLATE $INF"
+	echo $cmd
+	$cmd > $OUTF || exit(1)
+	set PDFFILE=$PDF_DIR/${RF}.pdf
+	set cmd="$FPD -n $NUM_LINES $OUTF $PDFFILE"
+	echo $cmd
+	$cmd || exit(1)
+end
+

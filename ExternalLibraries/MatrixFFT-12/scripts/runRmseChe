@@ -1,0 +1,68 @@
+#! /bin/csh -f
+# 
+# runRmseChe - generate RMSE, MXE, CHE measurements
+
+set PRECISION=`$LOCAL_BUILD_DIR/getFftConfig -p`
+
+set PROG=$LOCAL_BUILD_DIR/m1DRealTestSignal
+
+# set this to YES for quickie debug
+set SKIP_LARGE=NO
+
+#
+# 1D real
+#
+if($SKIP_LARGE == YES) then
+    set sizes = (2^20)
+else if ($PRECISION == Double) then
+    set sizes = (2^20 2^31)
+else
+    set sizes = (2^20 2^32)
+endif
+
+# first run with banner
+set cmd="$PROG -s 2^10 -S 2^10"
+$cmd || exit(1)
+foreach size ( $sizes )
+    set cmd="$PROG -s $size -S $size -b"
+    $cmd || exit(1)
+end
+
+#
+# 1D Complex
+#
+set PROG=$LOCAL_BUILD_DIR/m1DComplexChirp
+
+if($SKIP_LARGE == YES) then
+    set sizes = (2^20)
+else if($PRECISION == Double) then
+    set sizes = (2^20 2^30)
+else
+    set sizes = (2^20 2^31)
+endif
+
+# first run with banner
+set cmd="$PROG -s 2^10 -S 2^10"
+$cmd || exit(1)
+foreach size ( $sizes )
+    set cmd="$PROG -s $size -S $size -b"
+    $cmd || exit(1)
+end
+
+#
+# 2D Complex
+#
+set PROG=$LOCAL_BUILD_DIR/m2DComplexChirp
+
+set cmd="$PROG -s 32 -S 32"
+$cmd || exit(1)
+set cmd="$PROG -s 1k -S 1k -b"
+$cmd || exit(1)
+if($SKIP_LARGE == NO) then
+    if($PRECISION == Double) then
+        set cmd="$PROG -s 2^15 -S 2^15 -b"
+    else
+        set cmd="$PROG -s 2^15 -c 2^16 -b"
+    endif
+    $cmd || exit(1)
+endif

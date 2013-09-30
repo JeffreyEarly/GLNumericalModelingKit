@@ -1,0 +1,70 @@
+                         FFT Timing and verification scripts
+                              Last update Feb. 18 2009
+						   
+This directory contains a number of shell scripts which are used for regression testing of 
+the MatrixFFT library and for measuring the performance of the various FFT implementations
+in the parent MatrixFFT/ directory. See the README one level up (in MatrixFFT/) for info on 
+the various FFT implementations. 
+
+Regression test
+---------------
+
+	To perform a regression test on the entire MatrixFFT library, with the currently
+	configured precision and complex data format:
+
+	1. Build the library and all of the test programs. See ../README.
+	2. Set the LOCAL_BUILD_DIR environment variable to point to the directory
+	   containing the binaries you just built. 
+	3. Run this:
+
+	   % ./vfyAll [options]
+	   
+	Run vfyAll with -h to see the options. 
+
+	At the end of the run you should see this:
+
+        === MatrixFFT test SUCCEEDED. ===
+
+	If you see anything else, the test has failed. 
+
+	NOTE: To run this test on a PPC, you need to specify the "-q" (quick) option to 
+	the vfyAll script, to avoid performing FFTs which are larger than the PPC
+	implementations allow for. This is due to a limitation in Accelerate.framework. 
+
+
+Timing measurements
+-------------------
+
+    To get timing info for all operations, at the currently configured precision:
+	
+	1. Build the library and all of the test programs. See ../README.
+	2. Set the LOCAL_BUILD_DIR environment variable to point to the directory
+	   containing the binaries you just built. 
+	3. Run this:
+
+	   % ./timeAllMfft [options]
+	   
+	Run timeAllMfft with -h to see the options. The "-l" (large) and "-g" (huge) 
+	options are common when gathering performance data. 
+	
+	NOTE: To run this test on a PPC, you need to specify the "-q" (quick) option to 
+	the timeAllMfft script, to avoid performing FFTs which are larger than the PPC
+	implementations allow for.
+	
+	The results are displayed on stdout and are also tee'd to a number of files
+	in /tmp (or to an optional destination directory specified via "-d <dir>"). 
+
+    You can disable timing tests for any of (vDSP, FFTW, MatrixFFT) via the -D, -F, 
+    and -M flags, respectively. If you want to test the timing of one type of FFT you 
+    can run these scripts (which are all run by the timeAllMfft script):
+
+       timeAll1DComplex    -- 1-D complex
+       timeAll2DComplex    -- 2-D complex
+       timeAll1DReal       -- 1-D real
+       timeAll2DReal       -- 2-D real
+       timeAllConvolve     -- 2-D real convolution. No FFTW testing here. 
+
+    All of those scripts take the same options as timeAllMfft, so you can avoid running
+    timing tests for a given library, etc. All scripts print usage info when run with 
+    the "-h" option. 
+

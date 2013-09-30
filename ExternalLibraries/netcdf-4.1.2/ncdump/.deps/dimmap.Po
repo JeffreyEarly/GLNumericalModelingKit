@@ -1,0 +1,18 @@
+dimmap.o dimmap.o: dimmap.c ../include/netcdf.h \
+  /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stddef.h \
+  /usr/include/errno.h /usr/include/sys/errno.h /usr/include/sys/cdefs.h \
+  utils.h ../config.h
+
+../include/netcdf.h:
+
+/usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stddef.h:
+
+/usr/include/errno.h:
+
+/usr/include/sys/errno.h:
+
+/usr/include/sys/cdefs.h:
+
+utils.h:
+
+../config.h:

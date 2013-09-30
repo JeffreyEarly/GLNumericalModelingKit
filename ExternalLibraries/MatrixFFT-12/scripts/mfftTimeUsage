@@ -1,0 +1,13 @@
+Options:
+   -l           -- enable large FFTs
+   -g           -- enable huge FFTs (requires 64-bit binaries)
+   -q           -- quick test
+   -o           -- out-of-place; default in-place
+   -d dstDir    -- destination directory; default is /tmp
+   -F           -- no FFTW (we'll collate FFTW output if it exists)
+   -D           -- no vDSP (we'll collate vDSP output if it exists)
+   -M           -- no MatrixFFT (we'll collate MFFT output if it exists)
+   -n           -- no collate
+   -e           -- FFTW plan flag = ESTIMATE
+   -L loops
+   -T numThreads

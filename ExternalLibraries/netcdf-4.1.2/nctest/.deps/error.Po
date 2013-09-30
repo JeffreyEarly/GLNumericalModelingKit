@@ -1,0 +1,36 @@
+error.o error.o: error.c /usr/include/stdio.h /usr/include/_types.h \
+  /usr/include/sys/_types.h /usr/include/sys/cdefs.h \
+  /usr/include/machine/_types.h /usr/include/i386/_types.h \
+  /usr/include/secure/_stdio.h /usr/include/secure/_common.h \
+  /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stdarg.h \
+  ../include/netcdf.h \
+  /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stddef.h \
+  /usr/include/errno.h /usr/include/sys/errno.h error.h
+
+/usr/include/stdio.h:
+
+/usr/include/_types.h:
+
+/usr/include/sys/_types.h:
+
+/usr/include/sys/cdefs.h:
+
+/usr/include/machine/_types.h:
+
+/usr/include/i386/_types.h:
+
+/usr/include/secure/_stdio.h:
+
+/usr/include/secure/_common.h:
+
+/usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stdarg.h:
+
+../include/netcdf.h:
+
+/usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stddef.h:
+
+/usr/include/errno.h:
+
+/usr/include/sys/errno.h:
+
+error.h:

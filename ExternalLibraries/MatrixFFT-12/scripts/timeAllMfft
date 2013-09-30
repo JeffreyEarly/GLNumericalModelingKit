@@ -1,0 +1,66 @@
+#! /bin/csh -f
+#
+# Time all FFTs for all supported library configurations: vDSP, FFTW, MatrixFFT. 
+#
+# This script just calls the four lower-level scripts (timeAllComplex1D, etc.).
+# All of those scripts and this one have the same usage, so we just pass
+# on any arguments we see (except for -h) to the other scripts. 
+#
+# You can disable testing any of the individual libraries (MatrixFFT, vDSP,
+# FFTW). If you disable a library and its results already exist in the 
+# destination directory, those existing results will be used when collating
+# the results of all tests. A common use of this is when you make a change
+# to MatrixFFT, and you've previsouly tested vDSP and FFTW, you'd run this with 
+# the -F and -D options to avoid re-testing the libraries whose results
+# (presumably) won't change. You can even run this with all of the libraries
+# disabled including MatrixFFT (-D -F -M) to re-generate the collated 
+# results file, e.g. if you've modified the compareFFT program to produce
+# a different output. 
+#
+set SCRIPT_ARGS=
+while ( $#argv > 0 )
+    switch ( "$argv[1]" )
+		case -h:
+			echo "Usage: timeAllMfft [option...]"
+			cat mfftTimeUsage
+			exit(1);
+		default:
+			set SCRIPT_ARGS="${SCRIPT_ARGS} $argv[1]"
+			shift
+			breaksw
+	endsw
+end
+
+set LOGFILE=/tmp/timeAllMatrixFFT.log
+
+echo "=== starting timeAllMfft ===" > $LOGFILE
+echo `date` >> $LOGFILE
+
+set CMD="./timeAll1DComplex $SCRIPT_ARGS"
+echo $CMD
+echo ""
+echo $CMD >> $LOGFILE
+$CMD || exit(1)
+
+set CMD="./timeAll2DComplex $SCRIPT_ARGS"
+echo $CMD
+echo ""
+echo $CMD >> $LOGFILE
+$CMD || exit(1)
+
+set CMD="./timeAll1DReal $SCRIPT_ARGS"
+echo $CMD
+echo ""
+echo $CMD >> $LOGFILE
+$CMD || exit(1)
+
+set CMD="./timeAll2DReal $SCRIPT_ARGS"
+echo $CMD
+echo ""
+echo $CMD >> $LOGFILE
+$CMD || exit(1)
+
+echo "=== timeAllMfft COMPLETE ===" >> $LOGFILE
+echo "=== timeAllMfft COMPLETE ===" 
+echo ""
+

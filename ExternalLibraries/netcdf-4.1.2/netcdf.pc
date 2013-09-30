@@ -1,0 +1,16 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+ccompiler=gcc
+cppcompiler=g++
+fcompiler=x86_64-apple-darwin-gfortran
+fflags=-g -O2 -I${includedir}
+flibs=-lnetcdff -lnetcdf
+
+Name: netcdf
+Description: NetCDF Client Library
+Version: 4.1.2
+Libs: -L${libdir} -lnetcdf
+Cflags: -I${includedir}
+

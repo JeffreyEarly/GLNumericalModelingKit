@@ -1,0 +1,138 @@
+#! /bin/csh -f
+#
+# Plot collated outputs as PDF graphs. 
+#
+if( $#argv != 1) then
+	echo "Usage: makeGraphs resultsDir"
+	echo "Example:"
+	echo "makeGraphs ../results/baseline"
+	exit(1)
+endif
+
+set SUMM_DIR="$argv[1]/summaries"
+if(! -e $SUMM_DIR) then
+	echo "$SUMM_DIR does not exist. Aborting."
+	exit(1)
+endif
+
+set cmd="cd $SUMM_DIR"
+echo $cmd
+$cmd || exit(1);
+set cmd="mkdir -p PDFs"
+echo $cmd
+$cmd || exit(1)
+
+set FPD="$LOCAL_BUILD_DIR/fftPlotData"
+
+echo "...processing Double_IP_Intrlv_Complex1D"
+$FPD -l "1-D complex, double-precision FFT" Double_IP_Intrlv_Complex1D PDFs/Double_IP_Intrlv_Complex1D.pdf || exit(1)
+
+echo "...processing Double_IP_Intrlv_Complex2D"
+$FPD -l "2-D complex, double-precision FFT" Double_IP_Intrlv_Complex2D PDFs/Double_IP_Intrlv_Complex2D.pdf || exit(1)
+
+echo "...processing Double_IP_Intrlv_Real1D"
+$FPD -l "1-D real, double-precision FFT" Double_IP_Intrlv_Real1D PDFs/Double_IP_Intrlv_Real1D.pdf || exit(1)
+
+echo "...processing Double_IP_Intrlv_Real2D"
+$FPD -l "2-D real, double-precision FFT" Double_IP_Intrlv_Real2D PDFs/Double_IP_Intrlv_Real2D.pdf || exit(1)
+
+echo "...processing Double_IP_Split_Complex1D"
+$FPD -l "1-D complex, double-precision FFT" Double_IP_Split_Complex1D PDFs/Double_IP_Split_Complex1D.pdf || exit(1)
+
+echo "...processing Double_IP_Split_Complex2D"
+$FPD -l "2-D complex, double-precision FFT" Double_IP_Split_Complex2D PDFs/Double_IP_Split_Complex2D.pdf || exit(1)
+
+echo "...processing Double_IP_Split_Real1D"
+$FPD -l "1-D real, double-precision FFT" Double_IP_Split_Real1D PDFs/Double_IP_Split_Real1D.pdf || exit(1)
+
+echo "...processing Double_IP_Split_Real2D"
+$FPD -l "2-D real, double-precision FFT" Double_IP_Split_Real2D PDFs/Double_IP_Split_Real2D.pdf || exit(1)
+
+echo "...processing Single_IP_Intrlv_Complex1D"
+$FPD -l "1-D complex, single-precision FFT" Single_IP_Intrlv_Complex1D PDFs/Single_IP_Intrlv_Complex1D.pdf || exit(1)
+
+echo "...processing Single_IP_Intrlv_Complex2D"
+$FPD -l "2-D complex, single-precision FFT" Single_IP_Intrlv_Complex2D PDFs/Single_IP_Intrlv_Complex2D.pdf || exit(1)
+
+echo "...processing Single_IP_Intrlv_Real1D"
+$FPD -l "1-D real, single-precision FFT" Single_IP_Intrlv_Real1D PDFs/Single_IP_Intrlv_Real1D.pdf || exit(1)
+
+echo "...processing Single_IP_Intrlv_Real2D"
+$FPD -l "2-D real, single-precision FFT" Single_IP_Intrlv_Real2D PDFs/Single_IP_Intrlv_Real2D.pdf || exit(1)
+
+echo "...processing Single_IP_Split_Complex1D"
+$FPD -l "1-D complex, single-precision FFT" Single_IP_Split_Complex1D PDFs/Single_IP_Split_Complex1D.pdf || exit(1)
+
+echo "...processing Single_IP_Split_Complex2D"
+$FPD -l "2-D complex, single-precision FFT" Single_IP_Split_Complex2D PDFs/Single_IP_Split_Complex2D.pdf || exit(1)
+
+echo "...processing Single_IP_Split_Real1D"
+$FPD -l "1-D real, single-precision FFT" Single_IP_Split_Real1D PDFs/Single_IP_Split_Real1D.pdf || exit(1)
+
+echo "...processing Single_IP_Split_Real2D"
+$FPD -l "2-D real, single-precision FFT" Single_IP_Split_Real2D PDFs/Single_IP_Split_Real2D.pdf || exit(1)
+
+#
+# Collate split vs. interleaved
+#
+echo "...Collating Split vs. Interleaved format, MFFT only"
+set COMP_FFT="$LOCAL_BUILD_DIR/compareFFT"
+
+set cmd="$COMP_FFT ../MFFT_Double_IP_Intrlv_Complex1D ../MFFT_Double_IP_Split_Complex1D"
+echo $cmd
+$cmd > MFFT_Double_IP_Compare_Complex1D || exit(1)
+
+set cmd="$COMP_FFT ../MFFT_Double_IP_Intrlv_Complex2D ../MFFT_Double_IP_Split_Complex2D"
+echo $cmd
+$cmd > MFFT_Double_IP_Compare_Complex2D || exit(1)
+
+set cmd="$COMP_FFT ../MFFT_Double_IP_Intrlv_Real1D ../MFFT_Double_IP_Split_Real1D"
+echo $cmd
+$cmd > MFFT_Double_IP_Compare_Real1D || exit(1)
+
+set cmd="$COMP_FFT ../MFFT_Double_IP_Intrlv_Real2D ../MFFT_Double_IP_Split_Real2D"
+echo $cmd
+$cmd > MFFT_Double_IP_Compare_Real2D || exit(1)
+
+set cmd="$COMP_FFT ../MFFT_Single_IP_Intrlv_Complex1D ../MFFT_Single_IP_Split_Complex1D"
+echo $cmd
+$cmd > MFFT_Single_IP_Compare_Complex1D || exit(1)
+
+set cmd="$COMP_FFT ../MFFT_Single_IP_Intrlv_Complex2D ../MFFT_Single_IP_Split_Complex2D"
+echo $cmd
+$cmd > MFFT_Single_IP_Compare_Complex2D || exit(1)
+
+set cmd="$COMP_FFT ../MFFT_Single_IP_Intrlv_Real1D ../MFFT_Single_IP_Split_Real1D"
+echo $cmd
+$cmd > MFFT_Single_IP_Compare_Real1D || exit(1)
+
+set cmd="$COMP_FFT ../MFFT_Single_IP_Intrlv_Real2D ../MFFT_Single_IP_Split_Real2D"
+echo $cmd
+$cmd > MFFT_Single_IP_Compare_Real2D || exit(1)
+
+echo "...Graphing Split vs. Interleaved format, MFFT only"
+
+echo "...processing MFFT_Double_IP_Compare_Complex1D"
+$FPD -n 2 -l "1-D complex, double-precision FFT" MFFT_Double_IP_Compare_Complex1D PDFs/MFFT_Double_IP_Compare_Complex1D.pdf || exit(1)
+
+echo "...processing MFFT_Double_IP_Compare_Complex2D"
+$FPD -n 2 -l "2-D complex, double-precision FFT" MFFT_Double_IP_Compare_Complex2D PDFs/MFFT_Double_IP_Compare_Complex2D.pdf || exit(1)
+
+echo "...processing MFFT_Double_IP_Compare_Real1D"
+$FPD -n 2 -l "1-D real, double-precision FFT" MFFT_Double_IP_Compare_Real1D PDFs/MFFT_Double_IP_Compare_Real1D.pdf || exit(1)
+
+echo "...processing MFFT_Double_IP_Compare_Real2D"
+$FPD -n 2 -l "2-D real, double-precision FFT" MFFT_Double_IP_Compare_Real2D PDFs/MFFT_Double_IP_Compare_Real2D.pdf || exit(1)
+
+echo "...processing MFFT_Single_IP_Compare_Complex1D"
+$FPD -n 2 -l "1-D complex, single-precision FFT" MFFT_Single_IP_Compare_Complex1D PDFs/MFFT_Single_IP_Compare_Complex1D.pdf || exit(1)
+
+echo "...processing MFFT_Single_IP_Compare_Complex2D"
+$FPD -n 2 -l "2-D complex, single-precision FFT" MFFT_Single_IP_Compare_Complex2D PDFs/MFFT_Single_IP_Compare_Complex2D.pdf || exit(1)
+
+echo "...processing MFFT_Single_IP_Compare_Real1D"
+$FPD -n 2 -l "1-D real, single-precision FFT" MFFT_Single_IP_Compare_Real1D PDFs/MFFT_Single_IP_Compare_Real1D.pdf || exit(1)
+
+echo "...processing MFFT_Single_IP_Compare_Real2D"
+$FPD -n 2 -l "2-D real, single-precision FFT" MFFT_Single_IP_Compare_Real2D PDFs/MFFT_Single_IP_Compare_Real2D.pdf || exit(1)
+

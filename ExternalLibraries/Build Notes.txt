@@ -1,0 +1,4 @@
+export CFLAGS='-g -m64' CFLAGS='-g -m64' CXXFLAGS='-g -m64' HDF5DIR='/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static' LIBS='-lsz' LDFLAGS='-L/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/lib' CC='gcc'
+
+./configure --disable-f77 --disable-f90 --target=x86_64-apple-darwin -build=x86_64-apple-darwin --host=x86_64-apple-darwin --with-hdf5=$HDF5DIR --with-zlib=$HDF5DIR --with-szlib=$HDF5DIR --enable-shared
+

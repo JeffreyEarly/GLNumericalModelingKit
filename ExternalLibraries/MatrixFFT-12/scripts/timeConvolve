@@ -1,0 +1,93 @@
+#! /bin/csh -f
+#
+# Run fftConvTime or vimageConvTime in a variety of sizes.
+#
+set LARGE_ENABLE=NO
+set HUGE_ENABLE=NO
+set USER_TIME=
+set QUICK=NO
+set PRECALC_KERNEL=
+set EXECUTABLE=vimageConvTime
+set THREADS=
+
+while ( $#argv > 0 )
+    switch ( "$argv[1]" )
+		case -l:
+			set LARGE_ENABLE = YES
+            shift
+            breaksw
+		case -g:
+			set LARGE_ENABLE = YES
+			set HUGE_ENABLE = YES
+            shift
+            breaksw
+		case -u:
+			set USER_TIME = -u
+            shift
+            breaksw
+		case -q:
+			set QUICK = YES
+            shift
+            breaksw
+		case -p:
+			set PRECALC_KERNEL = -p
+            shift
+            breaksw
+		case -f:
+			set EXECUTABLE=mtimeFftConvolve
+			shift
+			breaksw
+		case -T:
+			if($#argv == 1) then
+				echo "Illegal numThreads specification"
+				exit(1)
+			endif
+			set THREADS="-T $argv[2]"
+            shift
+            shift
+            breaksw
+		default:
+			echo "Usage: timeConvolve [option...]"
+			echo "  Options:"
+			echo "     -f   -- FFT mode; default is vImage"
+			echo "     -l   -- enable large FFTs"
+			echo "     -g   -- enable huge FFTs"
+			echo "     -u   -- user time, not wall time"
+			echo "     -p   -- precalculate kernel FFT"
+			echo "     -q   -- quick test"
+			echo "     -T numThreads"
+			exit(1)
+    endsw
+end
+	
+set COM_FLAGS="$USER_TIME $PRECALC_KERNEL $THREADS"
+
+#
+# First time, with banner. This has a "bump to next power of 2" singularity
+# for the rows at kernel size 31.
+#
+set FCT="$LOCAL_BUILD_DIR/$EXECUTABLE $COM_FLAGS"
+$FCT -r 100 -c 40 -k 1 -K 63 || exit(1)
+
+set FCT="$LOCAL_BUILD_DIR/$EXECUTABLE $COM_FLAGS -n"
+# column singularity at kernel size 31, row singularity at size 9
+$FCT -r 120 -c 100 -k 1 -K 63 || exit(1)
+# column and row singularity at kernel size 31
+$FCT -r 100 -c 100 -k 1 -K 63 || exit(1)
+
+# no singularity
+$FCT -r 400 -c 400 -k 1 -K 63 || exit(1)
+
+if($QUICK == YES) then
+	echo ""
+	exit(0)
+endif
+
+# two simultaneous singularities
+$FCT -r 500 -c 500 -k 1 -K 127 || exit(1)
+$FCT -r 1000 -c 1000 -k 1 -k 21 -K 161 || exit(1)
+if($LARGE_ENABLE == YES) then
+	$FCT -r 2000 -c 2000 -k 21 -K 149 || exit(1)
+endif
+
+echo ""

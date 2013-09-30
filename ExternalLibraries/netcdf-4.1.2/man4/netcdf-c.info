@@ -1,0 +1,180 @@
+This is netcdf-c.info, produced by makeinfo version 4.13 from
+/machine/netcdf/nc_test_15812/man4//defines.texi.
+
+Copyright (C) 2005-2009 University Corporation for Atmospheric Research
+
+
+
+   Permission is granted to make and distribute verbatim copies of this
+manual provided that the copyright notice and these paragraphs are
+preserved on all copies.  The software and any accompanying written
+materials are provided "as is" without warranty of any kind.  UCAR
+expressly disclaims all warranties of any kind, either expressed or
+implied, including but not limited to the implied warranties of
+merchantability and fitness for a particular purpose.
+
+   The Unidata Program Center is managed by the University Corporation
+for Atmospheric Research and sponsored by the National Science
+Foundation.  Any opinions, findings, conclusions, or recommendations
+expressed in this publication are those of the author(s) and do not
+necessarily reflect the views of the National Science Foundation.
+
+   Mention of any commercial company or product in this document does
+not constitute an endorsement by the Unidata Program Center.  Unidata
+does not authorize any use of information from this publication for
+advertising or publicity purposes.
+
+INFO-DIR-SECTION netCDF scientific data format
+START-INFO-DIR-ENTRY
+* netcdf-c: (netcdf-c).         The NetCDF C Interface Guide
+END-INFO-DIR-ENTRY
+
+
+Indirect:
+netcdf-c.info-1: 1380
+netcdf-c.info-2: 293895
+
+Tag Table:
+(Indirect)
+Node: Top1380
+Node: Use of the NetCDF Library7087
+Node: Creating8836
+Node: Reading Known11821
+Node: Reading Unknown13828
+Node: Adding17092
+Node: Errors20725
+Node: Compiling21941
+Node: Datasets26867
+Node: Interface Descriptions29873
+Node: parallel access30815
+Node: nc_strerror34469
+Node: nc_inq_libvers35896
+Node: nc_create36576
+Node: nc__create42396
+Node: nc_create_par48637
+Node: nc_open50977
+Node: nc__open53975
+Node: nc_open_par57248
+Node: nc_redef59419
+Node: nc_enddef61575
+Node: nc__enddef64102
+Node: nc_close68481
+Node: nc_inq Family70271
+Node: nc_sync73815
+Node: nc_abort78061
+Node: nc_set_fill79902
+Node: nc_set_default_format84286
+Node: nc_set_chunk_cache87444
+Node: nc_get_chunk_cache89515
+Node: Groups91452
+Node: nc_inq_ncid93101
+Node: nc_inq_grps94464
+Node: nc_inq_varids96267
+Node: nc_inq_dimids97638
+Node: nc_inq_grpname99332
+Node: nc_inq_grpname_full100621
+Node: nc_inq_grpname_len102374
+Node: nc_inq_grp_parent103646
+Node: nc_inq_grp_ncid105026
+Node: nc_inq_grp_full_ncid106529
+Node: nc_def_grp108003
+Node: Dimensions109646
+Node: Dimensions Introduction110056
+Node: nc_def_dim112371
+Node: nc_inq_dimid114598
+Node: nc_inq_dim Family116268
+Node: nc_rename_dim119180
+Node: nc_inq_unlimdims121294
+Node: User Defined Data Types123411
+Node: User Defined Types124332
+Node: nc_inq_typeids125846
+Node: nc_inq_typeid126812
+Node: nc_inq_type129391
+Node: nc_inq_user_type132445
+Node: Compound Types134767
+Node: nc_def_compound136887
+Node: nc_insert_compound139592
+Node: nc_insert_array_compound141187
+Node: nc_inq_compound146514
+Node: nc_inq_compound_name150214
+Node: nc_inq_compound_size151073
+Node: nc_inq_compound_nfields151853
+Node: nc_inq_compound_field152700
+Node: nc_inq_compound_fieldname154153
+Node: nc_inq_compound_fieldindex155244
+Node: nc_inq_compound_fieldoffset156184
+Node: nc_inq_compound_fieldtype157211
+Node: nc_inq_compound_fieldndims158205
+Node: nc_inq_compound_fielddim_sizes159384
+Node: Variable Length Array160643
+Node: nc_def_vlen162275
+Node: nc_inq_vlen164060
+Node: nc_free_vlen165880
+Node: nc_free_vlens167210
+Node: Opaque Type168384
+Node: nc_def_opaque169078
+Node: nc_inq_opaque170283
+Node: Enum Type171470
+Node: nc_def_enum171740
+Node: nc_insert_enum176140
+Node: nc_inq_enum178475
+Node: nc_inq_enum_member181647
+Node: nc_inq_enum_ident184492
+Node: Variables185534
+Node: Variable Introduction187406
+Node: Variable Types189653
+Node: NetCDF-3 Variable Types190339
+Node: NetCDF-4 Atomic Types191682
+Node: nc_def_var193127
+Node: nc_def_var_chunking197177
+Node: nc_inq_var_chunking202095
+Node: nc_set_var_chunk_cache204623
+Node: nc_get_var_chunk_cache206981
+Node: nc_def_var_fill209383
+Node: nc_inq_var_fill212064
+Node: nc_def_var_deflate213813
+Node: nc_inq_var_deflate215806
+Node: nc_inq_var_szip217265
+Node: nc_def_var_fletcher32219037
+Node: nc_inq_var_fletcher32220665
+Node: nc_def_var_endian221775
+Node: nc_inq_var_endian223748
+Node: nc_inq_varid224927
+Node: nc_inq_var226259
+Node: nc_put_var1_ type230374
+Node: nc_put_var_ type235537
+Node: nc_put_vara_ type240482
+Node: nc_put_vars_ type247877
+Node: nc_put_varm_ type256314
+Node: nc_get_var1_ type268725
+Node: nc_get_var_ type274265
+Node: nc_get_vara_ type279220
+Node: nc_get_vars_ type285834
+Node: nc_get_varm_ type293895
+Node: Strings306053
+Node: Classic Strings306848
+Node: Arrays of Strings311634
+Node: nc_free_string314518
+Node: Fill Values315770
+Node: nc_rename_var318084
+Node: nc_copy_var319964
+Node: nc_var_par_access321432
+Node: nc_var_ubyte324288
+Node: Attributes326182
+Node: Attributes Introduction326535
+Node: nc_put_att_ type328494
+Node: nc_inq_att Family335375
+Node: nc_get_att_ type340458
+Node: nc_copy_att345457
+Node: nc_rename_att349181
+Node: nc_del_att351338
+Node: nc_att_ubyte353201
+Node: Summary of C Interface353731
+Node: NetCDF 3 Transition Guide370276
+Node: NetCDF 2 C Transition Guide379568
+Node: NetCDF-3 Error Codes396383
+Node: NetCDF-4 Error Codes399081
+Node: DAP Error Codes400197
+Node: Combined Index401816
+
+End Tag Table

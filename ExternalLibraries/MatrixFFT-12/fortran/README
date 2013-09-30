@@ -1,0 +1,89 @@
+                        MatrixFFT Fortran sample code
+                          Last update Nov. 3 2009
+                          
+This directory contains sample code illustrating how to call MatrixFFT code
+from Fortran. This example uses the GNU gfortran package; it has not been 
+tested with any other Fortran. 
+
+Contents
+--------
+   
+   File                 Contents
+--------------------    --------------------------------------------------------
+callFFTComplex.f90      Fortran program to illustrate usage of the wrapper for 
+                            performing a 1-dimension complex FFT 
+callFFTComplex2D.f90    Fortran program to illustrate usage of the wrapper for 
+                            performing a 2-dimension complex FFT 
+callFFTReal.f90         Fortran program to illustrate usage of the wrapper for 
+                            performing a 1-dimension real-signal FFT 
+callFFTReal2D.f90       Fortran program to illustrate usage of the wrapper for 
+                            performing a 2-dimension real-signal FFT 
+fortranFFTWrapper.h     Declaration of public wrapper functions fft_wrapper_ and
+                            fft_release_(). These functions can be called from
+                            Fortran. 
+fortranFFTWrapper.cpp   Implementation of public wrapper functions.
+Makefile                Make file to build all four executables.
+README                  This file.
+
+
+Installing gfortran
+-------------------
+
+The gfortran binary can be obtained here:
+
+   http://gcc.gnu.org/wiki/GFortranBinaries
+   
+Download the binary appropriate to your platform and install the package. There
+are no options or questions to answer; you just have to supply an admininstrator
+name and password. 
+
+
+Installing libMatrixFFT
+-----------------------
+
+This sample code assumes that the libMatrixFFT binary and its associated headers
+have been installed on your machine. To do this, use the xcodebuild command line 
+program, run as root (or via sudo) in the root MatrixFFT directory, as follows:
+
+  # /usr/bin/xcodebuild install DSTROOT=/
+  
+That places the MatrixFFT library binary in /usr/local/lib/libMatrixFFT.a and 
+the associated public headers in /usr/local/include/libMatrixFFT/*.h.
+
+NOTE: the example code requires that MatrixFFT be configured for split complex
+format, double precision. See libMatrixFFT/MatrixFFTConfig.h for info on 
+these configuration parameters.
+
+
+Building the Example
+--------------------
+
+Just type 'make' in the directory containing the example. It builds four command-line
+executables: callFFTComplex, callFFTComplex2D, callFFTReal, and callFFTReal2D. Each 
+of those runs with no arguments. 
+
+
+Notes on using the wrapper
+--------------------------
+
+The success or failure of the fft_wrapper call is indicated by the returned value
+'res'. Declared as an integer in the Fortran code, it represents an MFFTReturn
+as defined in libMatrixFFT/MatrixFFT.h. A value of zero indicates success; any
+nonzero value is failure as indicated by the MFFTReturn definitions.
+
+The wrapper function, fft_wrapper, caches some state on a per-thread basis
+across calls to it. This state, mainly consisting of a MatrixFFTPlan, is fairly
+time-consuming to create, but can be used for multiple FFTs as long as the 
+signal type and size does not change. 
+
+The wrapper function handles the creation and caching of this state in a manner 
+which is opaque to the Fortran caller of the wrapper. When multiple FFTs are
+executed in a given thread, and either the type or the size of the FFT changes, 
+a new MatrixFFTPlan will be created as needed, and the Fortran calling code 
+does not have to be aware of this or participate in any way. 
+
+However there is one additional function that the Fortran code needs to call, 
+once per thread which uses the wrapper. This function is fft_release. This 
+function frees up the MatrixFFTPlan and other state which is associated with 
+the calling thread. 
+

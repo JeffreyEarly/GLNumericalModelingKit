@@ -1,0 +1,147 @@
+#! /bin/csh -f
+#
+# Run mtimeFftConvolve or vimageConvTime in a variety of sizes as specified by REC. 
+#
+set LARGE_ENABLE=NO
+set HUGE_ENABLE=NO
+set USER_TIME=
+set QUICK=NO
+set PRECALC_KERNEL=
+set EXECUTABLE=vimageConvTime
+set THREADS=
+
+while ( $#argv > 0 )
+    switch ( "$argv[1]" )
+		case -l:
+			set LARGE_ENABLE = YES
+            shift
+            breaksw
+		case -g:
+			set LARGE_ENABLE = YES
+			set HUGE_ENABLE = YES
+            shift
+            breaksw
+		case -u:
+			set USER_TIME = -u
+            shift
+            breaksw
+		case -q:
+			set QUICK = YES
+            shift
+            breaksw
+		case -p:
+			set PRECALC_KERNEL = -p
+            shift
+            breaksw
+		case -f:
+			set EXECUTABLE=mtimeFftConvolve
+			shift
+			breaksw
+		case -T:
+			if($#argv == 1) then
+				echo "Illegal numThreads specification"
+				exit(1)
+			endif
+			set THREADS="-T $argv[2]"
+            shift
+            shift
+            breaksw
+		default:
+			echo "Usage: timeConvolveREC [option...]"
+			echo "  Options:"
+			echo "     -f   -- FFT mode; default is vImage"
+			echo "     -l   -- enable large FFTs"
+			echo "     -g   -- enable huge FFTs"
+			echo "     -u   -- user time, not wall time"
+			echo "     -p   -- precalculate kernel FFT"
+			echo "     -q   -- quick test"
+			echo "     -T numThreads"
+			exit(1)
+    endsw
+end
+	
+set COM_FLAGS="$USER_TIME $PRECALC_KERNEL $THREADS"
+
+#
+# First time, with banner. This has a "bump to next power of 2" singularity
+# for the rows at kernel size 31.
+#
+set FCT="$LOCAL_BUILD_DIR/$EXECUTABLE $COM_FLAGS"
+$FCT -r 120 -c 160 -k 1 -K 1 || exit(1)
+
+set FCT="$LOCAL_BUILD_DIR/$EXECUTABLE $COM_FLAGS -n"
+$FCT -r 120 -c 160 -k 3 -K 3 || exit(1)
+$FCT -r 120 -c 160 -k 7 -K 7 || exit(1)
+$FCT -r 120 -c 160 -k 15 -K 15 || exit(1)
+$FCT -r 120 -c 160 -k 31 -K 31 || exit(1)
+$FCT -r 120 -c 160 -k 63 -K 63 || exit(1)
+
+$FCT -r 240 -c 320 -k 3 -K 3 || exit(1)
+$FCT -r 240 -c 320 -k 7 -K 7 || exit(1)
+$FCT -r 240 -c 320 -k 15 -K 15 || exit(1)
+$FCT -r 240 -c 320 -k 31 -K 31 || exit(1)
+$FCT -r 240 -c 320 -k 63 -K 63 || exit(1)
+$FCT -r 240 -c 320 -k 127 -K 127 || exit(1)
+
+if($QUICK == YES) then
+	echo ""
+	exit(0)
+endif
+
+$FCT -r 480 -c 640 -k 3 -K 3 || exit(1)
+$FCT -r 480 -c 640 -k 7 -K 7 || exit(1)
+$FCT -r 480 -c 640 -k 15 -K 15 || exit(1)
+$FCT -r 480 -c 640 -k 31 -K 31 || exit(1)
+$FCT -r 480 -c 640 -k 63 -K 63 || exit(1)
+$FCT -r 480 -c 640 -k 127 -K 127 || exit(1)
+$FCT -r 480 -c 640 -k 255 -K 255 || exit(1)
+
+if($LARGE_ENABLE == NO) then
+	echo ""
+	exit(0)
+endif
+
+$FCT -r 960 -c 1280 -k 3 -K 3 || exit(1)
+$FCT -r 960 -c 1280 -k 7 -K 7 || exit(1)
+$FCT -r 960 -c 1280 -k 15 -K 15 || exit(1)
+$FCT -r 960 -c 1280 -k 31 -K 31 || exit(1)
+$FCT -r 960 -c 1280 -k 63 -K 63 || exit(1)
+$FCT -r 960 -c 1280 -k 127 -K 127 || exit(1)
+$FCT -r 960 -c 1280 -k 255 -K 255 || exit(1)
+$FCT -r 960 -c 1280 -k 511 -K 511 || exit(1)
+
+if($HUGE_ENABLE == NO) then
+	echo ""
+	exit(0)
+endif
+
+$FCT -r 4000 -c 4000 -k 3 -K 3 || exit(1)
+$FCT -r 4000 -c 4000 -k 7 -K 7 || exit(1)
+$FCT -r 4000 -c 4000 -k 15 -K 15 || exit(1)
+$FCT -r 4000 -c 4000 -k 31 -K 31 || exit(1)
+$FCT -r 4000 -c 4000 -k 63 -K 63 || exit(1)
+$FCT -r 4000 -c 4000 -k 127 -K 127 || exit(1)
+$FCT -r 4000 -c 4000 -k 255 -K 255 || exit(1)
+$FCT -r 4000 -c 4000 -k 511 -K 511 || exit(1)
+
+# 2^30 elements, need 64 bits for sure
+$FCT -r 8000 -c 8000 -k 3 -K 3 || exit(1)
+$FCT -r 8000 -c 8000 -k 7 -K 7 || exit(1)
+$FCT -r 8000 -c 8000 -k 15 -K 15 || exit(1)
+$FCT -r 8000 -c 8000 -k 31 -K 31 || exit(1)
+$FCT -r 8000 -c 8000 -k 63 -K 63 || exit(1)
+$FCT -r 8000 -c 8000 -k 127 -K 127 || exit(1)
+# 2^31 due to kernel size
+$FCT -r 8000 -c 8000 -k 255 -K 255 || exit(1)
+$FCT -r 8000 -c 8000 -k 511 -K 511 || exit(1)
+
+# 2^31 elements
+$FCT -r 8000 -c 16000 -k 3 -K 3 || exit(1)
+$FCT -r 8000 -c 16000 -k 7 -K 7 || exit(1)
+$FCT -r 8000 -c 16000 -k 15 -K 15 || exit(1)
+$FCT -r 8000 -c 16000 -k 31 -K 31 || exit(1)
+$FCT -r 8000 -c 16000 -k 63 -K 63 || exit(1)
+$FCT -r 8000 -c 16000 -k 127 -K 127 || exit(1)
+$FCT -r 8000 -c 16000 -k 255 -K 255 || exit(1)
+
+echo ""

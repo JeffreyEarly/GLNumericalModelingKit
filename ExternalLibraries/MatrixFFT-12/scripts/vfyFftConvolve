@@ -1,0 +1,94 @@
+#! /bin/csh -f
+#
+# Run mvfyConvolve in a variety of sizes.
+#
+
+set LARGE_ENABLE=NO
+set INCR_FLAG=
+set THREADS=
+# not actually used, here for compatibility with vfyAll script...
+set QUICK=NO
+set CORR=
+
+while ( $#argv > 0 )
+    switch ( "$argv[1]" )
+		case -l:
+			set LARGE_ENABLE = YES
+            shift
+            breaksw
+		case -i:
+			set INCR_FLAG = -i
+            shift
+            breaksw
+		case -T:
+			if($#argv == 1) then
+				echo "Illegal numThreads specification"
+				exit(1)
+			endif
+			set THREADS="-T $argv[2]"
+            shift
+            shift
+            breaksw
+		case -q:
+			set QUICK = YES
+			shift
+			breaksw
+		case -C:
+			set CORR = -C
+			shift
+			breaksw
+		default:
+			echo "Usage: vfyFftConvolve [option...]"
+			echo "  Options:"
+			echo "     -q   -- quick test"
+			echo "     -l   -- enable large FFTs"
+			echo "     -i   -- incrementing data"
+			echo "     -C   -- correlation"
+			echo "     -T numThreads"
+			exit(1)
+    endsw
+end
+
+set COM_FLAGS="$INCR_FLAG $THREADS $CORR"
+
+set RCV="$LOCAL_BUILD_DIR/mvfyConvolve $COM_FLAGS"
+$RCV -r 4 -c 8 || exit(1)
+set RCV="$LOCAL_BUILD_DIR/mvfyConvolve -b $COM_FLAGS"
+$RCV -r 8 -c 4 || exit(1)
+$RCV -r 8 -c 8 || exit(1)
+$RCV -r 8 -c 16 || exit(1)
+$RCV -r 16 -c 16 || exit(1)
+$RCV -r 16 -c 32 || exit(1)
+$RCV -r 16 -c 64 || exit(1)
+$RCV -r 32 -c 64 || exit(1)
+$RCV -r 32 -c 128 || exit(1)
+$RCV -r 64 -c 128 || exit(1)
+$RCV -r 64 -c 256 || exit(1)
+$RCV -r 64 -c 512 || exit(1)
+$RCV -r 120 -c 500 || exit(1)
+$RCV -r 100 -c 500 -k 7 || exit(1)
+$RCV -r 100 -c 500 -k 13 || exit(1)
+$RCV -r 100 -c 500 -k 25 || exit(1)
+$RCV -r 100 -c 500 -k 31 || exit(1)
+$RCV -r 100 -c 500 -k 39 || exit(1)
+$RCV -r 128 -c 1024 || exit(1)
+$RCV -r 128 -c 2048 || exit(1)
+$RCV -r 128 -c 4096 || exit(1)
+$RCV -r 256 -c 4096 || exit(1)
+$RCV -r 512 -c 4096 || exit(1)
+#
+# Ensure testing of fftExecute2DRealSquare, with numCols = 2 * numRows
+#
+$RCV -r 400 -c 800 -k 7 || exit(1)
+$RCV -r 400 -c 800 -k 13 || exit(1)
+$RCV -r 800 -c 1800 -k 25 || exit(1)
+$RCV -r 800 -c 1800 -k 31 || exit(1)
+
+if($LARGE_ENABLE == YES) then
+	$RCV -r 512 -c 4096 -k 9 || exit(1)
+	$RCV -r 512 -c 4096 -k 21 || exit(1)
+	$RCV -r 512 -c 4096 -k 33 || exit(1)
+	$RCV -r 512 -c 4096 -k 63 || exit(1)
+	$RCV -r 512 -c 4096 -k 127 || exit(1)
+	$RCV -r 1024 -c 4096 || exit(1)
+endif

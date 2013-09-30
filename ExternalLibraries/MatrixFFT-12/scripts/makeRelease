@@ -1,0 +1,94 @@
+#! /bin/csh -f
+#
+# Prepare a release of the MatrixFFT project. 
+#
+#  -- check via svn export the specified tag or trunk;
+#  -- remove " by Doug Mitchell" for every source file;
+#  -- remove Doc/ directory;
+#  -- gnutar up the whole thing
+#
+
+if( $#argv != 2) then
+	echo "Usage: makeRelease trunk|tag dstDir"
+	echo "Run from MatrixFFT/scripts directory."
+	echo "Examples:"
+	echo "./makeRelease trunk ../../foo_dir"
+	echo "./makeRelease MatrixFFT-5 /tmp/"
+	exit(1)
+endif
+
+### set this to YES to skip the export to save time during debug
+set SKIP_EXPORT=NO
+
+### set this to YES to gzip the result: currently Attache can NOT handle this
+set DO_GZIP=NO
+
+set SCRIPT_HOME=`pwd`
+cd $argv[2] || exit(1)
+set DST_DIR=`pwd`
+cd $SCRIPT_HOME
+
+set ACG_BASE=svn+ssh://src.apple.com/svn/acg
+
+#
+# EXPORT_ITEM is the thing we extract from SVN
+# EXPORT_DIR is the top-level directory it gets put into
+#
+if($argv[1] == trunk) then
+	set EXPORT_ITEM="$ACG_BASE/MatrixFFT/trunk"
+	set EXPORT_DIR=MatrixFFT
+else 
+	set EXPORT_ITEM="$ACG_BASE/MatrixFFT/tags/$argv[1]"
+	set EXPORT_DIR=$argv[1]
+endif
+
+cd $DST_DIR || exit(1)
+if($SKIP_EXPORT == NO) then
+	echo "Extracting $EXPORT_DIR to $DST_DIR..."
+	set cmd="svn export $EXPORT_ITEM $EXPORT_DIR"
+	echo $cmd
+	$cmd || exit(1)
+endif
+
+set PRUNE_DIRS = ( Doc )
+echo "Pruning unneeded directories..."
+cd $EXPORT_DIR || exit(1)
+foreach targ ($PRUNE_DIRS)
+	set cmd="rm -rf $targ"
+	echo $cmd
+	$cmd || exit(1)
+end
+
+set TMPFILE=/tmp/MatrixFFT_foo
+set SOURCFILES = (				\
+	*/*.[ch]*					\
+	libMatrixFFT/*.h			\
+	libMatrixFFT/src/*.[ch]*	\
+	fftw/*/*.[ch]*				\
+	tools/*/*.[ch]*             \
+    fortran/*.[ch]*             \
+    cExamples/*.[ch])
+	
+echo "Removing author names..."
+foreach sourceFile ($SOURCFILES)
+    sed 's/ by Doug Mitchell//' < $sourceFile > $TMPFILE 
+	cp $TMPFILE $sourceFile || exit(1)
+end
+
+if($DO_GZIP == YES) then
+    set BUNDLE_NAME="$EXPORT_DIR.tar.gz"
+    set TAR_CMD="gnutar czf $BUNDLE_NAME $EXPORT_DIR"
+else
+    set BUNDLE_NAME="$EXPORT_DIR.tar"
+    set TAR_CMD="gnutar cf $BUNDLE_NAME $EXPORT_DIR"
+endif
+
+cd .. || exit(1)
+echo "Tarring up the bundle to $BUNDLE_NAME..."
+set cmd="rm -f $BUNDLE_NAME"
+echo $cmd
+$cmd
+echo $TAR_CMD
+$TAR_CMD || exit(1)
+
+echo "=== makeRelease complete. ==="

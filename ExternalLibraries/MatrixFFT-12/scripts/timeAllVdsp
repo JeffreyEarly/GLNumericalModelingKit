@@ -1,0 +1,21 @@
+#! /bin/csh -f
+#
+# Time all ops, vDSP only
+#
+
+set cmd="mtime1DComplex -V -s 1k -S 1m"
+echo $cmd
+$cmd || exit(1)
+
+set cmd="mtime2DComplex -V -s 32 -S 512"
+echo $cmd
+$cmd || exit(1)
+
+set cmd="mtime1DReal -V -s 1k -S 1m"
+echo $cmd
+$cmd || exit(1)
+
+set cmd="mtime2DReal -V -s 32 -S 1k"
+echo $cmd
+$cmd || exit(1)
+

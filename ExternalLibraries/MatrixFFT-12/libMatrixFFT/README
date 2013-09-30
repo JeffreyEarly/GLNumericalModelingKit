@@ -1,0 +1,149 @@
+                            libMatrixFFT Notes
+                         Last update Nov. 13 2009
+
+This directory contains the MatrixFFT implementation as well as some general
+FFT utilities. MatrixFFT is a set of algorithms based on matrix decomposition used 
+to improve the performance of large-signal FFTs. 
+
+Configuration
+-------------
+
+See Configuration.txt, in the root directory of this project, for information on 
+configuring and porting this library. At the very least you really need to 
+understand and configure the FFT_DOUBLE_PREC and FFT_SPLIT_COMPLEX for your
+application. 
+
+Note that this library is intended to be used on Intel Macs. It runs on PPC-based
+Macs, but there is a fair amount of Intel-specific optimization which cannot be used on 
+PPCs, and there is no corresponding PPC-specific optimization. Performance on PPC is 
+very poor, not to mention the fact the the sizes of the low-level FFTs available on 
+the PPC are very limited, thus in turn limiting the sizes of MatrixFFT operations. 
+
+Also, note that performing FFTs on signals larger than approximately 2^31 *bytes* (e.g. 
+2^27 double-precision complex elements) must be done with 64-bit binaries. However, 
+at least on Mac OS X versions 10.4 and 10.5, the low-level FFTs implemented in 
+Accelerate.framework and used by MatrixFFT are significantly slower in the 64-bit
+versions than the 32-bit versions, by a factor of 2x or more. Thus the 64-bit build
+of MatrixFFT runs considerably slower than the 32-bit build for the same signal
+size for versions of Max OS X prior to 10.6. You should only use 64-bit builds when 
+necessary (due to large signal sizes) or when running Mac OS X 10.6. 
+
+
+Contents
+--------
+
+The public API of the libMatrixFFT is contained in the header files in the 
+libMatrixFFT directory. Contents are as follows:
+
+MatrixFFT.h          -- Primary API for MatrixFFT. See comments there for extensive
+                        usage info.
+MatrixFFTConfig.h    -- Basic configuration flags (see "Configuration", above). 
+complexBuf.h         -- Basic complex data format per FFT_SPLIT_COMPLEX flag. 
+complexBufUtils.h    -- Routines for manipulating complex data. 
+complexChirpSignal.h -- Routines for generating 1-D and 2-D complex chirp signals
+                        and for measuring the accuracy of FFTs performed on them. 
+devRandom.h          -- Simplfied interface to /dev/random, a good source of 
+                        pseudorandom data on the Mac OS X platform. 
+fftConvolve.h        -- API for MatrixFFT-based 2-D real convolution. 
+fftPrecision.h       -- Macros to redirect vDSP-based calls per the FFT_DOUBLE_PREC
+                        configuration flag. 
+fftUtils.h           -- General FFT utility functions. 
+NUFFT.h              -- Public API for Nonuniform FFT.
+real1DTestSignal.h   -- Routines for generating 1-D real test signal and for
+                        measuring the accuracy of FFTs performed on them.
+vdspUtils.h          -- vDSP-specific utility functions. 
+
+
+Implementations and private headers are contained in the libMatrixFFT/src directory.
+Contents are as follows:
+
+FFTEngine.{cpp,h}           -- Abstract superclass for implementation of low-level
+                               FFTs
+FFTEngineVDSP.{cpp,h}       -- FFTEngine implemented with Accelerate.framework
+MatrixFFT.cpp               -- Top-level API functions
+MatrixFFTPlan.h             -- Private MatrixFFTPlan definitions
+NUFFT.cpp                   -- Nonuniform FFT, current best performing implementation.
+NUFFT_Ref.cpp               -- Nonuniform FFT reference implementation and discrete NUDFT.
+NUFFT_Utils.h.{cpp,h}       -- Nonuniform FFT: common routines
+PolyComplex.h               -- Polymorphic complex buffer representation
+TextParser.{cpp,h}          -- General purpose text parser
+ThreadPool.{cpp,h}          -- Persistent thread pool object
+complexBufUtils.cpp         -- Configuration-independent FFTComplex utilities
+complexBufUtilsInt.cpp      -- FFTComplex utilities, interleaved complex version
+complexBufUtilsSplit.cpp    -- FFTComplex utilities, split complex version
+complexChirpSignal.cpp      -- Routines for generating 1-D and 2-D complex chirp
+                               signals and for measuring the accuracy of FFTs performed 
+							   on them.
+devRandom.c                 -- Simplfied interface to /dev/random
+fft1DComplex.cpp            -- 1-D complex FFT
+fft1DComplexTwist.cpp       -- Implementation of 1-D complex "Twist" 
+fft1DReal.cpp               -- 1-D real-signal FFT
+fft1DRealTwist.cpp          -- Implementation of 1-D real-signal "Twist"
+fft2DComplex.cpp            -- 2-D complex FFT
+fft2DReal.cpp               -- 2-D real-signal FFT
+fftConvolveInt.cpp          -- MatrixFFT-based 2-D real convolution, interleaved
+                               complex version
+fftConvolveSplit.cpp        -- MatrixFFT-based 2-D real convolution, split
+                               complex version
+fftDebug.h                  -- debugging macros
+fftEngineDispatch.{cpp,h}   -- high-level interface to FFTEngine mechanism. 
+fftIntel.h                  -- Intel-specific macros and inlines
+fftPriv.{cpp,h}             -- Misc. private routines
+fftSinCos.{cpp,h}           -- Sine/cosine lookup tables
+fftThreadOps.h              -- MatrixFFT-specific ThreadPool #defines and enums
+fftTranspose.h              -- Configuration-independent transposition interface
+fftTransposeIPInt.cpp       -- Square, in-place transpose, interleaved complex
+fftTransposeIPSplit.cpp     -- Square, in-place transpose, split complex
+fftTransposeOPInt.cpp       -- Out-of-place transpose, interleaved complex
+fftTransposeOPSplit.cpp     -- Out-of-place transpose, split complex
+fftUtils.cpp                -- General FFT utility functions
+fileIo.[ch]                 -- Simplified file read/write routines
+real1DTestSignal.cpp        -- Routines for generating 1-D real test signal and for
+                               measuring the accuracy of FFTs performed on them
+vdspUtils.cpp               -- vDSP-specific utility functions
+
+
+A note on threading
+-------------------
+
+All FFT operations performed by MatrixFFT are multithreaded by default. By default, there
+will be one thread per active CPU core on the machine when performing all CPU-intensive
+tasks. You can override this default by specifying a nonzero value numThreads argument when
+calling mfftCreatePlan(). A numThreads of 1 disables threading and causes all work to 
+be performed in main() (or whatever thread calls mfftExecute()). 
+
+The ThreadPool object maintains a pool of pthreads which persist for the lifetime of a 
+MatrixFFTPlan, thus avoiding the latency in starting up new pthreads every time a threaded
+operation is performed. Most FFT algorithms have several such threaded operation; for example
+the 1-D complex FFT has an "FFT all columns" step, and a step which atomically performs a
+twist and FFT of each row. Each of these steps runs with as many threads as currently 
+configured. 
+
+MatrixFFTPlan objects cannot be shared between different application threads - i.e. you can
+only call mfftExecute() on a given MatrixFFTPlan from one thread - but different threads
+can safely use *different* MatrixFFTPlan objects. 
+
+
+Compiling
+---------
+
+The XCode project file accompanying this project has six build configurations:
+
+  Release      -- 3-way Universal (PPC, 32-bit and 64-bit Intel) Deployment
+  Debug        -- 3-way Universal (PPC, 32-bit and 64-bit Intel) Debug
+  x86_64       -- 64-bit X86 Deployment build
+  x86_64 Debug -- 64-bit X86 Debug build
+  i386         -- 32-bit X86 Deployment build
+  i386 Debug   -- 32-bit X86 Debug build
+  
+There are two libraries built from the source in libMatrixFFT: libMatrixFFT.a, which 
+contains the bulk of the code therein; and libNUFFT.a, which contains the Nonuniform
+FFT implementations in NUFFT*.cpp. 
+
+For maximum performance, the libMatrixFFT code should compile with the -Os optimization
+flag, which optimizes for *both* speed and size. At large signal sizes, the performance
+of MatrixFFT is definitely bound by memory bandwidth, and that includes the fetching of 
+text (code). However the NUFFT code is more CPU bound, so it benefits from the slightly 
+faster, though slightly larger, code generated with the -O3 optimization flag. These
+differences are why the NUFFT code is split off into a separate library. (There is no
+way to specify per-file compiler options which differ for different build configurations.)

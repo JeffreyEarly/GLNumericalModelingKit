@@ -1,0 +1,65 @@
+#! /bin/csh -f
+#
+# In a results/summary directory, create TeX output of all interesting results. 
+# Results go to stdout.
+#
+if( $#argv  != 1 ) then
+	echo "Usage: makeTexTables resultsDir"
+	echo "Example:"
+	echo "makeTexTables ../results/baseline"
+	exit(1)
+endif
+
+set SUMM_DIR="$argv[1]/summaries"
+if(! -e $SUMM_DIR) then
+	echo "$SUMM_DIR does not exist. Aborting."
+	exit(1)
+endif
+
+set cmd="cd $SUMM_DIR"
+echo $cmd
+$cmd || exit(1);
+
+set GRTOOL="$LOCAL_BUILD_DIR/fftPlotData"
+
+#
+# 1-D double precision
+#
+echo "========================"
+echo "=== Start 1-D double ==="
+echo "========================"
+$GRTOOL -t "Complex"     Double_IP_Intrlv_Complex1D || exit(1)
+$GRTOOL -t "Real"        Double_IP_Intrlv_Real1D || exit(1)
+
+#
+# 2-D double precision
+#
+echo ""
+echo "========================"
+echo "=== Start 2-D double ==="
+echo "========================"
+
+$GRTOOL -t "Complex"     Double_IP_Intrlv_Complex2D || exit(1)
+$GRTOOL -t "Real"        Double_IP_Intrlv_Real2D || exit(1)
+
+#
+# 1-D single precision
+#
+echo ""
+echo "========================"
+echo "=== Start 1-D single ==="
+echo "========================"
+
+$GRTOOL -t "Complex"     Single_IP_Intrlv_Complex1D || exit(1)
+$GRTOOL -t "Real"        Single_IP_Intrlv_Real1D || exit(1)
+
+#
+# 2-D single precision
+#
+echo ""
+echo "========================"
+echo "=== Start 2-D single ==="
+echo "========================"
+
+$GRTOOL -t "Complex"     Single_IP_Intrlv_Complex2D || exit(1)
+$GRTOOL -t "Real"        Single_IP_Intrlv_Real2D || exit(1)

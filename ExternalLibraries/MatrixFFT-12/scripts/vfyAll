@@ -1,0 +1,331 @@
+#! /bin/csh -f
+#
+# Run MatrixFFT verification tests in a variety of configurations. 
+#
+set QUICK=NO
+set LARGE=NO
+set OPTS=
+set ONE_DIM_ENABLE=YES
+set TWO_DIM_ENABLE=YES
+set COMPLEX_ENABLE=YES
+set REAL_ENABLE=YES
+set CONVOLVE_ENABLE=YES
+set NUFFT_ENABLE=YES
+set LARGE_OPT=
+
+while ( $#argv > 0 )
+    switch ( "$argv[1]" )
+		case -l:
+			set LARGE = YES
+			set LARGE_OPT = "-l"
+            shift
+            breaksw
+		case -q:
+			set QUICK = YES
+            shift
+            breaksw
+		case -T:
+			if($#argv == 1) then
+				echo "Illegal numThreads specification"
+				exit(1)
+			endif
+			set OPTS="$OPTS -T $argv[2]"
+            shift
+            shift
+            breaksw
+		case -1:
+			set TWO_DIM_ENABLE=NO
+            set CONVOLVE_ENABLE=NO
+			shift
+			breaksw
+		case -2:
+			set ONE_DIM_ENABLE=NO
+            set NUFFT_ENABLE=NO
+			shift
+			breaksw
+		case -c:
+			set REAL_ENABLE=NO
+			set CONVOLVE_ENABLE=NO
+			shift
+			breaksw
+		case -r:
+			set COMPLEX_ENABLE=NO
+			set CONVOLVE_ENABLE=NO
+            set NUFFT_ENABLE=NO
+			shift
+			breaksw
+		case -C:
+			set COMPLEX_ENABLE=NO
+			set REAL_ENABLE=NO
+            set NUFFT_ENABLE=NO
+			shift
+			breaksw
+        case -n:
+			set COMPLEX_ENABLE=NO
+			set REAL_ENABLE=NO
+            set CONVOLVE_ENABLE=NO
+			shift
+			breaksw
+            
+		default:
+			echo "Usage: vfyAll [option...]"
+			echo "  Options:"
+			echo "     -l                 -- enable large FFTs"
+			echo "     -q                 -- quick test"
+			echo "     -1                 -- (that is 'one') - 1-D only"
+			echo "     -2                 -- 2-D only"
+			echo "     -c                 -- complex only"
+			echo "     -r                 -- real only"
+			echo "     -C                 -- convolution/correlation only"
+            echo "     -n                 -- NUFFT only"
+			echo "     -T numThreads"
+			exit(1)
+    endsw
+end
+
+# set up quick/large config params
+if($QUICK == YES) then
+	set VFY_1D_MAX=65536
+	set VFY_2D_MAX=128
+else if($LARGE == YES) then
+	set VFY_1D_MAX=16777216
+	set VFY_2D_MAX=16384
+else
+	set VFY_1D_MAX=1048576
+	set VFY_2D_MAX=2048
+endif
+
+if($ONE_DIM_ENABLE == YES) then
+
+	if($COMPLEX_ENABLE == YES) then
+	
+		echo "=== Testing 1-D complex ==="
+
+		# test all four combos: in-place/OOP, transpose via library and manual
+		set VFY_1D_CMD="$LOCAL_BUILD_DIR/mvfy1DComplex $OPTS -S $VFY_1D_MAX"
+
+		echo ""
+		set cmd="$VFY_1D_CMD"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -o"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -m"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -o -m"
+		echo $cmd
+		$cmd || exit(1)
+		
+		# Try a few with manual normalization
+		echo ""
+		set cmd="$VFY_1D_CMD -N"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -o -m -N"
+		echo $cmd
+		$cmd || exit(1)
+        
+		# And a few with MFC_HintTranspose
+		echo ""
+		set cmd="$VFY_1D_CMD -H"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -o -m -H"
+		echo $cmd
+		$cmd || exit(1)
+
+	endif
+	
+	if($REAL_ENABLE == YES) then
+	
+		echo ""
+		echo "=== Testing 1-D real-signal ==="
+
+		# test all four combos: in-place/OOP, transpose via library and manual
+		set VFY_1D_CMD="$LOCAL_BUILD_DIR/mvfy1DReal $OPTS -S $VFY_1D_MAX"
+
+		echo ""
+		set cmd="$VFY_1D_CMD"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -o"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -m"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -o -m"
+		echo $cmd
+		$cmd || exit(1)
+		
+		# Try a few with manual normalization
+		echo ""
+		set cmd="$VFY_1D_CMD -N"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -o -m -N"
+		echo $cmd
+		$cmd || exit(1)
+		
+		# And a few with MFC_HintTranspose
+		echo ""
+		set cmd="$VFY_1D_CMD -H"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_1D_CMD -o -m -H"
+		echo $cmd
+		$cmd || exit(1)
+
+	endif
+
+endif
+
+if($TWO_DIM_ENABLE == YES) then
+
+	if($COMPLEX_ENABLE == YES) then
+		echo ""
+		echo "=== Testing 2-D complex ==="
+
+		# test all four combos: in-place/OOP, transpose via library and manual
+		set VFY_2D_CMD="$LOCAL_BUILD_DIR/mvfy2DComplex $OPTS -S $VFY_2D_MAX"
+
+		echo ""
+		set cmd="$VFY_2D_CMD"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_2D_CMD -o"
+		echo $cmd
+		$cmd || exit(1)
+		
+		echo ""
+		set cmd="$VFY_2D_CMD -m"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_2D_CMD -o -m"
+		echo $cmd
+		$cmd || exit(1)
+		
+		# Try a few with manual normalization
+
+		echo ""
+		set cmd="$VFY_2D_CMD -N"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_2D_CMD -o -m -N"
+		echo $cmd
+		$cmd || exit(1)
+		
+
+	endif
+	
+	if($REAL_ENABLE == YES) then
+		echo ""
+		echo "=== Testing 2-D real-signal ==="
+
+		# test all four combos: in-place/OOP, transpose via library and manual
+		set VFY_2D_CMD="$LOCAL_BUILD_DIR/mvfy2DReal $OPTS -S $VFY_2D_MAX"
+
+		echo ""
+		set cmd="$VFY_2D_CMD"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_2D_CMD -o"
+		echo $cmd
+		$cmd || exit(1)
+		
+		echo ""
+		set cmd="$VFY_2D_CMD -m"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_2D_CMD -o -m"
+		echo $cmd
+		$cmd || exit(1)
+		
+		# Try a few with manual normalization
+
+		echo ""
+		set cmd="$VFY_2D_CMD -N"
+		echo $cmd
+		$cmd || exit(1)
+
+		echo ""
+		set cmd="$VFY_2D_CMD -o -m -N"
+		echo $cmd
+		$cmd || exit(1)
+		
+	endif
+endif
+
+if($CONVOLVE_ENABLE == YES) then
+	echo ""
+	echo "=== Testing 2-D real-signal convolution ==="
+	echo ""
+	
+	set cmd="./vfyFftConvolve $LARGE_OPT"
+	echo $cmd
+	$cmd || exit(1)
+	
+	echo ""
+	echo "=== Testing 2-D real-signal correlation ==="
+	echo ""
+	
+	set cmd="./vfyFftConvolve $LARGE_OPT -C"
+	echo $cmd
+	$cmd || exit(1)
+
+endif
+
+if($NUFFT_ENABLE == YES) then
+    set NUVFY="$LOCAL_BUILD_DIR/vfyNuFft"
+    if($QUICK == YES) then
+        set NU_MAX=1k
+    else if($LARGE == YES) then
+        set NU_MAX=2^16
+    else
+        set NU_MAX=2^13
+    endif
+    
+    # reference and optimized for now 
+    set cmd="$NUVFY -s 64 -S $NU_MAX"
+    echo $cmd
+    $cmd || exit(1)
+
+    set cmd="$NUVFY -s 64 -S $NU_MAX -r"
+    echo $cmd
+    $cmd || exit(1)
+endif
+
+echo ""
+echo "=== MatrixFFT test SUCCEEDED. ==="

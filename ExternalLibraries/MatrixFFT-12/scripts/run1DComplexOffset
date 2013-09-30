@@ -1,0 +1,60 @@
+#! /bin/csh -f
+#
+# Run mtime1DComplex with a range of rectangle offsets.
+# All args passed along to mtime1DComplex.
+#
+set ARGS=
+while ( $#argv > 0 )
+	set ARGS="$ARGS $argv[1]"
+	shift
+end
+
+echo "ARGS = $ARGS"
+
+set cmd="mtime1DComplex $ARGS -O -5"
+echo $cmd
+$cmd || exit(1)
+echo ""
+
+# skip banner from now on
+set ARGS="$ARGS -B"
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O -4"
+$cmd || exit(1)
+echo ""
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O -3"
+$cmd || exit(1)
+echo ""
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O -2"
+$cmd || exit(1)
+echo ""
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O -1"
+$cmd || exit(1)
+echo ""
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O 0"
+$cmd || exit(1)
+echo ""
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O 1"
+$cmd || exit(1)
+echo ""
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O 2"
+$cmd || exit(1)
+echo ""
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O 3"
+$cmd || exit(1)
+echo ""
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O 4"
+$cmd || exit(1)
+echo ""
+
+set cmd="$LOCAL_BUILD_DIR/mtime1DComplex $ARGS -O 5"
+$cmd || exit(1)
+

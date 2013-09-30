@@ -1,0 +1,116 @@
+#
+# Common code for all timeAll* scripts
+#
+set LARGE=NO
+set HUGE=NO
+set QUICK=NO
+set PRECISION=`$LOCAL_BUILD_DIR/getFftConfig -p`
+set COMP_FORM=`$LOCAL_BUILD_DIR/getFftConfig -c`
+set DSTDIR=/tmp
+set CMD_ARGS=
+set FFTW_ENABLE=YES
+set VDSP_ENABLE=YES
+set MFFT_ENABLE=YES
+set COLLATE_ENABLE=YES
+set PLACE_STR=IP
+set PLAN_FLAG=
+
+set LOGFILE=/tmp/timeAllMatrixFFT.log
+set ERR_EXIT=NO
+
+while ( $#argv > 0 )
+    switch ( "$argv[1]" )
+		case -l:
+			set LARGE=YES
+            shift
+            breaksw
+		case -g:
+			set HUGE=YES
+            shift
+            breaksw
+		case -q:
+			set QUICK=YES
+            shift
+            breaksw
+		case -d:
+			if($#argv == 1) then
+				echo "Illegal directory specification"
+				exit(1)
+			endif
+			set DSTDIR="$argv[2]"
+            shift
+            shift
+            breaksw
+		case -o:
+			set CMD_ARGS="$CMD_ARGS -o"
+			set PLACE_STR=OOP
+			shift
+			breaksw
+		case -L:
+			if($#argv == 1) then
+				echo "Illegal loop specification"
+				exit(1)
+			endif
+			set CMD_ARGS="$CMD_ARGS -l $argv[2]"
+            shift
+            shift
+            breaksw
+		case -T:
+			if($#argv == 1) then
+				echo "Illegal numThreads specification"
+				exit(1)
+			endif
+			set CMD_ARGS="$CMD_ARGS -T $argv[2]"
+            shift
+            shift
+            breaksw
+		case -F:
+			set FFTW_ENABLE=NO
+			shift
+			breaksw
+		case -D:
+			set VDSP_ENABLE=NO
+			shift
+			breaksw
+		case -M:
+			set MFFT_ENABLE=NO
+			shift
+			breaksw
+		case -n:
+			set COLLATE_ENABLE=NO
+			shift
+			breaksw
+		case -e:
+			set PLAN_FLAG=-e
+			shift
+			breaksw
+        case -1:
+			set CMD_ARGS="$CMD_ARGS -1"
+			shift
+			breaksw
+		default:
+			echo "Usage: $SCRIPT_NAME [option...]"
+			cat mfftTimeUsage
+			set ERR_EXIT=YES
+			shift
+			breaksw
+    endsw
+end
+
+# 
+# Set up output file names - sourcing script sets $BASE_FILE, e.g. Complex1D.
+# MFFT and summary filenames include the complex format string; vDSP and FFTW 
+# don't.
+#
+set FULL_BASE=${PRECISION}_${PLACE_STR}_${BASE_FILE}
+set FULL_BASE_COMP=${PRECISION}_${PLACE_STR}_${COMP_FORM}_${BASE_FILE}
+set VSDP_FILE=${DSTDIR}/vDSP_${FULL_BASE}
+set FFTW_FILE=${DSTDIR}/FFTW_${FULL_BASE}
+set MFFT_FILE=${DSTDIR}/MFFT_${FULL_BASE_COMP}
+set SUMM_FILE=${DSTDIR}/summaries/${FULL_BASE_COMP}
+
+if(! -e $DSTDIR ) then
+	echo "=== $DSTDIR does not exist. ==="
+	exit(1);
+endif
+mkdir -p $DSTDIR/summaries || exit(1)

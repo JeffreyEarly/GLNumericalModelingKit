@@ -1,0 +1,139 @@
+                          MatrixFFT Project notes
+                          Last Update Oct. 4 2011
+
+Introduction
+------------
+
+This directory contains the MatrixFFT implementation as well as a number of programs
+used to verify the correct operation of MatrixFFT and to measure the performance of
+MatrixFFT, basic Accelerate.framework FFT, and the FFTW library. MatrixFFT is 
+a set of algorithms based on matrix decomposition used to improve the performance
+of large-signal FFTs. 
+
+Discussions of the algorithms implemented herein, as well as measurements of 
+performance of this software, are described in "Large-scale FFTs and convolutions 
+on Apple hardware" available here:
+           http://images.apple.com/acg/pdf/FFTapps.pdf
+
+A variety of styles of FFT are performed, including
+
+-- Single- and double-precision
+-- Real and complex signal
+-- One- and two-dimension
+
+All 8 combinations of these 'bits' can be performed with all of the FFT  
+implementations.
+
+
+MatrixFFT Implementation
+------------------------
+
+The implementation of MatrixFFT is found in libMatrixFFT/. See the README in that
+directory for more information on usage and implementation details. 
+
+Building
+--------
+
+An XCode project file, MatrixFFT.xcodeproj, is provided for building all of the 
+code herein except for the 'C" and Fortran sample code. 
+
+Target 'World' builds all of the libraries and programs except the FFTW-based 
+binaries. Target "World Plus FFTW" also builds the FFTW-based binaries. To
+build the FFTW-based binaries, you need to have FFTW installed on your system;
+follow the instructions in any of the source code files comprising those programs
+to obtain, configure, build, and install FFTW on your machine.
+   
+  Release      -- 3-way Universal (PPC, 32-bit and 64-bit Intel) Deployment
+  Debug        -- 3-way Universal (PPC, 32-bit and 64-bit Intel) Debug
+  x86_64       -- 64-bit X86 Deployment build
+  x86_64 Debug -- 64-bit X86 Debug build
+  i386         -- 32-bit X86 Deployment build
+  i386 Debug   -- 32-bit X86 Debug build
+
+The 64-bit and 32-bit "only" configurations are needed when compiling the FFTW
+programs; the FFTW library does not build "fat". Also it builds differently by
+default depending on what OS you are running: currently, on Leopard (Mac OS 10.5) 
+and previous systems, the compiler builds 32-bit by default. On Snow Leopard
+(10.6) and later, the default is to build 64-bit if the host machine is 64-bit
+capable. 
+
+To install binaries and headers for the MatrixFFT library so that they can be 
+used by external programs, use the xcodebuild command line program, run as root, 
+as follows:
+
+  # /usr/bin/xcodebuild install DSTROOT=/
+  
+That places the MatrixFFT library binary in /usr/local/lib/libMatrixFFT.a and 
+the associated public headers in /usr/local/include/libMatrixFFT/*.h. Note that
+the binaries produced by this operation are 3-way fat. 
+
+'C" and Fortran sample programs are built via Makefiles in their respective directories.
+
+
+Contents
+--------
+
+MatrixFFT.xcodeproj        -- Xcode project file
+libMatrixFFT/              -- MatrixFFT implementation. See README therein.
+m1DComplexChirp/           -- Measure RMSE and chirp errors for 1-D complex
+                              signals using MatrixFFT.
+m1DRealTestSignal/         -- Measure RMSE 1-D real signals using MatrixFFT.
+m2DComplexChirp/           -- Measure RMSE and chirp errors for 2-D complex
+                              signals using MatrixFFT.
+mtime1DComplex/            -- Time 1-D complex FFT using vDSP and MatrixFFT.
+mtime2DComplex/            -- Time 2-D complex FFT using vDSP and MatrixFFT.
+mtime1DReal/               -- Time 1-D real FFT using vDSP and MatrixFFT.
+mtime2DReal/               -- Time 2-D real FFT using vDSP and MatrixFFT.
+mvfy1DComplex/             -- Verify proper operation of 1-D complex FFT.
+mvfy2DComplex/             -- Verify proper operation of 2-D complex FFT.
+mvfy1DReal/                -- Verify proper operation of 1-D real FFT.
+mvfy2DReal/                -- Verify proper operation of 2-D real FFT.
+mvfyConvolve/              -- Verify proper operation of 2-D real convolution via
+                              MatrixFFT-based FFT.
+mtimeFftConvolve/          -- Time 2-D real convolution via MatrixFFT-based FFT.
+vimageConvTime/            -- Time 2-D real convolution via Accelerate.framework.
+tools/                     -- Misc. utility programs.
+   compareFFT/             -- Collates outputs of various programs. 
+   fftPlotData/            -- Converts output of compareFFT to PDF graphs. 
+scripts/                   -- Scripts to run above binaries for measuring 
+                              performance and verifying proper operation. See 
+                              README therein.
+fftw/                      -- FFTW-based tests
+   libFftwUtils/           -- FFTW-specific utilities
+   fftwTime1D/             -- Measure performance of 1-D real and complex FFTs
+   fftwTime2D/             -- Measure performance of 2-D real and complex FFTs
+cExamples/                 -- Sample code illustrating use of MatrixFFT with 
+                              standard ANSI C code. See README therein for more info.
+fortran/                   -- Example of wrapper to allow calling of MatrixFFT from
+                              Fortran code. See README therein for more info.
+
+All programs are UNIX command-line tools. Run any program with an "-h" argument
+to get usage information. Each program has its source in a separate directory,
+and a separate Xcode group, each with the same name as the program. 
+
+
+Porting and Configuration
+-------------------------
+
+See Configuration.txt and libMatrixFFT/README for information on configuration and 
+porting this package.
+
+
+Revision History
+-----------------
+
+    Date         Version       Changes
+------------  ------------  ------------------------------------
+Oct.  4 2011   MatrixFFT-12 FFT_PLATFORM config flag can now also be specified
+                                by compiler. 
+                            Tweaks for Xcode 4.1.
+May   4 2011   MatrixFFT-10 Added raw vDSP mode to all FFT ops.
+                            Allow config flags to be specified by compiler.
+Nov. 24 2009   MatrixFFT-9  Added auto-configuration. 
+Nov.  4 2009   MatrixFFT-8  Added Fortran and 'C' sample code.
+                            Added #include <stdbool.h> as needed for use in standard
+                                ANSI C programs.
+Oct. 12 2009   MatrixFFT-7  Added installation mechanism. 
+                            Added Fortran shim for 1-D complex FFT.
+Sep.  8 2009   MatrixFFT-6  Optimizations for Nehalem platform. 
+Mar. 23 2009   MatrixFFT-5  Initial distribution of source code. 

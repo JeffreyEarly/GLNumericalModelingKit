@@ -1,0 +1,346 @@
+cdf4.lo cdf4.o: cdf4.c ../config.h ncdap4.h /usr/include/stdlib.h \
+  /usr/include/Availability.h /usr/include/AvailabilityInternal.h \
+  /usr/include/_types.h /usr/include/sys/_types.h \
+  /usr/include/sys/cdefs.h /usr/include/machine/_types.h \
+  /usr/include/i386/_types.h /usr/include/sys/wait.h \
+  /usr/include/sys/signal.h /usr/include/sys/appleapiopts.h \
+  /usr/include/machine/signal.h /usr/include/i386/signal.h \
+  /usr/include/i386/_structs.h /usr/include/sys/_structs.h \
+  /usr/include/machine/_structs.h /usr/include/mach/i386/_structs.h \
+  /usr/include/sys/resource.h /usr/include/machine/endian.h \
+  /usr/include/i386/endian.h /usr/include/sys/_endian.h \
+  /usr/include/libkern/_OSByteOrder.h \
+  /usr/include/libkern/i386/_OSByteOrder.h /usr/include/alloca.h \
+  /usr/include/machine/types.h /usr/include/i386/types.h \
+  /usr/include/i386/_types.h /usr/include/unistd.h \
+  /usr/include/sys/unistd.h /usr/include/sys/select.h \
+  /usr/include/sys/_select.h /usr/include/fcntl.h \
+  /usr/include/sys/fcntl.h /usr/include/sys/stat.h /usr/include/string.h \
+  /usr/include/secure/_string.h /usr/include/secure/_common.h \
+  /usr/include/stdio.h /usr/include/secure/_stdio.h \
+  ../libdispatch/ncbytes.h ../include/nclist.h ../libncdap3/nchashmap.h \
+  ../include/nclist.h ../include/netcdf.h \
+  /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stddef.h \
+  /usr/include/errno.h /usr/include/sys/errno.h ../include/ncdispatch.h \
+  ../config.h /usr/include/assert.h ../include/netcdf.h ../include/nc.h \
+  ../config.h /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stdint.h \
+  /usr/include/sys/types.h ../include/netcdf.h ../include/ncio.h \
+  ../include/fbits.h ../include/nc_url.h ../include/nclist.h \
+  ../libsrc4/nc4internal.h /usr/include/ctype.h /usr/include/runetype.h \
+  /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stdarg.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/hdf5.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5public.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5pubconf.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5version.h \
+  /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/limits.h \
+  /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/syslimits.h \
+  /usr/include/limits.h /usr/include/machine/limits.h \
+  /usr/include/i386/limits.h /usr/include/i386/_limits.h \
+  /usr/include/sys/syslimits.h /usr/include/inttypes.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5api_adpt.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Apublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Ipublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Opublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Lpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Tpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5ACpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Cpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Dpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Epublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Epubgen.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Fpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Gpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5MMpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Ppublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Zpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Rpublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Spublic.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDcore.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDfamily.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDlog.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDmpi.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDmpio.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDmpiposix.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDmulti.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDsec2.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDstdio.h \
+  /Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDdirect.h \
+  ../include/ncdimscale.h ../include/nc_logging.h ../include/netcdf_f.h \
+  ../include/nc.h ../oc/oc.h ../oc/dapurl.h ../libncdap3/nccommon.h \
+  ../libncdap3/ncdap3.h ../libdispatch/ncbytes.h ../libncdap3/nchashmap.h \
+  ../oc/oc.h ../oc/dapurl.h ../include/nc.h ../include/ncdispatch.h \
+  ../libncdap3/dapnc.h ../libncdap3/dapdebug.h ../libncdap3/daputil.h \
+  ../libncdap3/nccommon.h ../libncdap3/getvara.h \
+  ../libncdap3/constraints3.h ../libncdap3/dapdebug.h \
+  ../libncdap3/daputil.h ../libncdap3/getvara.h \
+  ../libncdap3/constraints3.h constraints4.h ../libncdap3/dapalign.h \
+  ../libncdap3/dapdump.h
+
+../config.h:
+
+ncdap4.h:
+
+/usr/include/stdlib.h:
+
+/usr/include/Availability.h:
+
+/usr/include/AvailabilityInternal.h:
+
+/usr/include/_types.h:
+
+/usr/include/sys/_types.h:
+
+/usr/include/sys/cdefs.h:
+
+/usr/include/machine/_types.h:
+
+/usr/include/i386/_types.h:
+
+/usr/include/sys/wait.h:
+
+/usr/include/sys/signal.h:
+
+/usr/include/sys/appleapiopts.h:
+
+/usr/include/machine/signal.h:
+
+/usr/include/i386/signal.h:
+
+/usr/include/i386/_structs.h:
+
+/usr/include/sys/_structs.h:
+
+/usr/include/machine/_structs.h:
+
+/usr/include/mach/i386/_structs.h:
+
+/usr/include/sys/resource.h:
+
+/usr/include/machine/endian.h:
+
+/usr/include/i386/endian.h:
+
+/usr/include/sys/_endian.h:
+
+/usr/include/libkern/_OSByteOrder.h:
+
+/usr/include/libkern/i386/_OSByteOrder.h:
+
+/usr/include/alloca.h:
+
+/usr/include/machine/types.h:
+
+/usr/include/i386/types.h:
+
+/usr/include/i386/_types.h:
+
+/usr/include/unistd.h:
+
+/usr/include/sys/unistd.h:
+
+/usr/include/sys/select.h:
+
+/usr/include/sys/_select.h:
+
+/usr/include/fcntl.h:
+
+/usr/include/sys/fcntl.h:
+
+/usr/include/sys/stat.h:
+
+/usr/include/string.h:
+
+/usr/include/secure/_string.h:
+
+/usr/include/secure/_common.h:
+
+/usr/include/stdio.h:
+
+/usr/include/secure/_stdio.h:
+
+../libdispatch/ncbytes.h:
+
+../include/nclist.h:
+
+../libncdap3/nchashmap.h:
+
+../include/nclist.h:
+
+../include/netcdf.h:
+
+/usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stddef.h:
+
+/usr/include/errno.h:
+
+/usr/include/sys/errno.h:
+
+../include/ncdispatch.h:
+
+../config.h:
+
+/usr/include/assert.h:
+
+../include/netcdf.h:
+
+../include/nc.h:
+
+../config.h:
+
+/usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stdint.h:
+
+/usr/include/sys/types.h:
+
+../include/netcdf.h:
+
+../include/ncio.h:
+
+../include/fbits.h:
+
+../include/nc_url.h:
+
+../include/nclist.h:
+
+../libsrc4/nc4internal.h:
+
+/usr/include/ctype.h:
+
+/usr/include/runetype.h:
+
+/usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stdarg.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/hdf5.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5public.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5pubconf.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5version.h:
+
+/usr/lib/gcc/i686-apple-darwin10/4.2.1/include/limits.h:
+
+/usr/lib/gcc/i686-apple-darwin10/4.2.1/include/syslimits.h:
+
+/usr/include/limits.h:
+
+/usr/include/machine/limits.h:
+
+/usr/include/i386/limits.h:
+
+/usr/include/i386/_limits.h:
+
+/usr/include/sys/syslimits.h:
+
+/usr/include/inttypes.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5api_adpt.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Apublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Ipublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Opublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Lpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Tpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5ACpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Cpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Dpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Epublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Epubgen.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Fpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Gpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5MMpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Ppublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Zpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Rpublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5Spublic.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDcore.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDfamily.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDlog.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDmpi.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDmpio.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDmpiposix.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDmulti.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDsec2.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDstdio.h:
+
+/Users/jearly/Documents/Projects/Single_Layer_PV_Modeling/GLNumericalModelingKit/GLNumericalModelingKit/ExternalLibraries/hdf5-1.8.6-macosx64-static/include/H5FDdirect.h:
+
+../include/ncdimscale.h:
+
+../include/nc_logging.h:
+
+../include/netcdf_f.h:
+
+../include/nc.h:
+
+../oc/oc.h:
+
+../oc/dapurl.h:
+
+../libncdap3/nccommon.h:
+
+../libncdap3/ncdap3.h:
+
+../libdispatch/ncbytes.h:
+
+../libncdap3/nchashmap.h:
+
+../oc/oc.h:
+
+../oc/dapurl.h:
+
+../include/nc.h:
+
+../include/ncdispatch.h:
+
+../libncdap3/dapnc.h:
+
+../libncdap3/dapdebug.h:
+
+../libncdap3/daputil.h:
+
+../libncdap3/nccommon.h:
+
+../libncdap3/getvara.h:
+
+../libncdap3/constraints3.h:
+
+../libncdap3/dapdebug.h:
+
+../libncdap3/daputil.h:
+
+../libncdap3/getvara.h:
+
+../libncdap3/constraints3.h:
+
+constraints4.h:
+
+../libncdap3/dapalign.h:
+
+../libncdap3/dapdump.h:
