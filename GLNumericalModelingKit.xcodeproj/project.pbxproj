@@ -745,8 +745,8 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"/Users/jearly/Documents/PrepareForGithub/GLNumericalModelingKit/ExternalLibraries/fftw/single-precision",
-					/Users/jearly/Documents/PrepareForGithub/GLNumericalModelingKit/ExternalLibraries,
+					"$(SRCROOT)/ExternalLibraries/fftw/single-precision",
+					"$(SRCROOT)/ExternalLibraries",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -766,8 +766,8 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"/Users/jearly/Documents/PrepareForGithub/GLNumericalModelingKit/ExternalLibraries/fftw/single-precision",
-					/Users/jearly/Documents/PrepareForGithub/GLNumericalModelingKit/ExternalLibraries,
+					"$(SRCROOT)/ExternalLibraries/fftw/single-precision",
+					"$(SRCROOT)/ExternalLibraries",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
