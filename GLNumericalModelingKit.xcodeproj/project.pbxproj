@@ -48,7 +48,7 @@
 		8157ADD817F9FCDB002A6ED6 /* GLIntegrationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADBA17F9FCDB002A6ED6 /* GLIntegrationOperations.m */; };
 		8157ADD917F9FCDB002A6ED6 /* GLRungeKuttaOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBB17F9FCDB002A6ED6 /* GLRungeKuttaOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADDA17F9FCDB002A6ED6 /* GLRungeKuttaOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADBC17F9FCDB002A6ED6 /* GLRungeKuttaOperation.m */; };
-		8157ADDB17F9FCDB002A6ED6 /* GLOperationOptimizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBD17F9FCDB002A6ED6 /* GLOperationOptimizer.h */; };
+		8157ADDB17F9FCDB002A6ED6 /* GLOperationOptimizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBD17F9FCDB002A6ED6 /* GLOperationOptimizer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADDC17F9FCDB002A6ED6 /* GLOperationOptimizer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADBE17F9FCDB002A6ED6 /* GLOperationOptimizer.m */; };
 		8157ADDD17F9FCDB002A6ED6 /* GLOperationVisualizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBF17F9FCDB002A6ED6 /* GLOperationVisualizer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADDE17F9FCDB002A6ED6 /* GLOperationVisualizer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADC017F9FCDB002A6ED6 /* GLOperationVisualizer.m */; };
@@ -484,12 +484,12 @@
 				8157ADD717F9FCDB002A6ED6 /* GLIntegrationOperations.h in Headers */,
 				8157ADCD17F9FCDB002A6ED6 /* GLBasisTransformationOperations.h in Headers */,
 				8157AE0417F9FDA7002A6ED6 /* GLDifferentialOperator.h in Headers */,
+				8157ADDB17F9FCDB002A6ED6 /* GLOperationOptimizer.h in Headers */,
 				8157AD6017F9FC36002A6ED6 /* GLVariable.h in Headers */,
 				8157ADCB17F9FCDB002A6ED6 /* GLVectorVectorOperations.h in Headers */,
 				8157AE1C17F9FDEB002A6ED6 /* GLLowLevelNetCDF.h in Headers */,
 				8157AE1817F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.h in Headers */,
 				8157ADC917F9FCDB002A6ED6 /* GLVectorScalarOperations.h in Headers */,
-				8157ADDB17F9FCDB002A6ED6 /* GLOperationOptimizer.h in Headers */,
 				8157ADFE17F9FD66002A6ED6 /* GLOpenCLFourierTransform.h in Headers */,
 				8157ADF617F9FD5E002A6ED6 /* GLMatrixFourierTransform.h in Headers */,
 				8157AE1A17F9FDEB002A6ED6 /* GLNetCDFConcatenationOperation.h in Headers */,
@@ -749,6 +749,7 @@
 					"$(SRCROOT)/ExternalLibraries",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PUBLIC_HEADERS_FOLDER_PATH = /usr/local/include/GLNumericalModelingKit;
 			};
 			name = Debug;
 		};
@@ -770,6 +771,7 @@
 					"$(SRCROOT)/ExternalLibraries",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PUBLIC_HEADERS_FOLDER_PATH = /usr/local/include/GLNumericalModelingKit;
 			};
 			name = Release;
 		};
