@@ -232,7 +232,7 @@
 	
 	if ( self.bottomVariables.count == 1 && self.topVariables.count == 1)
 	{		
-		NSHashTable *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
+		NSMutableArray *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
 		NSMapTable *parallelExecutionBlocks = [self parallelResponsibilitiesForOperation: (GLVariableOperation *) self];
 		if (groups.count != 0) {
 			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
@@ -243,9 +243,9 @@
 		
 		// All five of these objects will be copied/referenced by the block.
 		dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-		NSHashTable *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
+		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
 		dispatch_group_t bottomGroup = self.bottomVariableGroup;
-		NSHashTable *allGroups = [self allGroups];
+		NSMutableArray *allGroups = [self allGroups];
 		NSArray *internalDataBuffers = self.internalDataBuffers;
 		
 		unaryOperation aBlock = ^(NSMutableData *bottomResult, NSData *topOperand) {			
@@ -291,7 +291,7 @@
 	
 	if ( self.bottomVariables.count == 1 && self.topVariables.count == 2)
 	{		
-		NSHashTable *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
+		NSMutableArray *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
 		NSMapTable *parallelExecutionBlocks = [self parallelResponsibilitiesForOperation: (GLVariableOperation *) self];
 		if (groups.count != 0) {
 			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
@@ -302,9 +302,9 @@
 		
 		// All five of these objects will be copied/referenced by the block.
 		dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-		NSHashTable *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
+		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
 		dispatch_group_t bottomGroup = self.bottomVariableGroup;
-		NSHashTable *allGroups = [self allGroups];
+		NSMutableArray *allGroups = [self allGroups];
 		NSArray *internalDataBuffers = self.internalDataBuffers;
 		
 		binaryOperation aBlock = ^(NSMutableData *bottomResult, NSData *firstOperand, NSData *secondOperand) {			
@@ -352,7 +352,7 @@
 	
 	if ( self.bottomVariables.count && self.topVariables.count )
 	{		
-		NSHashTable *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
+		NSMutableArray *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
 		NSMapTable *parallelExecutionBlocks = [self parallelResponsibilitiesForOperation: (GLVariableOperation *) self];
 		if (groups.count != 0) {
 			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
@@ -363,9 +363,9 @@
 		
 		// All five of these objects will be copied/referenced by the block.
 		dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-		NSHashTable *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
+		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
 		dispatch_group_t bottomGroup = self.bottomVariableGroup;
-		NSHashTable *allGroups = [self allGroups];
+		NSMutableArray *allGroups = [self allGroups];
 		NSArray *internalDataBuffers = self.internalDataBuffers;
 				
 		unaryVectorOperation aBlock = ^(NSArray *bottomBuffers, NSArray *topBuffers) {
@@ -743,30 +743,30 @@
 
 - (void) addGroupResponsibility: (dispatch_group_t) aGroup forOperation: (GLVariableOperation *) operation
 {
-	NSHashTable *array = [self.operationGroupArrayMap objectForKey: operation];
+	NSMutableArray *array = [self.operationGroupArrayMap objectForKey: operation];
 	if (!array) {
-		array = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
+		array = [NSMutableArray array];
 		[self.operationGroupArrayMap setObject: array forKey: operation];
 	}
 	
 	[array addObject: aGroup];
 }
 
-- (NSHashTable *) groupResponsibilitiesForOperation: (GLVariableOperation *) operation
+- (NSMutableArray *) groupResponsibilitiesForOperation: (GLVariableOperation *) operation
 {
-	NSHashTable *array = [self.operationGroupArrayMap objectForKey: operation];
+	NSMutableArray *array = [self.operationGroupArrayMap objectForKey: operation];
 	if (!array) {
-		return [NSArray array];
+		return [NSMutableArray array];
 	}
 	
 	return array;
 }
 
-- (NSHashTable *) allGroups
+- (NSMutableArray *) allGroups
 {
-	NSHashTable *allGroups = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
+	NSMutableArray *allGroups = [NSMutableArray array];
 	for ( GLVariable *variable in self.operationGroupArrayMap ) {
-		[allGroups unionHashTable: [self.operationGroupArrayMap objectForKey: variable]];
+		[allGroups addObjectsFromArray: [self.operationGroupArrayMap objectForKey: variable]];
 	}
 		
 	return allGroups;
@@ -774,20 +774,20 @@
 
 - (void) addSerialResponsibility: (executionBlock) aBlock forOperation: (GLVariableOperation *) operation
 {
-	NSHashTable *array = [self.operationSerialDependencyBlockArrayMap objectForKey: operation];
+	NSMutableArray *array = [self.operationSerialDependencyBlockArrayMap objectForKey: operation];
 	if (!array) {
-		array = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
+		array = [NSMutableArray array];
 		[self.operationSerialDependencyBlockArrayMap setObject: array forKey: operation];
 	}
 	
 	[array addObject: [aBlock copy]];
 }
 
-- (NSHashTable *) serialResponsibilitiesForOperation: (GLVariableOperation *) operation
+- (NSMutableArray *) serialResponsibilitiesForOperation: (GLVariableOperation *) operation
 {
-	NSHashTable *array = [self.operationSerialDependencyBlockArrayMap objectForKey: operation];
+	NSMutableArray *array = [self.operationSerialDependencyBlockArrayMap objectForKey: operation];
 	if (!array) {
-		return [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
+		return [NSMutableArray array];
 	}
 	
 	return array;
@@ -797,7 +797,7 @@
 {
 	NSMapTable *mapTable = [self.operationParallelDependencyBlockArrayMap objectForKey: operation];
 	if (!mapTable) {
-		mapTable = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
+		mapTable = [NSMapTable strongToStrongObjectsMapTable];
 		[self.operationParallelDependencyBlockArrayMap setObject: mapTable forKey: operation];
 	}
 	
@@ -808,7 +808,7 @@
 {
 	NSMapTable *mapTable = [self.operationParallelDependencyBlockArrayMap objectForKey: operation];
 	if (!mapTable) {
-		mapTable = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
+		mapTable = [NSMapTable strongToStrongObjectsMapTable];
 	}
 	
 	return mapTable;
@@ -818,8 +818,8 @@
 	GLVariableOperation * operation = (GLVariableOperation *) self;
 	
 	// If this test passes, then it means we're ready to construct the actual planBlock that needs to be run
-	NSHashTable *groups = [self groupResponsibilitiesForOperation: operation];
-	NSHashTable *serialExecutionBlocks = [self serialResponsibilitiesForOperation: operation];
+	NSMutableArray *groups = [self groupResponsibilitiesForOperation: operation];
+	NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: operation];
 	NSMapTable *parallelExecutionBlocks = [self parallelResponsibilitiesForOperation: operation];
 	
 	// The executionBlock for this operation will only be created when it has the expected number
@@ -880,8 +880,8 @@
 	if (!executionBlockAlreadyCreated)
 	{
 		// If this test passes, then it means we're ready to construct the actual planBlock that needs to be run
-		NSHashTable *groups = [self groupResponsibilitiesForOperation: operation];
-		NSHashTable *serialExecutionBlocks = [self serialResponsibilitiesForOperation: operation];
+		NSMutableArray *groups = [self groupResponsibilitiesForOperation: operation];
+		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: operation];
 		NSMapTable *parallelExecutionBlocks = [self parallelResponsibilitiesForOperation: operation];
 		
 		// The executionBlock for this operation will only be created when it has the expected number

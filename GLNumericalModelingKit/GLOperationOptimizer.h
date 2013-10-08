@@ -158,11 +158,11 @@ typedef void (^executionBlock)(NSArray *);
 - (void) addParallelResponsibility: (executionBlock) aBlock withGroup: (dispatch_group_t) aGroup forOperation: (GLVariableOperation *) operation;
 - (void) addGroupResponsibility: (dispatch_group_t) aGroup forOperation: (GLVariableOperation *) operation;
 
-- (NSHashTable *) serialResponsibilitiesForOperation: (GLVariableOperation *) operation;
+- (NSMutableArray *) serialResponsibilitiesForOperation: (GLVariableOperation *) operation;
 - (NSMapTable *) parallelResponsibilitiesForOperation: (GLVariableOperation *) operation;
-- (NSHashTable *) groupResponsibilitiesForOperation: (GLVariableOperation *) operation;
+- (NSMutableArray *) groupResponsibilitiesForOperation: (GLVariableOperation *) operation;
 
-- (NSHashTable *) allGroups;
+- (NSMutableArray *) allGroups;
 
 @property NSHashTable *finishedOperations;
 @property NSMapTable *operationGroupArrayMap;
