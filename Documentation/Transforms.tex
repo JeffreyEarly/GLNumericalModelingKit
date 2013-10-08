@@ -81,7 +81,7 @@ There are a standard collection of grids that are used, some of which are well s
 
 Note that the Chebyshev grids are monotonically \emph{decreasing}, a necessary choice given the fast cosine transformation implementations provided by FFTW.
 
-Let's say we as for a grid with min 0, max 12---with four points. An endpoint grid, creates points at 0,4,8,12. An interior grid creates points at 1.5, 4.5, 7.5, 10.5. A periodic grid creates points at 0, 3, 6, 9.
+Let's say we as for a grid with min 0, max 12---with four points. An endpoint grid, creates points at 0,4,8,12. An interior grid creates points at 1.5, 4.5, 7.5, 10.5. A periodic grid creates points at 0, 3, 6, 9. A Chebyshev endpoint grid creates points at 12, 9, 3, 0. A Chebyshev interior grid creates points at 11.543277195067720, 8.296100594190539, 3.703899405809461, 0.456722804932280.
 
 \subsection{Periodicity}
 

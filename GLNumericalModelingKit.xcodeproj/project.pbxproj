@@ -205,6 +205,9 @@
 		8157AE3517FA132A002A6ED6 /* GLSpectralDifferentialOperatorPool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLSpectralDifferentialOperatorPool.m; sourceTree = "<group>"; };
 		8157AE3617FA132A002A6ED6 /* GLSpectralMatrices.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLSpectralMatrices.h; sourceTree = "<group>"; };
 		8157AE3717FA132A002A6ED6 /* GLSpectralMatrices.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = GLSpectralMatrices.c; sourceTree = "<group>"; };
+		81CCB0CC18049EB90064471F /* Optimizer.tex */ = {isa = PBXFileReference; lastKnownFileType = text; name = Optimizer.tex; path = Documentation/Optimizer.tex; sourceTree = "<group>"; };
+		81CCB0CD18049EB90064471F /* Transforms.tex */ = {isa = PBXFileReference; lastKnownFileType = text; name = Transforms.tex; path = Documentation/Transforms.tex; sourceTree = "<group>"; };
+		81CCB0CE18049EC60064471F /* NewModel.markdown */ = {isa = PBXFileReference; lastKnownFileType = text; name = NewModel.markdown; path = Documentation/NewModel.markdown; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -244,6 +247,7 @@
 				8157AD2A17F9FB8D002A6ED6 /* GLNumericalModelingKitTests */,
 				8157AD1217F9FB8D002A6ED6 /* Frameworks */,
 				8157AD1117F9FB8D002A6ED6 /* Products */,
+				81CCB0CB18049E9B0064471F /* Documentation */,
 			);
 			sourceTree = "<group>";
 		};
@@ -457,6 +461,16 @@
 				8157AE1317F9FDEB002A6ED6 /* GLLowLevelNetCDF.m */,
 			);
 			name = NetCDF;
+			sourceTree = "<group>";
+		};
+		81CCB0CB18049E9B0064471F /* Documentation */ = {
+			isa = PBXGroup;
+			children = (
+				81CCB0CC18049EB90064471F /* Optimizer.tex */,
+				81CCB0CD18049EB90064471F /* Transforms.tex */,
+				81CCB0CE18049EC60064471F /* NewModel.markdown */,
+			);
+			name = Documentation;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
