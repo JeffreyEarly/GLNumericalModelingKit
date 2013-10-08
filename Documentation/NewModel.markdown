@@ -17,6 +17,4 @@ Steps to make a new application based on GLNumericalModelingKit
 
 8. Add the workspace file to the local repository, `git add workspacename.xcworkspace`, then commit the local changes, `git commit -m 'some message'`.
 
-9. Upload those changes to github (or where ever), using the standard methods.
-	git remote add github https://github.com/username/Hello-World.git
-	git push github master
+9. Upload those changes to github (or where ever), using the standard methods. `git remote add github https://github.com/username/Hello-World.git` followed by `git push github master`.
