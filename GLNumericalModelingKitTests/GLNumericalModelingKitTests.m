@@ -29,6 +29,14 @@
     [super tearDown];
 }
 
+/************************************************/
+/*		Grid Tests								*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Grid Tests
+#pragma mark
+
 - (void) testEndpointGrid
 {
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 4 domainMin: 0.0 length: 12.0];
@@ -89,23 +97,162 @@
 	}
 }
 
+/************************************************/
+/*		Algebriac Vector-Scalar Tests			*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Algebriac Vector-Scalar Tests
+#pragma mark
+
+- (void)testVectorScalarMultiplication
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:0.0 length:4.0];
+	GLVariable *var = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	
+	GLVariable *result = [var scalarMultiply: 2.0];
+	[result solve];
+	GLFloat *output = result.pointerValue;
+	
+	GLFloat expected[4] = {0.0, 2.0, 4.0, 6.0};
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
 - (void)testVectorScalarAddition
 {
 	GLEquation *equation = [[GLEquation alloc] init];
-	GLDimension *xDim = [GLDimension dimensionXWithNPoints:4 length: 2.0];
-	GLVariable *a = [GLVariable variableOfRealTypeWithDimensions: @[xDim] forEquation:equation];
-	[a zero];
+	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:0.0 length:4.0];
+	GLVariable *var = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
-	GLVariable *b = [a scalarAdd: 1.0];
-	[b solve];
+	GLVariable *result = [var scalarAdd: 1.0];
+	[result solve];
+	GLFloat *output = result.pointerValue;
 	
-	BOOL isTrue = 1;
-	for (NSUInteger i=0; i<xDim.nPoints; i++) {
-		isTrue &= (b.pointerValue[i] == 1.);
+	GLFloat expected[4] = {1.0, 2.0, 3.0, 4.0};
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
 	}
-	
-    XCTAssertTrue( isTrue, @"No implementation for \"%s\"", __PRETTY_FUNCTION__);
 }
+
+- (void)testVectorScalarDivisionCaseI
+{
+	// Case I: real vector (real variable type). Testing 1.0/(1, 2, 3, 4)
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
+	GLVariable *var = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	
+	GLVariable *result = [var scalarDivide: 1.0];
+	[result solve];
+	GLFloat *output = result.pointerValue;
+	
+	GLFloat expected[4] = {1.0/1.0, 1.0/2.0, 1.0/3.0, 1.0/4.0};
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
+- (void)testVectorScalarDivisionCaseII
+{
+	// Case II: real vector (complex variable type). Testing 1.0/(1, 2, 3, 4)
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
+	GLVariable *var = [GLVariable variableOfComplexTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	
+	GLVariable *result = [var scalarDivide: 1.0];
+	[result solve];
+	GLSplitComplex output = result.splitComplex;
+	
+	GLFloat expected_realp[4] = {1.0/1.0, 1.0/2.0, 1.0/3.0, 1.0/4.0};
+	GLFloat expected_imagp[4] = {0.0, 0.0, 0.0, 0.0};
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output.realp[i], expected_realp[i]) || !fequal(output.imagp[i], expected_imagp[i]) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_realp[i], expected_imagp[i], output.realp[i], output.imagp[i]);
+		}
+	}
+}
+
+- (void)testVectorScalarDivisionCaseIII
+{
+	// Case III: imaginary vector (complex variable type). Testing 1.0/(I*(1, 2, 3, 4))
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
+	GLVariable *var = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	
+	GLVariable *result = [[var swapComplex] scalarDivide: 1.0];
+	[result solve];
+	GLSplitComplex output = result.splitComplex;
+	
+	GLFloat expected_realp[4] = {0.0, 0.0, 0.0, 0.0};
+	GLFloat expected_imagp[4] = {-1.0/1.0, -1.0/2.0, -1.0/3.0, -1.0/4.0};
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output.realp[i], expected_realp[i]) || !fequal(output.imagp[i], expected_imagp[i]) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_realp[i], expected_imagp[i], output.realp[i], output.imagp[i]);
+		}
+	}
+}
+
+- (void)testVectorScalarDivisionCaseIV
+{
+	// Case III: imaginary vector (complex variable type). Testing 1.0/(1+I*1, 2+I*2, 3+I*3, 4+I*4)
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
+	GLVariable *var = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	
+	GLVariable *result = [[var plus: [var swapComplex]] scalarDivide: 1.0];
+	[result solve];
+	GLSplitComplex output = result.splitComplex;
+	
+	GLFloat expected_realp[4] = {1.0/(2.0*1.0), 1.0/(2.0*2.0), 1.0/(2.0*3.0), 1.0/(2.0*4.0)};
+	GLFloat expected_imagp[4] = {-1.0/(2.0*1.0), -1.0/(2.0*2.0), -1.0/(2.0*3.0), -1.0/(2.0*4.0)};
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output.realp[i], expected_realp[i]) || !fequal(output.imagp[i], expected_imagp[i]) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_realp[i], expected_imagp[i], output.realp[i], output.imagp[i]);
+		}
+	}
+}
+
+- (void)testVectorPowerOperationCaseI
+{
+	// Case I: real vector (real variable type). Testing (1, 2, 3, 4)^2.0
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
+	GLVariable *var = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	
+	GLVariable *result = [var pow: 2.0];
+	[result solve];
+	GLFloat *output = result.pointerValue;
+	
+	GLFloat expected[4] = {pow(1.0, 2.0), pow(2.0, 2.0), pow(3.0, 2.0), pow(4.0, 2.0)};
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
+/************************************************/
+/*		Transform Tests							*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Transform Tests
+#pragma mark
 
 - (void) test1DDiscreteFourierTransform
 {
@@ -425,6 +572,116 @@
 	for (int i=0; i<8; i++) {
 		if ( !fequal(input[i], output[i]) ) {
 			XCTFail(@"Expected %f, found %f.", input[i], output[i]);
+		}
+	}
+}
+
+/************************************************/
+/*		Linear Algebra							*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Linear Algebra
+#pragma mark
+
+-(void) testRealMatrixMultiplication
+{
+	GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
+	GLDimension *yDim = [GLDimension dimensionYWithNPoints:3 length: 3.0];
+	
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
+	GLLinearTransform *B = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim] toDimensions: @[yDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
+	
+	GLFloat *a = A.pointerValue;
+	a[0] = 0.11; a[1] = 0.12; a[2] = 0.13;
+	a[3] = 0.21; a[4] = 0.22; a[5] = 0.23;
+	
+	GLFloat *b = B.pointerValue;
+	b[0] = 1011; b[1] = 1012;
+	b[2] = 1021; b[3] = 1022;
+	b[4] = 1031; b[5] = 1032;
+	
+	GLLinearTransform *C = [A times: B];
+	GLFloat *output = C.pointerValue;
+	[C solve];
+	
+	GLFloat expected[4] = { 367.76, 368.12, 674.06, 674.72 };
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
+-(void) testComplexMatrixMultiplication
+{
+	GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
+	GLDimension *yDim = [GLDimension dimensionYWithNPoints:3 length: 3.0];
+	
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
+	GLLinearTransform *B = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[xDim] toDimensions: @[yDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
+	
+	GLSplitComplex x = A.splitComplex;
+	x.realp[0] = 1.0; x.realp[1] = 0.0; x.realp[2] = 1.0;
+	x.realp[3] = 2.0; x.realp[4] = 0.0; x.realp[5] = 2.0;
+	
+	x.imagp[0] = 0.0; x.imagp[1] = 1.0; x.imagp[2] = 0.0;
+	x.imagp[3] = 0.0; x.imagp[4] = 1.0; x.imagp[5] = 0.0;
+	
+	GLSplitComplex y = B.splitComplex;
+	y.realp[0] = 0.0; y.realp[1] = 0.0;
+	y.realp[2] = 1.0; y.realp[3] = 2.0;
+	y.realp[4] = 1.0; y.realp[5] = 2.0;
+	
+	y.imagp[0] = 2.0; y.imagp[1] = 3.0;
+	y.imagp[2] = 0.0; y.imagp[3] = 0.0;
+	y.imagp[4] = 0.0; y.imagp[5] = 0.0;
+	
+	GLLinearTransform *C = [A times: B];
+	GLSplitComplex output = C.splitComplex;
+	[C solve];
+	
+	GLFloat expected_realp[4] = {1.0, 2.0, 2.0, 4.0};
+	GLFloat expected_imagp[4] = {3.0, 5.0, 5.0, 8.0};
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output.realp[i], expected_realp[i]) || !fequal(output.imagp[i], expected_imagp[i]) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_realp[i], expected_imagp[i], output.realp[i], output.imagp[i]);
+		}
+	}
+}
+
+- (void) testRealMatrixInversion
+{
+	GLDimension *xDim = [GLDimension dimensionXWithNPoints:3 length: 3.0];
+	GLDimension *yDim = [GLDimension dimensionYWithNPoints:3 length: 3.0];
+	
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
+	
+	GLFloat *a = A.pointerValue;
+	a[0] = 1.0; a[1] = 2.0; a[2] = 0.0;
+	a[3] = 2.0; a[4] = 5.0; a[5] = -1.0;
+	a[6] = 4.0; a[7] = 10.0; a[8] = -1.0;
+	
+	GLLinearTransform *invA = [A inverse];
+	
+	[invA solve];
+	[equation waitUntilAllOperationsAreFinished];
+	
+	GLFloat *output = invA.pointerValue;
+	
+	GLFloat expected[9] = { 5., 2., -2., -2., -1., 1., 0., -2., 1. };
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
 		}
 	}
 }

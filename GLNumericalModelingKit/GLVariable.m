@@ -140,7 +140,7 @@ static BOOL prefersSpatialMultiplication = YES;
 	{
 		NSUInteger dimIndex = (i/divisor) % modulus;
 		f.realp[i] = dimValue[dimIndex];
-        f.imagp[i] = dimValue[dimIndex];
+        f.imagp[i] = 0.0;
 	}	
 	
 	return aVariable;
