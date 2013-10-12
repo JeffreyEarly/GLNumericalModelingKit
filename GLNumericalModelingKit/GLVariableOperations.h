@@ -40,6 +40,10 @@ typedef void (^binaryOperation)(NSMutableData *, NSData *, NSData *);
 typedef void (^unaryVectorOperation)(NSArray *, NSArray *);
 typedef void (^binaryVectorOperation)(NSArray *, NSArray *, NSArray *);
 
+// The arguments are arrays of buffers (assumed to be NSMutableData objects.
+// 1. output, 2. input, 3. internal usage
+typedef void (^variableOperation)(NSArray *, NSArray *, NSArray *);
+
 /************************************************/
 /*		GLVariableOperation						*/
 /************************************************/
@@ -59,20 +63,21 @@ typedef void (^binaryVectorOperation)(NSArray *, NSArray *, NSArray *);
 
 @property(readwrite, copy, nonatomic) NSString *graphvisDescription;
 
-@end
 
-/************************************************/
-/*		GLNullaryOperation						*/
-/************************************************/
 
-@interface GLNullaryOperation : GLVariableOperation
+- (id) initWithResult: (NSArray *) result operand: (NSArray *) operand buffers: (NSArray *) buffers operation: (variableOperation) op;
 
-// Init with both the target variable and the operand. In-place operation is therefore possible.
-- (id) initWithResult: (GLVariable *) result;
+// This assumes that there are no internal buffers necessary, and that the operation will be set later.
+- (id) initWithResult: (NSArray *) result operand: (NSArray *) operand;
 
-@property(readwrite, strong, nonatomic) GLVariable *result;
+// This assumes that the result variables are the same type as the operand variables.
+- (id) initWithOperand: (NSArray *) operand;
 
-@property(copy) nullaryOperation blockOperation;
+@property(readwrite, strong, nonatomic) NSArray *result;
+@property(readwrite, strong, nonatomic) NSArray *operand;
+@property(readwrite, strong, nonatomic) NSArray *buffers;
+
+@property(copy) variableOperation operation;
 
 @end
 

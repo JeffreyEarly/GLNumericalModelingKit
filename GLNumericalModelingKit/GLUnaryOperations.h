@@ -14,7 +14,7 @@
 
 // Returns the negative of the variable.
 
-@interface GLNegationOperation : GLUnaryOperation
+@interface GLNegationOperation : GLVariableOperation
 
 @end
 
@@ -24,7 +24,7 @@
 
 // Simply returns the negative of the variable.
 
-@interface GLAbsoluteValueOperation : GLUnaryOperation
+@interface GLAbsoluteValueOperation : GLVariableOperation
 
 // You can optionally set useComplexDivision to NO, and it will simply do an element-wise divide, ignoring complex math.
 - (id) initWithOperand: (GLVariable *) operand shouldUseComplexArithmetic: (BOOL) useComplexArithmetic;
@@ -37,7 +37,7 @@
 /*		GLExponentialOperation					*/
 /************************************************/
 // variable = exponential( variable )
-@interface GLExponentialOperation : GLUnaryOperation
+@interface GLExponentialOperation : GLVariableOperation
 
 @end
 
@@ -45,7 +45,7 @@
 /*		GLSineOperation							*/
 /************************************************/
 // variable = sin( variable )
-@interface GLSineOperation : GLUnaryOperation
+@interface GLSineOperation : GLVariableOperation
 
 @end
 
@@ -53,7 +53,7 @@
 /*		GLCosineOperation						*/
 /************************************************/
 // variable = cos( variable )
-@interface GLCosineOperation : GLUnaryOperation
+@interface GLCosineOperation : GLVariableOperation
 
 @end
 
@@ -61,7 +61,7 @@
 /*		GLInverseTangentOperation				*/
 /************************************************/
 // variable = atan( variable )
-@interface GLInverseTangentOperation : GLUnaryOperation
+@interface GLInverseTangentOperation : GLVariableOperation
 
 @end
 
@@ -69,7 +69,7 @@
 /*		GLSquareRootOperation						*/
 /************************************************/
 // variable = sqrt( variable )
-@interface GLSquareRootOperation : GLUnaryOperation
+@interface GLSquareRootOperation : GLVariableOperation
 
 @end
 
@@ -77,7 +77,7 @@
 /*		GLFourierTransformOperation             */
 /************************************************/
 
-@interface GLFourierTransformOperation : GLUnaryOperation
+@interface GLFourierTransformOperation : GLVariableOperation
 
 @end
 
@@ -85,7 +85,7 @@
 /*		GLSwapComplexOperation                  */
 /************************************************/
 
-@interface GLSwapComplexOperation : GLUnaryOperation
+@interface GLSwapComplexOperation : GLVariableOperation
 
 @end
 
@@ -93,7 +93,7 @@
 /*		GLCopyVariableOperation                 */
 /************************************************/
 
-@interface GLCopyVariableOperation : GLUnaryOperation
+@interface GLCopyVariableOperation : GLVariableOperation
 
 @end
 
@@ -101,7 +101,7 @@
 /*		GLMaxOperation							*/
 /************************************************/
 
-@interface GLMaxOperation : GLUnaryOperation
+@interface GLMaxOperation : GLVariableOperation
 
 @end
 
@@ -109,7 +109,7 @@
 /*		GLAverageOperation						*/
 /************************************************/
 
-@interface GLAverageOperation : GLUnaryOperation
+@interface GLAverageOperation : GLVariableOperation
 
 - (id) initWithOperand: (GLVariable *) variable dimensionIndex: (NSUInteger) index;
 @property NSUInteger dimIndex;

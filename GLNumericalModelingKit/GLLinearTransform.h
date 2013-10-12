@@ -33,11 +33,62 @@ typedef NSUInteger GLLinearTransformType;
 // The first argument indicates the row/destination indices, the second argument indicates the column/starting indices.
 typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 
-@interface GLLinearTransform : GLVariable
+@interface GLLinearTransform : GLTensor
+
+/************************************************/
+/*		Initialization							*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Initialization
+#pragma mark
+
++ (id) transformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) equation;
+
+- (id) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation;
+
++ (id) dftMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
++ (id) idftMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
+
++ (id) cosineTransformMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
++ (id) inverseCosineTransformMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
+
++ (id) differentiationMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
+
+/************************************************/
+/*		Dimensionality							*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Dimensionality
+#pragma mark
 
 // At the moment the from dimensions need to be the same rank as the to dimensions.
 @property(readwrite, strong) NSArray *fromDimensions;
 @property(readwrite, strong) NSArray *toDimensions;
+
+// Does this even make sense? I don't think any of it does here.
+
+// The symmetry (none, even, or odd) of each dimension.
+@property(readwrite, assign, nonatomic) NSMutableArray *realSymmetry;
+@property(readwrite, assign, nonatomic) NSMutableArray *imaginarySymmetry;
+
+// Returns YES if the variable is Hermitian,  H(-f)=H†(f).
+@property(readonly, assign, nonatomic) BOOL isHermitian;
+
+// Return the dimension restricted to positive values that can be used to recover
+// the negative values. Returns nil if the variable is not hermitian.
+@property(readonly, strong, nonatomic) GLDimension *hermitianDimension;
+
+
+/************************************************/
+/*		Data									*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Data
+#pragma mark
+
 
 // row-major or column-major
 @property(readwrite) GLMatrixOrder matrixOrder;
@@ -51,17 +102,14 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 // A block that can be used to create the matrix.
 @property(copy) transformMatrix matrixBlock;
 
-+ (id) transformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) equation;
 
-- (id) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation;
+/************************************************/
+/*		Operations								*/
+/************************************************/
 
-+ (id) dftMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
-+ (id) idftMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
-
-+ (id) cosineTransformMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
-+ (id) inverseCosineTransformMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
-
-+ (id) differentiationMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
+#pragma mark -
+#pragma mark Operations
+#pragma mark
 
 // Assuming the linear transform was initialized with fromDims that match the diagonalVariable and a format of diag in each dimension
 - (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable;

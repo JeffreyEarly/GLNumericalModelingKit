@@ -28,19 +28,21 @@
 	resultVariable.name = variable.name;
 	resultVariable.units = variable.units;
 	
-	if (( self = [super initWithResult: resultVariable operand: variable] ))
-	{		
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
+	{
+		GLVariable *operandVariable = self.operand[0];
+		
 		self.theDimension = dim;
 		self.nPoints = dim.nPoints;
 		
-		NSUInteger n = self.operand.nDataPoints;
+		NSUInteger n = operandVariable.nDataPoints;
 		NSUInteger numPoints = dim.nPoints;
 		
-		if ( self.result.isComplex )
+		if ( resultVariable.isComplex )
 		{
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
-				GLSplitComplex toSplit = splitComplexFromData(result);
-				GLSplitComplex fromSplit = splitComplexFromData(operand);
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
+				GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
 				
 				// We extended by making copies of the data. That's the only sensible thing to do.
 				for (NSUInteger i=0; i < numPoints; i++)
@@ -51,7 +53,10 @@
 			};
 		}
 		else {
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
+				
 				GLFloat * toData = result.mutableBytes;
 				const GLFloat * fromData = operand.bytes;
 				
@@ -107,10 +112,11 @@
 	
 	GLVariable *resultVariable = [GLVariable variableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
 	
-	if (( self = [super initWithResult:resultVariable operand:variable] ))
+	if (( self = [super initWithResult:@[resultVariable] operand:@[variable]] ))
 	{
+		GLVariable *operandVariable = self.operand[0];
 		self.theRanges = ranges;
-		NSArray *dimensions = self.operand.dimensions;
+		NSArray *dimensions = operandVariable.dimensions;
         NSMutableString *rangeDescrip = [[NSMutableString alloc] initWithString: @"("];
         for (NSValue *aValue in self.theRanges) {
             [rangeDescrip appendFormat: @"%ld:%ld,", (unsigned long)aValue.rangeValue.location, aValue.rangeValue.location+aValue.rangeValue.length-1];
@@ -118,11 +124,11 @@
         [rangeDescrip deleteCharactersInRange: NSMakeRange(rangeDescrip.length-1, 1)];
         [rangeDescrip appendFormat: @")"];
 		
-		if ( self.result.isComplex )
+		if ( resultVariable.isComplex )
 		{
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
-				GLSplitComplex toSplit = splitComplexFromData(result);
-				GLSplitComplex fromSplit = splitComplexFromData(operand);
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
+				GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
 				
 				CopySubmatrix( dimensions, ranges, 0, 0, fromSplit.realp, toSplit.realp);
 				CopySubmatrix( dimensions, ranges, 0, 0, fromSplit.imagp, toSplit.imagp);
@@ -130,7 +136,10 @@
             self.graphvisDescription = [NSString stringWithFormat: @"complex subdomain %@", rangeDescrip];
 		}
 		else {
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
+				
 				GLFloat * toData = result.mutableBytes;
 				const GLFloat * fromData = operand.bytes;
 				
@@ -198,78 +207,78 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 }
 
 // vec[(i*ny+j)*nz+k] = matrix[i][j][k]
-- (void) threeLoop3DCopy
-{
-	GLFloat *fromData = self.operand.pointerValue;
-	GLFloat *toData = self.result.pointerValue;
-	
-	NSUInteger ny = [[self.operand.dimensions objectAtIndex: 1] nPoints];
-	NSUInteger nz = [[self.operand.dimensions objectAtIndex: 2] nPoints];
-	
-	NSRange xRange = [[self.theRanges objectAtIndex: 0] rangeValue];
-	NSRange yRange = [[self.theRanges objectAtIndex: 1] rangeValue];
-	NSRange zRange = [[self.theRanges objectAtIndex: 2] rangeValue];
-	
-	for (NSUInteger i=0; i < xRange.length; i++)
-	{
-		for (NSUInteger j=0; j < yRange.length; j++)
-		{
-			for (NSUInteger k=0; k < zRange.length; k++)
-			{
-				// When k=zRange.location, this is the start of a contiguous block of memory to be copied, of length zRange.length
-				NSUInteger submatrixIndex = (i*yRange.length+j)*zRange.length+k;
-				NSUInteger matrixIndex = ((i+xRange.location)*ny+(j+yRange.location))*nz+(k+zRange.location);
-				toData[submatrixIndex] = fromData[matrixIndex];
-			}
-		}
-	}
-}
-
-- (void) twoLoop3DCopy
-{
-	GLFloat *fromData = self.operand.pointerValue;
-	GLFloat *toData = self.result.pointerValue;
-	
-	NSUInteger ny = [[self.operand.dimensions objectAtIndex: 1] nPoints];
-	NSUInteger nz = [[self.operand.dimensions objectAtIndex: 2] nPoints];
-	
-	NSRange xRange = [[self.theRanges objectAtIndex: 0] rangeValue];
-	NSRange yRange = [[self.theRanges objectAtIndex: 1] rangeValue];
-	NSRange zRange = [[self.theRanges objectAtIndex: 2] rangeValue];
-	
-	for (NSUInteger i=0; i < xRange.length; i++)
-	{
-		for (NSUInteger j=0; j < yRange.length; j++)
-		{
-			NSUInteger submatrixIndex = (i*yRange.length+j)*zRange.length;
-			NSUInteger matrixIndex = ((i+xRange.location)*ny+(j+yRange.location))*nz+zRange.location;
-			memcpy( &(toData[submatrixIndex]), &(fromData[matrixIndex]), zRange.length);
-		}
-	}
-}
-
-- (void) oneLoop3DCopy
-{
-	GLFloat *fromData = self.operand.pointerValue;
-	GLFloat *toData = self.result.pointerValue;
-	
-	NSUInteger ny = [[self.operand.dimensions objectAtIndex: 1] nPoints];
-	NSUInteger nz = [[self.operand.dimensions objectAtIndex: 2] nPoints];
-	
-	NSRange xRange = [[self.theRanges objectAtIndex: 0] rangeValue];
-	NSRange yRange = [[self.theRanges objectAtIndex: 1] rangeValue];
-	NSRange zRange = [[self.theRanges objectAtIndex: 2] rangeValue];
-	
-	for (NSUInteger i=0; i < xRange.length; i++)
-	{
-		NSUInteger submatrixIndex = i*yRange.length;
-		NSUInteger matrixIndex = (i+xRange.location)*ny + yRange.location;
-		
-		// The number of columns, is the length of the fastest index
-		// The number of rows, is the length the slowest index
-		vGL_mmov( &(fromData[matrixIndex]), &(toData[submatrixIndex]), zRange.length, yRange.length, nz, zRange.length);
-	}
-}
+//- (void) threeLoop3DCopy
+//{
+//	GLFloat *fromData = self.operand.pointerValue;
+//	GLFloat *toData = self.result.pointerValue;
+//	
+//	NSUInteger ny = [[self.operand.dimensions objectAtIndex: 1] nPoints];
+//	NSUInteger nz = [[self.operand.dimensions objectAtIndex: 2] nPoints];
+//	
+//	NSRange xRange = [[self.theRanges objectAtIndex: 0] rangeValue];
+//	NSRange yRange = [[self.theRanges objectAtIndex: 1] rangeValue];
+//	NSRange zRange = [[self.theRanges objectAtIndex: 2] rangeValue];
+//	
+//	for (NSUInteger i=0; i < xRange.length; i++)
+//	{
+//		for (NSUInteger j=0; j < yRange.length; j++)
+//		{
+//			for (NSUInteger k=0; k < zRange.length; k++)
+//			{
+//				// When k=zRange.location, this is the start of a contiguous block of memory to be copied, of length zRange.length
+//				NSUInteger submatrixIndex = (i*yRange.length+j)*zRange.length+k;
+//				NSUInteger matrixIndex = ((i+xRange.location)*ny+(j+yRange.location))*nz+(k+zRange.location);
+//				toData[submatrixIndex] = fromData[matrixIndex];
+//			}
+//		}
+//	}
+//}
+//
+//- (void) twoLoop3DCopy
+//{
+//	GLFloat *fromData = self.operand.pointerValue;
+//	GLFloat *toData = self.result.pointerValue;
+//	
+//	NSUInteger ny = [[self.operand.dimensions objectAtIndex: 1] nPoints];
+//	NSUInteger nz = [[self.operand.dimensions objectAtIndex: 2] nPoints];
+//	
+//	NSRange xRange = [[self.theRanges objectAtIndex: 0] rangeValue];
+//	NSRange yRange = [[self.theRanges objectAtIndex: 1] rangeValue];
+//	NSRange zRange = [[self.theRanges objectAtIndex: 2] rangeValue];
+//	
+//	for (NSUInteger i=0; i < xRange.length; i++)
+//	{
+//		for (NSUInteger j=0; j < yRange.length; j++)
+//		{
+//			NSUInteger submatrixIndex = (i*yRange.length+j)*zRange.length;
+//			NSUInteger matrixIndex = ((i+xRange.location)*ny+(j+yRange.location))*nz+zRange.location;
+//			memcpy( &(toData[submatrixIndex]), &(fromData[matrixIndex]), zRange.length);
+//		}
+//	}
+//}
+//
+//- (void) oneLoop3DCopy
+//{
+//	GLFloat *fromData = self.operand.pointerValue;
+//	GLFloat *toData = self.result.pointerValue;
+//	
+//	NSUInteger ny = [[self.operand.dimensions objectAtIndex: 1] nPoints];
+//	NSUInteger nz = [[self.operand.dimensions objectAtIndex: 2] nPoints];
+//	
+//	NSRange xRange = [[self.theRanges objectAtIndex: 0] rangeValue];
+//	NSRange yRange = [[self.theRanges objectAtIndex: 1] rangeValue];
+//	NSRange zRange = [[self.theRanges objectAtIndex: 2] rangeValue];
+//	
+//	for (NSUInteger i=0; i < xRange.length; i++)
+//	{
+//		NSUInteger submatrixIndex = i*yRange.length;
+//		NSUInteger matrixIndex = (i+xRange.location)*ny + yRange.location;
+//		
+//		// The number of columns, is the length of the fastest index
+//		// The number of rows, is the length the slowest index
+//		vGL_mmov( &(fromData[matrixIndex]), &(toData[submatrixIndex]), zRange.length, yRange.length, nz, zRange.length);
+//	}
+//}
 
 @end
 
@@ -562,25 +571,28 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
     
 	GLVariable *resultVariable = [GLVariable variableOfType: lowResTransformedVariable.dataFormat withDimensions: highResDimensions forEquation: variable.equation];
 	
-	if (( self = [super initWithResult:resultVariable operand:lowResTransformedVariable] ))
+	if (( self = [super initWithResult:@[resultVariable] operand:@[lowResTransformedVariable]] ))
 	{		
 		if ( highResDimensions.count == 2 )
 		{
-            NSUInteger nDataElements = self.result.nDataElements;
-            NSUInteger nKPoints = [self.operand.dimensions[0] nPoints];
-            NSUInteger nLPoints = [self.operand.dimensions[1] nPoints];
-			NSUInteger n2KPoints = [self.result.dimensions[0] nPoints];
-            NSUInteger n2LPoints = [self.result.dimensions[1] nPoints];
+			GLVariable *resultVariable = self.result[0];
+			GLVariable *operandVariable = self.operand[0];
+			
+            NSUInteger nDataElements = resultVariable.nDataElements;
+            NSUInteger nKPoints = [operandVariable.dimensions[0] nPoints];
+            NSUInteger nLPoints = [operandVariable.dimensions[1] nPoints];
+			NSUInteger n2KPoints = [resultVariable.dimensions[0] nPoints];
+            NSUInteger n2LPoints = [resultVariable.dimensions[1] nPoints];
 			
 			NSUInteger diff = n2KPoints - nKPoints;
 			
 			if (resultVariable.isComplex)
 			{
-				self.blockOperation = ^(NSMutableData *result, NSData *operand) {
-					GLSplitComplex toSplit = splitComplexFromData(result);
-					GLSplitComplex fromSplit = splitComplexFromData(operand);
+				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
+					GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
 					
-					vGL_vclr( result.mutableBytes, 1, nDataElements);
+					vGL_vclr( ((NSMutableData *)resultArray[0]).mutableBytes, 1, nDataElements);
 					
 					
 					for (NSUInteger i=0; i<nKPoints; i++) {
@@ -598,7 +610,10 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 			}
 			else
 			{
-				self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					NSMutableData *result = resultArray[0];
+					NSMutableData *operand = operandArray[0];
+					
 					GLFloat *to = result.mutableBytes;
 					GLFloat *from = (GLFloat *) operand.bytes;
 					

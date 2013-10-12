@@ -12,7 +12,7 @@
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 #import <GLNumericalModelingKit/GLIntegrationOperations.h>
 
-@class GLDimension, GLVariable;
+@class GLDimension, GLVariable, GLTensor;
 @interface GLEquation : NSObject
 
 
@@ -51,9 +51,9 @@
 // Perform the computation. You don't need (or want) to do this after every operation, but instead
 // call this when you reach a choke point. A choke point would be a place where you actually finally
 // need the data from the variable, or a place where you *know* you won't benefit from parallization.
-- (void) solveForVariable: (GLVariable *) aVariable;
+- (void) solveForVariable: (GLTensor *) aVariable;
 
-- (void) solveForVariable: (GLVariable *) aVariable waitUntilFinished: (BOOL) shouldWait;
+- (void) solveForVariable: (GLTensor *) aVariable waitUntilFinished: (BOOL) shouldWait;
 
 - (void) solveForOperation: (GLVariableOperation *) anOperation waitUntilFinished: (BOOL) shouldWait;
 

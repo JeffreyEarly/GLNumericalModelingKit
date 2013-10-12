@@ -14,24 +14,25 @@
 // variable = clip(operand, min, max)
 @implementation GLRandomNumberOperation
 
-- (id) initWithResult: (GLVariable *) resultVector firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand
+- (id) initWithResult: (GLVariable *) resultVariable firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand
 {
-	if (( self = [super initWithResult: resultVector] ))
+	if (( self = [super initWithResult: @[resultVariable] operand: @[]] ))
 	{
         self.firstScalarOperand = fsOperand;
         self.secondScalarOperand = ssOperand;
-		NSUInteger nDataElements = self.result.nDataElements;
+		NSUInteger nDataElements = resultVariable.nDataElements;
 		
 		GLFloat amp = (ssOperand - fsOperand);
 		GLFloat offset = fsOperand;
 		
-        BOOL halfComplex = resultVector.dimensions.count == 2 && [resultVector.dimensions[0] basisFunction] == kGLExponentialBasis && [resultVector.dimensions[1] basisFunction] == kGLExponentialBasis && [resultVector.dimensions[1] isStrictlyPositive];
+        BOOL halfComplex = resultVariable.dimensions.count == 2 && [resultVariable.dimensions[0] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[1] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[1] isStrictlyPositive];
         
         if (halfComplex)
         {
-            NSUInteger kDimNPoints = [resultVector.dimensions[0] nPoints];
-            NSUInteger lDimNPoints = [resultVector.dimensions[1] nPoints];
-            self.blockOperation = ^(NSMutableData *result) {
+            NSUInteger kDimNPoints = [resultVariable.dimensions[0] nPoints];
+            NSUInteger lDimNPoints = [resultVariable.dimensions[1] nPoints];
+            self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
                 GLFloat *pointerValue = (GLFloat *) result.bytes;
                 for (NSUInteger i=0; i<nDataElements; i++) {
                     pointerValue[i] = amp*((double) rand())/( (double) RAND_MAX ) + offset;
@@ -44,7 +45,8 @@
         }
         else
         {
-            self.blockOperation = ^(NSMutableData *result) {
+            self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
                 GLFloat *pointerValue = (GLFloat *) result.bytes;
                 for (NSUInteger i=0; i<nDataElements; i++) {
                     pointerValue[i] = amp*((double) rand())/( (double) RAND_MAX ) + offset;

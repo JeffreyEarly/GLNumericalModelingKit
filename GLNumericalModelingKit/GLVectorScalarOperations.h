@@ -12,7 +12,10 @@
 /*		GLVectorScalarOperation					*/
 /************************************************/
 
-@interface GLVectorScalarOperation : GLUnaryOperation
+// This subclass of GLVariableOperation takes a single variable operand and has one, constant, scalar operand.
+// Two vector-scalar operations are equal only if their scalar operands are equal.
+
+@interface GLVectorScalarOperation : GLVariableOperation
 
 // Init with only the operand to automatically create the target variable.
 - (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand;
@@ -74,7 +77,7 @@
 /*		GLClipOperation				*/
 /************************************************/
 // variable = clip(operand, min, max)
-@interface GLClipOperation : GLUnaryOperation
+@interface GLClipOperation : GLVariableOperation
 
 - (id) initWithVectorOperand: (GLVariable *) vOperand firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand;
 

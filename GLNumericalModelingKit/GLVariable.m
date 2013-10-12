@@ -30,14 +30,6 @@
 
 #define MatrixFFT 0
 
-GLSplitComplex splitComplexFromData( NSData *data )
-{
-	GLSplitComplex fbar;
-	fbar.realp = (void *) data.bytes;
-	fbar.imagp = (void *) (data.bytes + data.length/2);
-	return fbar;
-}
-
 /************************************************/
 /*		GLVariable								*/
 /************************************************/
@@ -47,11 +39,9 @@ GLSplitComplex splitComplexFromData( NSData *data )
 #pragma mark
 
 @interface GLVariable ()
-
-@property(readonly, strong) NSMutableSet *variableDifferentialOperationMaps;
-
-@property(readonly, strong) NSMutableArray *existingOperations;
-
+@property(readwrite, assign, nonatomic) NSUInteger nDataPoints;
+@property(readwrite, assign, nonatomic) NSUInteger nDataElements;
+@property(readwrite, assign, nonatomic) NSUInteger dataBytes;
 @end
 
 static BOOL prefersSpatialMultiplication = YES;
@@ -258,6 +248,10 @@ static BOOL prefersSpatialMultiplication = YES;
 	return newVar;
 }
 
+- (NSUInteger) rank {
+	return 1;
+}
+
 /************************************************/
 /*		Initialization							*/
 /************************************************/
@@ -273,42 +267,32 @@ static BOOL prefersSpatialMultiplication = YES;
 //	return self;
 //}
 
+@synthesize nDataPoints = _nDataPoints;
+@synthesize nDataElements = _nDataElements;
+@synthesize dataBytes = _dataBytes;
+
 - (id) initVariableOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) theEquation
 {
-	if (!theEquation || !theDimensions) {
+	if (!theDimensions) {
 		NSLog(@"Attempted to initialize GLVariable without an equation or dimensions!!!");
 		return nil;
 	}
 	
-	if ((self = [super init])) {
-		_variableDifferentialOperationMaps = [[NSMutableSet alloc] init];
-        _existingOperations = [[NSMutableArray alloc] init];
-		
-		_pendingOperations = [[NSMutableArray alloc] init];
-		_equation = theEquation;
+	if ((self = [super initWithType:dataFormat withEquation:theEquation])) {
 		_dimensions = theDimensions;
-		_uniqueID = mach_absolute_time();
 		
 		_isFrequencyDomain = 0;
-		_isComplex = dataFormat != kGLRealDataFormat;
-		_isImaginaryPartZero = dataFormat == kGLRealDataFormat;
-		_dataFormat = dataFormat;
 		
 		// We loop through the dimensions and allocate enough memory for the variable
 		// defined on each dimension.
 		_nDataPoints = 1;
 		_nDataElements = 1;
+		_realSymmetry = [NSMutableArray array];
+		_imaginarySymmetry = [NSMutableArray array];
 		for ( GLDimension *aDim in theDimensions ) {
             NSUInteger idx = [theDimensions indexOfObject: aDim];
-            BOOL isHalfComplexDimension = dataFormat >= kGLHalfComplex1DDataFormat && (idx == dataFormat % 10);
             
-            // Amount of memory allocated for the half-complex format depends which dimension is responsible.
-            if (isHalfComplexDimension) {
-                _nDataElements *= 2*(aDim.nPoints-1);
-            } else {
-                _nDataElements *= aDim.nPoints;
-            }
-            
+            _nDataElements *= aDim.nPoints;
             _nDataPoints *= aDim.nPoints;
             
             if (aDim.basisFunction == kGLDeltaBasis) {
@@ -320,12 +304,6 @@ static BOOL prefersSpatialMultiplication = YES;
             } else if (aDim.basisFunction == kGLSineBasis || aDim.basisFunction == kGLSineHalfShiftBasis) {
                 self.realSymmetry[idx] = @(kGLOddSymmetry);
                 self.imaginarySymmetry[idx] = @(kGLZeroSymmetry);
-            } else if (aDim.basisFunction == kGLExponentialBasis && isHalfComplexDimension) {
-                self.realSymmetry[idx] = @(kGLEvenSymmetry);
-                self.imaginarySymmetry[idx] = @(kGLOddSymmetry);
-            } else if (aDim.basisFunction == kGLExponentialBasis && !isHalfComplexDimension) {
-                self.realSymmetry[idx] = @(kGLNoSymmetry);
-                self.imaginarySymmetry[idx] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
             }
             
 			_isFrequencyDomain |= aDim.isFrequencyDomain;
@@ -343,19 +321,6 @@ static BOOL prefersSpatialMultiplication = YES;
 	return self;
 }
 
-- (NSMutableDictionary *) metadata {
-	if (!_metadata) {
-		_metadata = [NSMutableDictionary dictionary];
-	}
-	return _metadata;
-}
-
-- (void) setUnits:(NSString *)theUnits
-{
-	self->_units = theUnits;	
-	[self.metadata setValue: theUnits forKey: @"units"];
-}
-
 /************************************************/
 /*		Dimensionality							*/
 /************************************************/
@@ -366,25 +331,6 @@ static BOOL prefersSpatialMultiplication = YES;
 
 - (BOOL) isMutable {
 	return NO;
-}
-
-@dynamic isPurelyReal;
-@dynamic isPurelyImaginary;
-
-- (BOOL) isPurelyReal {
-    return self.isImaginaryPartZero;
-}
-
-- (void) setIsPurelyReal:(BOOL)isPurelyReal {
-	self.isImaginaryPartZero = isPurelyReal;
-}
-
-- (BOOL) isPurelyImaginary {
-    return self.isRealPartZero;
-}
-
-- (void) setIsPurelyImaginary:(BOOL)isPurelyImaginary {
-	self.isRealPartZero = isPurelyImaginary;
 }
 
 - (BOOL) isHermitian {
@@ -447,53 +393,6 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark Data
 #pragma mark
 
-- (NSMutableData *) data
-{
-    if (!_data) {
-		_data =[[GLMemoryPool sharedMemoryPool] dataWithLength: self.dataBytes];
-	}
-    return _data;
-}
-
-- (void) setData: (NSData *) newData
-{
-	if (!_data) {
-		_data =[[GLMemoryPool sharedMemoryPool] dataWithLength: self.dataBytes];
-	}
-	
-	memcpy( _data.mutableBytes, newData.bytes, newData.length);
-}
-
-- (BOOL) hasData {
-	return _data != nil ? YES : NO;
-}
-
-- (GLFloat *) pointerValue
-{
-	[self solve];
-    GLFloat *f = self.data.mutableBytes;
-    return f;
-}
-
-- (GLSplitComplex) splitComplex
-{
-	GLSplitComplex fbar;
-	if (self.isComplex) {
-		fbar.realp = self.data.mutableBytes;
-		fbar.imagp = self.data.mutableBytes + self.data.length/2;
-	} else {
-		fbar.realp = NULL;
-		fbar.imagp = NULL;
-		NSLog(@"Error! Requesting splitComplex from a real variable!!!");
-	}
-	return fbar;
-}
-
-- (void) solve
-{
-	[self.equation solveForVariable: self];
-}
-
 - (void) zero
 {
 	vGL_vclr( self.pointerValue, 1, self.nDataElements);
@@ -526,22 +425,7 @@ static BOOL prefersSpatialMultiplication = YES;
 	return max;
 }
 
-/************************************************/
-/*		Superclass Overrides					*/
-/************************************************/
 
-#pragma mark -
-#pragma mark Superclass Overrides
-#pragma mark
-
-- (BOOL) isEqual: (id) otherObject
-{
-	return ([[self class] isSubclassOfClass: [otherObject class]] && self.uniqueID == [(GLVariable *)otherObject uniqueID]);
-}
-
-- (NSUInteger)hash {
-    return _uniqueID;
-}
 
 /************************************************/
 /*		Operations								*/
@@ -550,23 +434,6 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark -
 #pragma mark Operations
 #pragma mark
-
-- (id) replaceWithExistingOperation: (GLVariableOperation *) newOperation
-{
-    GLVariableOperation *existingOperation;
-    for (GLVariableOperation *op in self.existingOperations) {
-        if ( [op isEqualToOperation: newOperation] ) {
-            existingOperation = op;
-        }
-    }
-    
-    if (existingOperation) {
-        return existingOperation;
-    } else {
-        [self.existingOperations addObject: newOperation];
-    }
-    return newOperation;
-}
 
 - (GLVariable *) plus: (GLVariable *) otherVariable
 {
@@ -1112,59 +979,6 @@ static BOOL prefersSpatialMultiplication = YES;
     //return [NSString stringWithFormat: @"%@ <0x%lx> (%@: %lu points) %@\n", NSStringFromClass([self class]), (NSUInteger) self, self.name, self.nDataPoints, extra];
     
 	return [NSString stringWithFormat: @"%@ <0x%lx> (%@: %lu points) %@\n%@", NSStringFromClass([self class]), (NSUInteger) self, self.name, self.nDataPoints, extra, [self matrixDescriptionString]];
-}
-
-/************************************************/
-/*		Private									*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Private
-#pragma mark
-
-@synthesize equation=_equation;
-@synthesize variableDifferentialOperationMaps=_variableDifferentialOperationMaps;
-@synthesize pendingOperations=_pendingOperations;
-
-- (NSArray *) pendingOperations
-{
-	NSArray *returnArray;
-	@synchronized (self) {
-		returnArray = [NSArray arrayWithArray: _pendingOperations];
-	}
-	return returnArray;
-}
-
-- (void) addOperation: (id) operation
-{
-	@synchronized (self) {
-		if ( ![_pendingOperations containsObject: operation] ) {
-			[_pendingOperations addObject: operation];
-		}
-	}
-}
-
-- (void) removeOperation: (id) operation
-{
-	@synchronized (self) {
-		[_pendingOperations removeObject: operation];
-	}
-}
-
-- (GLVariableOperation *) lastOperation
-{
-	GLVariableOperation *lastOp;
-	@synchronized (self) {
-		lastOp = [_pendingOperations lastObject];
-	}
-	return lastOp;
-}
-
-- (void) dealloc
-{
-	if (_data) {
-		[[GLMemoryPool sharedMemoryPool] returnData: _data];
-	}
 }
 
 @end

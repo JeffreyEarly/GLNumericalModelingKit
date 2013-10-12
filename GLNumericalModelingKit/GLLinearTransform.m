@@ -14,6 +14,12 @@
 
 #include <mach/mach_time.h>
 
+@interface GLLinearTransform ()
+@property(readwrite, assign, nonatomic) NSUInteger nDataPoints;
+@property(readwrite, assign, nonatomic) NSUInteger nDataElements;
+@property(readwrite, assign, nonatomic) NSUInteger dataBytes;
+@end
+
 @implementation GLLinearTransform
 
 + (id) transformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) equation
@@ -280,6 +286,10 @@
 	return self;
 }
 
+@synthesize nDataPoints = _nDataPoints;
+@synthesize nDataElements = _nDataElements;
+@synthesize dataBytes = _dataBytes;
+
 - (id) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation
 {
 	if (!theEquation || fromDims.count != toDims.count || fromDims.count != matrixFormats.count) {
@@ -287,18 +297,7 @@
 		return nil;
 	}
 	
-	if ((self = [super init])) {
-		_variableDifferentialOperationMaps = [[NSMutableSet alloc] init];
-        _existingOperations = [[NSMutableArray alloc] init];
-		
-		_pendingOperations = [[NSMutableArray alloc] init];
-		_equation = theEquation;
-		_uniqueID = mach_absolute_time();
-		
-		_isFrequencyDomain = 0;
-		_isComplex = dataFormat != kGLRealDataFormat;
-		_isImaginaryPartZero = dataFormat == kGLRealDataFormat;
-		_dataFormat = dataFormat;
+	if ((self = [super initWithType: dataFormat withEquation: theEquation])) {
         self.matrixFormats = matrixFormats;
 		
 		self.toDimensions = [NSArray arrayWithArray: toDims];
@@ -360,6 +359,16 @@
 	
 	return self;
 }
+
+- (BOOL) isHermitian {
+	if (self.hermitianDimension) {
+		NSUInteger i = [self.fromDimensions indexOfObject: self.hermitianDimension];
+		return ( ([self.realSymmetry[i] unsignedIntegerValue] == kGLEvenSymmetry || self.isRealPartZero) && ([self.imaginarySymmetry[i] unsignedIntegerValue] == kGLOddSymmetry || self.isImaginaryPartZero) );
+	}
+	return NO;
+}
+
+
 
 - (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable
 {
@@ -565,9 +574,9 @@
 			[descrip appendFormat: @"%+1.1f ", splitComplex.imagp[i]/divisor];
 		}
 	}
-    if ( self.dimensions.count == 3)
+    if ( self.fromDimensions.count == 3)
     {
-        NSUInteger m = [self.dimensions[2] nPoints] * [self.dimensions[1] nPoints];
+        NSUInteger m = [self.fromDimensions[2] nPoints] * [self.fromDimensions[1] nPoints];
         GLFloat *f = self.pointerValue;
 		[descrip appendFormat: @"%g * ", divisor];
 		for (NSUInteger i=0; i<self.nDataElements; i++)

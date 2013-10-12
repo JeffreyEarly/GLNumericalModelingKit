@@ -13,7 +13,7 @@
 /************************************************/
 
 // Return nil if no transformation is necessary. Raises an exception if it can't do it.
-@interface GLBasisTransformOperation : GLUnaryOperation
+@interface GLBasisTransformOperation : GLVariableOperation
 + (id) basisTransformationWithOperand: (GLVariable *) variable destinationBasis: (NSArray *) toBasis;
 + (void) readWisdom;
 + (void) saveWisdom;
@@ -62,6 +62,6 @@
 /************************************************/
 
 // Return nil if no transformation is necessary. Raises an exception if it can't do it.
-@interface GLMatrixFFTTransformOperation : GLUnaryOperation
+@interface GLMatrixFFTTransformOperation : GLVariableOperation
 + (id) basisTransformationWithOperand: (GLVariable *) variable destinationBasis: (NSArray *) toBasis;
 @end

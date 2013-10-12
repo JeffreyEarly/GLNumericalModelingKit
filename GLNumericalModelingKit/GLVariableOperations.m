@@ -16,6 +16,16 @@
 /*		GLVariableOperation						*/
 /************************************************/
 
+@interface GLVariableOperation ()
+
+// To be called after the result and operands are set.
+- (void) setupDependencies;
+
+// To be called after the operation is complete.
+- (void) tearDownDependencies;
+
+@end
+
 @implementation GLVariableOperation : NSOperation
 
 - (id) init
@@ -37,32 +47,70 @@
     if ( ![[self class] isSubclassOfClass: [otherOperation class]] )  {
         return NO;
     }
+	
+	GLVariableOperation * op = otherOperation;
+	if (self.result.count != op.result.count) {
+        return NO;
+    } else if (self.operand.count != op.operand.count) {
+        return NO;
+    } else if (self.buffers.count != op.buffers.count) {
+        return NO;
+    }
+	
+	for ( NSUInteger i=0; i<self.result.count; i++) {
+        if ( self.result[i] != op.result[i]) {
+            return NO;
+        }
+    }
+	
+	for ( NSUInteger i=0; i<self.operand.count; i++) {
+        if ( self.operand[i] != op.operand[i]) {
+            return NO;
+        }
+    }
+	
     return YES;
 }
 
-@end
-
-/************************************************/
-/*		GLNullaryOperation						*/
-/************************************************/
-
-@interface GLNullaryOperation ()
-
-// To be called after the result and operands are set.
-- (void) setupDependencies;
-
-// To be called after the operation is complete.
-- (void) tearDownDependencies;
-
-@end
-
-@implementation GLNullaryOperation
-
-- (id) initWithResult: (GLVariable *) resultVariable
+- (id) initWithResult: (NSArray *) result operand: (NSArray *) operand buffers: (NSArray *) buffers operation: (variableOperation) op
 {
 	if (( self = [super init] ))
 	{
-		self.result = resultVariable;
+		self.result = result;
+		self.operand = operand;
+		self.buffers = buffers;
+		self.operation = op;
+		
+		[self setupDependencies];
+	}
+	
+    return self;
+}
+
+- (id) initWithResult: (NSArray *) result operand: (NSArray *) operand
+{
+	if (( self = [super init] ))
+	{
+		self.result = result;
+		self.operand = operand;
+		
+		[self setupDependencies];
+	}
+	
+    return self;
+}
+
+- (id) initWithOperand: (NSArray *) operand
+{
+	if (( self = [super init] ))
+	{
+		NSMutableArray *array = [[NSMutableArray alloc] initWithCapacity: operand.count];
+		for (GLVariable *variable in operand) {
+			[array addObject: [[variable class] variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
+		}
+		self.result = array;
+		self.operand = operand;
+		
 		[self setupDependencies];
 	}
 	
@@ -71,42 +119,47 @@
 
 - (void) main
 {
-	self.blockOperation( self.result.data);
+	NSMutableArray *resultBuffer = [[NSMutableArray alloc] initWithCapacity: self.result.count];
+	NSMutableArray *operandBuffer = [[NSMutableArray alloc] initWithCapacity: self.operand.count];
+	for (GLVariable *variable in self.result) {
+		[resultBuffer addObject: variable.data];
+	}
+	for (GLVariable *variable in self.operand) {
+		[operandBuffer addObject: variable.data];
+	}
+	self.operation( resultBuffer, operandBuffer, self.buffers );
 	
 	[self tearDownDependencies];
 }
 
-@synthesize result;
-@synthesize blockOperation;
-
 - (void) setupDependencies
 {
-	if (self.result.lastOperation && ![self.dependencies containsObject:self.result.lastOperation]) {
-		[self addDependency: self.result.lastOperation];
+	for (GLVariable *variable in self.operand) {
+		if (variable.lastOperation && ![self.dependencies containsObject:variable.lastOperation]) {
+			[self addDependency: variable.lastOperation];
+		}
 	}
-	
-	[self.result addOperation: self];
+	for (GLVariable *variable in self.result) {
+		if (variable.lastOperation && ![self.dependencies containsObject:variable.lastOperation]) {
+			[self addDependency: variable.lastOperation];
+		}
+	}
+	for (GLVariable *variable in self.result) {
+		[variable addOperation: self];
+	}
 }
 
 - (void) tearDownDependencies
 {
-	[self.result removeOperation: self];
+	for (GLVariable *variable in self.result) {
+		[variable removeOperation: self];
+	}
 	self.result = nil;
-}
-
-- (GLOperationType) operationType {
-	return kGLNullaryOperation;
-}
-
-- (BOOL) isEqualToOperation: (id) otherOperation {
-    if ( ![super isEqualToOperation: otherOperation] )  {
-        return NO;
-    }
-    
-    return YES;
+	self.operand = nil;
 }
 
 @end
+
 
 /************************************************/
 /*		GLUnaryOperation						*/

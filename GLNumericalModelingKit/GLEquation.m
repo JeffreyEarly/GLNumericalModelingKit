@@ -117,12 +117,12 @@
 // Operations automatically add their dependencies to other operations.
 // When they complete, they remove themselves as 
 
-- (void) solveForVariable: (GLVariable *) aVariable
+- (void) solveForVariable: (GLTensor *) aVariable
 {
 	[self solveForVariable: aVariable waitUntilFinished:YES];
 }
 
-- (void) solveForVariable: (GLVariable *) aVariable waitUntilFinished: (BOOL) shouldWait
+- (void) solveForVariable: (GLTensor *) aVariable waitUntilFinished: (BOOL) shouldWait
 {
 	if (!aVariable.pendingOperations.count) return;
 	

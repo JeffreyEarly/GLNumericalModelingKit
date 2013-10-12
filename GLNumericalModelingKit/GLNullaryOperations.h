@@ -12,7 +12,7 @@
 /*		GLRandomNumberOperation					*/
 /************************************************/
 // variable is populated with random numbers between the two values.
-@interface GLRandomNumberOperation : GLNullaryOperation
+@interface GLRandomNumberOperation : GLVariableOperation
 
 - (id) initWithResult: (GLVariable *) result firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand;
 

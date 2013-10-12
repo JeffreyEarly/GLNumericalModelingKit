@@ -7,26 +7,8 @@
 //
 
 #import <Foundation/Foundation.h>
-
-#import <GLNumericalModelingKit/Precision.h>
+#import <GLNumericalModelingKit/GLTensor.h>
 #import <GLNumericalModelingKit/GLDimension.h>
-
-GLSplitComplex splitComplexFromData( NSData *data );
-
-// This specifies how the data is organized in the memory buffer.
-// kGLRealDataFormat means that there is no memory allocated for the imaginary part.
-// kGLSplitComplexDataFormat means that the imaginary nPoints follow the real nPoints in the buffer.
-// The half complex format means that the reversed imaginary part follows real part *in that dimension*.
-// Unlike the split complex format then, you must specify which dimension is responsible for imaginary parts.
-enum {
-	kGLRealDataFormat = 0,
-    kGLSplitComplexDataFormat = 1,
-    kGLInterleavedComplexDataFormat = 2,
-	kGLHalfComplex1DDataFormat = 10,
-    kGLHalfComplex2DDataFormat = 11,
-    kGLHalfComplex3DDataFormat = 12
-};
-typedef NSUInteger GLDataFormat;
 
 // If a symmetry exists, then function is assumed to be defined for negative
 // values with the given symmetry. For example, if the dimension has even symmetry,
@@ -39,28 +21,8 @@ enum {
 };
 typedef NSUInteger GLVariableSymmetry;
 
-@class GLEquation, GLVariableOperation, GLDifferentialOperator, GLMatrixDescription;
-@interface GLVariable : NSObject {
-    NSArray *_dimensions;
-	NSUInteger _nDataPoints;
-	NSUInteger _nDataElements;
-	BOOL _isFrequencyDomain;
-	BOOL _isComplex;
-	BOOL _isImaginaryPartZero;
-	NSMutableDictionary *_metadata;
-	NSUInteger _uniqueID;
-	
-	NSMutableData *_data;
-	NSUInteger _dataBytes;
-	GLDataFormat _dataFormat;
-	
-    __weak GLEquation *_equation;
-	NSMutableArray *_existingOperations;
-	NSMutableArray *_pendingOperations;
-	GLVariable *_transformedVariable;
-	id _differentialOperatorPool;
-	NSMutableSet *_variableDifferentialOperationMaps;
-}
+@class GLEquation, GLVariableOperation, GLDifferentialOperator;
+@interface GLVariable : GLTensor
 
 // Variables do not get computed immediately and should only be computed when absolutely needed or a choke point has been reached.
 // This minimizes the amount of memory and computation required. If we computed a variable's value immediately (like [psi x]),
@@ -105,17 +67,6 @@ typedef NSUInteger GLVariableSymmetry;
 // Copies the data from the other variable (now!) not a delayed operation.
 + (id) variableFromVariable: (GLVariable *) otherVariable;
 
-@property(readwrite, copy, nonatomic) NSString *name;
-@property(readwrite, copy, nonatomic) NSString *units;
-
-// Any metadata that should follow around the variable. Units property is automicatically added to this.
-@property(readonly, strong, nonatomic) NSMutableDictionary *metadata;
-
-// An attempt to make a fairly unique variable id. Copies of this variable have the same id.
-@property(readonly, assign, nonatomic) NSUInteger uniqueID;
-
-@property(readonly) NSString *graphvisDescription;
-@property(readwrite, strong) GLMatrixDescription *matrixDescription;
 
 /************************************************/
 /*		Dimensionality							*/
@@ -129,32 +80,12 @@ typedef NSUInteger GLVariableSymmetry;
 // This is an array of GLDimensionObjects.
 @property(readonly, strong, nonatomic) NSArray *dimensions;
 
-// Derived by computing the product of the number of data points in each dimension.
-@property(readonly, assign, nonatomic) NSUInteger nDataPoints;
-
-// For a real number, the number of data points is equal to the number of elements.
-// For a split complex number, there are twice as many elements as points.
-@property(readonly, assign, nonatomic) NSUInteger nDataElements;
-
 // Derived property that returns YES if any one of the dimensions is in the frequency domain.
 @property(readonly, assign, nonatomic) BOOL isFrequencyDomain;
-
-// Determines whether the data is holding a real or complex number.
-// Variables in the frequency domain are always assumed to be complex.
-@property(readonly, assign, nonatomic) BOOL isComplex;
-
-// Returns NO.
-@property(readonly, assign, nonatomic) BOOL isMutable;
 
 // The symmetry (none, even, or odd) of each dimension.
 @property(readwrite, assign, nonatomic) NSMutableArray *realSymmetry;
 @property(readwrite, assign, nonatomic) NSMutableArray *imaginarySymmetry;
-
-@property(readwrite, assign, nonatomic) BOOL isRealPartZero;
-@property(readwrite, assign, nonatomic) BOOL isImaginaryPartZero;
-
-@property(readwrite, assign, nonatomic) BOOL isPurelyReal;
-@property(readwrite, assign, nonatomic) BOOL isPurelyImaginary;
 
 // Returns YES if the variable is Hermitian,  H(-f)=H†(f).
 @property(readonly, assign, nonatomic) BOOL isHermitian;
@@ -177,27 +108,6 @@ typedef NSUInteger GLVariableSymmetry;
 #pragma mark Data
 #pragma mark
 
-// Access to the raw computed data. If this variable is dependent on others, you should call
-// have the equation -solveForVariable first, otherwise an empty (non-zeroed!) chunk of data will be returned.
-@property(readonly, strong, nonatomic) NSMutableData *data;
-@property(readonly, assign, nonatomic) NSUInteger dataBytes;
-@property(readonly, assign, nonatomic) BOOL hasData;
-
-// The data format for each dimension corresponds 1-1 with the dataFormats array.
-// If the data formats are homogenous, -dataFormat will return the value, otherwise
-// it will return kGLMixedDataFormat.
-@property(readonly, assign, nonatomic) GLDataFormat dataFormat;
-
-// This will return a (GLSplitComplex *) pointing to the data the variable is complex,
-// or it will return a (GLFloat *) pointing to the data otherwise. Request the right one!
-@property(readonly, assign, nonatomic) GLFloat *pointerValue;
-@property(readonly, assign, nonatomic) GLSplitComplex splitComplex;
-
-- (void) solve;
-
-// Set the value to zero everywhere.
-- (void) zero;
-
 // Sets the value at each point to a different random number between [-amp, amp]
 - (void) rand: (GLFloat) amp;
 
@@ -214,10 +124,6 @@ typedef NSUInteger GLVariableSymmetry;
 #pragma mark -
 #pragma mark Operations
 #pragma mark
-
-// This method takes an operation and checks the GLVariable object's internal cache
-// to see if the equivalent operation has already been computed.
-- (id) replaceWithExistingOperation: (GLVariableOperation *) newOperation;
 
 // C = A + B
 - (id) plus: (GLVariable *) otherVariable NS_RETURNS_NOT_RETAINED;
@@ -385,37 +291,6 @@ typedef NSUInteger GLVariableSymmetry;
 
 - (GLVariable *) differentiate: (NSString *) operatorName byTransformingToBasis: (NSArray *) orderedBasis;
 
-/************************************************/
-/*		Reading & Writing						*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Reading & Writing
-#pragma mark
-
-// These methods create a new file and write out the variable.
-- (BOOL) writeToNetCDFFile: (NSURL *) anURL;
-- (void) dumpToConsole;
-
-/************************************************/
-/*		Private									*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Private
-#pragma mark
-
-// If I try to use an operation a second time, I'm going to find it won't work.
-
-@property(readonly, weak, nonatomic) GLEquation *equation;
-@property(readonly, strong, nonatomic) NSMutableArray *pendingOperations;
-
-// Operations upon which this variable depends.
-- (void) addOperation: (id) operation;
-- (void) removeOperation: (id) operation;
-
-// The last operation upon which this variable is dependent.
-- (GLVariableOperation *) lastOperation;
 
 // The one and only initializer for a variable.
 - (id) initVariableOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) theEquation;

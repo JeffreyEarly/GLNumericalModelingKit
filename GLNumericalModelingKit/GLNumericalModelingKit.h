@@ -9,9 +9,13 @@
 #import <GLNumericalModelingKit/Precision.h>
 
 #import <GLNumericalModelingKit/GLEquation.h>
+
 #import <GLNumericalModelingKit/GLDimension.h>
+#import <GLNumericalModelingKit/GLTensor.h>
+#import <GLNumericalModelingKit/GLScalar.h>
 #import <GLNumericalModelingKit/GLVariable.h>
 #import <GLNumericalModelingKit/GLLinearTransform.h>
+
 #import <GLNumericalModelingKit/GLNetCDFVariable.h>
 #import <GLNumericalModelingKit/GLMatrixDescription.h>
 

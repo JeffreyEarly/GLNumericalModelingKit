@@ -6,7 +6,6 @@
 //  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
 //
 
-#import <GLNumericalModelingKit/GLUnaryOperations.h>
 #import <GLNumericalModelingKit/GLVectorVectorOperations.h>
 
 /************************************************/
@@ -14,7 +13,7 @@
 /************************************************/
 
 // Returns nil if the variable already has that dimension.
-@interface GLAddDimensionOperation : GLUnaryOperation
+@interface GLAddDimensionOperation : GLVariableOperation
 
 - (id) initWithOperand: (GLVariable *) variable dimension: (GLDimension *) dim;
 
@@ -33,7 +32,7 @@
 // Returns a variable with only the elements indicated by by the array of ranges.
 // The size of the ranges array must match the number of dimensions.
 // If the -shouldFlatten flag is set, this will cause any dimensions of length 1 to be eliminated.
-@interface GLSubdomainOperation : GLUnaryOperation
+@interface GLSubdomainOperation : GLVariableOperation
 
 - (id) initWithOperand: (GLVariable *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag;
 
@@ -77,7 +76,7 @@
 /************************************************/
 /*		GLHalfToSplitComplexOperation			*/
 /************************************************/
-@interface GLHalfToSplitComplexOperation : GLUnaryOperation
+@interface GLHalfToSplitComplexOperation : GLVariableOperation
 
 @end
 
@@ -85,7 +84,7 @@
 /*		GLZeroPadOperation                      */
 /************************************************/
 
-@interface GLZeroPadOperation : GLUnaryOperation
+@interface GLZeroPadOperation : GLVariableOperation
 
 - (id) initWithOperand: (GLVariable *) variable newDimensions: (NSArray *) newDimensions basis: (NSArray *) basis;
 @property(readwrite, strong, nonatomic) NSArray *projectedDimensions;

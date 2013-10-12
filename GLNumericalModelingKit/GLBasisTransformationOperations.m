@@ -9,7 +9,6 @@
 #import "GLBasisTransformationOperations.h"
 #import <fftw3.h>
 #import "GLMemoryPool.h"
-#import "GLUnaryOperations.h"
 
 /************************************************/
 /*		GLBasisTransformOperation               */
@@ -198,7 +197,7 @@ static BOOL _shouldAntiAlias = NO;
         if (finishedTransformation) {
             return operation;
         } else {
-            variable = operation.result;
+            variable = operation.result[0];
         }
     }
     
@@ -232,7 +231,7 @@ static BOOL _shouldAntiAlias = NO;
         if (finishedTransformation) {
             return operation;
         } else {
-            variable = operation.result;
+            variable = operation.result[0];
         }
     }
     
@@ -263,7 +262,7 @@ static BOOL _shouldAntiAlias = NO;
         if (finishedTransformation) {
             return operation;
         } else {
-            variable = operation.result;
+            variable = operation.result[0];
         }
     }
     
@@ -305,7 +304,7 @@ static BOOL _shouldAntiAlias = NO;
         if (finishedTransformation) {
             return operation;
         } else {
-            variable = operation.result;
+            variable = operation.result[0];
         }
     }
     
@@ -339,7 +338,7 @@ static BOOL _shouldAntiAlias = NO;
         if (finishedTransformation) {
             return operation;
         } else {
-            variable = operation.result;
+            variable = operation.result[0];
         }
     }
     
@@ -370,7 +369,7 @@ static BOOL _shouldAntiAlias = NO;
         if (finishedTransformation) {
             return operation;
         } else {
-            variable = operation.result;
+            variable = operation.result[0];
         }
     }
     
@@ -494,8 +493,8 @@ static BOOL _shouldAntiAlias = NO;
     [basisDescription deleteCharactersInRange: NSMakeRange(basisDescription.length-2, 2)];
     [basisDescription appendString: @")"];
     
-    if (self.operand.name) {
-        return [NSString stringWithFormat: @"%@\t<0x%lx> (%@) %@", NSStringFromClass([self class]), (NSUInteger) self, self.operand.name, basisDescription];
+    if (((GLVariable *)self.operand[0]).name) {
+        return [NSString stringWithFormat: @"%@\t<0x%lx> (%@) %@", NSStringFromClass([self class]), (NSUInteger) self, ((GLVariable *)self.operand[0]).name, basisDescription];
     } else {
         return [NSString stringWithFormat: @"%@\t<0x%lx> %@", NSStringFromClass([self class]), (NSUInteger) self, basisDescription];
     }
@@ -556,7 +555,7 @@ static BOOL _shouldAntiAlias = NO;
     // Okay, we're good to go!
     GLVariable *resultVariable = [GLVariable variableOfRealTypeWithDimensions: finalDimensions forEquation: variable.equation];
     resultVariable.name = variable.name;
-	if (( self = [super initWithResult: resultVariable operand: variable] ))
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
         self.fromBasis = initialBasis;
         self.toBasis = finalBasis;
@@ -675,14 +674,20 @@ static BOOL _shouldAntiAlias = NO;
         
         // Note that we leak the plan.
         if (scaleFactor == 1.0) {
-            self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
+				
                 GLFloat *f = (void *) operand.bytes;
                 GLFloat *fbar = (void *) result.mutableBytes;
                 
                 fftwf_execute_r2r( plan, f, fbar );		
             };
         } else {
-            self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
+				
                 GLFloat *f = (void *) operand.bytes;
                 GLFloat *fbar = (void *) result.mutableBytes;
                 
@@ -787,7 +792,7 @@ static BOOL _shouldAntiAlias = NO;
     }
     
     resultVariable.name = variable.name;
-	if (( self = [super initWithResult: resultVariable operand: variable] ))
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
         self.fromBasis = initialBasis;
         self.toBasis = finalBasis;
@@ -876,7 +881,10 @@ static BOOL _shouldAntiAlias = NO;
             
             // Note that we leak the plan.
             NSUInteger dataPoints = resultVariable.nDataPoints;
-            self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
+				
                 GLFloat *f = (void *) operand.bytes;
                 GLSplitComplex fbar = splitComplexFromData(result);
                 
@@ -903,7 +911,10 @@ static BOOL _shouldAntiAlias = NO;
 #warning We are inefficiently copying to a buffer because the input is destroyed.
 			NSUInteger numBytes = variable.nDataElements*sizeof(GLFloat);
 			NSMutableData *buffer = [[GLMemoryPool sharedMemoryPool] dataWithLength: numBytes];
-            self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
+				
                 GLFloat *f = (void *) result.mutableBytes;
 				memcpy(buffer.mutableBytes, operand.bytes, numBytes);
                 GLSplitComplex fbar = splitComplexFromData(buffer);
@@ -986,7 +997,7 @@ static BOOL _shouldAntiAlias = NO;
     // Okay, we're good to go!
     GLVariable *resultVariable = [GLVariable variableOfComplexTypeWithDimensions: finalDimensions forEquation: variable.equation];
     resultVariable.name = variable.name;
-	if (( self = [super initWithResult: resultVariable operand: variable] ))
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
         self.fromBasis = initialBasis;
         self.toBasis = finalBasis;
@@ -1075,7 +1086,10 @@ static BOOL _shouldAntiAlias = NO;
             }
             
             // Note that we leak the plan.
-            self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
+				
                 GLSplitComplex f = splitComplexFromData(operand);
                 GLSplitComplex fbar = splitComplexFromData(result);
                 
@@ -1089,7 +1103,10 @@ static BOOL _shouldAntiAlias = NO;
         else
         {
             // Note that we leak the plan.
-            self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
+				
                 GLSplitComplex fbar = splitComplexFromData(operand);
                 GLSplitComplex f = splitComplexFromData(result);
                 
@@ -1142,7 +1159,7 @@ static BOOL _shouldAntiAlias = NO;
 		return nil;
 	}
 	
-    GLFourierTransformOperation *operation = [[GLFourierTransformOperation alloc] initWithOperand: variable];
+    GLFourierTransformOperation *operation = [[GLFourierTransformOperation alloc] initWithOperand: @[variable]];
     return operation;
 }
 

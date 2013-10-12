@@ -21,12 +21,17 @@
 
 - (id) initWithOperand: (GLVariable *) variable;
 {
-	if (( self = [super initWithOperand: variable] ))
+	if (( self = [super initWithOperand: @[variable] ]))
 	{
-		NSUInteger numElements = self.result.nDataElements;
-		self.result.isPurelyReal = self.operand.isPurelyReal;
-		self.result.isPurelyImaginary = self.operand.isPurelyImaginary;
-		self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+		GLVariable *resultVariable = self.result[0];
+		GLVariable *operandVariable = self.operand[0];
+		
+		NSUInteger numElements = resultVariable.nDataElements;
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
+		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
 			vGL_vneg( (void *) operand.bytes, 1, result.mutableBytes, 1, numElements );
 		};
         self.graphvisDescription = @"negate";
@@ -55,21 +60,27 @@
 {
 	GLVariable *resultVar = [[variable class] variableOfRealTypeWithDimensions: variable.dimensions forEquation: variable.equation];
 	
-	if (( self = [super initWithResult: resultVar operand: variable] ))
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ] ))
 	{
-		self.result.isPurelyReal = YES;
+		GLVariable *resultVariable = self.result[0];
+		GLVariable *operandVariable = self.operand[0];
+		
+		resultVariable.isPurelyReal = YES;
         self.useComplexArithmetic = useComplexArithmetic;
 		
-		if (self.operand.isComplex && useComplexArithmetic == YES) {
-			NSUInteger numPoints = self.result.nDataPoints;
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
-				GLSplitComplex fromSplit = splitComplexFromData(operand);
+		if (operandVariable.isComplex && useComplexArithmetic == YES) {
+			NSUInteger numPoints = resultVariable.nDataPoints;
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
 				vGL_zvabs( &fromSplit, 1, result.mutableBytes, 1, numPoints );
 			};
             self.graphvisDescription = @"abs (complex)";
 		} else {
-			NSUInteger numElements = self.result.nDataElements;
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			NSUInteger numElements = resultVariable.nDataElements;
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
 				vGL_vabs( (void *) operand.bytes, 1, result.mutableBytes, 1, numElements );
 			};
             self.graphvisDescription = @"abs (real)";
@@ -109,32 +120,37 @@
 	// If the operand is purely real, we don't need a complex number
 	GLDataFormat format = variable.isPurelyReal ? kGLRealDataFormat : kGLSplitComplexDataFormat;
 	GLVariable *resultVar = [[variable class] variableOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
-	if (( self = [super initWithResult: resultVar operand: variable] ))
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ] ))
 	{
-		const int numElements = (int) self.result.nDataElements;
-		const int numPoints = (int) self.result.nDataPoints;
-		self.result.isPurelyReal = self.operand.isPurelyReal;
+		GLVariable *resultVariable = self.result[0];
+		GLVariable *operandVariable = self.operand[0];
+		
+		const int numElements = (int) resultVariable.nDataElements;
+		const int numPoints = (int) resultVariable.nDataPoints;
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
 		
 		NSMutableData *buffer = [[GLMemoryPool sharedMemoryPool] dataWithLength: numPoints*sizeof(GLFloat)];
 		
-		if (self.operand.isComplex) {
-			if (self.operand.isPurelyReal) {
-				self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+		if (operandVariable.isComplex) {
+			if (operandVariable.isPurelyReal) {
+				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					NSMutableData *result = resultArray[0];
+					NSMutableData *operand = operandArray[0];
 					vGL_vvexp( result.mutableBytes, operand.bytes, &numElements );
 				};
                 self.graphvisDescription = @"exp (complex, purely real)";
-			} else if (self.operand.isPurelyImaginary) {
-				self.blockOperation = ^(NSMutableData *result, NSData *operand) {
-					GLSplitComplex fromSplit = splitComplexFromData(operand);
-					GLSplitComplex toSplit = splitComplexFromData(result);
+			} else if (operandVariable.isPurelyImaginary) {
+				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
+					GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
 					
 					vGL_vvsincos( toSplit.imagp, toSplit.realp, fromSplit.imagp, &numPoints);
 				};
                 self.graphvisDescription = @"exp (complex, purely imaginary)";
 			} else {
-				self.blockOperation = ^(NSMutableData *result, NSData *operand) {
-					GLSplitComplex fromSplit = splitComplexFromData(operand);
-					GLSplitComplex toSplit = splitComplexFromData(result);
+				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
+					GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
 					
 					vGL_vvsincos( toSplit.imagp, toSplit.realp, fromSplit.imagp, &numPoints);
 					vGL_vvexp( buffer.mutableBytes, fromSplit.realp, &numPoints );
@@ -145,7 +161,9 @@
                 self.graphvisDescription = @"exp (complex)";
 			}
 		} else {
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
 				vGL_vvexp( result.mutableBytes, operand.bytes, &numElements );
 			};
             self.graphvisDescription = @"exp (real)";
@@ -169,12 +187,17 @@
 
 - (id) initWithOperand: (GLVariable *) variable;
 {
-	if (( self = [super initWithOperand: variable] ))
+	if (( self = [super initWithOperand: @[variable] ]))
 	{
-		const int numElements = (int) self.result.nDataElements;
-		self.result.isPurelyReal = self.operand.isPurelyReal;
-		self.result.isPurelyImaginary = self.operand.isPurelyImaginary;
-		self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+		GLVariable *resultVariable = self.result[0];
+		GLVariable *operandVariable = self.operand[0];
+		
+		const int numElements = (int) resultVariable.nDataElements;
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
+		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
 			vGL_vvsin( result.mutableBytes, operand.bytes, &numElements );
 		};
         self.graphvisDescription = @"sine";
@@ -198,12 +221,17 @@
 
 - (id) initWithOperand: (GLVariable *) variable;
 {
-	if (( self = [super initWithOperand: variable] ))
+	if (( self = [super initWithOperand: @[variable] ]))
 	{
-		const int numElements = (int) self.result.nDataElements;
-		self.result.isPurelyReal = self.operand.isPurelyReal;
-		self.result.isPurelyImaginary = self.operand.isPurelyImaginary;
-		self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+		GLVariable *resultVariable = self.result[0];
+		GLVariable *operandVariable = self.operand[0];
+		
+		const int numElements = (int) resultVariable.nDataElements;
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
+		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
 			vGL_vvcos( result.mutableBytes, operand.bytes, &numElements );
 		};
         self.graphvisDescription = @"cosine";
@@ -226,12 +254,17 @@
 
 - (id) initWithOperand: (GLVariable *) variable;
 {
-	if (( self = [super initWithOperand: variable] ))
+	if (( self = [super initWithOperand: @[variable] ]))
 	{
-		const int numElements = (int) self.result.nDataElements;
-		self.result.isPurelyReal = self.operand.isPurelyReal;
-		self.result.isPurelyImaginary = self.operand.isPurelyImaginary;
-		self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+		GLVariable *resultVariable = self.result[0];
+		GLVariable *operandVariable = self.operand[0];
+		
+		const int numElements = (int) resultVariable.nDataElements;
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
+		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
 			vGL_vvatan( result.mutableBytes, operand.bytes, &numElements );
 		};
         self.graphvisDescription = @"atan";
@@ -253,12 +286,17 @@
 @implementation GLSquareRootOperation
 - (id) initWithOperand: (GLVariable *) variable;
 {
-	if (( self = [super initWithOperand: variable] ))
+	if (( self = [super initWithOperand: @[variable] ]))
 	{
-		const int numElements = (int) self.result.nDataElements;
-		self.result.isPurelyReal = self.operand.isPurelyReal;
-		self.result.isPurelyImaginary = self.operand.isPurelyImaginary;
-		self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+		GLVariable *resultVariable = self.result[0];
+		GLVariable *operandVariable = self.operand[0];
+		
+		const int numElements = (int) resultVariable.nDataElements;
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
+		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
 			vGL_vvsqrt( result.mutableBytes, operand.bytes, &numElements );
 		};
         self.graphvisDescription = @"sqrt";
@@ -290,24 +328,24 @@
 	GLDataFormat format = !variable.isFrequencyDomain ? kGLSplitComplexDataFormat : kGLRealDataFormat;
 	GLVariable *resultVariable = [[variable class] variableOfType: format withDimensions: transformedDimensions forEquation: variable.equation];
 	
-	if (( self = [super initWithResult: resultVariable operand: variable] ))
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
-		NSNumber *key = [[GLFourierTransformPool sharedFourierTransformPool] keyForDimensions: self.result.dimensions];
-		if (self.result.isFrequencyDomain) {
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+		NSNumber *key = [[GLFourierTransformPool sharedFourierTransformPool] keyForDimensions: resultVariable.dimensions];
+		if (resultVariable.isFrequencyDomain) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				GLFourierTransform *transform = [[GLFourierTransformPool sharedFourierTransformPool] transformForKey: key];
-				GLSplitComplex fbar = splitComplexFromData(result);
-				GLFloat *f = (void *) operand.bytes;
+				GLSplitComplex fbar = splitComplexFromData(resultArray[0]);
+				GLFloat *f = (void *) ((NSMutableData *)operandArray[0]).bytes;
 				
 				[transform transform: f forward: &fbar];
 				
 				[[GLFourierTransformPool sharedFourierTransformPool] returnTransform: transform];
 			};
 		} else  {
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				GLFourierTransform *transform = [[GLFourierTransformPool sharedFourierTransformPool] transformForKey: key];
-				GLSplitComplex fbar = splitComplexFromData(operand);
-				GLFloat *f = (void *) result.bytes;
+				GLSplitComplex fbar = splitComplexFromData(operandArray[0]);
+				GLFloat *f = (void *) ((NSMutableData *)resultArray[0]).bytes;
 				
 				[transform transform: &fbar inverse: f];
 				
@@ -338,22 +376,25 @@
 	resultVariable.isPurelyImaginary = variable.isPurelyReal;
 	resultVariable.isPurelyReal = variable.isPurelyImaginary;
 	
-	if (( self = [super initWithResult: resultVariable operand: variable] ))
-	{		
-		NSUInteger numBytes = self.result.nDataPoints*sizeof(GLFloat);
-		if (self.operand.isComplex) {
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
-				GLSplitComplex toSplit = splitComplexFromData(result);
-				GLSplitComplex fromSplit = splitComplexFromData(operand);
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
+	{
+		GLVariable *operandVariable = self.operand[0];
+		
+		NSUInteger numBytes = resultVariable.nDataPoints*sizeof(GLFloat);
+		if (operandVariable.isComplex) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
+				GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
 				
 				memcpy( toSplit.realp, fromSplit.imagp, numBytes );
 				memcpy( toSplit.imagp, fromSplit.realp, numBytes );	
 			};
             self.graphvisDescription = @"swap complex (complex)";
 		} else {
-			NSUInteger numPoints = self.result.nDataPoints;
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
-				GLSplitComplex toSplit = splitComplexFromData(result);
+			NSUInteger numPoints = resultVariable.nDataPoints;
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
+				NSMutableData *operand = operandArray[0];
 				
 				vGL_vclr( toSplit.realp, 1, numPoints);
 				memcpy( toSplit.imagp, operand.bytes, numBytes );
@@ -375,13 +416,18 @@
 
 - (id) initWithOperand: (GLVariable *) variable;
 {
-	if (( self = [super initWithOperand: variable] ))
+	if (( self = [super initWithOperand: @[variable]] ))
 	{
-        self.result.name = variable.name;
-		NSUInteger numBytes = self.result.nDataElements*sizeof(GLFloat);
-		self.result.isPurelyReal = self.operand.isPurelyReal;
-		self.result.isPurelyImaginary = self.operand.isPurelyImaginary;
-		self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+		GLVariable *resultVariable = self.result[0];
+		GLVariable *operandVariable = self.operand[0];
+		
+        resultVariable.name = variable.name;
+		NSUInteger numBytes = resultVariable.nDataElements*sizeof(GLFloat);
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
+		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
 			memcpy( result.mutableBytes, operand.bytes,  numBytes );
         
 		};
@@ -405,13 +451,14 @@
 
 - (id) initWithOperand: (GLVariable *) variable
 {
-	
 	GLVariable *resultVariable = [GLVariable variableOfRealTypeWithDimensions: [NSArray array] forEquation: variable.equation];
 	
-	if (( self = [super initWithResult: resultVariable operand: variable] ))
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{		
-		NSUInteger nDataElements = self.operand.nDataElements;
-		self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+		NSUInteger nDataElements = ((GLVariable *)self.operand[0]).nDataElements;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
 			vGL_maxv( (GLFloat *) operand.bytes, 1, result.mutableBytes, nDataElements);
 		};
         self.graphvisDescription = @"max";
@@ -435,7 +482,7 @@
 	
 	GLVariable *resultVariable = [GLVariable variableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
 	
-	if (( self = [super initWithResult: resultVariable operand: variable] ))
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
         self.dimIndex = index;
         
@@ -486,8 +533,9 @@
 		
 		if (resultVariable.dataFormat == kGLRealDataFormat)
 		{
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
-				
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
 				dispatch_apply( nDataPoints, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(size_t iteration) {
                     NSUInteger index = (iteration/divisor)*a + (iteration%divisor)*b;
 					GLFloat *op = (GLFloat *) operand.bytes;
@@ -500,12 +548,12 @@
 		}
         else if (resultVariable.dataFormat == kGLSplitComplexDataFormat)
 		{
-			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				
 				dispatch_apply( nDataPoints, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(size_t iteration) {
                     NSUInteger index = (iteration/divisor)*a + (iteration%divisor)*b;
-                    GLSplitComplex toSplit = splitComplexFromData(result);
-                    GLSplitComplex fromSplit = splitComplexFromData(operand);
+                    GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
+                    GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
 					vGL_meanv(fromSplit.realp + index*sizeof(GLFloat), summingStride, toSplit.realp + index*sizeof(GLFloat), summingPoints);
                     vGL_meanv(fromSplit.imagp + index*sizeof(GLFloat), summingStride, toSplit.imagp + index*sizeof(GLFloat), summingPoints);
 
