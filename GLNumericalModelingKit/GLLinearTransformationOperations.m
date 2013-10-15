@@ -59,7 +59,7 @@
 			}
 		}
 		
-		BOOL shiftResult = totalShift > 0 ? YES : NO; // Yes if we shift the result, no if we shift the operand
+		BOOL shiftResult = totalShift > 0 ? YES : NO; // Yes if we shift the result and transform, no if we shift the operand
 		totalShift = labs(totalShift); // total number of elements to shift by
 		NSInteger totalShiftBytes = totalShift*sizeof(GLFloat); // total number of bytes to shift by
 		NSInteger nDataElements = result.nDataElements - totalShift;
@@ -73,7 +73,7 @@
 					NSMutableData *result = resultArray[0];
 					NSMutableData *transform = operandArray[0];
 					NSMutableData *function = operandArray[1];
-					vGL_vmul( transform.bytes, 1, function.bytes, 1, result.mutableBytes+totalShiftBytes, 1, nDataElements);
+					vGL_vmul( transform.bytes+totalShiftBytes, 1, function.bytes, 1, result.mutableBytes+totalShiftBytes, 1, nDataElements);
 					vGL_vclr( result.mutableBytes, 1, totalShift );
 				};
 			} else {
@@ -81,7 +81,7 @@
 					NSMutableData *result = resultArray[0];
 					NSMutableData *transform = operandArray[0];
 					NSMutableData *function = operandArray[1];
-					vGL_vmul( transform.bytes+totalShiftBytes, 1, function.bytes+totalShiftBytes, 1, result.mutableBytes, 1, nDataElements);
+					vGL_vmul( transform.bytes, 1, function.bytes+totalShiftBytes, 1, result.mutableBytes, 1, nDataElements);
 					vGL_vclr( result.mutableBytes+totalEndShiftBytes, 1, totalShift );
 				};
 			}
@@ -89,26 +89,28 @@
 		else if ( !linearTransform.isComplex && function.isComplex )
 		{
 			if (shiftResult) {
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-					GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-					GLSplitComplex destComplex = splitComplexFromData( result );
-					vGL_vmul( rightComplex.realp, 1, fOperand.bytes, 1, ((void*)destComplex.realp)+totalShiftBytes, 1, nDataPoints);
-					vGL_vclr( destComplex.realp, 1, totalShift );
+				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					GLSplitComplex result = splitComplexFromData( resultArray[0] );
+					NSMutableData *transform = operandArray[0];
+					GLSplitComplex function = splitComplexFromData( operandArray[1] );
 					
-					vGL_vmul( rightComplex.imagp, 1, fOperand.bytes, 1, ((void*)destComplex.imagp)+totalShiftBytes, 1, nDataPoints);
-					vGL_vclr( destComplex.imagp, 1, totalShift );
+					vGL_vmul( transform.bytes+totalShiftBytes, 1, function.realp, 1, result.realp+totalShiftBytes, 1, nDataPoints);
+					vGL_vclr( result.realp, 1, totalShift );
+					
+					vGL_vmul( transform.bytes+totalShiftBytes, 1, function.imagp, 1, result.imagp+totalShiftBytes, 1, nDataPoints);
+					vGL_vclr( result.realp, 1, totalShift );
 				};
 			} else {
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
+				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					GLSplitComplex result = splitComplexFromData( resultArray[0] );
+					NSMutableData *transform = operandArray[0];
+					GLSplitComplex function = splitComplexFromData( operandArray[1] );
 					
-					GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-					GLSplitComplex destComplex = splitComplexFromData( result );
+					vGL_vmul( transform.bytes, 1, function.realp+totalShiftBytes, 1, result.realp, 1, nDataPoints);
+					vGL_vclr( result.realp+totalEndShiftBytes, 1, totalShift );
 					
-					vGL_vmul( ((void*)rightComplex.realp)+totalShiftBytes, 1, fOperand.bytes+totalShiftBytes, 1, destComplex.realp, 1, nDataPoints);
-					vGL_vclr( ((void*)destComplex.realp)+totalEndShiftBytes, 1, totalShift );
-					
-					vGL_vmul( ((void*)rightComplex.imagp)+totalShiftBytes, 1, fOperand.bytes+totalShiftBytes, 1, destComplex.imagp, 1, nDataPoints);
-					vGL_vclr( ((void*)destComplex.imagp)+totalEndShiftBytes, 1, totalShift );
+					vGL_vmul( transform.bytes, 1, function.imagp+totalShiftBytes, 1, result.imagp, 1, nDataPoints);
+					vGL_vclr( result.realp+totalEndShiftBytes, 1, totalShift );
 				};
 			}
 		} else {

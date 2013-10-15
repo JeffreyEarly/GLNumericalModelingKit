@@ -51,13 +51,13 @@ At the heart of GLNumericalModelingKit is the ability to transform a variable be
 \begin{tabular}{llL}
       \hline
       Basis Name & Discrete value & Basis \tabularnewline \hline \hline
-      \verb"kGLDeltaBasis" & $x_n$ & \[ \delta( x - x_n) \] \tabularnewline
-      \verb"kGLExponentialBasis" & $f_n$  & \[ e^{-2\pi i f_n x} \] \tabularnewline
-      \verb"kGLSineHalfShiftBasis" & $f_n$ & \[ \sin( 2 \pi f_n x )\] \tabularnewline
-      \verb"kGLCosineHalfShiftBasis" & $f_n$ & \[  \cos ( 2 \pi f_n x )\] \tabularnewline
-       \verb"kGLSineBasis" & $f_n$ & \[ \sin ( 2 \pi f_n x )\] \tabularnewline
-      \verb"kGLCosineBasis"&$f_n$ & \[ \cos ( 2 \pi f_n x ) \] \tabularnewline 
-      \verb"kGLChebyshevBasis"& $n$ & \[ T_n(x) \] \tabularnewline 
+      \verb"kGLDeltaBasis" & $x_n$ &\[  \bar{x}_n \equiv  \delta( x - x_n) \] \tabularnewline
+      \verb"kGLExponentialBasis" & $f_n$  & \[ \bar{e}_n \equiv e^{-2\pi i f_n x} \] \tabularnewline
+      \verb"kGLSineHalfShiftBasis" & $f_n$ & \[ \bar{s}_n \equiv \sin( 2 \pi f_n x )\] \tabularnewline
+      \verb"kGLCosineHalfShiftBasis" & $f_n$ & \[  \bar{c}_n \equiv \cos ( 2 \pi f_n x )\] \tabularnewline
+       \verb"kGLSineBasis" & $f_n$ & \[ \bar{s}_n \equiv \sin ( 2 \pi f_n x )\] \tabularnewline
+      \verb"kGLCosineBasis"&$f_n$ & \[ \bar{c}_n \equiv \cos ( 2 \pi f_n x ) \] \tabularnewline 
+      \verb"kGLChebyshevBasis"& $n$ & \[ \bar{t}_n \equiv  T_n(x) \] \tabularnewline 
       \hline
 \end{tabular}
 
@@ -145,7 +145,21 @@ GLNumericalModelingKit is slightly more specific and actually defines a symmetry
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Basis Transformations}
-Forward transformations take a function $H_n$ defined in physical space on a grid $x_n$ and transform it to a function $h_k$ in spectral space on a grid $f_k$.
+Forward transformations take a function $H^n$ defined in physical space on a grid $x_n$ and transform it to a function $h^k$ in spectral space on a grid $f_k$.
+
+In general, a function is defined as,
+\begin{equation}
+f = h^n \bar{e}_n
+\end{equation}
+where $\bar{e}_n$ are the basis vectors and $h^n$ are the components. We can write the function with respect to a different basis, say $\bar{e}_{k^\prime}$, by inserting the transformation matrix and its inverse,
+\begin{equation}
+f = h^n \lambda^{k^\prime}_n \lambda^n_{k^\prime} \bar{e}_n
+\end{equation}
+which is just,
+\begin{equation}
+f = H^{n^\prime} \bar{e}_{n^\prime}
+\end{equation}
+if we define $H^{n^\prime} \equiv \lambda^{k^\prime}_n h^n$ and $\bar{e}_{n^\prime} \equiv  \lambda^n_{k^\prime} \bar{e}_n$.
 
 \begin{tabular}{llL}
       \hline
@@ -379,7 +393,7 @@ and the super-diagonal Kronecker delta,
 
 A general sub-diagonal matrix can be represented as,
 \begin{equation}
-a^i \delta^i_{j+1} = a^{i-1} \delta^{i-1}_j = \left[\begin{array}{cccc}0 & 0 & 0 & 0 \\a_1 & 0 & 0 & 0 \\0 & \ddots & 0 & 0 \\0 & 0 & a_{n-1} & 0\end{array}\right]
+a^i \delta^i_{j+1} = a^{i} \delta^{i-1}_j = a_{j+1} \delta^i_{j+1} = a_{j+1} \delta^{i-1}_j = \left[\begin{array}{cccc}0 & 0 & 0 & 0 \\a_1 & 0 & 0 & 0 \\0 & \ddots & 0 & 0 \\0 & 0 & a_{n-1} & 0\end{array}\right]
 \end{equation}
 where the index $i$ is not summed because it does not appear as both a superscript and a subscript. A general super-diagonal matrix can similarly be represented as,
 \begin{equation}
@@ -411,21 +425,37 @@ When do I initialize the operator? It's going to be a slightly different prototy
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We can determine the differentiation operator using the definition of the inverse transforms.
+A function in delta basis may be represented as,
+\begin{equation}
+f = H^n \bar{x}_n
+\end{equation}
+or as
+\begin{equation}
+f = h^k \bar{e}_k
+\end{equation}
+in some spectral basis such as the exponentials in the Fourier series. The goal in this section is determine how we need to transform the components in function in the spectral basis in order to take the derivative $\partial_x$. So, we seek to determine the differentiation matrix $D_x$ by computing
+\begin{equation}
+\partial_x f= \partial_x\left( h^k \bar{e}_k \right).
+\end{equation}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{kGLExponentialBasis}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+Starting with,
+\begin{equation}
+f = h^k \bar{e}_k
+\end{equation}
+we compute its derivative with respect to $x$,
 \begin{align}
-\partial_x H_n &= \partial_x  \left( \sum_{k=0}^{N-1} h_k e^{2\pi i f_k x_n} \right)\\
-&=  \sum_{k=0}^{N-1} h_k (2 \pi i f_k ) e^{2\pi i f_k x_n}
+\partial_x f &= \partial_x  \left( \sum_{k=0}^{N-1} h^k e^{2\pi i f_k^{\textrm{e}} x} \right)\\
+&=  \sum_{k=0}^{N-1} h^k (2 \pi i f_k^{\textrm{e}} ) e^{2\pi i f_k x} \\
+& =  \sum_{k=0}^{N-1} \left[D_x^{\textrm{e}} \right]^k_m h^m e^{2\pi i f_k x}.
 \end{align}
 This means that the differentiation operator $D_x^{\textrm{e}}$ is defined as,
 \begin{equation}
-D_x^{\textrm{e}} \equiv \left( 2 \pi i f_k^{\textrm{e}} \right) \delta_{m}^k .
+\left[D_x^{\textrm{e}} \right]^k_m \equiv \left( 2 \pi i f_m^{\textrm{e}} \right) \delta_{m}^k .
 \end{equation}
-and take a function in the exponential basis and transforms it to a differentiated function in the exponential basis.
+and takes the components of a function in the exponential basis and transforms it to the components of a differentiated function in the exponential basis.
 
 This linear transformation can be represented by a diagonal matrix.
 
@@ -433,27 +463,36 @@ This linear transformation can be represented by a diagonal matrix.
 \subsubsection{kGLSineHalfShiftBasis}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We denote the $k$ frequency component in the sine basis by $h_k^{\textrm{s}}$.
+Starting with,
+\begin{equation}
+f = h^k \bar{s}_k
+\end{equation}
+and taking the derivative with respect to $x$,
 \begin{align}
-\partial_x H_n &= \partial_x  \left( (-1)^n h_{N-1} + 2 \sum_{k=0}^{N-2} h_k^{\textrm{s}} \sin \left[ 2 \pi f_k^{\textrm{s}} x_n \right] \right)\\
-&= 2 \sum_{k=0}^{N-2} h_k^{\textrm{s}} \left( 2 \pi f_k^{\textrm{s}} \right) \cos \left[ 2 \pi f_k^{\textrm{s}} x_n \right]
+\partial_x f &= \partial_x  \left( (-1)^n h^{N-1} + 2 \sum_{k=0}^{N-2} h^k \sin \left[ 2 \pi f_k^{\textrm{s}} x \right] \right)\\
+&= 2 \sum_{k=0}^{N-2} h^k \left( 2 \pi f_k^{\textrm{s}} \right) \cos \left[ 2 \pi f_k^{\textrm{s}} x \right]
 \end{align}
 Now let $k=m-1$, so that
 \begin{align}
-\partial_x H_n &= 2 \sum_{m=1}^{N-1}  h_k^{\textrm{s}} \left( 2 \pi f_k^{\textrm{s}} \right)\cos \left[ 2 \pi f_{m-1}^{\textrm{s}} x_n \right] \\
-&= 2 \sum_{m=1}^{N-1}  h_k^{\textrm{s}} \left( 2 \pi f_k^{\textrm{s}} \right) \cos \left[ 2 \pi f_m^{\textrm{c}} x_n \right]
+\partial_x f &= 2 \sum_{m=1}^{N-1}  h^k \left( 2 \pi f_k^{\textrm{s}} \right)\cos \left[ 2 \pi f_{m-1}^{\textrm{s}} x \right] \\
+&= 2 \sum_{m=1}^{N-1}  h^k \left( 2 \pi f_k^{\textrm{s}} \right) \cos \left[ 2 \pi f_m^{\textrm{c}} x \right]
 \end{align}
-where we used that $f_k^{\textrm{s}}=f_{k+1}^{\textrm{c}}$ in the last step. Let's define $g_m^{\textrm{c}}$ to be the coefficient of the sum. In that case,
+where we used that $f_k^{\textrm{s}}=f_{k+1}^{\textrm{c}}$ in the last step. Let's define $g^m$ to be the coefficient of the cosine series. In that case,
 \begin{equation}
-g_m^{\textrm{c}} = \delta_{m-1}^k h_k^{\textrm{s}} \left( 2 \pi f_k^{\textrm{s}} \right).
+g^m = \left( 2 \pi f_k^{\textrm{s}} \right) \delta^{m-1}_k h^k .
 \end{equation}
 This means that the differentiation operator $D_x^{\textrm{s}}$ is defined as,
 \begin{equation}
-D_x^{\textrm{s}} \equiv \left( 2 \pi f_k^{\textrm{s}} \right) \delta_{m-1}^k.
+\left[D_x^{\textrm{s}}\right]^m_k \equiv \left( 2 \pi f_k^{\textrm{s}} \right) \delta^{m-1}_k.
 \end{equation}
-This operator takes a function defined in a sine basis, and transforms it to a differentiated function in the cosine basis.
+This operator takes a the components of a function defined in a sine basis, and transforms it to the components of a differentiated function in the cosine basis.
 
-This linear transformation can be represented by a subdiagonal matrix.
+This linear transformation can be represented by a subdiagonal matrix. To be explicit,
+\begin{equation}
+\left( 2 \pi f_k^{\textrm{s}} \right) \delta^{m-1}_k = 2 \pi \left[\begin{array}{ccccc}0 & 0 & 0 & 0 & 0 \\f_0^{\textrm{s}} & 0 & 0 & 0 & 0 \\0 & f_1^{\textrm{s}} & 0 & 0 & 0 \\0 & 0 & \ddots & 0 & 0 \\0 & 0 & 0 & f_{N-2}^{\textrm{s}} & 0\end{array}\right].
+\end{equation}
+
+Using our storage format for sub-diagonal matrices, this is just $f^c_k$. The $k=0$ component is ignored.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{kGLCosineHalfShiftBasis}
@@ -461,25 +500,30 @@ This linear transformation can be represented by a subdiagonal matrix.
 
 We denote the $k$ frequency component in the cosine basis by $h_k^{\textrm{c}}$.
 \begin{align}
-\partial_x H_n &= \partial_x  \left( h_{0} + 2 \sum_{k=1}^{N-1} h_k^{\textrm{c}} \cos \left[ 2 \pi f_k^{\textrm{c}} x_n \right] \right)\\
-&= 2 \sum_{k=1}^{N-1} h_k^{\textrm{c}} \left( -2 \pi f_k^{\textrm{c}} \right) \sin \left[ 2 \pi f_k^{\textrm{c}} x_n \right]
+\partial_x f&= \partial_x  \left( h_{0} + 2 \sum_{k=1}^{N-1}h^k \cos \left[ 2 \pi f_k^{\textrm{c}} x \right] \right)\\
+&= 2 \sum_{k=1}^{N-1} h^k \left( -2 \pi f_k^{\textrm{c}} \right) \sin \left[ 2 \pi f_k^{\textrm{c}} x \right]
 \end{align}
 Now let $k=m+1$, so that
 \begin{align}
-\partial_x H_n &= 2 \sum_{m=0}^{N-2}  h_k^{\textrm{c}} \left( -2 \pi f_k^{\textrm{c}} \right)\sin \left[ 2 \pi f_{m+1}^{\textrm{c}} x_n \right] \\
-&= 2 \sum_{m=0}^{N-2}  h_k^{\textrm{c}} \left( -2 \pi f_k^{\textrm{c}} \right) \sin \left[ 2 \pi f_m^{\textrm{s}} x_n \right]
+\partial_x f &= 2 \sum_{m=0}^{N-2}  h^k \left( -2 \pi f_k^{\textrm{c}} \right)\sin \left[ 2 \pi f_{m+1}^{\textrm{c}} x_n \right] \\
+&= 2 \sum_{m=0}^{N-2}  h^k \left( -2 \pi f_k^{\textrm{c}} \right) \sin \left[ 2 \pi f_m^{\textrm{s}} x_n \right]
 \end{align}
-where we used that $f_k^{\textrm{s}}=f_{k+1}^{\textrm{c}}$ in the last step. Let's define $g_m^{\textrm{s}}$ to be the coefficient of the sum. In that case,
+where we used that $f_k^{\textrm{s}}=f_{k+1}^{\textrm{c}}$ in the last step. Let's define $g^m$ to be the coefficient of the sum. In that case,
 \begin{equation}
-g_m^{\textrm{s}} = \delta_{m+1}^k h_k^{\textrm{c}} \left( -2 \pi f_k^{\textrm{c}} \right).
+g^m = \delta^{m+1}_k h^k \left( -2 \pi f_k^{\textrm{c}} \right).
 \end{equation}
 This means that the differentiation operator $D_x^{\textrm{c}}$ is defined as,
 \begin{equation}
-D_x^{\textrm{c}} \equiv \left( -2 \pi f_k^{\textrm{c}} \right) \delta_{m+1}^k.
+\left[D_x^{\textrm{c}}\right]^m_k \equiv \left( -2 \pi f_k^{\textrm{c}} \right) \delta^{m+1}_k.
 \end{equation}
 This operator takes a function defined in a cosine basis, and transforms it to a differentiated function in the sine basis.
 
-This linear transformation can be represented by a superdiagonal matrix.
+This linear transformation can be represented by a superdiagonal matrix.To be explicit,
+\begin{equation}
+\left( -2 \pi f_k^{\textrm{c}} \right) \delta^{m+1}_k = -2 \pi \left[\begin{array}{ccccc}0 & f_1^{\textrm{c}} & 0 & 0 & 0 \\0 & 0 & f_2^{\textrm{c}} & 0 & 0 \\0 & 0 & 0 & \ddots & 0 \\0 & 0 & 0 & 0 & f_{N-1}^{\textrm{c}} \\0 & 0 & 0 & 0 & 0\end{array}\right].
+\end{equation}
+
+Using our storage format for sub-diagonal matrices, this is just $f^s_k$. The $kN-10$ component is ignored.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{kGLChebyshevBasis}
@@ -659,7 +703,29 @@ For reference, the diagonal format takes the following form,
 \left[\begin{array}{ccccc}b_0 & c_0 &  &  & 0 \\a_1 & b_1 & c_1 &  &  \\ & a_2 & b_2 & \ddots &  \\ &  & \ddots  & \ddots  & c_{n-2} \\0 &  &  & a_{n-1} & b_{n-1}\end{array}\right] \left[\begin{array}{c}x_0 \\x_1 \\x_2 \\ \vdots \\x_{n-1}\end{array}\right]
 \end{equation}
 
-We also need to side how rows and columns get stored. In a typical matrix multiplication, one would multiply the rows of a matrix by the column vector. 
+\subsection{Matrix Multiplication}
+
+The single diagonal formats make for very simple transformation operations. Take vector $v^i$ an considering how a sub-diagonal matrix acts on it:
+\begin{equation}
+w^i = a^i \delta^i_{j+1} v^j
+\end{equation}
+which means that,
+\begin{align}
+w^0 =& 0 \\
+w^i = & a^i v^{i-1}, i \geqslant 1
+\end{align}
+So here the first multiplication is $w^1 = a^1 v^0$, meaning we shift the result and transform matrix.
+
+A super diagonal matrix,
+\begin{equation}
+w^i = c^i \delta^i_{j-1} v^j
+\end{equation}
+which means that,
+\begin{align}
+w^i = & c^i v^{i+1}, i \geqslant 0\\
+w^{N-2} =& 0
+\end{align}
+Here the first multiplication is $w^0 = c^0 v^1$, meaning we shift the operand.
 
 \section{Class Hierarchy}
 
