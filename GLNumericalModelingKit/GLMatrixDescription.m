@@ -76,7 +76,7 @@
 				self.strides[iDim].nPoints = fromDim.nPoints * toDim.nPoints;
 				self.strides[iDim].nRows = toDim.nPoints;
 				self.strides[iDim].nColumns = fromDim.nPoints;
-			} else if ( matrixFormat == kGLDiagonalMatrixFormat) {
+			} else if ( matrixFormat == kGLDiagonalMatrixFormat || matrixFormat == kGLSubdiagonalMatrixFormat || matrixFormat == kGLSuperdiagonalMatrixFormat) {
 				self.strides[iDim].nPoints = toDim.nPoints;
                 self.strides[iDim].nDiagonals = 1;
                 self.strides[iDim].nDiagonalPoints = toDim.nPoints;

@@ -55,6 +55,12 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 
 + (id) differentiationMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
 
+// Assuming the linear transform was initialized with fromDims that match the diagonalVariable and a format of diag in each dimension
+- (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable;
+
+// Starting with the subdiagonal, diagonal, superdiagonal.
+- (void) setVariablesAlongTridiagonal: (NSArray *) tridiagonalVariables;
+
 /************************************************/
 /*		Dimensionality							*/
 /************************************************/
@@ -111,20 +117,14 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 #pragma mark Operations
 #pragma mark
 
-// Assuming the linear transform was initialized with fromDims that match the diagonalVariable and a format of diag in each dimension
-- (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable;
-
-// Starting with the subdiagonal, diagonal, superdiagonal.
-- (void) setVariablesAlongTridiagonal: (NSArray *) tridiagonalVariables;
+// Returns b in the equation A x = b, where A is this linear transformation
+- (GLVariable *) transform: (GLVariable *) x;
 
 // Returns x in the equation A x = b, where A is this linear transformation
 - (GLVariable *) solve: (GLVariable *) b;
 
 // Returns x in the equation A x = b, where A is this linear transformation
 - (GLVariable *) tridiagonalSolveWithVector: (GLVariable *)	b;
-
-// Returns b in the equation A x = b, where A is this linear transformation
-- (GLVariable *) transform: (GLVariable *) x;
 
 - (GLLinearTransform *) inverse;
 

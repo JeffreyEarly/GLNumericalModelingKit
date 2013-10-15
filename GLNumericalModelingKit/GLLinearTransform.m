@@ -22,6 +22,103 @@
 
 @implementation GLLinearTransform
 
+/************************************************/
+/*		Superclass								*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Superclass
+#pragma mark
+
+- (id) init
+{
+	[NSException raise: @"BadInitialization" format: @"Cannot initialize GLLinearTransfor with -init method."];
+	
+	return self;
+}
+
+@synthesize nDataPoints = _nDataPoints;
+@synthesize nDataElements = _nDataElements;
+@synthesize dataBytes = _dataBytes;
+
+- (id) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation
+{
+	if (!theEquation || fromDims.count != toDims.count || fromDims.count != matrixFormats.count) {
+		NSLog(@"Attempted to initialize GLLinearTransform without an equation or consistent set of dimensions!!!");
+		return nil;
+	}
+	
+	if ((self = [super initWithType: dataFormat withEquation: theEquation])) {
+        self.matrixFormats = matrixFormats;
+		
+		self.toDimensions = [NSArray arrayWithArray: toDims];
+		self.fromDimensions = [NSArray arrayWithArray: fromDims];
+		
+		// We loop through the dimensions and allocate enough memory for the variable
+		// defined on each dimension.
+		_nDataPoints = 0;
+		_nDataElements = 0;
+		
+		for (NSUInteger iDim=0; iDim < fromDims.count; iDim++)
+		{
+			GLDimension *fromDim = fromDims[iDim];
+			GLDimension *toDim = toDims[iDim];
+			GLMatrixFormat matrixFormat = [matrixFormats[iDim] unsignedIntegerValue];
+			
+			if (_nDataPoints == 0 && matrixFormat != kGLIdentityMatrixFormat) {
+				_nDataPoints = 1;
+				_nDataElements = 1;
+			}
+			
+			if ( matrixFormat == kGLIdentityMatrixFormat) {
+				_nDataPoints *= 1;
+				_nDataElements *= 1;
+			} else if ( matrixFormat == kGLDenseMatrixFormat) {
+				_nDataPoints *= fromDim.nPoints * toDim.nPoints;
+				_nDataElements *= fromDim.nPoints * toDim.nPoints;
+			} else if ( matrixFormat == kGLDiagonalMatrixFormat) {
+				_nDataPoints *= toDim.nPoints;
+				_nDataElements *= toDim.nPoints;
+			} else if ( matrixFormat == kGLTridiagonalMatrixFormat) {
+				_nDataPoints *= 3*toDim.nPoints;
+				_nDataElements *= 3*toDim.nPoints;
+			}
+			
+			if (fromDim.basisFunction == kGLDeltaBasis) {
+                self.realSymmetry[iDim] = @(kGLNoSymmetry);
+                self.imaginarySymmetry[iDim] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
+            } else if (fromDim.basisFunction == kGLCosineBasis || fromDim.basisFunction == kGLCosineHalfShiftBasis) {
+                self.realSymmetry[iDim] = @(kGLEvenSymmetry);
+                self.imaginarySymmetry[iDim] = @(kGLZeroSymmetry);
+            } else if (fromDim.basisFunction == kGLSineBasis || fromDim.basisFunction == kGLSineHalfShiftBasis) {
+                self.realSymmetry[iDim] = @(kGLOddSymmetry);
+                self.imaginarySymmetry[iDim] = @(kGLZeroSymmetry);
+            } else if (fromDim.basisFunction == kGLExponentialBasis ) {
+                self.realSymmetry[iDim] = @(kGLNoSymmetry);
+                self.imaginarySymmetry[iDim] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
+            }
+		}
+        
+        if (dataFormat == kGLSplitComplexDataFormat || dataFormat == kGLInterleavedComplexDataFormat) {
+            _nDataElements *= 2;
+        }
+		
+		_dataBytes = _nDataElements*sizeof(GLFloat);
+        
+        self.matrixDescription = [[GLMatrixDescription alloc] initWithLinearTransform: self];
+	}
+	
+	return self;
+}
+
+/************************************************/
+/*		Initialization							*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Initialization
+#pragma mark
+
 + (id) transformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) equation
 {	
 	return [[GLLinearTransform alloc] initTransformOfType: dataFormat withFromDimensions: fromDims toDimensions: toDims inFormat: matrixFormats forEquation: equation];
@@ -279,97 +376,6 @@
 	return diff;
 }
 
-- (id) init
-{
-	[NSException raise: @"BadInitialization" format: @"Cannot initialize GLLinearTransfor with -init method."];
-	
-	return self;
-}
-
-@synthesize nDataPoints = _nDataPoints;
-@synthesize nDataElements = _nDataElements;
-@synthesize dataBytes = _dataBytes;
-
-- (id) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation
-{
-	if (!theEquation || fromDims.count != toDims.count || fromDims.count != matrixFormats.count) {
-		NSLog(@"Attempted to initialize GLLinearTransform without an equation or consistent set of dimensions!!!");
-		return nil;
-	}
-	
-	if ((self = [super initWithType: dataFormat withEquation: theEquation])) {
-        self.matrixFormats = matrixFormats;
-		
-		self.toDimensions = [NSArray arrayWithArray: toDims];
-		self.fromDimensions = [NSArray arrayWithArray: fromDims];
-		
-		// We loop through the dimensions and allocate enough memory for the variable
-		// defined on each dimension.
-		_nDataPoints = 0;
-		_nDataElements = 0;
-		
-		for (NSUInteger iDim=0; iDim < fromDims.count; iDim++)
-		{
-			GLDimension *fromDim = fromDims[iDim];
-			GLDimension *toDim = toDims[iDim];
-			GLMatrixFormat matrixFormat = [matrixFormats[iDim] unsignedIntegerValue];
-			
-			if (_nDataPoints == 0 && matrixFormat != kGLIdentityMatrixFormat) {
-				_nDataPoints = 1;
-				_nDataElements = 1;
-			}
-			
-			if ( matrixFormat == kGLIdentityMatrixFormat) {
-				_nDataPoints *= 1;
-				_nDataElements *= 1;
-			} else if ( matrixFormat == kGLDenseMatrixFormat) {
-				_nDataPoints *= fromDim.nPoints * toDim.nPoints;
-				_nDataElements *= fromDim.nPoints * toDim.nPoints;
-			} else if ( matrixFormat == kGLDiagonalMatrixFormat) {
-				_nDataPoints *= toDim.nPoints;
-				_nDataElements *= toDim.nPoints;
-			} else if ( matrixFormat == kGLTridiagonalMatrixFormat) {
-				_nDataPoints *= 3*toDim.nPoints;
-				_nDataElements *= 3*toDim.nPoints;
-			}
-			
-			if (fromDim.basisFunction == kGLDeltaBasis) {
-                self.realSymmetry[iDim] = @(kGLNoSymmetry);
-                self.imaginarySymmetry[iDim] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
-            } else if (fromDim.basisFunction == kGLCosineBasis || fromDim.basisFunction == kGLCosineHalfShiftBasis) {
-                self.realSymmetry[iDim] = @(kGLEvenSymmetry);
-                self.imaginarySymmetry[iDim] = @(kGLZeroSymmetry);
-            } else if (fromDim.basisFunction == kGLSineBasis || fromDim.basisFunction == kGLSineHalfShiftBasis) {
-                self.realSymmetry[iDim] = @(kGLOddSymmetry);
-                self.imaginarySymmetry[iDim] = @(kGLZeroSymmetry);
-            } else if (fromDim.basisFunction == kGLExponentialBasis ) {
-                self.realSymmetry[iDim] = @(kGLNoSymmetry);
-                self.imaginarySymmetry[iDim] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
-            }            
-		}
-        
-        if (dataFormat == kGLSplitComplexDataFormat || dataFormat == kGLInterleavedComplexDataFormat) {
-            _nDataElements *= 2;
-        }
-		
-		_dataBytes = _nDataElements*sizeof(GLFloat);
-        
-        self.matrixDescription = [[GLMatrixDescription alloc] initWithLinearTransform: self];
-	}
-	
-	return self;
-}
-
-- (BOOL) isHermitian {
-	if (self.hermitianDimension) {
-		NSUInteger i = [self.fromDimensions indexOfObject: self.hermitianDimension];
-		return ( ([self.realSymmetry[i] unsignedIntegerValue] == kGLEvenSymmetry || self.isRealPartZero) && ([self.imaginarySymmetry[i] unsignedIntegerValue] == kGLOddSymmetry || self.isImaginaryPartZero) );
-	}
-	return NO;
-}
-
-
-
 - (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable
 {
     if (self.matrixDescription.nDimensions == 1)
@@ -427,7 +433,33 @@
     }
 }
 
+/************************************************/
+/*		Dimensionality							*/
+/************************************************/
 
+#pragma mark -
+#pragma mark Dimensionality
+#pragma mark
+
+- (BOOL) isHermitian {
+	if (self.hermitianDimension) {
+		NSUInteger i = [self.fromDimensions indexOfObject: self.hermitianDimension];
+		return ( ([self.realSymmetry[i] unsignedIntegerValue] == kGLEvenSymmetry || self.isRealPartZero) && ([self.imaginarySymmetry[i] unsignedIntegerValue] == kGLOddSymmetry || self.isImaginaryPartZero) );
+	}
+	return NO;
+}
+
+- (NSUInteger) rank {
+	return 2;
+}
+
+/************************************************/
+/*		Operations								*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Operations
+#pragma mark
 
 - (GLVariable *) tridiagonalSolveWithVector: (GLVariable *)	b
 {

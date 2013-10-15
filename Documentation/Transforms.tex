@@ -46,7 +46,7 @@ Dimensions are what you would expect, defining a coordinate with respect to some
 
 All dimensions are defined with respect some basis. This determines how a function is interpreted and how a function is differentiated. For example, the default basis is kGLDeltaBasis, conceptually a series of delta functions at each point.
 
-At the heart of GLNumericalModelingKit is the ability to transform a variable between basis functions. If a one-dimensional variable is defined on a dimension with basis kGLDeltaBasis, then you may transform this to kGLExponentialBasis or kGLCosineHalfShiftBasis, for example. The new coordinate defined with respect to the cosine basis, for example, should be thought of as coefficients of the cosine series. 
+At the heart of GLNumericalModelingKit is the ability to transform a variable between basis functions. If a one-dimensional function is defined on a dimension with basis kGLDeltaBasis, then you may transform this to kGLExponentialBasis or kGLCosineHalfShiftBasis, for example. The new coordinate defined with respect to the cosine basis, for example, should be thought of as coefficients of the cosine series. 
 
 \begin{tabular}{llL}
       \hline
@@ -77,11 +77,23 @@ A particular grid can be defined given the length $L$ and total number of points
       \verb"kGLChebyshevInteriorGrid" & $\frac{L}{2} \cos{ \left( \frac{\pi (n+\frac{1}{2})}{N} \right) + \frac{L}{2} }$ & Chebyshev transform \tabularnewline
       \hline
 \end{tabular}
+
 There are a standard collection of grids that are used, some of which are well suited to transformations into a particular basis.
 
 Note that the Chebyshev grids are monotonically \emph{decreasing}, a necessary choice given the fast cosine transformation implementations provided by FFTW.
 
-Let's say we as for a grid with min 0, max 12---with four points. An endpoint grid, creates points at 0,4,8,12. An interior grid creates points at 1.5, 4.5, 7.5, 10.5. A periodic grid creates points at 0, 3, 6, 9. A Chebyshev endpoint grid creates points at 12, 9, 3, 0. A Chebyshev interior grid creates points at 11.543277195067720, 8.296100594190539, 3.703899405809461, 0.456722804932280.
+Let's say we as for a grid with minimum of 0, a maximum 12 and a total of four points. This will result in the following values,
+
+\begin{tabular}{llL}
+      \hline
+      Grid Name &Values \tabularnewline \hline \hline
+      \verb"kGLEndpointGrid" & 0,4,8,12 \tabularnewline
+      \verb"kGLInteriorGrid" & 1.5, 4.5, 7.5, 10.5 \tabularnewline
+      \verb"kGLPeriodicGrid" & 0, 3, 6, 9 \tabularnewline
+      \verb"kGLChebyshevEndpointGrid" & 12, 9, 3, 0 \tabularnewline
+      \verb"kGLChebyshevInteriorGrid" & 11.54, 8.29, 3.70, 0.45 \tabularnewline
+      \hline
+\end{tabular}
 
 \subsection{Periodicity}
 
@@ -304,13 +316,14 @@ So now we need to consider the different  transformations that are possible, and
 If I'm thinking of this correctly, we can always do a real-to-real transform first on the appropriate dimensions, and then 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Differential Transformations
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%
 \section{Differential Transformations}
+%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A differential operators acts on a variable and returns a new differentiated variable. The method of differentiation that is used can be set by choosing a basis for differentiation. For example, choosing kGLDeltaBasis will use finite differencing, whereas kGLExponentialBasis will do a Fourier transform and differentiate in wavenumber space.
 
@@ -337,7 +350,48 @@ A GLDifferentialOperatorPool is specific to a particular set of \emph{differenti
 
 \textbf{Important note:} The advantage to using the half-shift basis, aside from speed, is that the colocation points in the spatial domain are the same. This is \emph{not} the case for the basic sine and cosine transform. The basic cosine transform requires the function be specified at the end points of the domain, whereas the sine transform does not. This effectively gives the sine transform two more points to work with and also therefore makes it difficult to define an obvious transformation between the two different basis.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\subsection{Notation}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+For the following sections dealing with the transformation of functions, we treat the discrete functions as vectors in a function space. The components of the functions are represented as superscripted contravariant tensors, $f^i$, where as the vector basis functions are represented as $\bar{e}_j$. Summation is assumed when an index appears in an expression twice, once as a superscript and once as a subscript.
+
+In our notation all indices are zero based in order to be consistent with $C$ programming conventions and therefore run from $0$ through $n-1$. Superscripted indices indicate the row number, and subscripted indices indicate the column number.
+
+Some examples include a column vector,
+\begin{equation}
+v^i = \left[\begin{array}{c}v_0 \\v_1 \\v_2 \\ \vdots \\v_{n-1}\end{array}\right]
+\end{equation}
+the Kronecker delta,
+\begin{equation}
+\delta^i_j = \left[\begin{array}{cccc}1 & 0 & 0 & 0 \\0 & 1 & 0 & 0 \\0 & 0 & \ddots & 0 \\0 & 0 & 0 & 1\end{array}\right]
+\end{equation}
+the sub-diagonal Kronecker delta,
+\begin{equation}
+\delta^i_{j+1} = \delta^{i-1}_j = \left[\begin{array}{cccc}0 & 0 & 0 & 0 \\1 & 0 & 0 & 0 \\0 & \ddots & 0 & 0 \\0 & 0 & 1 & 0\end{array}\right]
+\end{equation}
+and the super-diagonal Kronecker delta,
+\begin{equation}
+\delta^i_{j-1} = \delta^{i+1}_j = \left[\begin{array}{cccc}0 & 1 & 0 & 0 \\0 & 0 & \ddots & 0 \\0 & 0 & 0 & 1 \\0 & 0 & 0 & 0\end{array}\right].
+\end{equation}
+
+A general sub-diagonal matrix can be represented as,
+\begin{equation}
+a^i \delta^i_{j+1} = a^{i-1} \delta^{i-1}_j = \left[\begin{array}{cccc}0 & 0 & 0 & 0 \\a_1 & 0 & 0 & 0 \\0 & \ddots & 0 & 0 \\0 & 0 & a_{n-1} & 0\end{array}\right]
+\end{equation}
+where the index $i$ is not summed because it does not appear as both a superscript and a subscript. A general super-diagonal matrix can similarly be represented as,
+\begin{equation}
+c^i \delta^i_{j-1} =c^{i+1} \delta^{i+1}_j = \left[\begin{array}{cccc}0 & c_0 & 0 & 0 \\0 & 0 & \ddots & 0 \\0 & 0 & 0 & c_{n-2} \\0 & 0 & 0 & 0\end{array}\right].
+\end{equation}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 \subsection{Implementation}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Designing the GLDifferentialOperator class is actually quite tricky. On the one hand, a differential operator is obviously a unary operator---it takes a single variable and returns a single differentiated variable. On the other hand, differential operators are variables---wavenumber vectors for spectral differentiation or sparse differentiation matrices for finite differencing.
 
@@ -351,11 +405,18 @@ The best shortcut for differentiation would look like this,
 
 When do I initialize the operator? It's going to be a slightly different prototype. We init
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 \subsection{Differentiation Matrices}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 We can determine the differentiation operator using the definition of the inverse transforms.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{kGLExponentialBasis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \begin{align}
 \partial_x H_n &= \partial_x  \left( \sum_{k=0}^{N-1} h_k e^{2\pi i f_k x_n} \right)\\
 &=  \sum_{k=0}^{N-1} h_k (2 \pi i f_k ) e^{2\pi i f_k x_n}
@@ -366,7 +427,38 @@ D_x^{\textrm{e}} \equiv \left( 2 \pi i f_k^{\textrm{e}} \right) \delta_{m}^k .
 \end{equation}
 and take a function in the exponential basis and transforms it to a differentiated function in the exponential basis.
 
+This linear transformation can be represented by a diagonal matrix.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{kGLSineHalfShiftBasis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We denote the $k$ frequency component in the sine basis by $h_k^{\textrm{s}}$.
+\begin{align}
+\partial_x H_n &= \partial_x  \left( (-1)^n h_{N-1} + 2 \sum_{k=0}^{N-2} h_k^{\textrm{s}} \sin \left[ 2 \pi f_k^{\textrm{s}} x_n \right] \right)\\
+&= 2 \sum_{k=0}^{N-2} h_k^{\textrm{s}} \left( 2 \pi f_k^{\textrm{s}} \right) \cos \left[ 2 \pi f_k^{\textrm{s}} x_n \right]
+\end{align}
+Now let $k=m-1$, so that
+\begin{align}
+\partial_x H_n &= 2 \sum_{m=1}^{N-1}  h_k^{\textrm{s}} \left( 2 \pi f_k^{\textrm{s}} \right)\cos \left[ 2 \pi f_{m-1}^{\textrm{s}} x_n \right] \\
+&= 2 \sum_{m=1}^{N-1}  h_k^{\textrm{s}} \left( 2 \pi f_k^{\textrm{s}} \right) \cos \left[ 2 \pi f_m^{\textrm{c}} x_n \right]
+\end{align}
+where we used that $f_k^{\textrm{s}}=f_{k+1}^{\textrm{c}}$ in the last step. Let's define $g_m^{\textrm{c}}$ to be the coefficient of the sum. In that case,
+\begin{equation}
+g_m^{\textrm{c}} = \delta_{m-1}^k h_k^{\textrm{s}} \left( 2 \pi f_k^{\textrm{s}} \right).
+\end{equation}
+This means that the differentiation operator $D_x^{\textrm{s}}$ is defined as,
+\begin{equation}
+D_x^{\textrm{s}} \equiv \left( 2 \pi f_k^{\textrm{s}} \right) \delta_{m-1}^k.
+\end{equation}
+This operator takes a function defined in a sine basis, and transforms it to a differentiated function in the cosine basis.
+
+This linear transformation can be represented by a subdiagonal matrix.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{kGLCosineHalfShiftBasis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 We denote the $k$ frequency component in the cosine basis by $h_k^{\textrm{c}}$.
 \begin{align}
 \partial_x H_n &= \partial_x  \left( h_{0} + 2 \sum_{k=1}^{N-1} h_k^{\textrm{c}} \cos \left[ 2 \pi f_k^{\textrm{c}} x_n \right] \right)\\
@@ -387,7 +479,11 @@ D_x^{\textrm{c}} \equiv \left( -2 \pi f_k^{\textrm{c}} \right) \delta_{m+1}^k.
 \end{equation}
 This operator takes a function defined in a cosine basis, and transforms it to a differentiated function in the sine basis.
 
+This linear transformation can be represented by a superdiagonal matrix.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{kGLChebyshevBasis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 We have the series,
 \begin{equation}
@@ -546,11 +642,22 @@ Assuming that we're transforming from a dimension of length $n$ to one of length
 \hline
 % after \\ : \hline or \cline{col1-col2} \cline{col3-col4} ...
   kGLIdentityMatrixFormat & $\delta^i_j$ & 0 \\
-  kGLDenseMatrixFormat & $a^i_j$ & $n^2$  \\
-  kGLDiagonalMatrixFormat & $a_j \delta^i_j$ & $n$ \\
-  kGLTridiagonalMatrixFormat & $a_j \delta^i_{j-1} + b_j \delta^i_j + c_j \delta^i_{j+1}$ & $3n$ \\
+  kGLDenseMatrixFormat & $m^i_j$ & $n^2$  \\
+  kGLDiagonalMatrixFormat & $b^i \delta^i_j$ & $n$ \\
+  kGLSubdiagonalMatrixFormat & $a^i \delta^i_{j+1}$ & $n$ \\
+  kGLSuperdiagonalMatrixFormat & $c^i \delta^i_{j-1}$ & $n$ \\
+  kGLTridiagonalMatrixFormat & $a^i \delta^i_{j+1} + b^i \delta^i_j + c^i \delta^i_{j-1}$ & $3n$ \\
 \hline
 \end{tabular}
+
+In the above table, the components $a_0$ and $c_{n-1}$ are \emph{always} zero.
+
+Note that $v^j$ is a column vector where the index $j$ iterates through the rows. A transformation matrix is represented by $R^i_j$ where $i$ indexes the matrix row and $j$ indexes the matrix column.
+
+For reference, the diagonal format takes the following form,
+\begin{equation}
+\left[\begin{array}{ccccc}b_0 & c_0 &  &  & 0 \\a_1 & b_1 & c_1 &  &  \\ & a_2 & b_2 & \ddots &  \\ &  & \ddots  & \ddots  & c_{n-2} \\0 &  &  & a_{n-1} & b_{n-1}\end{array}\right] \left[\begin{array}{c}x_0 \\x_1 \\x_2 \\ \vdots \\x_{n-1}\end{array}\right]
+\end{equation}
 
 We also need to side how rows and columns get stored. In a typical matrix multiplication, one would multiply the rows of a matrix by the column vector. 
 

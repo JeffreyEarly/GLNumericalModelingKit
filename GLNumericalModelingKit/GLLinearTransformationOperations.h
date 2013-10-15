@@ -58,3 +58,12 @@
 /************************************************/
 @interface GLDenseMatrixSolver : GLBinaryOperation
 @end
+
+/************************************************/
+/*		GLSingleDiagonalTransformOperation		*/
+/************************************************/
+// Find b in A x = b for matrices A that have exactly one diagonal
+// in each dimension, be a proper-, super-, or sub-diagonal.
+@interface GLSingleDiagonalTransformOperation : GLVariableOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function;
+@end

@@ -13,6 +13,125 @@
 
 #import <Accelerate/Accelerate.h>
 
+/************************************************/
+/*		GLSingleDiagonalTransformOperation		*/
+/************************************************/
+
+#pragma mark -
+#pragma mark GLSingleDiagonalTransformOperation
+#pragma mark
+
+@implementation GLSingleDiagonalTransformOperation
+
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
+{
+	BOOL isComplex = linearTransform.isComplex || function.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+	
+    if (linearTransform.name && function.name) {
+        result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
+    }
+    
+	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
+		result.isPurelyReal = (linearTransform.isPurelyReal && function.isPurelyReal) || (linearTransform.isPurelyImaginary && function.isPurelyImaginary);
+		result.isPurelyImaginary= (linearTransform.isPurelyReal && function.isPurelyImaginary) || (linearTransform.isPurelyImaginary && function.isPurelyReal);
+		
+		// First we determine how many elements over we need to shift the result.
+		// This is necessary because shifting between a sine and cosine basis results
+		// in a different set of wavenumbers available. A positive shift indicates that the
+		// result array shifts forward, a negative shift indicates that the operator shifts forward.
+		
+		// Going from a cosine to sine should be a superdiagonal, meaning that we reference the first element of the operand, and the second element of transformation.
+		// In otherwards, we shift the operator forward.
+		
+		NSInteger totalShift = 0;
+		GLMatrixDescription *matrix = linearTransform.matrixDescription;
+		for (NSUInteger i=0; i<matrix.nDimensions; i++) {
+			if (matrix.strides[i].format == kGLSuperdiagonalMatrixFormat) {
+				totalShift -= matrix.strides[i].stride;
+			} else if (matrix.strides[i].format == kGLSubdiagonalMatrixFormat) {
+				totalShift += matrix.strides[i].stride;
+			}  else if (matrix.strides[i].format == kGLDiagonalMatrixFormat) {
+				totalShift += 0;
+			} else {
+				[NSException raise: @"BadFormat" format: @"This operation type can only transform with matrices in a diagonal format."];
+			}
+		}
+		
+		BOOL shiftResult = totalShift > 0 ? YES : NO; // Yes if we shift the result, no if we shift the operand
+		totalShift = labs(totalShift); // total number of elements to shift by
+		NSInteger totalShiftBytes = totalShift*sizeof(GLFloat); // total number of bytes to shift by
+		NSInteger nDataElements = result.nDataElements - totalShift;
+		NSInteger nDataPoints = result.nDataPoints - totalShift;
+		NSInteger totalEndShiftBytes = nDataPoints*sizeof(GLFloat);
+		
+		if ( !linearTransform.isComplex && !function.isComplex )
+		{
+			if (shiftResult) {
+				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					NSMutableData *result = resultArray[0];
+					NSMutableData *transform = operandArray[0];
+					NSMutableData *function = operandArray[1];
+					vGL_vmul( transform.bytes, 1, function.bytes, 1, result.mutableBytes+totalShiftBytes, 1, nDataElements);
+					vGL_vclr( result.mutableBytes, 1, totalShift );
+				};
+			} else {
+				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					NSMutableData *result = resultArray[0];
+					NSMutableData *transform = operandArray[0];
+					NSMutableData *function = operandArray[1];
+					vGL_vmul( transform.bytes+totalShiftBytes, 1, function.bytes+totalShiftBytes, 1, result.mutableBytes, 1, nDataElements);
+					vGL_vclr( result.mutableBytes+totalEndShiftBytes, 1, totalShift );
+				};
+			}
+		}
+		else if ( !linearTransform.isComplex && function.isComplex )
+		{
+			if (shiftResult) {
+				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
+					GLSplitComplex rightComplex = splitComplexFromData( sOperand );
+					GLSplitComplex destComplex = splitComplexFromData( result );
+					vGL_vmul( rightComplex.realp, 1, fOperand.bytes, 1, ((void*)destComplex.realp)+totalShiftBytes, 1, nDataPoints);
+					vGL_vclr( destComplex.realp, 1, totalShift );
+					
+					vGL_vmul( rightComplex.imagp, 1, fOperand.bytes, 1, ((void*)destComplex.imagp)+totalShiftBytes, 1, nDataPoints);
+					vGL_vclr( destComplex.imagp, 1, totalShift );
+				};
+			} else {
+				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
+					
+					GLSplitComplex rightComplex = splitComplexFromData( sOperand );
+					GLSplitComplex destComplex = splitComplexFromData( result );
+					
+					vGL_vmul( ((void*)rightComplex.realp)+totalShiftBytes, 1, fOperand.bytes+totalShiftBytes, 1, destComplex.realp, 1, nDataPoints);
+					vGL_vclr( ((void*)destComplex.realp)+totalEndShiftBytes, 1, totalShift );
+					
+					vGL_vmul( ((void*)rightComplex.imagp)+totalShiftBytes, 1, fOperand.bytes+totalShiftBytes, 1, destComplex.imagp, 1, nDataPoints);
+					vGL_vclr( ((void*)destComplex.imagp)+totalEndShiftBytes, 1, totalShift );
+				};
+			}
+		} else {
+			[NSException raise: @"MethodNotImplemented" format: @"MethodNotImplemented"];
+		}
+	}
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end
+
+/************************************************/
+/*		GLTriadiagonalOperation					*/
+/************************************************/
+
+#pragma mark -
+#pragma mark GLTriadiagonalOperation
+#pragma mark
+
 @implementation GLTriadiagonalOperation
 
 // This is copy and pasted from the superclass, needs to be properly retooled.

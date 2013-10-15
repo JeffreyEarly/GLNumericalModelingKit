@@ -38,7 +38,7 @@
 #pragma mark GLVariable
 #pragma mark
 
-@interface GLVariable ()
+@interface GLFunction ()
 @property(readwrite, assign, nonatomic) NSUInteger nDataPoints;
 @property(readwrite, assign, nonatomic) NSUInteger nDataElements;
 @property(readwrite, assign, nonatomic) NSUInteger dataBytes;
@@ -46,7 +46,7 @@
 
 static BOOL prefersSpatialMultiplication = YES;
 
-@implementation GLVariable 
+@implementation GLVariable
 
 /************************************************/
 /*		Class Methods							*/

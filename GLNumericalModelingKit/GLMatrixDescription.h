@@ -16,7 +16,9 @@ enum {
 	kGLIdentityMatrixFormat = 0,
 	kGLDenseMatrixFormat = 1,
     kGLDiagonalMatrixFormat = 2,
-	kGLTridiagonalMatrixFormat = 3
+	kGLSubdiagonalMatrixFormat = 3,
+	kGLSuperdiagonalMatrixFormat = 4,
+	kGLTridiagonalMatrixFormat = 5
 };
 typedef NSUInteger GLMatrixFormat;
 
