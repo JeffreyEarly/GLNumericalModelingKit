@@ -727,6 +727,10 @@ w^{N-2} =& 0
 \end{align}
 Here the first multiplication is $w^0 = c^0 v^1$, meaning we shift the operand.
 
+\subsection{Tensor product}
+
+We can define transformation or differentiation matrices on a single dimension, then scale up to multiple dimensions by taking the tensor product. This lets us define the derivative operators in a single dimension, then easily scale them up.
+
 \section{Class Hierarchy}
 
 It's proper to think of GLVariable objects as discrete functions. They are functions defined on some manifold with respect to some dimensions. We also have some GLVariables that are dimensionless that we've had to accommodate. Now we have Linear Transformations which are defined with respect to two sets of dimensions---those being transformed from, and those being transformed to. These linear transformations also happen to be operators that act on functions. This duality explains why it was a challenge to determine the best way to define differential operators (as a subclass of GLVariable, or a subclass of GLVariableOperation?).

@@ -293,6 +293,33 @@
 	return dft;
 }
 
++ (GLLinearTransform *) transformWithFromDimension: (GLDimension *) k forEquation: (GLEquation *) equation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix {
+    
+}
+
++ (id) differentiationMatrixOfOrder: (NSUInteger) numDerivs fromDimension: (GLDimension *) k forEquation: (GLEquation *) equation
+{
+    GLLinearTransform *diff;
+	if (k.basisFunction == kGLExponentialBasis)
+    {
+        // i^0=1, i^1=i, i^2=-1, i^3=-i
+        BOOL dataFormat = numDerivs % 2 == 0 ? kGLRealDataFormat : kGLSplitComplexDataFormat;
+        
+		diff = [GLLinearTransform transformOfType: dataFormat withFromDimensions: @[k] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
+        diff.isRealPartZero = numDerivs % 2 == 1;
+        diff.isImaginaryPartZero = numDerivs % 2 == 0;
+		
+        transformMatrix matrix = ^( NSUInteger *row, NSUInteger *col ) {
+            GLFloat *kVal = (GLFloat *) k.data.bytes;
+            return (GLFloatComplex) (row[0]==col[0] ? cpow(I*2*M_PI*kVal[row[0]], numDerivs) : 0.0);
+        };
+	}
+    
+    
+    
+    return diff;
+}
+
 + (id) differentiationMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation
 {
 	GLLinearTransform *diff;

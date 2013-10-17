@@ -33,6 +33,8 @@ typedef NSUInteger GLLinearTransformType;
 // The first argument indicates the row/destination indices, the second argument indicates the column/starting indices.
 typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 
+typedef GLFloatComplex (^transformMatrix1D)(NSUInteger, NSUInteger);
+
 @interface GLLinearTransform : GLTensor
 
 /************************************************/
@@ -46,6 +48,9 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 + (id) transformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) equation;
 
 - (id) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation;
+
+// Possible initialization
++ (GLLinearTransform *) transformWithFromDimension: (GLDimension *) k forEquation: (GLEquation *) equation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
 
 + (id) dftMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
 + (id) idftMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
