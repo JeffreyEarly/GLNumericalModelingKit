@@ -132,5 +132,25 @@
     return self;
 }
 
+- (BOOL) isEqualToMatrixDescription: (GLMatrixDescription *) otherMatrixDescription
+{
+	if (self.nDimensions != otherMatrixDescription.nDimensions) return NO;
+	
+	BOOL flag = YES;
+	for (NSUInteger iDim=0; iDim<self.nDimensions; iDim++) {
+		flag &= self.strides[iDim].format == otherMatrixDescription.strides[iDim].format;
+		flag &= self.strides[iDim].nPoints == otherMatrixDescription.strides[iDim].nPoints;
+		flag &= self.strides[iDim].nRows == otherMatrixDescription.strides[iDim].nRows;
+		flag &= self.strides[iDim].nColumns == otherMatrixDescription.strides[iDim].nColumns;
+		flag &= self.strides[iDim].nDiagonals == otherMatrixDescription.strides[iDim].nDiagonals;
+		flag &= self.strides[iDim].nDiagonalPoints == otherMatrixDescription.strides[iDim].nDiagonalPoints;
+		flag &= self.strides[iDim].stride == otherMatrixDescription.strides[iDim].stride;
+		flag &= self.strides[iDim].rowStride == otherMatrixDescription.strides[iDim].rowStride;
+		flag &= self.strides[iDim].columnStride == otherMatrixDescription.strides[iDim].columnStride;
+		flag &= self.strides[iDim].diagonalStride == otherMatrixDescription.strides[iDim].diagonalStride;
+	}
+	
+	return YES;
+}
 
 @end

@@ -12,7 +12,13 @@
 /*		GLAdditionOperation						*/
 /************************************************/
 // variable = leftVariable + rightVariable
-@interface GLAdditionOperation : GLBinaryOperation
+/** C = A + B. This operation takes scalar-scalar, scalar-vector, vector-vector, scalar-matrix and matrix-matrix arguments. At the moment, the matrices must be in the same format.
+ @param A An input scalar, vector or matrix.
+ @param B An input scalar, vector or matrix.
+ @returns The result C.
+ */
+@interface GLAdditionOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
 @end
 
 

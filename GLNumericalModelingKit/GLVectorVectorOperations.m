@@ -8,6 +8,8 @@
 
 #import "GLVectorVectorOperations.h"
 #import "GLMatrixDescription.h"
+#import "GLScalar.h"
+#import "GLLinearTransform.h"
 
 /************************************************/
 /*		GLAdditionOperation						*/
@@ -15,20 +17,133 @@
 
 @implementation GLAdditionOperation
 
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand
+- (id) initWithFirstOperand: (GLTensor *) fOperand secondOperand: (GLTensor *) sOperand;
 {
     // We order the operands so that scalars are always in the first position.
     // We can do this in this case because order doesn't matter for addition.
     GLDataFormat format = (fOperand.isPurelyReal && sOperand.isPurelyReal) ? kGLRealDataFormat : kGLSplitComplexDataFormat;
-    GLVariable *op1 = (sOperand.dimensions.count < fOperand.dimensions.count) ? sOperand : fOperand;
-    GLVariable *op2 = (sOperand.dimensions.count < fOperand.dimensions.count) ? fOperand : sOperand;
-    GLVariable *result = [[op2 class] variableOfType:format withDimensions: op2.dimensions forEquation: fOperand.equation];
-    
-	if (( self = [super initWithResult: result firstOperand: op1 secondOperand: op2] )) {
-		self.result.isPurelyReal = self.firstOperand.isPurelyReal && self.secondOperand.isPurelyReal;
-		self.result.isPurelyImaginary = self.firstOperand.isPurelyImaginary && self.secondOperand.isPurelyImaginary;
+    GLTensor *op1 = (sOperand.rank < fOperand.rank) ? sOperand : fOperand;
+    GLTensor *op2 = (sOperand.rank < fOperand.rank) ? fOperand : sOperand;
+    GLTensor *result;
+	variableOperation operation;
+	NSString *graphvisDescription;
+	
+	// Lots of cases to parse through.
+	if (op2.rank == 0)
+	{	// scalar-scalar
+		result = [[GLScalar alloc] initWithType: format forEquation: op1.equation];
+		result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
+		result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
 		
-		if (!self.firstOperand.dimensions.count && !self.secondOperand.dimensions.count)
+		if ( !op1.isComplex && !op2.isComplex) {
+			graphvisDescription = [NSString stringWithFormat: @"add (real scalar, real scalar)"];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *a = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *b = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *c = (GLFloat *) [resultArray[0] bytes];
+				*c = (*a) + (*b);
+			};
+		} else if ( !op1.isComplex && op2.isComplex) {
+			graphvisDescription = [NSString stringWithFormat: @"add (real scalar, complex scalar)"];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *a = (GLFloat *) [operandArray[0] bytes];
+				GLFloatComplex *b = (GLFloatComplex *) [operandArray[1] bytes];
+				GLFloatComplex *c = (GLFloatComplex *) [resultArray[0] bytes];
+				*c = (*a) + (*b);
+			};
+		} else if ( op1.isComplex && !op2.isComplex) {
+			graphvisDescription = [NSString stringWithFormat: @"add (complex scalar, real scalar)"];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloatComplex *a = (GLFloatComplex *) [operandArray[0] bytes];
+				GLFloat *b = (GLFloat *) [operandArray[1] bytes];
+				GLFloatComplex *c = (GLFloatComplex *) [resultArray[0] bytes];
+				*c = (*a) + (*b);
+			};
+		} else {
+			graphvisDescription = [NSString stringWithFormat: @"add (complex scalar, complex scalar)"];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloatComplex *a = (GLFloatComplex *) [operandArray[0] bytes];
+				GLFloatComplex *b = (GLFloatComplex *) [operandArray[1] bytes];
+				GLFloatComplex *c = (GLFloatComplex *) [resultArray[0] bytes];
+				*c = (*a) + (*b);
+			};
+		}
+		
+	}
+	else if (op2.rank == 1)
+	{		// scalar-function or function-function
+		GLVariable *func2 = (GLVariable *) op2;
+		result = [GLVariable variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+		result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
+		result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
+		
+		if (op1.rank == 0)
+		{		// scalar-function
+			NSUInteger numPoints = result.nDataPoints;
+			if ( !op1.isComplex && !op2.isComplex) {
+				graphvisDescription = [NSString stringWithFormat: @"add (real scalar, real function)"];
+				operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					vGL_vsadd( (void *) [operandArray[1] bytes], 1, (void *) [operandArray[0] bytes], (GLFloat *) [resultArray[1] bytes], 1, numPoints);
+				};
+			} else if ( !op1.isComplex && op2.isComplex) {
+				graphvisDescription = [NSString stringWithFormat: @"add (real scalar, complex function)"];
+				operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					vGL_vsadd( (void *) [operandArray[1] bytes], 1, (void *) [operandArray[0] bytes], (GLFloat *) [resultArray[1] bytes], 1, numPoints);
+				};
+			} else if ( op1.isComplex && !op2.isComplex) {
+				graphvisDescription = [NSString stringWithFormat: @"add (complex scalar, real function)"];
+				operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					GLFloatComplex *a = (GLFloatComplex *) [operandArray[0] bytes];
+					GLFloat a_realp = creal(*a);
+					GLFloat a_imagp = cimag(*a);
+					GLFloat *b = (GLFloat *) [operandArray[1] bytes];
+					GLSplitComplex c = splitComplexFromData(resultArray[0]);
+					vGL_vsadd( (void *) b, 1, &a_realp, (GLFloat *) c.realp, 1, numPoints);
+					vGL_vfill( &a_imagp, (GLFloat *) c.imagp, 1, numPoints);
+				};
+			} else {
+				graphvisDescription = [NSString stringWithFormat: @"add (complex scalar, complex function)"];
+				operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					GLFloatComplex *a = (GLFloatComplex *) [operandArray[0] bytes];
+					GLFloat a_realp = creal(*a);
+					GLFloat a_imagp = cimag(*a);
+					GLSplitComplex b = splitComplexFromData([operandArray[1] bytes]);
+					GLSplitComplex c = splitComplexFromData(resultArray[0]);
+					vGL_vsadd( b.realp, 1, &a_realp, c.realp, 1, numPoints);
+					vGL_vsadd( b.imagp, 1, &a_imagp, c.imagp, 1, numPoints);
+				};
+			}
+		}
+		else if (op1.rank == 1) {
+			GLVariable *func1 = (GLVariable *) op1;
+			if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
+				[NSException raise: @"DimensionsNotEqualException" format: @"Cannot add two functions of different dimensions"];
+			}
+		}
+		
+	} else if (op2.rank == 2) {
+		GLLinearTransform *B = (GLLinearTransform *) op2;
+		if (op1.rank == 1) {
+			[NSException raise: @"TensorAdditionMismatch" format: @"Cannot add a function to a linear transformation"];
+		} else if (op1.rank == 2) {
+			GLLinearTransform *A = (GLLinearTransform *) op1;
+			if ( ![A.fromDimensions isEqualToArray: B.fromDimensions] ) {
+				[NSException raise: @"DimensionsNotEqualException" format: @"When adding two matrices, the fromDimensions of A, must equal the fromDimensions of B."];
+			}
+			if ( ![A.toDimensions isEqualToArray: B.toDimensions] ) {
+				[NSException raise: @"DimensionsNotEqualException" format: @"When adding two matrices, the toDimensions of A, must equal the toDimensions of B."];
+			}
+			if ( ![A.matrixDescription isEqualToMatrixDescription: B.matrixDescription] ) {
+				[NSException raise: @"UnsupportedMatrixFormatException" format: @"Cannot add two matrices in different formats using this operation."];
+			}
+		}
+		result = [GLLinearTransform transformOfType:format withFromDimensions:B.fromDimensions toDimensions:B.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
+	}
+    
+	if (( self = [super initWithResult: @[result] operand:@[op1,op2]] )) {
+
+		
+		if (!fOperand.dimensions.count && !self.secondOperand.dimensions.count)
 		{ // scalar-scalar addition
 			if (!self.firstOperand.isComplex && !self.secondOperand.isComplex) {
 				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
@@ -42,7 +157,7 @@
 				[NSException raise: @"MethodNotImplemented" format: @"This case has not yet been implemented."];
 			}
 		}
-        else if (!self.firstOperand.dimensions.count && self.secondOperand.dimensions.count)
+        else if (!fOperand.dimensions.count && self.secondOperand.dimensions.count)
         {   // scalar-vector addition
             if (!self.firstOperand.isComplex && !self.secondOperand.isComplex) {
                 NSUInteger numPoints = self.result.nDataPoints;
@@ -54,7 +169,7 @@
 				[NSException raise: @"MethodNotImplemented" format: @"This case has not yet been implemented."];
 			}
         }
-        else if (self.firstOperand.dimensions.count == self.secondOperand.dimensions.count)
+        else if (fOperand.dimensions.count == self.secondOperand.dimensions.count)
         {
 			if (!fOperand.isComplex && sOperand.isComplex) {
 				NSUInteger nDataPoints = self.result.nDataPoints;

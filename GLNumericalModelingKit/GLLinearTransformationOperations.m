@@ -127,157 +127,6 @@
 @end
 
 /************************************************/
-/*		GLTriadiagonalOperation					*/
-/************************************************/
-
-#pragma mark -
-#pragma mark GLTriadiagonalOperation
-#pragma mark
-
-@implementation GLTriadiagonalOperation
-
-// This is copy and pasted from the superclass, needs to be properly retooled.
-- (id) initWithResult: (GLVariable *) resultVariable firstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
-{
-	if ( ![fOperand.class isSubclassOfClass: [GLLinearTransform class]] ) {
-        [NSException raise: @"BadArgument" format: @"The first argument must be a GLLinearTransform."];
-    }
-    
-    GLLinearTransform *linearTransform = (GLLinearTransform *) fOperand;
-    
-    if ( ![linearTransform.toDimensions isEqualToArray: sOperand.dimensions] ) {
-        [NSException raise: @"DimensionsNotEqualException" format: @"Destination dimensions of the linear operator must equal the resultant vector."];
-    }
-    
-    NSUInteger triIndex = NSNotFound;
-	NSUInteger lastNonTriIndex = NSNotFound;
-	NSUInteger numTriIndices = 0;
-    for ( NSUInteger index=0; index < linearTransform.matrixFormats.count; index++) {
-        NSNumber *num = linearTransform.matrixFormats[index];
-        if ([num unsignedIntegerValue] == kGLTridiagonalMatrixFormat) {
-            triIndex = index;
-			numTriIndices++;
-        }
-        
-        if ([num unsignedIntegerValue] != kGLIdentityMatrixFormat && [num unsignedIntegerValue] != kGLTridiagonalMatrixFormat ) {
-			lastNonTriIndex = index;
-		}
-    }
-	
-    if ( numTriIndices != 1 ) {
-        [NSException raise: @"TridiagonalIndexNotFound" format: @"Unable to find a tridiagonal index."];
-    }
-
-    
-	if (( self = [super init] )) {
-		self.firstOperand = fOperand;
-		self.secondOperand = sOperand;
-		
-		if (!resultVariable) {
-			BOOL isComplex = fOperand.isComplex || sOperand.isComplex;
-			GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-			
-			self.result = [GLVariable variableOfType: format withDimensions: linearTransform.fromDimensions forEquation: self.firstOperand.equation];
-		} else {
-			self.result = resultVariable;
-		}
-		
-		[self setupDependencies];
-        
-		
-        GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
-        
-#warning non of this deals with complex numbers yet.
-		
-#warning this needs the same outer loop as the transform below.
-        
-        // This buffer is 3 times as large as it needs to be, but it makes bookkeeping easier.
-        NSMutableData *buffer = [[GLMemoryPool sharedMemoryPool] dataWithLength: self.result.nDataPoints*sizeof(GLFloat)];
-		
-        dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-        
-        NSUInteger inNDiagonalPoints = matrixDescription.strides[triIndex].nDiagonalPoints;
-        NSUInteger inElementStride = matrixDescription.strides[triIndex].stride;
-        NSUInteger inDiagonalStride = matrixDescription.strides[triIndex].diagonalStride;
-        NSUInteger inEquationStride = lastNonTriIndex == NSNotFound ? 0 : matrixDescription.strides[lastNonTriIndex].stride;
-        NSUInteger outElementStride = self.result.matrixDescription.strides[triIndex].stride;
-        NSUInteger outEquationStride = lastNonTriIndex == NSNotFound ? 0 : self.result.matrixDescription.strides[lastNonTriIndex].stride;
-        NSUInteger totalEquations = linearTransform.nDataPoints / matrixDescription.strides[triIndex].nPoints;
-        
-        self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-            
-            dispatch_apply(totalEquations, globalQueue, ^(size_t iteration) {
-
-                NSInteger inEquationPos = iteration*inEquationStride;
-                NSInteger outEquationPos = iteration*outEquationStride;
-                
-                GLFloat *f = (GLFloat *) fOperand.bytes;
-                
-                // plus the offset!!!!
-                GLFloat *a = &(f[0*inDiagonalStride]);
-                GLFloat *b = &(f[1*inDiagonalStride]);
-                GLFloat *c = &(f[2*inDiagonalStride]);
-                
-                GLFloat *cprime = (GLFloat *) buffer.mutableBytes;
-                
-                GLFloat *d = (GLFloat *) sOperand.bytes;
-                GLFloat *x = (GLFloat *) result.mutableBytes;                
-                
-                NSUInteger iIn = inEquationPos + 0*inElementStride;
-                NSUInteger iOut = outEquationPos + 0*outElementStride;
-                
-                cprime[iOut] = c[iIn] / b[iIn];
-                x[iOut] = d[iOut] / b[iIn];
-                
-                for (NSInteger i=1; i<inNDiagonalPoints; i++) {
-                    iIn = inEquationPos + i*inElementStride;
-                    iOut = outEquationPos + i*outElementStride;
-                    NSUInteger iOutMinus1 = outEquationPos + (i-1)*outElementStride;
-                    
-                    GLFloat m = 1.0 / ( b[iIn] - a[iIn] * cprime[iOutMinus1]);
-                    cprime[iOut] = c[iIn] * m;
-                    x[iOut] = (d[iOut] - a[i]*x[iOutMinus1])*m;
-                }
-                
-                for (NSInteger i=inNDiagonalPoints-2; i >= 0; i-- ) {
-                    iOut = outEquationPos + i*outElementStride;
-                    NSUInteger iOutPlus1 = outEquationPos + (i+1)*outElementStride;
-                    
-                    x[iOut] = x[iOut] - cprime[iOut] * x[iOutPlus1];
-                }
-                
-//                if (iteration == 2) { for (NSInteger i=0; i<inNDiagonalPoints; i++) {
-//                    iIn = inEquationPos + i*inElementStride;
-//                    iOut = outEquationPos + i*outElementStride;
-//                    
-//                    printf("i=%ld (a,b,c,d,x,c')=(%f,%f,%f,%f, %f, %f)\n", i, a[iIn], b[iIn], c[iIn], d[iOut], x[iOut], cprime[iOut]);
-//                }}
-            });
-        };
-        
-    }
-    return self;
-}
-
-- (void) setupDependencies
-{
-	if (self.firstOperand.lastOperation && ![self.dependencies containsObject:self.firstOperand.lastOperation]) {
-		[self addDependency: self.firstOperand.lastOperation];
-	}
-	if (self.secondOperand.lastOperation && ![self.dependencies containsObject:self.secondOperand.lastOperation]) {
-		[self addDependency: self.secondOperand.lastOperation];
-	}
-	if (self.result.lastOperation && ![self.dependencies containsObject:self.result.lastOperation]) {
-		[self addDependency: self.result.lastOperation];
-	}
-	
-	[self.result addOperation: self];
-}
-
-@end
-
-
-/************************************************/
 /*		GLTriadiagonalTransformOperation		*/
 /************************************************/
 
@@ -287,16 +136,9 @@
 
 @implementation GLTriadiagonalTransformOperation
 
-// This is copy and pasted from the superclass, needs to be properly retooled.
-- (id) initWithResult: (GLVariable *) resultVariable firstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
 {
-	if ( ![fOperand.class isSubclassOfClass: [GLLinearTransform class]] ) {
-        [NSException raise: @"BadArgument" format: @"The first argument must be a GLLinearTransform."];
-    }
-    
-    GLLinearTransform *linearTransform = (GLLinearTransform *) fOperand;
-    
-    if ( ![linearTransform.fromDimensions isEqualToArray: sOperand.dimensions] ) {
+    if ( ![linearTransform.fromDimensions isEqualToArray: function.dimensions] ) {
         [NSException raise: @"DimensionsNotEqualException" format: @"From dimensions of the linear operator must equal the operand vector."];
     }
     
@@ -326,24 +168,16 @@
     if ( numTriIndices != 1 ) {
         [NSException raise: @"TridiagonalIndexNotFound" format: @"Unable to find a tridiagonal index."];
     }
-	
     
-	if (( self = [super init] )) {
-		self.firstOperand = fOperand;
-		self.secondOperand = sOperand;
-		
-		if (!resultVariable) {
-			BOOL isComplex = fOperand.isComplex || sOperand.isComplex;
-			GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-			
-			self.result = [GLVariable variableOfType: format withDimensions: linearTransform.toDimensions forEquation: self.firstOperand.equation];
-		} else {
-			self.result = resultVariable;
-		}
-		
-		[self setupDependencies];
-        
-		
+	BOOL isComplex = linearTransform.isComplex || function.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+	
+    if (linearTransform.name && function.name) {
+        result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
+    }
+    
+	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
         GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
         
 #warning non of this deals with complex numbers yet.
@@ -359,18 +193,18 @@
 		NSUInteger totalEquations = linearTransform.nDataPoints / matrixDescription.strides[triIndex].nPoints;
 		
 		// Now we need the strides to match up to the inner loop
-        NSUInteger outElementStride = self.result.matrixDescription.strides[triIndex].stride;
-        NSUInteger outEquationStride = lastNonTrivialNonTriIndex == NSNotFound ? 0 : self.result.matrixDescription.strides[lastNonTrivialNonTriIndex].stride;
+        NSUInteger outElementStride = result.matrixDescription.strides[triIndex].stride;
+        NSUInteger outEquationStride = lastNonTrivialNonTriIndex == NSNotFound ? 0 : result.matrixDescription.strides[lastNonTrivialNonTriIndex].stride;
         
 		// Finally, we need the outer loop strides and totals
 		NSUInteger totalOuterLoops = totalTrivialPoints;
-		NSUInteger outerLoopStride = lastTrivialIndex == NSNotFound ? 0 : self.result.matrixDescription.strides[lastTrivialIndex].stride;
+		NSUInteger outerLoopStride = lastTrivialIndex == NSNotFound ? 0 : result.matrixDescription.strides[lastTrivialIndex].stride;
 		
 		// This operation has two loops.
 		// The inner loop walks over non-trivial elements of the linear operator, while
 		// the out loop walks over trivial elements of the linear operator, really just to new x and b elements
         
-        self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
+        self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
             
 			dispatch_apply(totalOuterLoops, globalQueue, ^(size_t outerIteration) {
 				
@@ -381,15 +215,15 @@
 					NSInteger inEquationPos = iteration*inEquationStride;
 					NSInteger outEquationPos = outerOffset + iteration*outEquationStride;
 					
-					GLFloat *f = (GLFloat *) fOperand.bytes;
+					GLFloat *f = (GLFloat *) [operandArray[0] bytes];
 					
 					// plus the offset!!!!
 					GLFloat *a = &(f[0*inDiagonalStride]);
 					GLFloat *b = &(f[1*inDiagonalStride]);
 					GLFloat *c = &(f[2*inDiagonalStride]);
 					
-					GLFloat *x = (GLFloat *) sOperand.bytes;
-					GLFloat *d = (GLFloat *) result.mutableBytes;
+					GLFloat *x = (GLFloat *) [operandArray[1] bytes];
+					GLFloat *d = (GLFloat *) [resultArray[0] bytes];
 					
 					NSUInteger iIn0 = inEquationPos + 0*inElementStride;
 					NSUInteger iOut0 = outEquationPos + 0*outElementStride;
@@ -418,21 +252,6 @@
         
     }
     return self;
-}
-
-- (void) setupDependencies
-{
-	if (self.firstOperand.lastOperation && ![self.dependencies containsObject:self.firstOperand.lastOperation]) {
-		[self addDependency: self.firstOperand.lastOperation];
-	}
-	if (self.secondOperand.lastOperation && ![self.dependencies containsObject:self.secondOperand.lastOperation]) {
-		[self addDependency: self.secondOperand.lastOperation];
-	}
-	if (self.result.lastOperation && ![self.dependencies containsObject:self.result.lastOperation]) {
-		[self addDependency: self.result.lastOperation];
-	}
-	
-	[self.result addOperation: self];
 }
 
 @end
@@ -554,6 +373,259 @@
 
 @end
 
+/************************************************/
+/*		GLTriadiagonalSolverOperation			*/
+/************************************************/
+
+#pragma mark -
+#pragma mark GLTriadiagonalSolverOperation
+#pragma mark
+
+@implementation GLTriadiagonalSolverOperation
+
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
+{
+    if ( ![linearTransform.toDimensions isEqualToArray: function.dimensions] ) {
+        [NSException raise: @"DimensionsNotEqualException" format: @"Destination dimensions of the linear operator must equal the resultant vector."];
+    }
+    
+    NSUInteger triIndex = NSNotFound;
+	NSUInteger lastNonTriIndex = NSNotFound;
+	NSUInteger numTriIndices = 0;
+    for ( NSUInteger index=0; index < linearTransform.matrixFormats.count; index++) {
+        NSNumber *num = linearTransform.matrixFormats[index];
+        if ([num unsignedIntegerValue] == kGLTridiagonalMatrixFormat) {
+            triIndex = index;
+			numTriIndices++;
+        }
+        
+        if ([num unsignedIntegerValue] != kGLIdentityMatrixFormat && [num unsignedIntegerValue] != kGLTridiagonalMatrixFormat ) {
+			lastNonTriIndex = index;
+		}
+    }
+	
+    if ( numTriIndices != 1 ) {
+        [NSException raise: @"TridiagonalIndexNotFound" format: @"Unable to find a tridiagonal index."];
+    }
+	
+	BOOL isComplex = linearTransform.isComplex || function.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
+    
+	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
+        
+		
+        GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
+        
+#warning non of this deals with complex numbers yet.
+		
+#warning this needs the same outer loop as the transform below.
+        
+        // This buffer is 3 times as large as it needs to be, but it makes bookkeeping easier.
+        NSMutableData *buffer = [[GLMemoryPool sharedMemoryPool] dataWithLength: result.nDataPoints*sizeof(GLFloat)];
+		
+        dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+        
+        NSUInteger inNDiagonalPoints = matrixDescription.strides[triIndex].nDiagonalPoints;
+        NSUInteger inElementStride = matrixDescription.strides[triIndex].stride;
+        NSUInteger inDiagonalStride = matrixDescription.strides[triIndex].diagonalStride;
+        NSUInteger inEquationStride = lastNonTriIndex == NSNotFound ? 0 : matrixDescription.strides[lastNonTriIndex].stride;
+        NSUInteger outElementStride = result.matrixDescription.strides[triIndex].stride;
+        NSUInteger outEquationStride = lastNonTriIndex == NSNotFound ? 0 : result.matrixDescription.strides[lastNonTriIndex].stride;
+        NSUInteger totalEquations = linearTransform.nDataPoints / matrixDescription.strides[triIndex].nPoints;
+        
+        self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+            
+            dispatch_apply(totalEquations, globalQueue, ^(size_t iteration) {
+				
+                NSInteger inEquationPos = iteration*inEquationStride;
+                NSInteger outEquationPos = iteration*outEquationStride;
+                
+                GLFloat *f = (GLFloat *) [operandArray[0] bytes];
+                
+                // plus the offset!!!!
+                GLFloat *a = &(f[0*inDiagonalStride]);
+                GLFloat *b = &(f[1*inDiagonalStride]);
+                GLFloat *c = &(f[2*inDiagonalStride]);
+                
+                GLFloat *cprime = (GLFloat *) buffer.mutableBytes;
+                
+                GLFloat *d = (GLFloat *) [operandArray[1] bytes];
+                GLFloat *x = (GLFloat *) [resultArray[0] bytes];
+                
+                NSUInteger iIn = inEquationPos + 0*inElementStride;
+                NSUInteger iOut = outEquationPos + 0*outElementStride;
+                
+                cprime[iOut] = c[iIn] / b[iIn];
+                x[iOut] = d[iOut] / b[iIn];
+                
+                for (NSInteger i=1; i<inNDiagonalPoints; i++) {
+                    iIn = inEquationPos + i*inElementStride;
+                    iOut = outEquationPos + i*outElementStride;
+                    NSUInteger iOutMinus1 = outEquationPos + (i-1)*outElementStride;
+                    
+                    GLFloat m = 1.0 / ( b[iIn] - a[iIn] * cprime[iOutMinus1]);
+                    cprime[iOut] = c[iIn] * m;
+                    x[iOut] = (d[iOut] - a[i]*x[iOutMinus1])*m;
+                }
+                
+                for (NSInteger i=inNDiagonalPoints-2; i >= 0; i-- ) {
+                    iOut = outEquationPos + i*outElementStride;
+                    NSUInteger iOutPlus1 = outEquationPos + (i+1)*outElementStride;
+                    
+                    x[iOut] = x[iOut] - cprime[iOut] * x[iOutPlus1];
+                }
+                
+				//                if (iteration == 2) { for (NSInteger i=0; i<inNDiagonalPoints; i++) {
+				//                    iIn = inEquationPos + i*inElementStride;
+				//                    iOut = outEquationPos + i*outElementStride;
+				//
+				//                    printf("i=%ld (a,b,c,d,x,c')=(%f,%f,%f,%f, %f, %f)\n", i, a[iIn], b[iIn], c[iIn], d[iOut], x[iOut], cprime[iOut]);
+				//                }}
+            });
+        };
+        
+    }
+    return self;
+}
+
+@end
+
+
+/************************************************/
+/*		GLDenseMatrixSolver						*/
+/************************************************/
+
+#pragma mark -
+#pragma mark GLDenseMatrixSolver
+#pragma mark
+
+@implementation GLDenseMatrixSolver
+
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
+{
+    if ( ![linearTransform.toDimensions isEqualToArray: function.dimensions] ) {
+        [NSException raise: @"DimensionsNotEqualException" format: @"Destination dimensions of the linear operator must equal the resultant vector."];
+    }
+    
+    NSUInteger denseIndex = NSNotFound;
+	NSUInteger lastNonTrivialNonDenseIndex = NSNotFound;
+	NSUInteger lastTrivialIndex = NSNotFound;
+	NSUInteger totalTrivialPoints = 1;
+	NSUInteger numDenseIndices = 0;
+    for ( NSUInteger index=0; index < linearTransform.matrixFormats.count; index++) {
+        NSNumber *num = linearTransform.matrixFormats[index];
+		
+        if ([num unsignedIntegerValue] == kGLDenseMatrixFormat) {
+            denseIndex = index;
+			numDenseIndices++;
+        } else if ([num unsignedIntegerValue] == kGLIdentityMatrixFormat) {
+            lastTrivialIndex = index;
+			totalTrivialPoints *= [linearTransform.fromDimensions[index] nPoints];
+        }
+        if ([num unsignedIntegerValue] != kGLIdentityMatrixFormat && [num unsignedIntegerValue] != kGLDenseMatrixFormat ) {
+			lastNonTrivialNonDenseIndex = index;
+		}
+    }
+	
+    if ( numDenseIndices != 1 ) {
+        [NSException raise: @"BadInputFormat" format: @"The GLDenseMatrixSolver can only take exactly one dense dimension."];
+    }
+	
+    
+	BOOL isComplex = linearTransform.isComplex || function.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
+    
+	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
+        
+        GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
+        
+#warning non of this deals with complex numbers yet.
+		
+        dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+		
+		// How many 'inner loop' steps we need to take depends on how many other nontrivial dimensions there are.
+        NSUInteger inEquationStride = lastNonTrivialNonDenseIndex == NSNotFound ? 0 : matrixDescription.strides[lastNonTrivialNonDenseIndex].stride;
+		NSUInteger totalEquations = linearTransform.nDataPoints / matrixDescription.strides[denseIndex].nPoints;
+		
+		// Now we need the strides to match up to the inner loop
+        NSUInteger outElementStride = result.matrixDescription.strides[denseIndex].stride;
+        NSUInteger outEquationStride = lastNonTrivialNonDenseIndex == NSNotFound ? 0 : result.matrixDescription.strides[lastNonTrivialNonDenseIndex].stride;
+        
+		// Finally, we need the outer loop strides and totals
+		// The totalTrivialPoints is the number of times we need to repeat a point
+		// trivialPointStride is the distance between those trivial points
+		// totalNonTrivialPoints is the number of points we need to copy
+		NSUInteger totalNonTrivialPoints = result.nDataPoints / totalTrivialPoints;
+		NSUInteger trivialPointStride = lastTrivialIndex == NSNotFound ? 0 : result.matrixDescription.strides[lastTrivialIndex].stride;
+		
+		// This operation has two loops.
+		// The inner loop walks over non-trivial elements of the linear operator, while
+		// the out loop walks over trivial elements of the linear operator, really just to new x and b elements
+        
+		NSUInteger N = matrixDescription.strides[denseIndex].nRows;
+		
+		if ( lastNonTrivialNonDenseIndex != NSNotFound && lastNonTrivialNonDenseIndex > denseIndex) {
+			NSLog(@"Warning! The dense dimension is not the last non-trivial dimensions, which results in slower solutions times.");
+		}
+		// sgesv is only capable of handling input arrays with a stride of 1. For us, this means that if that lastNonTrivialNonDenseIndex is greater
+		// than the denseIndex, we have to copy the elements to a temporary, contiguous buffer.
+		
+		// sgesv also overwrites the b vector (in Mx=b) with the output x. So we need to copy the output as well.
+		
+        self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			
+			dispatch_apply(totalEquations, globalQueue, ^(size_t iteration) {
+				
+				NSInteger inEquationPos = iteration*inEquationStride;
+				NSInteger outEquationPos = iteration*outEquationStride;
+				
+				NSMutableData *ipiv = [[GLMemoryPool sharedMemoryPool] dataWithLength: N*sizeof(__CLPK_integer)];
+				__CLPK_integer n = (__CLPK_integer) N;
+				__CLPK_integer nrhs = 1;
+				__CLPK_integer info;
+				
+				GLFloat *MData = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *bData = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *xData = (GLFloat *) [resultArray[0] bytes];
+				
+				GLFloat *M;
+				GLFloat *b;
+				GLFloat *x;
+				if ( lastNonTrivialNonDenseIndex != NSNotFound && lastNonTrivialNonDenseIndex > denseIndex) {
+					
+				} else {
+					M = &(MData[inEquationPos]);
+					b = &(bData[outEquationPos]);
+					x = &(xData[outEquationPos]);
+					memcpy( x, b, n*n*sizeof(GLFloat));
+				}
+				
+				sgesv_( &n, &nrhs, M, &n, ipiv.mutableBytes, x, &n, (__CLPK_integer *) &info );
+				
+				if (info != 0) {
+					printf("sgesv failed with error code %d\n", (int)info);
+				}
+				
+				[[GLMemoryPool sharedMemoryPool] returnData: ipiv];
+				
+				if (totalTrivialPoints) {
+					dispatch_apply(totalNonTrivialPoints, globalQueue, ^(size_t outIteration) {
+						GLFloat *theOutput = (GLFloat *) [resultArray[0] bytes];
+						vGL_vfill( &theOutput[ outIteration*outElementStride], &theOutput[outIteration*outElementStride], trivialPointStride, totalTrivialPoints);
+					});
+					
+				}
+				
+			});
+        };
+        
+    }
+    return self;
+}
+
+@end
 
 /************************************************/
 /*		GLMatrixMatrixMultiplicationOperation   */
@@ -566,18 +638,18 @@
 @implementation GLMatrixMatrixMultiplicationOperation
 
 // This is copy and pasted from the superclass, needs to be properly retooled.
-- (id) initWithResult: (GLVariable *) resultVariable firstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
+- (id) initWithOperand:(NSArray *)operand
 {
-	if ( ![fOperand.class isSubclassOfClass: [GLLinearTransform class]] ) {
+	if ( ![[operand[0] class] isSubclassOfClass: [GLLinearTransform class]] ) {
         [NSException raise: @"BadArgument" format: @"The first argument must be a GLLinearTransform."];
     }
     
-    if ( ![sOperand.class isSubclassOfClass: [GLLinearTransform class]] ) {
+    if ( ![[operand[1] class]isSubclassOfClass: [GLLinearTransform class]] ) {
         [NSException raise: @"BadArgument" format: @"The second argument must be a GLLinearTransform."];
     }
     
-    GLLinearTransform *A = (GLLinearTransform *) fOperand;
-    GLLinearTransform *B = (GLLinearTransform *) sOperand;
+    GLLinearTransform *A = (GLLinearTransform *) operand[0];
+    GLLinearTransform *B = (GLLinearTransform *) operand[1];
     
     if ( ![A.fromDimensions isEqualToArray: B.toDimensions] ) {
         [NSException raise: @"DimensionsNotEqualException" format: @"fromDimensions of A, must equal the toDimensions of B."];
@@ -861,169 +933,4 @@
 
 @end
 
-/************************************************/
-/*		GLDenseMatrixSolver						*/
-/************************************************/
 
-#pragma mark -
-#pragma mark GLDenseMatrixSolver
-#pragma mark
-
-@implementation GLDenseMatrixSolver
-
-// This is copy and pasted from the superclass, needs to be properly retooled.
-- (id) initWithResult: (GLVariable *) resultVariable firstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
-{
-	if ( ![fOperand.class isSubclassOfClass: [GLLinearTransform class]] ) {
-        [NSException raise: @"BadArgument" format: @"The first argument must be a GLLinearTransform."];
-    }
-    
-    GLLinearTransform *linearTransform = (GLLinearTransform *) fOperand;
-    
-    if ( ![linearTransform.toDimensions isEqualToArray: sOperand.dimensions] ) {
-        [NSException raise: @"DimensionsNotEqualException" format: @"To dimensions of the linear operator must equal the operand vector."];
-    }
-    
-    NSUInteger denseIndex = NSNotFound;
-	NSUInteger lastNonTrivialNonDenseIndex = NSNotFound;
-	NSUInteger lastTrivialIndex = NSNotFound;
-	NSUInteger totalTrivialPoints = 1;
-	NSUInteger numDenseIndices = 0;
-    for ( NSUInteger index=0; index < linearTransform.matrixFormats.count; index++) {
-        NSNumber *num = linearTransform.matrixFormats[index];
-		
-        if ([num unsignedIntegerValue] == kGLDenseMatrixFormat) {
-            denseIndex = index;
-			numDenseIndices++;
-        } else if ([num unsignedIntegerValue] == kGLIdentityMatrixFormat) {
-            lastTrivialIndex = index;
-			totalTrivialPoints *= [linearTransform.fromDimensions[index] nPoints];
-        }
-        if ([num unsignedIntegerValue] != kGLIdentityMatrixFormat && [num unsignedIntegerValue] != kGLDenseMatrixFormat ) {
-			lastNonTrivialNonDenseIndex = index;
-		}
-    }
-	
-    if ( numDenseIndices != 1 ) {
-        [NSException raise: @"BadInputFormat" format: @"The GLDenseMatrixSolver can only take exactly one dense dimension."];
-    }
-	
-    
-	if (( self = [super init] )) {
-		self.firstOperand = fOperand;
-		self.secondOperand = sOperand;
-		
-		if (!resultVariable) {
-			BOOL isComplex = fOperand.isComplex || sOperand.isComplex;
-			GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-			
-			self.result = [GLVariable variableOfType: format withDimensions: linearTransform.toDimensions forEquation: self.firstOperand.equation];
-		} else {
-			self.result = resultVariable;
-		}
-		
-		[self setupDependencies];
-        
-		
-        GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
-        
-#warning non of this deals with complex numbers yet.
-		
-        dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-        		
-		// How many 'inner loop' steps we need to take depends on how many other nontrivial dimensions there are.
-        NSUInteger inEquationStride = lastNonTrivialNonDenseIndex == NSNotFound ? 0 : matrixDescription.strides[lastNonTrivialNonDenseIndex].stride;
-		NSUInteger totalEquations = linearTransform.nDataPoints / matrixDescription.strides[denseIndex].nPoints;
-		
-		// Now we need the strides to match up to the inner loop
-        NSUInteger outElementStride = self.result.matrixDescription.strides[denseIndex].stride;
-        NSUInteger outEquationStride = lastNonTrivialNonDenseIndex == NSNotFound ? 0 : self.result.matrixDescription.strides[lastNonTrivialNonDenseIndex].stride;
-        
-		// Finally, we need the outer loop strides and totals
-		// The totalTrivialPoints is the number of times we need to repeat a point
-		// trivialPointStride is the distance between those trivial points
-		// totalNonTrivialPoints is the number of points we need to copy
-		NSUInteger totalNonTrivialPoints = self.result.nDataPoints / totalTrivialPoints;
-		NSUInteger trivialPointStride = lastTrivialIndex == NSNotFound ? 0 : self.result.matrixDescription.strides[lastTrivialIndex].stride;
-		
-		// This operation has two loops.
-		// The inner loop walks over non-trivial elements of the linear operator, while
-		// the out loop walks over trivial elements of the linear operator, really just to new x and b elements
-        
-		NSUInteger N = matrixDescription.strides[denseIndex].nRows;
-		
-		if ( lastNonTrivialNonDenseIndex != NSNotFound && lastNonTrivialNonDenseIndex > denseIndex) {
-			NSLog(@"Warning! The dense dimension is not the last non-trivial dimensions, which results in slower solutions times.");
-		}
-		// sgesv is only capable of handling input arrays with a stride of 1. For us, this means that if that lastNonTrivialNonDenseIndex is greater
-		// than the denseIndex, we have to copy the elements to a temporary, contiguous buffer.
-		
-		// sgesv also overwrites the b vector (in Mx=b) with the output x. So we need to copy the output as well.
-		
-        self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				
-				dispatch_apply(totalEquations, globalQueue, ^(size_t iteration) {
-					
-					NSInteger inEquationPos = iteration*inEquationStride;
-					NSInteger outEquationPos = iteration*outEquationStride;
-					
-					NSMutableData *ipiv = [[GLMemoryPool sharedMemoryPool] dataWithLength: N*sizeof(__CLPK_integer)];
-					__CLPK_integer n = (__CLPK_integer) N;
-					__CLPK_integer nrhs = 1;
-					__CLPK_integer info;
-					
-					GLFloat *MData = (GLFloat *) fOperand.bytes;
-					GLFloat *bData = (GLFloat *) sOperand.bytes;
-					GLFloat *xData = (GLFloat *) result.bytes;
-					
-					GLFloat *M;
-					GLFloat *b;
-					GLFloat *x;
-					if ( lastNonTrivialNonDenseIndex != NSNotFound && lastNonTrivialNonDenseIndex > denseIndex) {
-						
-					} else {
-						M = &(MData[inEquationPos]);
-						b = &(bData[outEquationPos]);
-						x = &(xData[outEquationPos]);
-						memcpy( x, b, n*n*sizeof(GLFloat));
-					}
-					
-					sgesv_( &n, &nrhs, M, &n, ipiv.mutableBytes, x, &n, (__CLPK_integer *) &info );
-					
-					if (info != 0) {
-						printf("sgesv failed with error code %d\n", (int)info);
-					}
-					
-					[[GLMemoryPool sharedMemoryPool] returnData: ipiv];
-										
-					if (totalTrivialPoints) {
-						dispatch_apply(totalNonTrivialPoints, globalQueue, ^(size_t outIteration) {
-							GLFloat *theOutput = (GLFloat *) result.mutableBytes;
-							vGL_vfill( &theOutput[ outIteration*outElementStride], &theOutput[outIteration*outElementStride], trivialPointStride, totalTrivialPoints);
-						});
-						
-					}
-					
-				});
-        };
-        
-    }
-    return self;
-}
-
-- (void) setupDependencies
-{
-	if (self.firstOperand.lastOperation && ![self.dependencies containsObject:self.firstOperand.lastOperation]) {
-		[self addDependency: self.firstOperand.lastOperation];
-	}
-	if (self.secondOperand.lastOperation && ![self.dependencies containsObject:self.secondOperand.lastOperation]) {
-		[self addDependency: self.secondOperand.lastOperation];
-	}
-	if (self.result.lastOperation && ![self.dependencies containsObject:self.result.lastOperation]) {
-		[self addDependency: self.result.lastOperation];
-	}
-	
-	[self.result addOperation: self];
-}
-
-@end

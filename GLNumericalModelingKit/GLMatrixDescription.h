@@ -54,4 +54,7 @@ typedef struct {
 
 @property GLDataStride *strides;
 
+// Returns yes if the matrices are in the same format.
+- (BOOL) isEqualToMatrixDescription: (GLMatrixDescription *) otherMatrixDescription;
+
 @end
