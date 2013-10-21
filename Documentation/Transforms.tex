@@ -494,6 +494,14 @@ This linear transformation can be represented by a subdiagonal matrix. To be exp
 
 Using our storage format for sub-diagonal matrices, this is just $f^c_k$. The $k=0$ component is ignored.
 
+Higher derivatives with respect to $x$ result in, 
+\begin{align}
+\left[D_{xx}^{\textrm{s}}\right]^m_k \equiv& - \left( 2 \pi f_k^{\textrm{s}} \right)^2 \delta^{m}_k \\
+\left[D_{xxx}^{\textrm{s}}\right]^m_k \equiv&  - \left( 2 \pi f_k^{\textrm{s}} \right)^3 \delta^{m+1}_k. \\
+\left[D_{xxxx}^{\textrm{s}}\right]^m_k \equiv& \left( 2 \pi f_k^{\textrm{s}} \right)^4 \delta^{m}_k 
+\end{align}
+and so on.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{kGLCosineHalfShiftBasis}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -514,7 +522,7 @@ g^m = \delta^{m+1}_k h^k \left( -2 \pi f_k^{\textrm{c}} \right).
 \end{equation}
 This means that the differentiation operator $D_x^{\textrm{c}}$ is defined as,
 \begin{equation}
-\left[D_x^{\textrm{c}}\right]^m_k \equiv \left( -2 \pi f_k^{\textrm{c}} \right) \delta^{m+1}_k.
+\left[D_x^{\textrm{c}}\right]^m_k \equiv - \left( 2 \pi f_k^{\textrm{c}} \right) \delta^{m+1}_k.
 \end{equation}
 This operator takes a function defined in a cosine basis, and transforms it to a differentiated function in the sine basis.
 
@@ -523,7 +531,15 @@ This linear transformation can be represented by a superdiagonal matrix.To be ex
 \left( -2 \pi f_k^{\textrm{c}} \right) \delta^{m+1}_k = -2 \pi \left[\begin{array}{ccccc}0 & f_1^{\textrm{c}} & 0 & 0 & 0 \\0 & 0 & f_2^{\textrm{c}} & 0 & 0 \\0 & 0 & 0 & \ddots & 0 \\0 & 0 & 0 & 0 & f_{N-1}^{\textrm{c}} \\0 & 0 & 0 & 0 & 0\end{array}\right].
 \end{equation}
 
-Using our storage format for sub-diagonal matrices, this is just $f^s_k$. The $kN-10$ component is ignored.
+Using our storage format for sub-diagonal matrices, this is just $f^s_k$. The $k=N-1$ component is ignored.
+
+Higher derivatives with respect to $x$ result in, 
+\begin{align}
+\left[D_{xx}^{\textrm{c}}\right]^m_k \equiv& - \left( 2 \pi f_k^{\textrm{c}} \right)^2 \delta^{m}_k \\
+\left[D_{xxx}^{\textrm{c}}\right]^m_k \equiv&  \left( 2 \pi f_k^{\textrm{c}} \right)^3 \delta^{m+1}_k. \\
+\left[D_{xxxx}^{\textrm{c}}\right]^m_k \equiv& \left( 2 \pi f_k^{\textrm{c}} \right)^4 \delta^{m}_k 
+\end{align}
+and so on.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{kGLChebyshevBasis}

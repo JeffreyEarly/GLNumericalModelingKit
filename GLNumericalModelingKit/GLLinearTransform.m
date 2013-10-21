@@ -41,7 +41,24 @@
 @synthesize nDataElements = _nDataElements;
 @synthesize dataBytes = _dataBytes;
 
-- (id) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation
+/************************************************/
+/*		Initialization							*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Initialization
+#pragma mark
+
++ (GLLinearTransform *) transformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) equation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix
+{
+    return [[self alloc] initTransformOfType: dataFormat withFromDimensions: fromDims toDimensions: toDims inFormat: matrixFormats forEquation: equation matrix:matrix];
+}
+
++ (GLLinearTransform *) transformWithFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims forEquation: (GLEquation *) equation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix {
+    return nil;
+}
+
+- (id) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
 {
 	if (!theEquation || fromDims.count != toDims.count || fromDims.count != matrixFormats.count) {
 		NSLog(@"Attempted to initialize GLLinearTransform without an equation or consistent set of dimensions!!!");
@@ -50,7 +67,7 @@
 	
 	if ((self = [super initWithType: dataFormat withEquation: theEquation])) {
         self.matrixFormats = matrixFormats;
-		
+		self.matrixBlock = matrix;
 		self.toDimensions = [NSArray arrayWithArray: toDims];
 		self.fromDimensions = [NSArray arrayWithArray: fromDims];
 		
@@ -77,6 +94,12 @@
 				_nDataPoints *= fromDim.nPoints * toDim.nPoints;
 				_nDataElements *= fromDim.nPoints * toDim.nPoints;
 			} else if ( matrixFormat == kGLDiagonalMatrixFormat) {
+				_nDataPoints *= toDim.nPoints;
+				_nDataElements *= toDim.nPoints;
+			} else if ( matrixFormat == kGLSubdiagonalMatrixFormat) {
+				_nDataPoints *= toDim.nPoints;
+				_nDataElements *= toDim.nPoints;
+			} else if ( matrixFormat == kGLSuperdiagonalMatrixFormat) {
 				_nDataPoints *= toDim.nPoints;
 				_nDataElements *= toDim.nPoints;
 			} else if ( matrixFormat == kGLTridiagonalMatrixFormat) {
@@ -106,302 +129,355 @@
 		_dataBytes = _nDataElements*sizeof(GLFloat);
         
         self.matrixDescription = [[GLMatrixDescription alloc] initWithLinearTransform: self];
+        
+        if (self.matrixBlock) {
+            [self populateDataFromMatrixBlock];
+        }
 	}
 	
 	return self;
 }
 
-/************************************************/
-/*		Initialization							*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Initialization
-#pragma mark
-
-+ (id) transformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) equation
-{	
-	return [[GLLinearTransform alloc] initTransformOfType: dataFormat withFromDimensions: fromDims toDimensions: toDims inFormat: matrixFormats forEquation: equation];
-}
 
 - (void) populateDataFromMatrixBlock
 {
     if (self.matrixBlock) {
         transformMatrix theMatrixBlock = self.matrixBlock;
         
-        // First we need a block to iterate over the inner most matrix.
-        NSInteger iDim = self.matrixDescription.nDimensions-1;
-        GLDataStride stride = self.matrixDescription.strides[iDim];
-        
-        void (^innerLoop)( NSUInteger *, NSUInteger *, GLFloat *, NSUInteger );
-        
-        if (stride.format == kGLDenseMatrixFormat) {
-            innerLoop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
-                for (NSUInteger i=0; i<stride.nRows; i++) {
-                    for (NSUInteger j=0; j<stride.nColumns; j++) {
-                        row[iDim] = i;
-                        col[iDim] = j;
-                        
-                        NSUInteger memIndex = index + i*stride.rowStride + j*stride.columnStride;
-                        GLFloatComplex value = theMatrixBlock(row, col);
-                        
-                        if (self.dataFormat == kGLRealDataFormat) {
-                            f[memIndex] = creal(value);
-                        } else if (self.dataFormat == kGLInterleavedComplexDataFormat) {
-                            f[2*memIndex] = creal(value);
-                            f[2*memIndex+1] = cimag(value);
-                        } else if (self.dataFormat == kGLSplitComplexDataFormat) {
-                            f[memIndex] = creal(value);
-                            f[memIndex+self.nDataPoints] = cimag(value);
-                        }
-                    }
+        // This block places the matrix value in the correct spot in memory (memIndex), given a particular choice of row and column indices (rows, col).
+        // The assignment is only dependent on the format.
+        void (^assignData)(NSUInteger *, NSUInteger *, GLFloat *, NSUInteger) = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger memIndex ) {
+                GLFloatComplex value = theMatrixBlock(row, col);
+                
+                if (self.dataFormat == kGLRealDataFormat) {
+                    f[memIndex] = creal(value);
+                } else if (self.dataFormat == kGLInterleavedComplexDataFormat) {
+                    f[2*memIndex] = creal(value);
+                    f[2*memIndex+1] = cimag(value);
+                } else if (self.dataFormat == kGLSplitComplexDataFormat) {
+                    f[memIndex] = creal(value);
+                    f[memIndex+self.nDataPoints] = cimag(value);
                 }
-            }; 
-        }
+        };
         
-        for (iDim = self.matrixDescription.nDimensions-2; iDim >= 0; iDim--)
+        void (^assignZeroData)(GLFloat *, NSUInteger) = ^(GLFloat *f, NSUInteger memIndex ) {
+            if (self.dataFormat == kGLRealDataFormat) {
+                f[memIndex] = 0.0;
+            } else if (self.dataFormat == kGLInterleavedComplexDataFormat) {
+                f[2*memIndex] = 0.0;
+                f[2*memIndex+1] = 0.0;
+            } else if (self.dataFormat == kGLSplitComplexDataFormat) {
+                f[memIndex] = 0.0;
+                f[memIndex+self.nDataPoints] = 0.0;
+            }
+        };
+        
+        for (NSInteger iDim = self.matrixDescription.nDimensions-1; iDim >= 0; iDim--)
         {
-            stride = self.matrixDescription.strides[iDim];
-            void (^outerLoop)( NSUInteger *, NSUInteger *, GLFloat *, NSUInteger );
+            GLDataStride stride = self.matrixDescription.strides[iDim];
             
-            if (stride.format == kGLDenseMatrixFormat) {
-                outerLoop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger memIndex ) {
+            // This block encapsulates a loop over the appropriate rows and columns of one dimension pair, given the known data format.
+            void (^loop)( NSUInteger *, NSUInteger *, GLFloat *, NSUInteger );
+        
+            if (stride.format == kGLIdentityMatrixFormat) {
+                // We store nothing in this case---so there is no loop.
+                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+                    assignData( row, col, f, index);
+                };
+            } else if (stride.format == kGLDenseMatrixFormat) {
+                // Here we loop over ALL possible rows an columns---this matrix is dense.
+                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
                     for (NSUInteger i=0; i<stride.nRows; i++) {
                         for (NSUInteger j=0; j<stride.nColumns; j++) {
                             row[iDim] = i;
                             col[iDim] = j;
                             
-                            memIndex += i*stride.rowStride + j*stride.columnStride;
-                            
-                            innerLoop( row, col, f, memIndex);
+                            NSUInteger memIndex = index + i*stride.rowStride + j*stride.columnStride;
+                            assignData( row, col, f, memIndex);
                         }
                     }
                 };
-                
+            } else if (stride.format == kGLDiagonalMatrixFormat) {
+                // Loop over the diagonal only.
+                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+                    for (NSUInteger i=0; i<stride.nDiagonalPoints; i++) {
+                        row[iDim] = i;
+                        col[iDim] = i;
+                        
+                        NSUInteger memIndex = index + i*stride.stride;
+                        assignData( row, col, f, memIndex);
+                    }
+                };
+            } else if (stride.format == kGLSubdiagonalMatrixFormat) {
+                // Loop over the sub-diagonal. Assign zero to the first element (which never actually gets used)
+                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+                    assignZeroData(f, index + 0*stride.stride);
+                    for (NSUInteger i=1; i<stride.nDiagonalPoints; i++) {
+                        row[iDim] = i;
+                        col[iDim] = i-1;
+                        
+                        NSUInteger memIndex = index + i*stride.stride;
+                        assignData( row, col, f, memIndex);
+                    }
+                };
+            } else if (stride.format == kGLSuperdiagonalMatrixFormat) {
+                // Loop over the super-diagonal. Assign zero to the last element (which never actually gets used)
+                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+                    assignZeroData(f, index + (stride.nDiagonalPoints-1)*stride.stride);
+                    for (NSUInteger i=0; i<stride.nDiagonalPoints-1; i++) {
+                        row[iDim] = i;
+                        col[iDim] = i+1;
+                        
+                        NSUInteger memIndex = index + i*stride.stride;
+                        assignData( row, col, f, memIndex);
+                    }
+                };
+            } else if (stride.format == kGLTridiagonalMatrixFormat) {
+                // Loop over the super-diagonal. Assign zero to the last element (which never actually gets used)
+                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+                    assignZeroData(f, index + 0*stride.stride);
+                    assignZeroData(f, index + (stride.nDiagonalPoints-1)*stride.stride + 2*stride.diagonalStride);
+                    for (NSUInteger i=1; i<stride.nDiagonalPoints; i++) {
+                        row[iDim] = i;
+                        col[iDim] = i-1;
+                        
+                        NSUInteger memIndex = index + i*stride.stride;
+                        assignData( row, col, f, memIndex);
+                    }
+                    for (NSUInteger i=0; i<stride.nDiagonalPoints; i++) {
+                        row[iDim] = i;
+                        col[iDim] = i;
+                        
+                        NSUInteger memIndex = index + i*stride.stride + 1*stride.diagonalStride;
+                        assignData( row, col, f, memIndex);
+                    }
+                    for (NSUInteger i=0; i<stride.nDiagonalPoints-1; i++) {
+                        row[iDim] = i;
+                        col[iDim] = i+1;
+                        
+                        NSUInteger memIndex = index + i*stride.stride + 2*stride.diagonalStride;
+                        assignData( row, col, f, memIndex);
+                    }
+                };
             }
             
-            innerLoop = outerLoop;
+            assignData = loop;
         }
         
         // And finally, we can now excute the block.
         NSUInteger *rows = malloc(self.matrixDescription.nDimensions * sizeof(NSUInteger));
         NSUInteger *cols = malloc(self.matrixDescription.nDimensions * sizeof(NSUInteger));
-        innerLoop( rows, cols, self.pointerValue, 0);
+        assignData( rows, cols, self.pointerValue, 0);
         free(rows);
         free(cols);
     }
 }
 
-+ (id) dftMatrixFromDimension: (GLDimension *) x forEquation: (GLEquation *) equation
-{
-	GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: kGLExponentialBasis strictlyPositive: NO];
-	GLLinearTransform *dft = [self transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-	
-//	GLFloat *kVal = (GLFloat *) k.data.bytes;
-//	GLFloat *xVal = (GLFloat *) x.data.bytes;
-//	GLFloat N = x.nPoints;
-//	
-//	GLSplitComplex f = dft.splitComplex;
-//	for (NSUInteger i=0; i<k.nPoints; i++) {
-//		for (NSUInteger j=0; j<x.nPoints; j++) {
-//			f.realp[i*x.nPoints+j] = cos(2*M_PI*kVal[i]*xVal[j])/N;
-//			f.imagp[i*x.nPoints+j] = -sin(2*M_PI*kVal[i]*xVal[j])/N;
-//		}
-//	}
-    
-    transformMatrix matrix = ^( NSUInteger *row, NSUInteger *col ) {
-        GLFloat *kVal = (GLFloat *) k.data.bytes;
-        GLFloat *xVal = (GLFloat *) x.data.bytes;
-        GLFloat N = x.nPoints;
-        
-        GLFloatComplex value = cos(2*M_PI*kVal[row[0]]*xVal[col[0]])/N - I*(sin(2*M_PI*kVal[row[0]]*xVal[col[0]])/N);
-        
-        return value;
-    };
-    
-    dft.matrixBlock = matrix;
-    [dft populateDataFromMatrixBlock];
-	
-	return dft;
-}
+/************************************************/
+/*		Pre-defined transformations             */
+/************************************************/
 
-+ (id) idftMatrixFromDimension: (GLDimension *) k forEquation: (GLEquation *) equation
-{
-	GLDimension *x = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLDeltaBasis strictlyPositive: NO];
-	GLLinearTransform *dft = [self transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-	
-	GLFloat *kVal = (GLFloat *) k.data.bytes;
-	GLFloat *xVal = (GLFloat *) x.data.bytes;
-	
-	GLSplitComplex f = dft.splitComplex;
-	
-	for (NSUInteger i=0; i<x.nPoints; i++) {
-		for (NSUInteger j=0; j<k.nPoints; j++) {
-			f.realp[i*k.nPoints+j] = cos(2*M_PI*kVal[i]*xVal[j]);
-			f.imagp[i*k.nPoints+j] = sin(2*M_PI*kVal[i]*xVal[j]);
-		}
-	}
-	
-	return dft;
-}
+#pragma mark -
+#pragma mark Pre-defined transformations
+#pragma mark
 
-+ (id) cosineTransformMatrixFromDimension: (GLDimension *) x forEquation: (GLEquation *) equation
++ (GLLinearTransform *) discreteTransformFromDimension: (GLDimension *) aDimension toBasis: (GLBasisFunction) aBasis forEquation: (GLEquation *) equation
 {
-	GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: kGLCosineHalfShiftBasis strictlyPositive: YES];
-	GLLinearTransform *dft = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-	
-	GLFloat N = x.nPoints;
-	
-	GLFloat *f = dft.pointerValue;
-	for (NSUInteger i=0; i<k.nPoints; i++) {
-		for (NSUInteger j=0; j<x.nPoints; j++) {
-			f[i*x.nPoints+j] = cos(M_PI*((GLFloat)j+0.5)*((GLFloat)i)/N)/N;
-		}
-	}
-	
-	return dft;
-}
-
-+ (id) inverseCosineTransformMatrixFromDimension: (GLDimension *) someDimension forEquation: (GLEquation *) equation
-{
-    GLDimension *x, *k;
-    if (someDimension.basisFunction == kGLCosineHalfShiftBasis) {
-        k = someDimension;
-        x = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLDeltaBasis strictlyPositive: NO];
-    } else if (someDimension.basisFunction == kGLDeltaBasis) {
-        x = someDimension;
-        k = [[GLDimension alloc] initAsDimension: x transformedToBasis: kGLCosineHalfShiftBasis strictlyPositive: YES];
-    } else {
-        [NSException exceptionWithName: @"BadDimension" reason:@"I don't understand the words that are coming out of your mouth." userInfo:nil];
+    if (aDimension.basisFunction == kGLDeltaBasis) {
+        GLDimension *x=aDimension;
+   
+        if (aBasis == kGLExponentialBasis)
+        {   // This is the DFT---discrete Fourier transform
+            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: NO];
+            GLLinearTransform *dft = [self transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                GLFloat *xVal = (GLFloat *) x.data.bytes;
+                GLFloat N = x.nPoints;
+                
+                GLFloatComplex value = cos(2*M_PI*kVal[row[0]]*xVal[col[0]])/N - I*(sin(2*M_PI*kVal[row[0]]*xVal[col[0]])/N);
+                
+                return value;
+            }];
+            
+            return dft;
+        }
+        else if (aBasis == kGLCosineHalfShiftBasis)
+        {   // This is the DCT---discrete cosine transform
+            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
+            GLLinearTransform *dct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                GLFloat *xVal = (GLFloat *) x.data.bytes;
+                
+                GLFloatComplex value = cos(M_PI*kVal[row[0]]*xVal[col[0]])/x.nPoints ;
+                
+                return value;
+            }];
+            
+            return dct;
+        }
+        else if (aBasis == kGLSineHalfShiftBasis)
+        {   // This is the DST---discrete sine transform
+            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
+            GLLinearTransform *dst = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                GLFloat *xVal = (GLFloat *) x.data.bytes;
+                
+                GLFloatComplex value = sin(M_PI*kVal[row[0]]*xVal[col[0]])/x.nPoints ;
+                
+                return value;
+            }];
+            
+            return dst;
+        }
+    }
+    else {
+        GLDimension *k=aDimension;
+        GLDimension *x = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLDeltaBasis strictlyPositive: NO];
+        if (k.basisFunction == kGLExponentialBasis)
+        {   // This is the IDFT---inverse discrete Fourier transform
+            GLLinearTransform *idft = [self transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                GLFloat *xVal = (GLFloat *) x.data.bytes;
+                
+                GLFloatComplex value = cos(2*M_PI*kVal[col[0]]*xVal[row[0]]) - I*sin(2*M_PI*kVal[col[0]]*xVal[row[0]]);
+                
+                return value;
+            }];
+            
+            return idft;
+        }
+        else if (aBasis == kGLCosineHalfShiftBasis)
+        {   // This is the IDCT---inverse discrete cosine transform
+            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
+            GLLinearTransform *idct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                GLFloat *xVal = (GLFloat *) x.data.bytes;
+                
+                GLFloatComplex value = col[0]==0 ? 1.0 : 2.0*cos(M_PI*kVal[col[0]]*xVal[row[0]]);
+                
+                return value;
+            }];
+            
+            return idct;
+        }
+        else if (aBasis == kGLSineHalfShiftBasis)
+        {   // This is the IDST---inverse discrete sine transform
+            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
+            GLLinearTransform *idst = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                GLFloat *xVal = (GLFloat *) x.data.bytes;
+                
+                GLFloatComplex value = col[0]==x.nPoints-1 ? pow(-1.0,x.nPoints) : 2.0*sin(M_PI*kVal[col[0]]*xVal[row[0]]);
+                
+                return value;
+            }];
+            
+            return idst;
+        }
     }
     
-	GLLinearTransform *dft = [self transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-	
-	GLFloat N = x.nPoints;
-	
-	GLFloat *f = dft.pointerValue;
-	for (NSUInteger i=0; i<x.nPoints; i++) {
-		for (NSUInteger j=0; j<k.nPoints; j++) {
-			if (j==0) {
-				f[i*k.nPoints+j] = 1.0;
-			} else {
-				f[i*k.nPoints+j] = 2.0*cos(M_PI*((GLFloat)j)*((GLFloat)i+0.5)/N);
-			}
-		}
-	}
-	
-	return dft;
-}
-
-+ (GLLinearTransform *) transformWithFromDimension: (GLDimension *) k forEquation: (GLEquation *) equation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix {
+    [NSException exceptionWithName: @"BadDimension" reason:@"I don't understand the words that are coming out of your mouth." userInfo:nil];
     
+    return nil;
 }
 
-+ (id) differentiationMatrixOfOrder: (NSUInteger) numDerivs fromDimension: (GLDimension *) k forEquation: (GLEquation *) equation
++ (GLLinearTransform *) differentialOperatorOfOrder: (NSUInteger) numDerivs fromDimension: (GLDimension *) k forEquation: (GLEquation *) equation
 {
     GLLinearTransform *diff;
-	if (k.basisFunction == kGLExponentialBasis)
+    if (numDerivs == 0)
+    {
+		diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[k] inFormat: @[@(kGLDiagonalMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
+            return (GLFloatComplex) (row[0]==col[0] ? 1.0 : 0.0);
+        }];
+    }
+	else if (k.basisFunction == kGLExponentialBasis)
     {
         // i^0=1, i^1=i, i^2=-1, i^3=-i
-        BOOL dataFormat = numDerivs % 2 == 0 ? kGLRealDataFormat : kGLSplitComplexDataFormat;
-        
-		diff = [GLLinearTransform transformOfType: dataFormat withFromDimensions: @[k] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-        diff.isRealPartZero = numDerivs % 2 == 1;
-        diff.isImaginaryPartZero = numDerivs % 2 == 0;
-		
-        transformMatrix matrix = ^( NSUInteger *row, NSUInteger *col ) {
+        GLDataFormat dataFormat = numDerivs % 2 == 0 ? kGLRealDataFormat : kGLSplitComplexDataFormat;
+		diff = [GLLinearTransform transformOfType: dataFormat withFromDimensions: @[k] toDimensions: @[k] inFormat: @[@(kGLDiagonalMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
             GLFloat *kVal = (GLFloat *) k.data.bytes;
             return (GLFloatComplex) (row[0]==col[0] ? cpow(I*2*M_PI*kVal[row[0]], numDerivs) : 0.0);
-        };
+        }];
+        diff.isRealPartZero = numDerivs % 2 == 1;
+        diff.isImaginaryPartZero = numDerivs % 2 == 0;
 	}
-    
-    
+    else if (k.basisFunction == kGLCosineHalfShiftBasis)
+    {
+        if (numDerivs % 2 == 1) {
+            GLDimension *transformedDimension = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLSineHalfShiftBasis strictlyPositive: YES];
+            GLFloat sign = (numDerivs-1)/2 % 2 ? 1. : -1.;
+            diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[transformedDimension] inFormat: @[@(kGLSuperdiagonalMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                return (GLFloatComplex) (row[0]+1==col[0] ? sign*pow(2*M_PI*kVal[row[0]+1], numDerivs) : 0.0);
+            }];
+        } else {
+            GLFloat sign = numDerivs/2 % 2 ? -1. : 1.;
+            diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[k] inFormat: @[@(kGLDiagonalMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                return (GLFloatComplex) (row[0]==col[0] ? sign*pow(2*M_PI*kVal[row[0]], numDerivs) : 0.0);
+            }];
+        }
+	}
+    else if (k.basisFunction == kGLSineHalfShiftBasis)
+    {
+        if (numDerivs % 2 == 1) {
+            GLDimension *transformedDimension = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLCosineHalfShiftBasis strictlyPositive: YES];
+            GLFloat sign = (numDerivs-1)/2 % 2 ? -1. : 1.;
+            diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[transformedDimension] inFormat: @[@(kGLSubdiagonalMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                return (GLFloatComplex) (row[0]-1==col[0] ? sign*pow(2*M_PI*kVal[row[0]-1], numDerivs) : 0.0);
+            }];
+        } else {
+            GLFloat sign = numDerivs/2 % 2 ? -1. : 1.;
+            diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[k] inFormat: @[@(kGLDiagonalMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
+                GLFloat *kVal = (GLFloat *) k.data.bytes;
+                return (GLFloatComplex) (row[0]==col[0] ? sign*pow(2*M_PI*kVal[row[0]], numDerivs) : 0.0);
+            }];
+        }
+	} else if (k.basisFunction == kGLChebyshevBasis)
+    {
+        if (numDerivs > 1) [NSException exceptionWithName: @"NotYetImplemented" reason:@"Chebyshev derivatives greater than 1 are not yet implemented" userInfo:nil];
+		diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
+            GLFloat *kVal = (GLFloat *) k.data.bytes;
+            return (GLFloatComplex) (  (col[0] >= row[0]+1 && (row[0]+col[0])%2==1)  ? 2.*kVal[col[0]] : 0.0);
+        }];
+	} else {
+        [NSException exceptionWithName: @"NotYetImplemented" reason:@"Derivatives for that basis are not yet implemented" userInfo:nil];
+    }
     
     return diff;
 }
 
-+ (id) differentiationMatrixFromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation
++ (GLLinearTransform *) differentialOperatorWithDerivatives: (NSArray *) numDerivs fromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation
 {
-	GLLinearTransform *diff;
-	if (aDimension.basisFunction == kGLExponentialBasis)
-    {
-		diff = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[aDimension] toDimensions: @[aDimension] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-		
-		NSUInteger N = aDimension.nPoints;
-		GLSplitComplex f = diff.splitComplex;
-		GLFloat *kVal = (GLFloat *) aDimension.data.bytes;
-		
-		for (NSUInteger i=0; i<N; i++) {
-			for (NSUInteger j=0; j<N; j++) {
-				if ( i == j ) {
-					f.realp[i*N+j] = 0.0;
-					f.imagp[i*N+j] = 2*M_PI*kVal[i];
-				} else {
-					f.realp[i*N+j] = 0.0;
-					f.imagp[i*N+j] = 0.0;
-				}
-			}
-		}
-	}
-	else if (aDimension.basisFunction == kGLCosineHalfShiftBasis)
-    {
-        GLDimension *transformedDimension = [[GLDimension alloc] initAsDimension: aDimension transformedToBasis: kGLSineHalfShiftBasis strictlyPositive: YES];
-		diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[aDimension] toDimensions: @[transformedDimension] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-		
-		NSUInteger N = aDimension.nPoints;
-		GLFloat *f = diff.pointerValue;
-		GLFloat *kVal = (GLFloat *) aDimension.data.bytes;
-		
-		for (NSInteger i=0; i<N; i++) {
-			for (NSInteger j=0; j<N; j++) { // j loops through the 'from' dimension
-				if ( i+1 == j ) {
-					f[i*N+j] = -2*M_PI*kVal[j];
-				} else {
-					f[i*N+j] = 0.0;
-				}
-			}
-		}
-	}
-    else if (aDimension.basisFunction == kGLSineHalfShiftBasis)
-    {
-        GLDimension *transformedDimension = [[GLDimension alloc] initAsDimension: aDimension transformedToBasis: kGLCosineHalfShiftBasis strictlyPositive: YES];
-		diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[aDimension] toDimensions: @[transformedDimension] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-		
-		NSUInteger N = aDimension.nPoints;
-		GLFloat *f = diff.pointerValue;
-		GLFloat *kVal = (GLFloat *) aDimension.data.bytes;
-		
-		for (NSInteger i=0; i<N; i++) {
-			for (NSInteger j=0; j<N; j++) {
-				if ( i == j+1 ) {
-					f[i*N+j] = 2*M_PI*kVal[j];
-				} else {
-					f[i*N+j] = 0.0;
-				}
-			}
-		}
-	}
-    else if (aDimension.basisFunction == kGLChebyshevBasis)
-    {
-		diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[aDimension] toDimensions: @[aDimension] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-		
-		NSUInteger N = aDimension.nPoints;
-		GLFloat *f = diff.pointerValue;
-		GLFloat *kVal = (GLFloat *) aDimension.data.bytes;
-		
-		for (NSInteger i=0; i<N; i++) {
-			for (NSInteger j=0; j<N; j++) {
-				if ( j >= i+1 && (i+j)%2==1 ) {
-                    f[i*N+j] = 2*kVal[j];
-				} else {
-					f[i*N+j] = 0.0;
-				}
-			}
-		}
-	}
-	
-	return diff;
+    NSMutableArray *linearTransformations = [NSMutableArray array];
+    NSMutableArray *toDimensions = [NSMutableArray array];
+    NSMutableArray *matrixFormat = [NSMutableArray array];
+    NSMutableArray *matrixBlocks = [NSMutableArray array];
+    BOOL isComplex = NO;
+    for (NSUInteger i=0; i<dimensions.count; i++) {
+        GLLinearTransform *diffOp = [self differentialOperatorOfOrder: [numDerivs[i] unsignedIntegerValue] fromDimension: dimensions[i] forEquation:equation];
+        linearTransformations[i] = diffOp;
+        toDimensions[i] = diffOp.toDimensions[0];
+        isComplex |= diffOp.isComplex;
+        matrixFormat[i] = diffOp.matrixFormats[0];
+        matrixBlocks[i] = diffOp.matrixBlock;
+    }
+    GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+    
+    // We are just taking the outer product (tensor product) of the different transformations.
+    GLLinearTransform *diffOp = [GLLinearTransform transformOfType:format withFromDimensions: dimensions toDimensions: toDimensions inFormat:matrixFormat forEquation:equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+        transformMatrix theMatrixBlock = matrixBlocks[0];
+        GLFloatComplex value = theMatrixBlock(&(row[0]), &(col[0]));
+        for (NSUInteger i=1;i<matrixBlocks.count;i++) {
+            value *= theMatrixBlock(&(row[i]), &(col[i]));
+        }
+        return value;
+    }];
+    
+    return diffOp;
 }
+
 
 - (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable
 {
