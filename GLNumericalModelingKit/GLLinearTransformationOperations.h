@@ -45,7 +45,8 @@
  @param function The function representing vector x.
  @returns The solution function, b.
  */
-@interface GLDenseMatrixTransformOperation : GLBinaryOperation
+@interface GLDenseMatrixTransformOperation : GLVariableOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function;
 @end
 
 

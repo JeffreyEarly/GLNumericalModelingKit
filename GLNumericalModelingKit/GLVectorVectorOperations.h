@@ -11,7 +11,6 @@
 /************************************************/
 /*		GLAdditionOperation						*/
 /************************************************/
-// variable = leftVariable + rightVariable
 /** C = A + B. This operation takes scalar-scalar, scalar-vector, vector-vector, scalar-matrix and matrix-matrix arguments. At the moment, the matrices must be in the same format.
  @param A An input scalar, vector or matrix.
  @param B An input scalar, vector or matrix.
@@ -25,16 +24,26 @@
 /************************************************/
 /*		GLSubtractionOperation					*/
 /************************************************/
-// variable = leftVariable - rightVariable
-@interface GLSubtractionOperation : GLBinaryOperation
+/** C = A - B. This operation takes scalar-scalar, scalar-vector, vector-vector, scalar-matrix and matrix-matrix arguments. At the moment, the matrices must be in the same format.
+ @param A An input scalar, vector or matrix.
+ @param B An input scalar, vector or matrix.
+ @returns The result C.
+ */
+@interface GLSubtractionOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
 @end
 
 
 /************************************************/
 /*		GLMultiplicationOperation				*/
 /************************************************/
-// variable = leftVariable * rightVariable
-@interface GLMultiplicationOperation : GLBinaryOperation
+/** C = A * B. This operation takes scalar-scalar, scalar-vector, vector-vector, scalar-matrix and matrix-matrix arguments. At the moment, the matrices must be diagonal matrices. This will also multiply functions of different dimensions together, such as h(x,y) = f(x)*g(x,y).
+ @param A An input scalar, vector or matrix.
+ @param B An input scalar, vector or matrix.
+ @returns The result C.
+ */
+@interface GLMultiplicationOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
 @end
 
 /************************************************/

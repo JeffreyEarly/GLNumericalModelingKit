@@ -266,16 +266,9 @@
 
 @implementation GLDenseMatrixTransformOperation
 
-// This is copy and pasted from the superclass, needs to be properly retooled.
-- (id) initWithResult: (GLVariable *) resultVariable firstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
 {
-	if ( ![fOperand.class isSubclassOfClass: [GLLinearTransform class]] ) {
-        [NSException raise: @"BadArgument" format: @"The first argument must be a GLLinearTransform."];
-    }
-    
-    GLLinearTransform *linearTransform = (GLLinearTransform *) fOperand;
-    
-    if ( ![linearTransform.fromDimensions isEqualToArray: sOperand.dimensions] ) {
+    if ( ![linearTransform.fromDimensions isEqualToArray: function.dimensions] ) {
         [NSException raise: @"DimensionsNotEqualException" format: @"From dimensions of the linear operator must equal the operand vector."];
     }
     
@@ -289,22 +282,15 @@
         [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
     }
 
-    if (( self = [super init] )) {
-		self.firstOperand = fOperand;
-		self.secondOperand = sOperand;
-		
-		if (!resultVariable) {
-			BOOL isComplex = fOperand.isComplex || sOperand.isComplex;
-			GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-			
-			self.result = [GLVariable variableOfType: format withDimensions: linearTransform.toDimensions forEquation: self.firstOperand.equation];
-		} else {
-			self.result = resultVariable;
-		}
-		
-		[self setupDependencies];
-        
-		
+	BOOL isComplex = linearTransform.isComplex || function.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+	
+    if (linearTransform.name && function.name) {
+        result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
+    }
+    
+	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
         GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
         
 //        int M = (int) matrixDescription.strides[0].nRows;
@@ -316,59 +302,49 @@
 		int M = (int) matrixDescription.strides[0].nRows;
         int N = (int) 1;
 		int K = (int) matrixDescription.strides[0].nColumns;
-		if ( !self.firstOperand.isComplex && !self.secondOperand.isComplex)
+		if ( !linearTransform.isComplex && !function.isComplex)
 		{	// C = A.X
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				vDSP_mmul( (GLFloat *)fOperand.bytes, 1, (GLFloat *)sOperand.bytes, 1, result.mutableBytes, 1, M, N, K);
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+				vDSP_mmul( A, 1, B, 1, C, 1, M, N, K);
 			};
 		}
-		else if ( self.firstOperand.isComplex && !self.secondOperand.isComplex)
+		else if ( linearTransform.isComplex && !function.isComplex)
 		{	// (A+iB).(X) = A.X + iB.X
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				GLSplitComplex leftComplex = splitComplexFromData( fOperand );
-				GLSplitComplex destComplex = splitComplexFromData( result );
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData( operandArray[0] );
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( leftComplex.realp, 1, (GLFloat *)sOperand.bytes, 1, destComplex.realp, 1, M, N, K);
-				vDSP_mmul( leftComplex.imagp, 1, (GLFloat *)sOperand.bytes, 1, destComplex.imagp, 1, M, N, K);
+				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
 			};
 		}
-		else if ( !self.firstOperand.isComplex && self.secondOperand.isComplex)
+		else if ( !linearTransform.isComplex && function.isComplex)
 		{	// A.(X+iY) = A.X + iA.Y
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-				GLSplitComplex destComplex = splitComplexFromData( result );
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLSplitComplex B = splitComplexFromData( operandArray[1] );
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( (GLFloat *)fOperand.bytes, 1, rightComplex.realp, 1, destComplex.realp, 1, M, N, K);
-				vDSP_mmul( (GLFloat *)fOperand.bytes, 1, rightComplex.imagp, 1, destComplex.imagp, 1, M, N, K);
+				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
 			};
 		}
-		else if ( self.firstOperand.isComplex && self.secondOperand.isComplex)
+		else if ( linearTransform.isComplex && function.isComplex)
 		{
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				GLSplitComplex leftComplex = splitComplexFromData( fOperand );
-				GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-				GLSplitComplex destComplex = splitComplexFromData( result );
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData( operandArray[0] );
+				GLSplitComplex B = splitComplexFromData( operandArray[1] );
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_zmmul( &leftComplex, 1, &rightComplex, 1, &destComplex, 1, M, N, K);
+				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
 			};
 		}
     }
     return self;
-}
-
-- (void) setupDependencies
-{
-	if (self.firstOperand.lastOperation && ![self.dependencies containsObject:self.firstOperand.lastOperation]) {
-		[self addDependency: self.firstOperand.lastOperation];
-	}
-	if (self.secondOperand.lastOperation && ![self.dependencies containsObject:self.secondOperand.lastOperation]) {
-		[self addDependency: self.secondOperand.lastOperation];
-	}
-	if (self.result.lastOperation && ![self.dependencies containsObject:self.result.lastOperation]) {
-		[self addDependency: self.result.lastOperation];
-	}
-	
-	[self.result addOperation: self];
 }
 
 @end

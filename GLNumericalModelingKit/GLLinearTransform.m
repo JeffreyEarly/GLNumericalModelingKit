@@ -9,6 +9,7 @@
 #import "GLLinearTransform.h"
 #import "GLEquation.h"
 #import "GLDimension.h"
+#import "GLVectorVectorOperations.h"
 
 #import "GLLinearTransformationOperations.h"
 
@@ -564,17 +565,12 @@
 #pragma mark Operations
 #pragma mark
 
-- (GLVariable *) tridiagonalSolveWithVector: (GLVariable *)	b
-{
-	GLTriadiagonalOperation *operation = [[GLTriadiagonalOperation alloc] initWithFirstOperand: self secondOperand: b];
-    operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
-}
-
-- (GLVariable *) solve: (GLVariable *) b
+- (GLVariable *) transform: (GLVariable *) x
 {
 	NSUInteger numIdentityIndices = 0;
 	NSUInteger numDiagonalIndices = 0;
+	NSUInteger numSubDiagonalIndices = 0;
+	NSUInteger numSuperDiagonalIndices = 0;
 	NSUInteger numTriIndices = 0;
 	NSUInteger numDenseIndices = 0;
 	for ( NSNumber *num in self.matrixFormats ) {
@@ -582,6 +578,62 @@
 			numIdentityIndices++;
         } else if ([num unsignedIntegerValue] == kGLDiagonalMatrixFormat) {
 			numDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLSubdiagonalMatrixFormat) {
+			numSubDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLSuperdiagonalMatrixFormat) {
+			numSuperDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLTridiagonalMatrixFormat) {
+			numTriIndices++;
+        } else if ([num unsignedIntegerValue] == kGLDenseMatrixFormat) {
+			numDenseIndices++;
+        }
+    }
+		
+	if (numDenseIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 1 && numDenseIndices == 0) {
+		// Tridiagonal matrix transformations.
+		GLTriadiagonalTransformOperation *operation = [[GLTriadiagonalTransformOperation alloc] initWithLinearTransformation: self function: x];
+		operation = [self replaceWithExistingOperation: operation];
+		return operation.result[0];
+	} else if (numDenseIndices == 1 && numDiagonalIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numDenseIndices == 0) {
+		// Dense matrix transformations.
+		GLDenseMatrixTransformOperation *operation = [[GLDenseMatrixTransformOperation alloc] initWithLinearTransformation: self function: x];
+		operation = [self replaceWithExistingOperation: operation];
+		return operation.result[0];
+	}  else if (numDenseIndices == 0 && numIdentityIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numDenseIndices == 0) {
+		// Diagonal matrix transformation
+		GLMultiplicationOperation *operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: x];
+		operation = [self replaceWithExistingOperation: operation];
+		return operation.result[0];
+	}  else if (numDenseIndices == 0 && numIdentityIndices == 0 && numTriIndices == 0 && numDenseIndices == 0) {
+		// General diagonal matrix transformation
+		GLSingleDiagonalTransformOperation *operation = [[GLSingleDiagonalTransformOperation alloc] initWithLinearTransformation: self function: x];
+		operation = [self replaceWithExistingOperation: operation];
+		return operation.result[0];
+	}
+	
+	NSString *descrip = [NSString stringWithFormat: @"No algorithm implemented to solve problem. This matrix contains (identity, diagonal, sub-diagonal, super-diagonal, tri-diagonal, dense)=(%lu,%lu,%lu,%lu,%lu,%lu) indices", numIdentityIndices, numDiagonalIndices,numSubDiagonalIndices, numSuperDiagonalIndices, numTriIndices, numDenseIndices];
+	[NSException exceptionWithName: @"BadFormat" reason:descrip userInfo:nil];
+	
+	return nil;
+}
+
+- (GLVariable *) solve: (GLVariable *) b
+{
+	NSUInteger numIdentityIndices = 0;
+	NSUInteger numDiagonalIndices = 0;
+	NSUInteger numSubDiagonalIndices = 0;
+	NSUInteger numSuperDiagonalIndices = 0;
+	NSUInteger numTriIndices = 0;
+	NSUInteger numDenseIndices = 0;
+	for ( NSNumber *num in self.matrixFormats ) {
+        if ([num unsignedIntegerValue] == kGLIdentityMatrixFormat) {
+			numIdentityIndices++;
+        } else if ([num unsignedIntegerValue] == kGLDiagonalMatrixFormat) {
+			numDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLSubdiagonalMatrixFormat) {
+			numSubDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLSuperdiagonalMatrixFormat) {
+			numSuperDiagonalIndices++;
         } else if ([num unsignedIntegerValue] == kGLTridiagonalMatrixFormat) {
 			numTriIndices++;
         } else if ([num unsignedIntegerValue] == kGLDenseMatrixFormat) {
@@ -599,43 +651,23 @@
 	}
 	else if ( numTriIndices == 1 && !numDenseIndices )
 	{	// A single tridiagonal dimension
-		GLTriadiagonalOperation *operation = [[GLTriadiagonalOperation alloc] initWithFirstOperand: self secondOperand: b];
+		GLTriadiagonalSolverOperation *operation = [[GLTriadiagonalSolverOperation alloc] initWithLinearTransformation: self function: b];
 		operation = [self replaceWithExistingOperation: operation];
-		return operation.result;
+		return operation.result[0];
 	}
 	else if ( !numTriIndices && numDenseIndices == 1 )
 	{	// A single dense dimension
-		GLDenseMatrixSolver *operation = [[GLDenseMatrixSolver alloc] initWithFirstOperand: self secondOperand: b];
+		GLDenseMatrixSolver *operation = [[GLDenseMatrixSolver alloc] initWithLinearTransformation: self function: b];
 		operation = [self replaceWithExistingOperation: operation];
-		return operation.result;
+		return operation.result[0];
 	}
 	
-	NSString *descrip = [NSString stringWithFormat: @"We can only solve a matrix with one nondiagonal dimension. This matrix contains %lu tridiagonal dimensions and %lu dense dimensions.", numTriIndices, numDenseIndices];
+	NSString *descrip = [NSString stringWithFormat: @"No algorithm implemented to solve problem. This matrix contains (identity, diagonal, sub-diagonal, super-diagonal, tri-diagonal, dense)=(%lu,%lu,%lu,%lu,%lu,%lu) indices", numIdentityIndices, numDiagonalIndices,numSubDiagonalIndices, numSuperDiagonalIndices, numTriIndices, numDenseIndices];
 	[NSException exceptionWithName: @"BadFormat" reason:descrip userInfo:nil];
 	
 	return nil;
 }
 
-- (GLVariable *) transform: (GLVariable *) x
-{
-	NSUInteger numTriIndices = 0;
-	for ( NSNumber *num in self.matrixFormats ) {
-        if ([num unsignedIntegerValue] == kGLTridiagonalMatrixFormat) {
-			numTriIndices++;
-        }
-    }
-		
-	if (numTriIndices) {
-		GLTriadiagonalTransformOperation *operation = [[GLTriadiagonalTransformOperation alloc] initWithFirstOperand: self secondOperand: x];
-		operation = [self replaceWithExistingOperation: operation];
-		return operation.result;
-	} else {
-		GLDenseMatrixTransformOperation *operation = [[GLDenseMatrixTransformOperation alloc] initWithFirstOperand: self secondOperand: x];
-		operation = [self replaceWithExistingOperation: operation];
-		return operation.result;
-	}
-
-}
 
 - (GLVariable *) times: (GLVariable *) otherVariable
 {

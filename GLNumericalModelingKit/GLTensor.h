@@ -70,7 +70,7 @@ GLSplitComplex splitComplexFromData( NSData *data );
 #pragma mark Data
 #pragma mark
 
-// The total number of components saved to the data. Note that some formats may not save zeros, for example.
+// The total number of components saved to the data. Note that some formats may not save zeros, for example, while others may save extra points than required.
 @property(readonly, assign, nonatomic) NSUInteger nDataPoints;
 
 // For a real number, the number of data points is equal to the number of elements.

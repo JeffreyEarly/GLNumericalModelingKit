@@ -66,27 +66,29 @@ typedef	FFTSetupD	GLFFTSetup;
 
 #define vGL_vrvrs		vDSP_vrvrsD
 
-#define	vGL_vsmul	vDSP_vsmulD
-#define	vGL_vadd	vDSP_vaddD
-#define	vGL_vsmsa	vDSP_vsmsaD
-#define	vGL_vsq		vDSP_vsqD
-#define	vGL_sve		vDSP_sveD
-#define	vGL_vsadd	vDSP_vsaddD
-#define	vGL_vmul	vDSP_vmulD
-#define	vGL_vneg	vDSP_vnegD
-#define vGL_vabs	vDSP_vabsD
-#define vGL_zvabs	vDSP_zvabsD
-#define	vGL_svdiv	vDSP_svdivD
-#define vGL_vdiv	vDSP_vdivD
-#define	vGL_vma		vDSP_vmaD
-#define	vGL_vsma	vDSP_vsmaD
-#define	vGL_vfrac	vDSP_vfracD
-#define	vGL_vsub	vDSP_vsubD
-#define	vGL_vindex	vDSP_vindexD
-#define	vGL_vramp	vDSP_vrampD
-#define	vGL_vsbsm	vDSP_vsbsmD
-#define	vGL_vmmsb	vDSP_vmmsbD
-#define	vGL_vmma	vDSP_vmmaD
+#define vGL_zvzsml		vDSP_zvzsmlD		// Complex vector multiply by complex scalar
+#define	vGL_vsmul		vDSP_vsmulD
+#define	vGL_vadd		vDSP_vaddD
+#define	vGL_vsmsa		vDSP_vsmsaD
+#define	vGL_vsq			vDSP_vsqD
+#define	vGL_sve			vDSP_sveD
+#define	vGL_vsadd		vDSP_vsaddD
+#define	vGL_vmul		vDSP_vmulD
+#define vGL_zvmul		vDSP_zvmulD		// Complex vector multiply by complex vector
+#define	vGL_vneg		vDSP_vnegD
+#define vGL_vabs		vDSP_vabsD
+#define vGL_zvabs		vDSP_zvabsD
+#define	vGL_svdiv		vDSP_svdivD
+#define vGL_vdiv		vDSP_vdivD
+#define	vGL_vma			vDSP_vmaD
+#define	vGL_vsma		vDSP_vsmaD
+#define	vGL_vfrac		vDSP_vfracD
+#define	vGL_vsub		vDSP_vsubD
+#define	vGL_vindex		vDSP_vindexD
+#define	vGL_vramp		vDSP_vrampD
+#define	vGL_vsbsm		vDSP_vsbsmD
+#define	vGL_vmmsb		vDSP_vmmsbD
+#define	vGL_vmma		vDSP_vmmaD
 
 #define vGL_mmov	vDSP_mmovD
 #define	vGL_fft2d_zip			vDSP_fft2d_zipD
@@ -129,28 +131,30 @@ typedef	FFTSetup	GLFFTSetup;
 
 #define vGL_vrvrs		vDSP_vrvrs
 
-#define	vGL_vsmul	vDSP_vsmul
-#define	vGL_vadd	vDSP_vadd
-#define	vGL_vsmsa	vDSP_vsmsa
-#define	vGL_vsq		vDSP_vsq
-#define	vGL_sve		vDSP_sve
-#define	vGL_vsadd	vDSP_vsadd
-#define	vGL_vmul	vDSP_vmul
-#define	vGL_vneg	vDSP_vneg
-#define vGL_vabs	vDSP_vabs
-#define vGL_zvabs	vDSP_zvabs
-#define	vGL_svdiv	vDSP_svdiv
-#define vGL_vdiv	vDSP_vdiv
-#define	vGL_vma		vDSP_vma
-#define	vGL_vsma	vDSP_vsma
+#define vGL_zvzsml		vDSP_zvzsml		// Complex vector multiply by complex scalar
+#define	vGL_vsmul		vDSP_vsmul
+#define	vGL_vadd		vDSP_vadd
+#define	vGL_vsmsa		vDSP_vsmsa
+#define	vGL_vsq			vDSP_vsq
+#define	vGL_sve			vDSP_sve
+#define	vGL_vsadd		vDSP_vsadd
+#define	vGL_vmul		vDSP_vmul
+#define vGL_zvmul		vDSP_zvmul		// Complex vector multiply by complex vector
+#define	vGL_vneg		vDSP_vneg
+#define vGL_vabs		vDSP_vabs
+#define vGL_zvabs		vDSP_zvabs
+#define	vGL_svdiv		vDSP_svdiv
+#define vGL_vdiv		vDSP_vdiv
+#define	vGL_vma			vDSP_vma
+#define	vGL_vsma		vDSP_vsma
 
-#define	vGL_vfrac	vDSP_vfrac
-#define	vGL_vsub	vDSP_vsub
-#define	vGL_vindex	vDSP_vindex
-#define	vGL_vramp	vDSP_vramp
-#define	vGL_vsbsm	vDSP_vsbsm
-#define	vGL_vmmsb	vDSP_vmmsb
-#define	vGL_vmma	vDSP_vmma
+#define	vGL_vfrac		vDSP_vfrac
+#define	vGL_vsub		vDSP_vsub
+#define	vGL_vindex		vDSP_vindex
+#define	vGL_vramp		vDSP_vramp
+#define	vGL_vsbsm		vDSP_vsbsm
+#define	vGL_vmmsb		vDSP_vmmsb
+#define	vGL_vmma		vDSP_vmma
 
 #define vGL_mmov	vDSP_mmov
 #define	vGL_fft2d_zip			vDSP_fft2d_zip
