@@ -70,17 +70,19 @@ GLSplitComplex splitComplexFromData( NSData *data );
 #pragma mark Data
 #pragma mark
 
-// The total number of components saved to the data. Note that some formats may not save zeros, for example, while others may save extra points than required.
+/// The total number of components saved to the data. Note that some formats may not save zeros, for example, while others may save extra points than required.
 @property(readonly, assign, nonatomic) NSUInteger nDataPoints;
 
-// For a real number, the number of data points is equal to the number of elements.
-// For a split complex number, there are twice as many elements as points.
+/// For a real number, the number of data points is equal to the number of elements. For a split complex number, there are twice as many elements as points.
 @property(readonly, assign, nonatomic) NSUInteger nDataElements;
 
-// Access to the raw computed data. If this variable is dependent on others, you should call
-// have the equation -solveForVariable first, otherwise an empty (non-zeroed!) chunk of data will be returned.
+/// Access to the raw computed data. If this variable is dependent on others, you should call -solve first, otherwise an empty (non-zeroed!) chunk of data will be returned.
 @property(readonly, strong, nonatomic) NSMutableData *data;
+
+/// Number of bytes allocated in the raw data, essentially the nDataElements*sizeof(GLFloat)
 @property(readonly, assign, nonatomic) NSUInteger dataBytes;
+
+/// Indicates whether or not an NSMutableData object has been assigned yet.
 @property(readonly, assign, nonatomic) BOOL hasData;
 
 // The data format for each dimension corresponds 1-1 with the dataFormats array.
@@ -99,6 +101,43 @@ GLSplitComplex splitComplexFromData( NSData *data );
 
 // Set the value to zero everywhere.
 - (void) zero;
+
+/************************************************/
+/*		Operations								*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Operations
+#pragma mark
+
+/** Adds two variables together: result = receiving variable + otherVariableOrScalar.
+ @discussion Adding two artibrary variables together doesn't always make sense and may cause an exception to be thrown. For example, adding a function to a matrix is undefined, and adding two matrices or two functions with different dimensions is also undefined. Adding a scalar always makes sense.
+ @discussion Note that a different algorithm is used depending on whether the scalar is given as a subclass of NSNumber or GLVariable. In the former case, the value is assumed constant and can't be altered in subsequent uses, while in the latter case it can vary. It is generally most computationally efficient to use the constant value.
+ @param otherVariableOrScalar An input scalar, vector or matrix.
+ @returns A subclass of GLVariable with the same dimensions as the highest rank input.
+ */
+- (GLTensor *) plus: (id) otherVariableOrScalar;
+
+/** Subtract two variables: result = receiving variable - otherVariableOrScalar.
+ @discussion Subtracting two artibrary variables together doesn't always make sense and may cause an exception to be thrown. For example, subtracting a function to a matrix is undefined, and subtracting two matrices or two functions with different dimensions is also undefined. Subtracting a scalar always makes sense.
+ @discussion Note that a different algorithm is used depending on whether the scalar is given as a subclass of NSNumber or GLVariable. In the former case, the value is assumed constant and can't be altered in subsequent uses, while in the latter case it can vary. It is generally most computationally efficient to use the constant value.
+ @param otherVariableOrScalar An input scalar, vector or matrix.
+ @returns A subclass of GLVariable with the same dimensions as the highest rank input.
+ */
+- (GLTensor *) minus: (id) otherVariableOrScalar;
+
+/** Multiplies two variables together: result = receiving variable * otherVariableOrScalar.
+ @discussion This operation is treated differently depending on the receiver and otherVariable class.
+ @discussion A scalar can multiply another scalar, a function, or a linear transformation.
+ @discussion Two functions can be multiplied together if they have the same dimension, e.g., h(x)=f(x)*g(x), or if one dimension is missing, e.g. h(x,y) = f(x)*g(x,y).
+ @discussion A linear transformation 'times' a function is treated as a transformation of that function, and is only valid if the fromDimensions of the linear transformation match the dimensions of the function. Left-sided transformations are not supported.
+ @discussion Two linear transformations are treated as a matrix multiplication and the fromDimensions of the receiver must match the the toDimensions of the otherVariable linear transformation.
+ @discussion Note that a different algorithm is used depending on whether the scalar is given as a subclass of NSNumber or GLVariable. In the former case, the value is assumed constant and can't be altered in subsequent uses, while in the latter case it can vary. It is generally most computationally efficient to use the constant value.
+ @param otherVariableOrScalar An input scalar, vector or matrix.
+ @returns A subclass of GLVariable.
+ */
+- (GLTensor *) times: (id) otherVariableOrScalar;
+
 
 /************************************************/
 /*		Reading & Writing						*/

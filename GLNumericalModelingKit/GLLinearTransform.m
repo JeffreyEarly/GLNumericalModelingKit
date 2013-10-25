@@ -42,6 +42,85 @@
 @synthesize nDataElements = _nDataElements;
 @synthesize dataBytes = _dataBytes;
 
+- (NSString *) matrixDescriptionString
+{
+	NSUInteger n = self.matrixDescription.strides[0].rowStride;
+	n = n==0?1:n;
+	NSMutableString *descrip = [NSMutableString string];
+	
+	GLFloat max, min;
+	vGL_maxv( self.data.mutableBytes, 1, &max, self.nDataElements);
+	vGL_minv( self.data.mutableBytes, 1, &min, self.nDataElements);
+	
+	if ( fabs(min) > max) {
+		max = fabs(min);
+	}
+	
+	GLFloat divisor = pow(10, floor(log10(max)));
+	if ( divisor == 0.0) divisor = 1;
+	
+	if (0 && self.dataFormat == kGLSplitComplexDataFormat)
+	{
+		GLSplitComplex splitComplex = self.splitComplex;
+		[descrip appendFormat: @"%f * ", divisor];
+        //		for (NSUInteger i=0; i<self.nDataPoints; i++)
+        //		{
+        //			if ( i % n == 0 ) {
+        //				[descrip appendFormat: @"\n"];
+        //			}
+        //			[descrip appendFormat: @"%1.1f ", sqrt(fabs(splitComplex.realp[i] * splitComplex.realp[i] - splitComplex.imagp[i] * splitComplex.imagp[i]))/divisor];
+        //		}
+		
+		for (NSUInteger i=0; i<self.nDataPoints; i++)
+		{
+			if ( i % n == 0 ) {
+				[descrip appendFormat: @"\n"];
+			}
+			[descrip appendFormat: @"%+1.1f ", splitComplex.realp[i]/divisor];
+		}
+		
+		[descrip appendFormat: @" imagp \n"];
+		for (NSUInteger i=0; i<self.nDataPoints; i++)
+		{
+			if ( i % n == 0 ) {
+				[descrip appendFormat: @"\n"];
+			}
+			[descrip appendFormat: @"%+1.1f ", splitComplex.imagp[i]/divisor];
+		}
+	}
+    if ( self.fromDimensions.count == 3)
+    {
+        NSUInteger m = [self.fromDimensions[2] nPoints] * [self.fromDimensions[1] nPoints];
+        GLFloat *f = self.pointerValue;
+		[descrip appendFormat: @"%g * ", divisor];
+		for (NSUInteger i=0; i<self.nDataElements; i++)
+		{
+			if ( i % m == 0 ) {
+				[descrip appendFormat: @"\n"];
+			}
+            if ( i % n == 0 ) {
+				[descrip appendFormat: @"\n"];
+			}
+            
+			[descrip appendFormat: @"%+1.1f ", f[i]/divisor];
+		}
+    }
+	else
+	{
+		GLFloat *f = self.pointerValue;
+		[descrip appendFormat: @"%g * ", divisor];
+		for (NSUInteger i=0; i<self.nDataElements; i++)
+		{
+			if ( i % n == 0 ) {
+				[descrip appendFormat: @"\n"];
+			}
+			[descrip appendFormat: @"%+1.1f ", f[i]/divisor];
+		}
+	}
+	
+	return descrip;
+}
+
 /************************************************/
 /*		Initialization							*/
 /************************************************/
@@ -479,6 +558,90 @@
     return diffOp;
 }
 
++ (GLLinearTransform *) harmonicOperatorOfOrder: (NSUInteger) order fromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation;
+{
+	NSMutableArray *zeros = [NSMutableArray array];
+	for (NSUInteger i=0; i<dimensions.count; i++) {
+		[zeros addObject: @0];
+	}
+	
+	// Build the operators
+	GLLinearTransform *harmonicOperator=nil;;
+	for (NSUInteger i=0; i<dimensions.count; i++) {
+		NSMutableArray *deriv = [zeros mutableCopy];
+		deriv[i] = @2;
+		if (harmonicOperator) {
+			harmonicOperator = (GLLinearTransform *) [harmonicOperator plus: [GLLinearTransform differentialOperatorWithDerivatives: deriv fromDimensions: dimensions forEquation: equation]];
+		} else {
+			harmonicOperator = [GLLinearTransform differentialOperatorWithDerivatives: deriv fromDimensions: dimensions forEquation: equation];
+		}
+	}
+	
+	for (NSUInteger i=1; i<order; i++) {
+		harmonicOperator = [harmonicOperator matrixMultiply: harmonicOperator];
+	}
+	
+	[equation solveForVariable: harmonicOperator waitUntilFinished: YES];
+		
+    harmonicOperator.name = [NSString stringWithFormat: @"nabla^%lu", order];
+	return harmonicOperator;
+}
+
++ (GLLinearTransform *) harmonicOperatorFromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation
+{
+	return [GLLinearTransform harmonicOperatorOfOrder: 1 fromDimensions: dimensions forEquation: equation];
+}
+
+// The SVV operator is a filter which multiplies the the toDimensions, and gives the toDimensions back.
++ (GLSpectralDifferentialOperator *) spectralVanishingViscosityFilterWithDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation;
+{
+	GLFloat minNyquist;
+	GLFloat minSampleInterval;
+	
+	GLSpectralDifferentialOperator *bigK;
+	for (GLDimension *dim in self.transformedDimensions) {
+		GLSpectralDifferentialOperator *k = [GLSpectralDifferentialOperator variableOfRealTypeFromDimension: dim withDimensions: self.transformedDimensions forEquation: self.equation];
+		GLFloat nyquist = dim.domainMin + dim.domainLength;
+		if (!bigK) {
+			bigK = [k multiply: k];
+			minNyquist = nyquist;
+			minSampleInterval = dim.sampleInterval;
+		} else {
+			bigK = [bigK plus: [k multiply: k]];
+			if (nyquist < minNyquist) {
+				minNyquist = nyquist;
+				minSampleInterval = dim.sampleInterval;
+			}
+		}
+	}
+	bigK = [bigK sqrt];
+	
+	if ([GLBasisTransformOperation shouldAntialias]) {
+		minNyquist = 2*minNyquist/3;
+	}
+	
+    // Note that the 'minSampleInterval' is deltaK (not deltaX)
+	GLFloat wavenumberCutoff = minSampleInterval * pow(minNyquist/minSampleInterval, 0.75);
+	
+	
+	// expf( -alpha * powf( (k-max)/(k-cutoff), p) );
+	
+	GLSpectralDifferentialOperator *filter = [[bigK scalarAdd: -minNyquist] multiply: [[bigK scalarAdd: -wavenumberCutoff] scalarDivide: 1.0]];
+	filter = [[[filter pow: 2] negate] exponentiate];
+	
+	[filter solve];
+	GLFloat *kk = [bigK pointerValue];
+	GLFloat *f = [filter pointerValue];
+	for (NSUInteger i=0; i<filter.nDataPoints; i++) {
+		if ( kk[i] < wavenumberCutoff ) {
+			f[i] = 0;
+		} else if ( kk[i] > minNyquist ) {
+			f[i] = 1.0;
+		}
+	}
+	
+	return filter;
+}
 
 - (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable
 {
@@ -668,110 +831,56 @@
 	return nil;
 }
 
-
-- (GLVariable *) times: (GLVariable *) otherVariable
+- (GLLinearTransform *) matrixMultiply: (GLLinearTransform *) otherVariable
 {
-	return [self multiply: otherVariable];
-}
-
-- (GLVariable *) multiply: (GLVariable *) otherVariable
-{
-	GLMatrixMatrixMultiplicationOperation *operation = [[GLMatrixMatrixMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
+	// Not very smart yet---we only know how to matrix multiply diagonal matrices (of any dimension) or 1D dense matrices.
+	GLLinearTransform *A = self;
+	GLLinearTransform *B = otherVariable;
+	
+	if ( ![A.fromDimensions isEqualToArray: B.toDimensions] ) {
+		[NSException raise: @"DimensionsNotEqualException" format: @"When multiplying two matrices, the fromDimensions of A, must equal the toDimensions of B."];
+	}
+	
+	NSUInteger numIdentityIndices = 0;
+	NSUInteger numDiagonalIndices = 0;
+	NSUInteger numSubDiagonalIndices = 0;
+	NSUInteger numSuperDiagonalIndices = 0;
+	NSUInteger numTriIndices = 0;
+	NSUInteger numDenseIndices = 0;
+	for ( NSNumber *num in self.matrixFormats ) {
+        if ([num unsignedIntegerValue] == kGLIdentityMatrixFormat) {
+			numIdentityIndices++;
+        } else if ([num unsignedIntegerValue] == kGLDiagonalMatrixFormat) {
+			numDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLSubdiagonalMatrixFormat) {
+			numSubDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLSuperdiagonalMatrixFormat) {
+			numSuperDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLTridiagonalMatrixFormat) {
+			numTriIndices++;
+        } else if ([num unsignedIntegerValue] == kGLDenseMatrixFormat) {
+			numDenseIndices++;
+        }
+    }
+	
+	GLVariableOperation *operation;
+	if (numDiagonalIndices == A.fromDimensions.count && [A.matrixDescription isEqualToMatrixDescription: B.matrixDescription]) {
+		operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: A secondOperand: B];
+	} else if (numDenseIndices == 1 && A.fromDimensions.count == 1 && [B.matrixFormats[0] unsignedIntegerValue] == kGLDenseMatrixFormat) {
+		operation = [[GLMatrixMatrixMultiplicationOperation alloc] initWithFirstOperand: A secondOperand: B];
+	} else {
+		[NSException raise: @"StupidMatrixMultiplication" format: @"You have requested the matrix multiplicatin of two matrices, but we only support diagonal matrices and 1D dense matrices."];
+	}
+	
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLLinearTransform *) inverse
 {
-    GLMatrixInversionOperation *operation = [[GLMatrixInversionOperation alloc] initWithOperand: self];
+    GLMatrixInversionOperation *operation = [[GLMatrixInversionOperation alloc] initWithLinearTransformation: self];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
-}
-
-- (GLLinearTransform *) plus: (GLLinearTransform *) otherVariable
-{
-	GLLinearTransformAdditionOperation *operation = [[GLLinearTransformAdditionOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-    operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
-}
-
-- (NSString *) matrixDescriptionString
-{
-	NSUInteger n = self.matrixDescription.strides[0].rowStride;
-	n = n==0?1:n;
-	NSMutableString *descrip = [NSMutableString string];
-	
-	GLFloat max, min;
-	vGL_maxv( self.data.mutableBytes, 1, &max, self.nDataElements);
-	vGL_minv( self.data.mutableBytes, 1, &min, self.nDataElements);
-	
-	if ( fabs(min) > max) {
-		max = fabs(min);
-	}
-	
-	GLFloat divisor = pow(10, floor(log10(max)));
-	if ( divisor == 0.0) divisor = 1;
-	
-	if (0 && self.dataFormat == kGLSplitComplexDataFormat)
-	{
-		GLSplitComplex splitComplex = self.splitComplex;
-		[descrip appendFormat: @"%f * ", divisor];
-        //		for (NSUInteger i=0; i<self.nDataPoints; i++)
-        //		{
-        //			if ( i % n == 0 ) {
-        //				[descrip appendFormat: @"\n"];
-        //			}
-        //			[descrip appendFormat: @"%1.1f ", sqrt(fabs(splitComplex.realp[i] * splitComplex.realp[i] - splitComplex.imagp[i] * splitComplex.imagp[i]))/divisor];
-        //		}
-		
-		for (NSUInteger i=0; i<self.nDataPoints; i++)
-		{
-			if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-			[descrip appendFormat: @"%+1.1f ", splitComplex.realp[i]/divisor];
-		}
-		
-		[descrip appendFormat: @" imagp \n"];
-		for (NSUInteger i=0; i<self.nDataPoints; i++)
-		{
-			if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-			[descrip appendFormat: @"%+1.1f ", splitComplex.imagp[i]/divisor];
-		}
-	}
-    if ( self.fromDimensions.count == 3)
-    {
-        NSUInteger m = [self.fromDimensions[2] nPoints] * [self.fromDimensions[1] nPoints];
-        GLFloat *f = self.pointerValue;
-		[descrip appendFormat: @"%g * ", divisor];
-		for (NSUInteger i=0; i<self.nDataElements; i++)
-		{
-			if ( i % m == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-            if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-            
-			[descrip appendFormat: @"%+1.1f ", f[i]/divisor];
-		}
-    }
-	else
-	{
-		GLFloat *f = self.pointerValue;
-		[descrip appendFormat: @"%g * ", divisor];
-		for (NSUInteger i=0; i<self.nDataElements; i++)
-		{
-			if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-			[descrip appendFormat: @"%+1.1f ", f[i]/divisor];
-		}
-	}
-	
-	return descrip;
+	return operation.result[0];
 }
 
 @end

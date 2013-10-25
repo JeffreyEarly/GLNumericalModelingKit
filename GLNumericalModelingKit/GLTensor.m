@@ -11,6 +11,9 @@
 #import "GLMemoryPool.h"
 #import "GLNetCDFFile.h"
 #import "GLEquation.h"
+#import "GLLinearTransform.h"
+#import "GLVectorVectorOperations.h"
+#import "GLVectorScalarOperations.h"
 #include <mach/mach_time.h>
 
 @interface GLTensor ()
@@ -164,6 +167,63 @@ GLSplitComplex splitComplexFromData( NSData *data )
 
 - (NSUInteger)hash {
     return _uniqueID;
+}
+
+/************************************************/
+/*		Operations								*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Operations
+#pragma mark
+
+- (GLTensor *) plus: (id) otherVariable
+{
+	GLVariableOperation *operation;
+	if ([[otherVariable class] isSubclassOfClass: [NSNumber class]]) {
+		operation  = [[GLScalarAddOperation alloc] initWithVectorOperand: self scalarOperand: [(NSNumber *) otherVariable doubleValue]];
+	} else {
+		operation = [[GLAdditionOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
+	}
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLTensor *) minus: (id) otherVariable
+{
+	GLVariableOperation *operation;
+	if ([[otherVariable class] isSubclassOfClass: [NSNumber class]]) {
+		operation  = [[GLScalarAddOperation alloc] initWithVectorOperand: self scalarOperand: -[(NSNumber *) otherVariable doubleValue]];
+	} else {
+		operation = [[GLSubtractionOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
+	}
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLTensor *) times: (id) otherVariable
+{
+	GLVariableOperation *operation;
+	if ([[otherVariable class] isSubclassOfClass: [NSNumber class]]) {
+		operation  = [[GLScalarMultiplyOperation alloc] initWithVectorOperand: self scalarOperand: [(NSNumber *) otherVariable doubleValue]];
+	} else {
+		if ([[self class] isSubclassOfClass: [GLScalar class]] || [[otherVariable class] isSubclassOfClass: [GLScalar class]]) {
+			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
+		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
+			if (prefersSpatialMultiplication) {
+				operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: [(GLVariable*)self spatialDomain] secondOperand: [(GLVariable*)otherVariable spatialDomain]];
+			} else {
+				operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
+			}
+		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
+			[NSException raise: @"InvalidOperation" format: @"You cannot left-multipy a function by a linear transformation"];
+		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
+			return [(GLLinearTransform *) self transform: otherVariable];
+		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
+			return [(GLLinearTransform *) self matrixMultiply: (GLLinearTransform *)otherVariable];
+		}
+		
+	}
 }
 
 /************************************************/

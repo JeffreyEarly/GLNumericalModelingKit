@@ -89,21 +89,16 @@
 /*		GLMatrixMatrixMultiplicationOperation   */
 /************************************************/
 
-@interface GLMatrixMatrixMultiplicationOperation : GLBinaryOperation
+@interface GLMatrixMatrixMultiplicationOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
 @end
 
 /************************************************/
 /*		GLMatrixInversionOperation              */
 /************************************************/
 
-@interface GLMatrixInversionOperation : GLUnaryOperation
-@end
-
-/************************************************/
-/*		GLLinearTransformAdditionOperation		*/
-/************************************************/
-
-@interface GLLinearTransformAdditionOperation : GLBinaryOperation
+@interface GLMatrixInversionOperation : GLVariableOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform;
 @end
 
 

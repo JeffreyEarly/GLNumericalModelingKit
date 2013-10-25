@@ -7,6 +7,7 @@
 //
 
 #import "GLVectorScalarOperations.h"
+#import "GLLinearTransform.h"
 
 /************************************************/
 /*		GLVectorScalarOperation					*/
@@ -14,7 +15,7 @@
 
 @implementation GLVectorScalarOperation
 
-- (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand
+- (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand
 {
 	if (( self = [super initWithOperand: @[vOperand]] ))
 	{
@@ -47,12 +48,12 @@
 
 @implementation GLScalarMultiplyOperation
 
-- (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand
+- (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand
 {
 	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
 	{
-		GLVariable *resultVariable = self.result[0];
-		GLVariable *operandVariable = self.operand[0];
+		GLTensor *resultVariable = self.result[0];
+		GLTensor *operandVariable = self.operand[0];
 		
 		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
 		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
@@ -82,12 +83,12 @@
 
 @implementation GLScalarAddOperation
 
-- (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand
+- (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand
 {
 	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
 	{
-		GLVariable *resultVariable = self.result[0];
-		GLVariable *operandVariable = self.operand[0];
+		GLTensor *resultVariable = self.result[0];
+		GLTensor *operandVariable = self.operand[0];
 		
 		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
 		resultVariable.isPurelyImaginary = NO; // because we just added a (hopefully nonzero) real number
@@ -121,8 +122,12 @@
 
 @implementation GLScalarDivideOperation
 @synthesize canOperateInPlace;
-- (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand
+- (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand
 {
+	if ( [[vOperand class] isSubclassOfClass: [GLLinearTransform class]] ) {
+		[NSException raise: @"InvalidOperation" format: @"Cannot scalar divide a matrix."];
+	}
+	
 	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
 	{
 		GLVariable *resultVariable = self.result[0];
@@ -208,8 +213,12 @@
 @implementation GLPowerOperation
 
 #warning GLPowerOperation remains unoptimized
-- (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand
+- (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand
 {
+	if ( [[vOperand class] isSubclassOfClass: [GLLinearTransform class]] ) {
+		[NSException raise: @"InvalidOperation" format: @"Cannot take the power of a matrix, yet."];
+	}
+	
 	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
 	{
 		GLVariable *resultVariable = self.result[0];
@@ -244,7 +253,7 @@
 // variable = min( operand, scalar )
 @implementation GLScalarThresholdOperation
 
-- (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand
+- (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand
 {
 	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
 	{
@@ -274,7 +283,7 @@
 // variable = operand > scalar ? operand : 0.0
 @implementation GLZeroThresholdOperation
 
-- (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand
+- (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand
 {
 	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
 	{
@@ -304,7 +313,7 @@
 // variable = max( operand, scalar )
 @implementation GLClipOperation 
 
-- (id) initWithVectorOperand: (GLVariable *) vOperand firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand
+- (id) initWithVectorOperand: (GLTensor *) vOperand firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand
 {
 	if (( self = [super initWithOperand: @[vOperand]] ))
 	{
@@ -348,8 +357,13 @@
 
 @implementation GLSetValueOperation
 
-- (id) initWithVectorOperand: (GLVariable *) variable scalarOperand: (GLFloat) aScalar indexString: (NSString *) indexString
+- (id) initWithVectorOperand: (GLTensor *) aTensor scalarOperand: (GLFloat) aScalar indexString: (NSString *) indexString
 {
+	if ( ![[aTensor class] isSubclassOfClass: [GLVariable class]] ) {
+		[NSException raise: @"InvalidOperation" format: @"Can only set the value of a function."];
+	}
+	
+	GLVariable *variable = (GLVariable *) aTensor;
     NSArray *ranges = [GLDimension rangesFromIndexString: indexString usingDimensions: variable.dimensions];
     
     if (( self = [super initWithVectorOperand: variable scalarOperand: aScalar] ))
@@ -464,8 +478,13 @@
 
 @implementation GLScaleOperation
 
--(id) initWithOperand: (GLVariable *) vOperand variableScale: (GLFloat) sOperand units: (NSString *) varUnits dimensionScale: (GLFloat) dimScale translation: (GLFloat) delta units: (NSString *) dimUnits
+-(id) initWithOperand: (GLTensor *) aTensor variableScale: (GLFloat) sOperand units: (NSString *) varUnits dimensionScale: (GLFloat) dimScale translation: (GLFloat) delta units: (NSString *) dimUnits
 {
+	if ( ![[aTensor class] isSubclassOfClass: [GLVariable class]] ) {
+		[NSException raise: @"InvalidOperation" format: @"Can only set the value of a function."];
+	}
+	
+	GLVariable *vOperand = (GLVariable *) aTensor;
 	NSMutableArray *newDims = [NSMutableArray arrayWithCapacity: vOperand.dimensions.count];
 	for (GLDimension *dim in vOperand.dimensions) {
 		[newDims addObject: [dim scaledBy: dimScale translatedBy: delta withUnits: dimUnits]];

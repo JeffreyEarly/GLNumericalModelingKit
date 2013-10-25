@@ -106,6 +106,21 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
  */
 + (GLLinearTransform *) differentialOperatorWithDerivatives: (NSArray *) numDerivs fromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation;
 
+/** Create a harmonic operator of arbitrary order that can act on multi-dimensional functions in the given dimensions.
+ @param order Order n, is given by \nabla^{2n}
+ @param dimensions Ordered dimensions (and therefore basis) which should be used to take the derivative.
+ @param equation The GLEquation object being used.
+ @returns A GLLinearTransform with fromDimensions that match dimensions, and toDimensions which may be different.
+ */
++ (GLLinearTransform *) harmonicOperatorOfOrder: (NSUInteger) order fromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation;
+
+/** Create a harmonic operator of order 1 that can act on multi-dimensional functions in the given dimensions.
+ @param dimensions Ordered dimensions (and therefore basis) which should be used to take the derivative.
+ @param equation The GLEquation object being used.
+ @returns A GLLinearTransform with fromDimensions that match dimensions, and toDimensions which may be different.
+ */
++ (GLLinearTransform *) harmonicOperatorFromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation;
+
 // Assuming the linear transform was initialized with fromDims that match the diagonalVariable and a format of diag in each dimension
 - (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable;
 
@@ -182,8 +197,5 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 
 - (GLLinearTransform *) inverse;
 
-- (GLLinearTransform *) plus: (GLLinearTransform *) otherVariable;
-
-- (GLLinearTransform *) times: (GLLinearTransform *) otherVariable;
-
+- (GLLinearTransform *) matrixMultiply: (GLLinearTransform *) otherVariable;
 @end

@@ -977,7 +977,7 @@
 					[NSException raise: @"DimensionsNotEqualException" format: @"When multiplying two matrices, the fromDimensions of A, must equal the toDimensions of B."];
 				}
 				if ( ![A.matrixDescription isEqualToMatrixDescription: B.matrixDescription] ) {
-					[NSException raise: @"UnsupportedMatrixFormatException" format: @"Cannot subtract two matrices in different formats using this operation."];
+					[NSException raise: @"UnsupportedMatrixFormatException" format: @"Cannot multiply two matrices in different formats using this operation."];
 				}
 				GLMatrixDescription *matrix = A.matrixDescription;
 				for (NSUInteger i=0; i<matrix.nDimensions; i++) {

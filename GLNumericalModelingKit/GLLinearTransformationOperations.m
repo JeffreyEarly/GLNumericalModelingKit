@@ -614,18 +614,8 @@
 @implementation GLMatrixMatrixMultiplicationOperation
 
 // This is copy and pasted from the superclass, needs to be properly retooled.
-- (id) initWithOperand:(NSArray *)operand
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
 {
-	if ( ![[operand[0] class] isSubclassOfClass: [GLLinearTransform class]] ) {
-        [NSException raise: @"BadArgument" format: @"The first argument must be a GLLinearTransform."];
-    }
-    
-    if ( ![[operand[1] class]isSubclassOfClass: [GLLinearTransform class]] ) {
-        [NSException raise: @"BadArgument" format: @"The second argument must be a GLLinearTransform."];
-    }
-    
-    GLLinearTransform *A = (GLLinearTransform *) operand[0];
-    GLLinearTransform *B = (GLLinearTransform *) operand[1];
     
     if ( ![A.fromDimensions isEqualToArray: B.toDimensions] ) {
         [NSException raise: @"DimensionsNotEqualException" format: @"fromDimensions of A, must equal the toDimensions of B."];
@@ -641,23 +631,14 @@
     if (A.matrixDescription.nDimensions != 1) {
         [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
     }
+	
+	BOOL isComplex = A.isComplex || B.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions:A.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
     
-    if (( self = [super init] )) {
-		self.firstOperand = fOperand;
-		self.secondOperand = sOperand;
-		
-		if (!resultVariable) {
-			BOOL isComplex = fOperand.isComplex || sOperand.isComplex;
-			GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-			
-			self.result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions: A.toDimensions inFormat:B.matrixFormats forEquation: A.equation];
-		} else {
-			self.result = resultVariable;
-		}
-		
-		[self setupDependencies];
+	if (( self = [super initWithResult: @[result] operand: @[A, B]] )) {
         
-		GLLinearTransform *C = (GLLinearTransform *) self.result;
+		//GLLinearTransform *C = result;
 		        
         int M = (int) A.matrixDescription.strides[0].nRows;
         int N = (int) B.matrixDescription.strides[0].nColumns;
@@ -671,60 +652,50 @@
 //			cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0, fOperand.bytes, lda, sOperand.bytes, ldb, 0.0, result.mutableBytes, ldc);
 //        };
 		
-		if ( !self.firstOperand.isComplex && !self.secondOperand.isComplex)
+		if ( !A.isComplex && !B.isComplex)
 		{	// C = A.X
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				vDSP_mmul( (GLFloat *)fOperand.bytes, 1, (GLFloat *)sOperand.bytes, 1, result.mutableBytes, 1, M, N, K);
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+				vDSP_mmul( A, 1, B, 1, C, 1, M, N, K);
 			};
 		}
-		else if ( self.firstOperand.isComplex && !self.secondOperand.isComplex)
+		else if ( A.isComplex && !B.isComplex)
 		{	// (A+iB).(X) = A.X + iB.X
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				GLSplitComplex leftComplex = splitComplexFromData( fOperand );
-				GLSplitComplex destComplex = splitComplexFromData( result );
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData( operandArray[0] );
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( leftComplex.realp, 1, (GLFloat *)sOperand.bytes, 1, destComplex.realp, 1, M, N, K);
-				vDSP_mmul( leftComplex.imagp, 1, (GLFloat *)sOperand.bytes, 1, destComplex.imagp, 1, M, N, K);
+				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
 			};
 		}
-		else if ( !self.firstOperand.isComplex && self.secondOperand.isComplex)
+		else if ( !A.isComplex && B.isComplex)
 		{	// A.(X+iY) = A.X + iA.Y
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-				GLSplitComplex destComplex = splitComplexFromData( result );
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLSplitComplex B = splitComplexFromData( operandArray[1] );
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( (GLFloat *)fOperand.bytes, 1, rightComplex.realp, 1, destComplex.realp, 1, M, N, K);
-				vDSP_mmul( (GLFloat *)fOperand.bytes, 1, rightComplex.imagp, 1, destComplex.imagp, 1, M, N, K);
+				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
 			};
 		}
-		else if ( self.firstOperand.isComplex && self.secondOperand.isComplex)
+		else if ( A.isComplex && B.isComplex)
 		{
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				GLSplitComplex leftComplex = splitComplexFromData( fOperand );
-				GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-				GLSplitComplex destComplex = splitComplexFromData( result );
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData(operandArray[0]);
+				GLSplitComplex B = splitComplexFromData(operandArray[1]);
+				GLSplitComplex C = splitComplexFromData(resultArray[0]);
 				
-				vDSP_zmmul( &leftComplex, 1, &rightComplex, 1, &destComplex, 1, M, N, K);
+				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
 			};
 		}
 		
     }
     return self;
-}
-
-- (void) setupDependencies
-{
-	if (self.firstOperand.lastOperation && ![self.dependencies containsObject:self.firstOperand.lastOperation]) {
-		[self addDependency: self.firstOperand.lastOperation];
-	}
-	if (self.secondOperand.lastOperation && ![self.dependencies containsObject:self.secondOperand.lastOperation]) {
-		[self addDependency: self.secondOperand.lastOperation];
-	}
-	if (self.result.lastOperation && ![self.dependencies containsObject:self.result.lastOperation]) {
-		[self addDependency: self.result.lastOperation];
-	}
-	
-	[self.result addOperation: self];
 }
 
 @end
@@ -739,36 +710,25 @@
 
 @implementation GLMatrixInversionOperation
 
-- (id) initWithResult:(GLVariable *)resultVariable operand:(GLVariable *)variable
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform;
 {
-    if ( ![variable.class isSubclassOfClass: [GLLinearTransform class]] ) {
-        [NSException raise: @"BadArgument" format: @"The argument must be a GLLinearTransform."];
-    }
-    
-    if (variable.matrixDescription.nDimensions != 1) {
+    if (linearTransform.matrixDescription.nDimensions != 1) {
         [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
     }
     
-    GLLinearTransform *A = (GLLinearTransform *) variable;
+    GLLinearTransform *A = (GLLinearTransform *) linearTransform;
     if (A.fromDimensions.count != A.toDimensions.count ) {
         [NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
     }
+	
+	GLDataFormat format = A.isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: A.toDimensions toDimensions:A.fromDimensions inFormat:A.matrixFormats forEquation:A.equation matrix: nil];
     
-    if ((self=[super init]))
-    {
-        self.operand = variable;
-        if (!resultVariable) {
-			GLDataFormat format = self.operand.isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-			
-			self.result = [GLLinearTransform transformOfType: format withFromDimensions: A.toDimensions toDimensions: A.fromDimensions inFormat:A.matrixFormats forEquation: A.equation];
-		} else {
-			self.result = resultVariable;
-		}
-        
-        [self setupDependencies];
-        
+	if (( self = [super initWithResult: @[result] operand: @[A]] )) {
         NSUInteger N = [A.fromDimensions[0] nPoints];
-        self.blockOperation = ^(NSMutableData *result, NSData *operand) {
+        self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+			GLFloat *C = (GLFloat *) [resultArray[0] bytes];
             
             // clapack takes matrices in column-major format.
             // However, the transpose of the inverse is the inverse of the transpose---so we don't need to worry here.
@@ -776,8 +736,8 @@
             NSMutableData *ipiv = [[GLMemoryPool sharedMemoryPool] dataWithLength: N*sizeof(__CLPK_integer)];
             __CLPK_integer n = (__CLPK_integer) N;
             __CLPK_integer info;
-            memcpy( result.mutableBytes, operand.bytes, n*n*sizeof(GLFloat));
-            sgetrf_(&n, &n, result.mutableBytes, &n, ipiv.mutableBytes, (__CLPK_integer *)&info);
+            memcpy( C, A, n*n*sizeof(GLFloat));
+            sgetrf_(&n, &n, C, &n, ipiv.mutableBytes, (__CLPK_integer *)&info);
             
             if (info != 0) {
                 printf("sgetrf failed with error code %d\n", (int)info);
@@ -785,7 +745,7 @@
             
             __CLPK_integer lwork = n*n;
             NSMutableData *work = [[GLMemoryPool sharedMemoryPool] dataWithLength: lwork*sizeof(GLFloat)];
-            sgetri_(&n, result.mutableBytes, &n, ipiv.mutableBytes, work.mutableBytes, &lwork, (__CLPK_integer *)&info);
+            sgetri_(&n, C, &n, ipiv.mutableBytes, work.mutableBytes, &lwork, (__CLPK_integer *)&info);
             
             if (info != 0) {
                 printf("sgetri failed with error code %d\n", (int)info);
@@ -798,115 +758,4 @@
     return self;
 }
 
-- (void) setupDependencies
-{
-	if (self.operand.lastOperation && ![self.dependencies containsObject:self.operand.lastOperation]) {
-		[self addDependency: self.operand.lastOperation];
-	}
-	if (self.result.lastOperation && ![self.dependencies containsObject:self.result.lastOperation]) {
-		[self addDependency: self.result.lastOperation];
-	}
-	
-	[self.result addOperation: self];
-}
-
 @end
-
-/************************************************/
-/*		GLLinearTransformAdditionOperation		*/
-/************************************************/
-
-@implementation GLLinearTransformAdditionOperation
-
-- (id) initWithResult: (GLVariable *) resultVariable firstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
-{
-    if ( ![fOperand.class isSubclassOfClass: [GLLinearTransform class]] ) {
-        [NSException raise: @"BadArgument" format: @"The first argument must be a GLLinearTransform."];
-    }
-    
-    if ( ![sOperand.class isSubclassOfClass: [GLLinearTransform class]] ) {
-        [NSException raise: @"BadArgument" format: @"The second argument must be a GLLinearTransform."];
-    }
-    
-    GLLinearTransform *A = (GLLinearTransform *) fOperand;
-    GLLinearTransform *B = (GLLinearTransform *) sOperand;
-    
-    if ( ![A.fromDimensions isEqualToArray: B.fromDimensions] ) {
-        [NSException raise: @"DimensionsNotEqualException" format: @"fromDimensions of A, must equal the fromDimensions of B."];
-    }
-    
-    if ( ![A.toDimensions isEqualToArray: B.toDimensions] ) {
-        [NSException raise: @"DimensionsNotEqualException" format: @"toDimensions of A, must equal the toDimensions of B."];
-    }
-    
-    if (( self = [super init] )) {
-		self.firstOperand = fOperand;
-		self.secondOperand = sOperand;
-		
-		if (!resultVariable) {
-			BOOL isComplex = fOperand.isComplex || sOperand.isComplex;
-			GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-			
-			self.result = [GLLinearTransform transformOfType: format withFromDimensions: A.fromDimensions toDimensions: A.toDimensions inFormat:A.matrixFormats forEquation: A.equation];
-		} else {
-			self.result = resultVariable;
-		}
-		
-		[self setupDependencies];
-        
-        if (!fOperand.isComplex && sOperand.isComplex) {
-            NSUInteger nDataPoints = self.result.nDataPoints;
-            self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-                GLSplitComplex leftComplex = splitComplexFromData( fOperand );
-                GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-                GLSplitComplex destComplex = splitComplexFromData( result );
-                
-                vGL_vadd( leftComplex.realp, 1, rightComplex.realp, 1, destComplex.realp, 1, nDataPoints);
-                vGL_mmov( rightComplex.imagp, destComplex.imagp, nDataPoints, 1, nDataPoints, nDataPoints);
-            };
-            self.graphvisDescription = [NSString stringWithFormat: @"add (real,complex)"];
-        } else if (fOperand.isComplex && !sOperand.isComplex) {
-            NSUInteger nDataPoints = self.result.nDataPoints;
-            self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-                GLSplitComplex leftComplex = splitComplexFromData( fOperand );
-                GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-                GLSplitComplex destComplex = splitComplexFromData( result );
-                
-                vGL_vadd( leftComplex.realp, 1, rightComplex.realp, 1, destComplex.realp, 1, nDataPoints);
-                vGL_mmov( leftComplex.imagp, destComplex.imagp, nDataPoints, 1, nDataPoints, nDataPoints);
-            };
-            self.graphvisDescription = [NSString stringWithFormat: @"add (complex,real)"];
-        } else {
-            NSUInteger nDataElements = self.result.nDataElements;
-            self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-                vGL_vadd( fOperand.bytes, 1, sOperand.bytes, 1, result.mutableBytes, 1, nDataElements);
-            };
-            self.graphvisDescription = [NSString stringWithFormat: @"add"];
-        }
-    }
-    
-    return self;   
-}
-
-- (BOOL) canOperateInPlace {
-	return YES;
-}
-
-- (void) setupDependencies
-{
-	if (self.firstOperand.lastOperation && ![self.dependencies containsObject:self.firstOperand.lastOperation]) {
-		[self addDependency: self.firstOperand.lastOperation];
-	}
-	if (self.secondOperand.lastOperation && ![self.dependencies containsObject:self.secondOperand.lastOperation]) {
-		[self addDependency: self.secondOperand.lastOperation];
-	}
-	if (self.result.lastOperation && ![self.dependencies containsObject:self.result.lastOperation]) {
-		[self addDependency: self.result.lastOperation];
-	}
-	
-	[self.result addOperation: self];
-}
-
-@end
-
-
