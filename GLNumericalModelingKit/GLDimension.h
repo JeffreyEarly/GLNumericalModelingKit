@@ -25,9 +25,9 @@
 // and multiple NetCDF files.
 
 enum {
-	kGLEndpointGrid = 0,
-	kGLInteriorGrid = 1,
-	kGLPeriodicGrid = 2,
+	kGLEndpointGrid = 0,		// A good grid for finite differencing
+	kGLInteriorGrid = 1,		// A good grid for transforming to a sine or cosine basis
+	kGLPeriodicGrid = 2,		// A good grid for transforming to an exponential basis.
 	kGLChebyshevEndpointGrid = 3, // aka, 'extrema' or 'Lobatto' grid
 	kGLChebyshevInteriorGrid = 4 // aka, 'roots' or 'Gauss' grid
 };
@@ -146,6 +146,9 @@ typedef NSUInteger GLBasisFunction;
 @property(readonly, nonatomic) BOOL isMutable;
 
 @property(readwrite, nonatomic) GLBasisFunction basisFunction;
+
+/// The default basis which should be used to take a derivative. This can only be changed for spatial dimensions.
+@property(readwrite, nonatomic) GLBasisFunction differentiationBasis;
 
 @property(readwrite, nonatomic) BOOL isStrictlyPositive;
 

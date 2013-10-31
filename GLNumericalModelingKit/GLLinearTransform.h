@@ -82,6 +82,21 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 #pragma mark Pre-defined transformations
 #pragma mark
 
+/**  Returns the linear transformation of the given name, if it can be found or created.
+ @discussion You may request derivatives in the form 'xxx' or known operators such as 'svv' or 'harmonicOperator'.
+ @param name The name of the linear transformation.
+ @param dimensions The dimensions that we are transforming from.
+ @param equation The GLEquation object being used.
+ @returns A GLLinearTransform with fromDimensions that match dimensions, and toDimensions that may be different.
+ */
++ (GLLinearTransform *) linearTransformWithName: (NSString *) name forDimensions: (NSArray *) dimensions equation: (GLEquation *) equation;
+
+/**  Add an operator to the pool so that it can be used later.
+ @param transform The linear transform that you want to save.
+ @param name The name of the linear transformation.
+*/
++ (void) setLinearTransform: (GLLinearTransform *) transform withName: (NSString *) name;
+
 /** Create a discrete transform that can act on 1-dimensional functions in the given dimension and transform them to the new basis.
  @param aDimension The dimension (and therefore basis) that we are transforming from.
  @param aBasis The basis that we are transforming to.
@@ -120,6 +135,15 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
  @returns A GLLinearTransform with fromDimensions that match dimensions, and toDimensions which may be different.
  */
 + (GLLinearTransform *) harmonicOperatorFromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation;
+
+/** Create the spectral vanishing viscosity operator for a set of (spectral) dimensions.
+ @discussion This linear transformation is intended to act as a filter on some isotropic damping operator.
+ @param dimensions Ordered dimensions that, at the moment, must all be spectral.
+ @param isAntialiasing Whether or not we should assume the Nyquist is decreased by 2/3 for anti-aliasing.
+ @param equation The GLEquation object being used.
+ @returns A GLLinearTransform with fromDimensions and toDimensions that match dimensions.
+ */
++ (GLLinearTransform *) spectralVanishingViscosityFilterWithDimensions: (NSArray *) dimensions scaledForAntialiasing: (BOOL) isAntialiasing forEquation: (GLEquation *) equation;
 
 // Assuming the linear transform was initialized with fromDims that match the diagonalVariable and a format of diag in each dimension
 - (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable;

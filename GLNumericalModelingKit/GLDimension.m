@@ -155,6 +155,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 		if (isPeriodic) {
 			_gridType = kGLPeriodicGrid;
 			_domainLength = ( (double) _nPoints) * sampleInterval;
+			_differentiationBasis = kGLExponentialBasis;
 		}
 		else {
 			_gridType = kGLEndpointGrid;
@@ -163,6 +164,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			} else {
 				_domainLength = ( (double) (_nPoints-1)) * sampleInterval;
 			}
+			_differentiationBasis = kGLDeltaBasis;
 		}
 		
 		self.basisFunction = kGLDeltaBasis;
@@ -192,6 +194,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			if (_nPoints > 0) {
 				sampleInterval = _domainLength / ( (double) _nPoints);
 			}
+			_differentiationBasis = kGLExponentialBasis;
 		}
 		else {
 			_gridType = kGLEndpointGrid;
@@ -200,6 +203,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			} else {
 				sampleInterval = 0;
 			}
+			_differentiationBasis = kGLDeltaBasis;
 		}
 		
 		self.basisFunction = kGLDeltaBasis;
@@ -237,6 +241,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
 				f[i] = sampleInterval * ( (GLFloat) i) + _domainMin;
 			}
+			_differentiationBasis = kGLDeltaBasis;
 		}
 		else if (gridType == kGLInteriorGrid)
 		{
@@ -245,6 +250,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
 				f[i] = sampleInterval * ( (GLFloat) i + 0.5) + _domainMin;
 			}
+			_differentiationBasis = kGLCosineHalfShiftBasis;
 		}
 		else if (gridType == kGLPeriodicGrid)
 		{
@@ -253,6 +259,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
 				f[i] = sampleInterval * ( (GLFloat) i ) + _domainMin;
 			}
+			_differentiationBasis = kGLExponentialBasis;
 		}
 		else if (gridType == kGLChebyshevEndpointGrid)
 		{
@@ -261,6 +268,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
 				f[i] = 0.5 * _domainLength * (cos( sampleInterval * ( (GLFloat) i ) ) + 1.0) + _domainMin;
 			}
+			_differentiationBasis = kGLChebyshevBasis;
 		}
 		else if (gridType == kGLChebyshevInteriorGrid)
 		{
@@ -269,6 +277,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
 				f[i] = 0.5 * _domainLength * (cos( sampleInterval * ( (GLFloat) i + 0.5 ) ) + 1.0) + _domainMin;
 			}
+			_differentiationBasis = kGLChebyshevBasis;
 		}
 	}
 	
@@ -407,6 +416,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 		_gridType = kGLEndpointGrid;
 		isFrequencyDomain = YES;
 		isMutable = NO;
+		_differentiationBasis = basis;
 		
 		self.basisFunction = basis;
 		self.isStrictlyPositive = isPositive;

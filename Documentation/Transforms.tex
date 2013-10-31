@@ -618,7 +618,27 @@ h_k^\prime &= - 2 \sum_{n=1}^{N-1} H_n  \left( \frac{\pi n}{N} \right) \sin \lef
 &= - 2 \sum_{n=0}^{N-2} H_{n+1}  \left( \frac{\pi (n+1)}{N} \right) \sin \left[ \pi (n+1)(k+1/2)/N\right].
 \end{align}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\subsection{Spectral Vanishing Viscosity}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+The SVV operator as described in Karamanos is defined with a coefficient dependent on the grid size, essentially you get $\epsilon$ (proportional to $1/N$) multiplied by $Q$ (the filter). The filter cut off is something like $5\sqrt{N}$, or maybe I like $N^{3/4}$ just because it scales better.
+
+I think that I don't want to build in the $\epsilon$ scaling into the definition of the operator because I damp, for example, with biharmonic damping. I think that's appropriate. The cutoff *should*, however, be performed automatically. I don't see any reason why not. So an SVV filter for a given set of dimensions is returned without any parameters needing to be specified. Of course, the 2/3 anti-aliasing should be built in automatically as well.
+
+In a mixed basis we may have different values of wave numbers that are resolved, but we would still like the damping operator to be isotropic. Therefore, we need to define the filter cutoff in terms of an actual wavenumber. The sampleInterval is the Fourier frequency and the domainMin plus domainLength is the Nyquist frequency. Thus, we want to our filter cutoff to be a function of the Nyquist frequency.
+
+\begin{equation}
+Q(k) = 
+\begin{cases}
+0 & k < k_c \\
+\exp \left[ - \left( \frac{k-k_m}{k-k_c} \right)^2 \right] & k_c < k < k_m \\
+1 & k > k_m
+\end{cases}
+\end{equation}
+where $k_m$ is the minimum Nyquist frequency of the various dimensions and $k_c = \Delta \left(\frac{k_m}{\Delta}\right)^{3/4}$. The filter will therefore gently activate wavenumbers above $k_c$ until $k_m$ at which they're fully activated.
 
 \subsection{Example}
 
@@ -653,6 +673,12 @@ In the first case we simply return $\vec{b}$. In the second case, we simply have
 \subsection{Algorithm}
 
 Assuming we have only one non-diagonal dimension, the linear solver problem can be thought of as a number of independent one-dimensional linear problems. We need to find the stride between equations and total number of equations, and then just repeat the solver. In addition, a trivial dimension (one with the identity) will just repeat an existing solution across that dimension.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\section{}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %

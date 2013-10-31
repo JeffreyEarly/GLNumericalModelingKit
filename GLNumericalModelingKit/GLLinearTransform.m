@@ -361,6 +361,54 @@
 #pragma mark Pre-defined transformations
 #pragma mark
 
++ (void) setLinearTransform: (GLLinearTransform *) diffOp withName: (NSString *) name
+{
+	[diffOp.equation setLinearTransform: diffOp withName: name];
+}
+
++ (GLLinearTransform *) linearTransformWithName: (NSString *) name forDimensions: (NSArray *) dimensions equation: (GLEquation *) equation
+{
+	GLLinearTransform *diffOp = [equation linearTransformWithName: name forDimensions: dimensions];
+	
+	if (!diffOp)
+	{
+        if ([name isEqualToString: @"harmonicOperator"]) {
+            diffOp = [self harmonicOperatorFromDimensions: dimensions forEquation: equation];
+        } else {
+			NSMutableArray *spatialDimensions = [NSMutableArray arrayWithCapacity: dimensions.count];
+			for (GLDimension *dim in dimensions) {
+				[spatialDimensions addObject: dim.isFrequencyDomain ? [[GLDimension alloc] initAsFourierTransformOfDimension: dim] : dim];
+			}
+			
+            NSMutableArray *derivatives = [NSMutableArray arrayWithCapacity: spatialDimensions.count];
+            NSString *reducedString = [name copy];
+            for (GLDimension *dim in spatialDimensions)
+            {
+                NSString *newReducedString = [reducedString stringByReplacingOccurrencesOfString: dim.name withString: @""];
+                [derivatives addObject: [NSNumber numberWithUnsignedInteger: reducedString.length - newReducedString.length]];
+                reducedString = newReducedString;
+            }
+            // We check to make sure we can account for the entire string
+            if (reducedString.length == 0)
+            {
+                diffOp = [self differentialOperatorWithDerivatives: derivatives fromDimensions: dimensions forEquation: equation];
+            }
+        }
+		// We check to make sure we can account for the entire string
+		if (diffOp)
+		{
+            diffOp.name = name;
+			[self setLinearTransform: diffOp withName: name];
+		}
+		else
+		{
+			[NSException raise: @"BadDifferentiationRequest" format: @"Cannot find the differential operator: %@", name];
+		}
+	}
+	
+	return diffOp;
+}
+
 + (GLLinearTransform *) discreteTransformFromDimension: (GLDimension *) aDimension toBasis: (GLBasisFunction) aBasis forEquation: (GLEquation *) equation
 {
     if (aDimension.basisFunction == kGLDeltaBasis) {
@@ -593,52 +641,52 @@
 }
 
 // The SVV operator is a filter which multiplies the the toDimensions, and gives the toDimensions back.
-+ (GLSpectralDifferentialOperator *) spectralVanishingViscosityFilterWithDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation;
++ (GLLinearTransform *) spectralVanishingViscosityFilterWithDimensions: (NSArray *) dimensions scaledForAntialiasing: (BOOL) isAntialiasing forEquation: (GLEquation *) equation;
 {
-	GLFloat minNyquist;
-	GLFloat minSampleInterval;
+	GLFloat minNyquist = HUGE_VAL;
+	GLFloat minSampleInterval = HUGE_VAL;
+	NSMutableArray *matrixFormat = [NSMutableArray arrayWithCapacity: dimensions.count];
 	
-	GLSpectralDifferentialOperator *bigK;
-	for (GLDimension *dim in self.transformedDimensions) {
-		GLSpectralDifferentialOperator *k = [GLSpectralDifferentialOperator variableOfRealTypeFromDimension: dim withDimensions: self.transformedDimensions forEquation: self.equation];
+	for (GLDimension *dim in dimensions) {
 		GLFloat nyquist = dim.domainMin + dim.domainLength;
-		if (!bigK) {
-			bigK = [k multiply: k];
+		if (nyquist < minNyquist) {
 			minNyquist = nyquist;
 			minSampleInterval = dim.sampleInterval;
-		} else {
-			bigK = [bigK plus: [k multiply: k]];
-			if (nyquist < minNyquist) {
-				minNyquist = nyquist;
-				minSampleInterval = dim.sampleInterval;
-			}
 		}
+		[matrixFormat addObject: @(kGLDiagonalMatrixFormat)];
 	}
-	bigK = [bigK sqrt];
 	
-	if ([GLBasisTransformOperation shouldAntialias]) {
+	if (isAntialiasing) {
 		minNyquist = 2*minNyquist/3;
 	}
 	
-    // Note that the 'minSampleInterval' is deltaK (not deltaX)
+	// Note that the 'minSampleInterval' is deltaK (not deltaX)
 	GLFloat wavenumberCutoff = minSampleInterval * pow(minNyquist/minSampleInterval, 0.75);
 	
-	
-	// expf( -alpha * powf( (k-max)/(k-cutoff), p) );
-	
-	GLSpectralDifferentialOperator *filter = [[bigK scalarAdd: -minNyquist] multiply: [[bigK scalarAdd: -wavenumberCutoff] scalarDivide: 1.0]];
-	filter = [[[filter pow: 2] negate] exponentiate];
-	
-	[filter solve];
-	GLFloat *kk = [bigK pointerValue];
-	GLFloat *f = [filter pointerValue];
-	for (NSUInteger i=0; i<filter.nDataPoints; i++) {
-		if ( kk[i] < wavenumberCutoff ) {
-			f[i] = 0;
-		} else if ( kk[i] > minNyquist ) {
-			f[i] = 1.0;
+	NSUInteger nDims = dimensions.count;
+	GLLinearTransform *filter = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: dimensions toDimensions: dimensions inFormat: matrixFormat forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
+		// Bail as soon as we see that we're not on the diagonal
+		for (NSUInteger i=0; i<nDims; i++) {
+			if (row[i]!=col[i]) return (GLFloatComplex) 0.0;
 		}
-	}
+		
+		// Okay, we're on the diagonal, so now compute k
+		GLDimension *dim = dimensions[0];
+		GLFloat k = [dim valueAtIndex: row[0]] * [dim valueAtIndex: row[0]];
+		for (NSUInteger i=1; i<nDims; i++) {
+			dim = dimensions[i];
+			k +=[dim valueAtIndex: row[i]] * [dim valueAtIndex: row[i]];
+		}
+		k = sqrt(k);
+		
+		if (k < wavenumberCutoff) {
+			return (GLFloatComplex) 0.0;
+		} else if ( k > minNyquist) {
+			return (GLFloatComplex) 1.0;
+		} else {
+			return (GLFloatComplex) exp(-pow((k-minNyquist)/(k-wavenumberCutoff),2.0));
+		}
+	}];
 	
 	return filter;
 }

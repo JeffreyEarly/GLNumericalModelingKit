@@ -9,6 +9,7 @@
 #import "GLVariable.h"
 #import "GLEquation.h"
 #import "GLDimension.h"
+#import "GLLinearTransform.h"
 
 #import "GLVariableOperations.h"
 #import "GLNullaryOperations.h"
@@ -767,14 +768,10 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark Differential Operations - Primitive
 #pragma mark
 
-- (GLVariable *) differentiateWithOperator: (GLDifferentialOperator *) diffOperator
+- (GLVariable *) differentiateWithOperator: (GLLinearTransform *) diffOperator
 {
-    GLVariable *transformedVariable = [self transformToBasis: diffOperator.basis];
-    
-    GLBinaryOperation *operation = [diffOperator differentiationOperationFromVariable: transformedVariable];
-    operation = [self replaceWithExistingOperation: operation];
-
-	return operation.result;
+    GLVariable *transformedVariable = [self transformToBasis: self.differentiationBasis];
+    return [diffOperator transform: transformedVariable];
 }
 
 /************************************************/
@@ -785,20 +782,20 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark Differential Operations
 #pragma mark
 
-@synthesize differentialOperatorPool=_differentialOperatorPool;
-
-- (id) differentialOperatorPool
-{
-	if(!_differentialOperatorPool) {
-		return [self.equation defaultDifferentialOperatorPoolForVariable:self];
-	} else {
-		return _differentialOperatorPool;
+- (NSArray *) differentiationBasis {
+	if (!_differentiationBasis) {
+		NSMutableArray *array = [NSMutableArray arrayWithCapacity: self.dimensions.count];
+		for (GLDimension *dim in self.dimensions) {
+			[array addObject: @(dim.differentiationBasis)];
+		}
+		_differentiationBasis = array;
 	}
+	return _differentiationBasis;
 }
 
 - (GLVariable *) diff: (NSString *) operatorName
 {
-	GLDifferentialOperator *diffOperator = [self.differentialOperatorPool differentialOperatorWithName: operatorName];
+	GLLinearTransform *diffOperator = [GLLinearTransform linearTransformWithName: operatorName forDimensions: [self dimensionsTransformedToBasis: self.differentiationBasis] equation: self.equation];
 	if (!diffOperator) {
 		[NSException raise: @"DifferentialOperatorDoesNotExist" format: @"The differential operator %@ does not exist.", operatorName];
 	}
@@ -819,7 +816,7 @@ static BOOL prefersSpatialMultiplication = YES;
 	if (!signature)
 	{
 		NSString *possibleDiff = NSStringFromSelector(selector);
-		GLDifferentialOperator * diffOperator = [self.differentialOperatorPool differentialOperatorWithName: possibleDiff];
+		GLLinearTransform *diffOperator = [GLLinearTransform linearTransformWithName: possibleDiff forDimensions: [self dimensionsTransformedToBasis: self.differentiationBasis] equation: self.equation];
 		
 		if (diffOperator)
 		{
@@ -833,7 +830,7 @@ static BOOL prefersSpatialMultiplication = YES;
 - (void)forwardInvocation:(NSInvocation *)anInvocation
 {
 	NSString *possibleDiff = NSStringFromSelector([anInvocation selector]);
-	GLDifferentialOperator * diffOperator = [self.differentialOperatorPool differentialOperatorWithName: possibleDiff];
+	GLLinearTransform *diffOperator = [GLLinearTransform linearTransformWithName: possibleDiff forDimensions: [self dimensionsTransformedToBasis: self.differentiationBasis] equation: self.equation];
 	
 	if (diffOperator)
 	{		
@@ -998,6 +995,12 @@ static BOOL prefersSpatialMultiplication = YES;
 {
 	NSLog(@"Method not yet implemented:- (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;");
 }
+
+@end
+
+@implementation GLVariable (DifferentiationExtensions)
+
+@dynamic x, y, xx, xy, yy, xxx, xxy, xyy, yyy;
 
 @end
 

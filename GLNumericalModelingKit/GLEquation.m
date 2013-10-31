@@ -11,6 +11,7 @@
 #import "GLDimension.h"
 #import "GLVariableOperations.h"
 #import "GLSpectralDifferentialOperatorPool.h"
+#import "GLLinearTransform.h"
 #import <fftw3.h>
 
 /************************************************/
@@ -176,131 +177,40 @@
 
 @synthesize dimensionOperatorPoolMapTable;
 
-// Depends on whether or not the variable is real or complex, and the variables dimensions.
-- (id) defaultDifferentialOperatorPoolForVariable: (GLVariable *) aVariable
+- (GLLinearTransform *) linearTransformWithName: (NSString *) name forDimensions: (NSArray *) dimensions
 {
-	NSArray *differentiationBasis = aVariable.differentiationBasis;
-	if (!differentiationBasis) {
-		differentiationBasis = [self defaultDifferentiationBasisForOrder: aVariable.dimensions.count];
+	NSMutableDictionary *pool = [self.dimensionOperatorPoolMapTable objectForKey: dimensions];
+	if (pool) {
+		return [pool objectForKey: name];
+	} else {
+		return nil;
 	}
-	NSArray *transformedDimensions = [aVariable dimensionsTransformedToBasis: differentiationBasis];
+}
+
+- (void) setLinearTransform: (GLLinearTransform *) diffOp withName: (NSString *) name
+{
+	[diffOp solve];
+	
+	BOOL containsNan = NO;
+	for (NSUInteger i=0; i<diffOp.nDataElements; i++) {
+		if ( !isfinite(diffOp.pointerValue[i])) containsNan = YES;
+	}
+	
+	if ( containsNan ) {
+		NSLog(@"Warning! Your differential operator \"%@\" contains at least one non-finite value. This is likely not what you intended.", name);
+	}
+	
+    [diffOp setName: name];
 	
 	// This should do an individual isEquals on each dimension.
-	GLDifferentialOperatorPool *pool = [self.dimensionOperatorPoolMapTable objectForKey: transformedDimensions];
+	NSMutableDictionary *pool = [self.dimensionOperatorPoolMapTable objectForKey: diffOp.fromDimensions];
 	
 	if (!pool) {
-		// Presumably the user is trying to differentiate the spatial dimensions
-		NSArray *diffDimensions = [aVariable dimensionsTransformedToBasis:  @[@(kGLDeltaBasis)]];
-		
-		GLSpectralDifferentialOperatorPool *spectralPool = [[GLSpectralDifferentialOperatorPool alloc] initWithDifferentiationDimensions: diffDimensions transformDimensions: transformedDimensions forEquation: self];
-		pool = spectralPool;
-		[self.dimensionOperatorPoolMapTable setObject: spectralPool forKey: transformedDimensions];
+		pool = [NSMutableDictionary dictionary];
+		[self.dimensionOperatorPoolMapTable setObject: pool forKey: diffOp.fromDimensions];
 	}
 	
-	return pool;
-	
-}
-
-- (void) setDefaultDifferentiationBasis:(NSArray *) aBasis forOrder: (NSUInteger) order
-{
-	[self.basisDictionary setObject: aBasis forKey: @(order)];
-}
-
-- (NSArray *) defaultDifferentiationBasisForOrder: (NSUInteger) order
-{
-	NSMutableArray *possibleMatch = [self.basisDictionary objectForKey: @(order)];
-	if (!possibleMatch) {
-		NSArray *orderOne = [self.basisDictionary objectForKey: @(1)];
-		NSNumber *aBasis = orderOne.count ? orderOne.lastObject : @(kGLExponentialBasis);
-		possibleMatch = [NSMutableArray arrayWithCapacity: order];
-		for (NSUInteger i=0; i<order; i++) {
-			[possibleMatch addObject: aBasis];
-		}
-	}
-	return possibleMatch;
-}
-
-/************************************************/
-/*		Time Stepping							*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Time Stepping
-#pragma mark
-
-- (GLVariable *) rungeKuttaAdvanceY: (GLVariable *) y withF: (GLVariable *) f stepSize: (GLFloat) deltaT fFromY: (FfromY) fFromY;
-{
-	if (!f) {
-		f = fFromY(y);
-	}
-	
-	// Half a step forward and find the new slope (f) at this point
-	GLVariable *f2 = fFromY([[f scalarMultiply: 0.5*deltaT] plus: y]);
-	[self solveForVariable: f2];
-	
-	// Find the new slope at this 2nd point
-	GLVariable *f3 = fFromY([[f2 scalarMultiply: 0.5*deltaT] plus: y]);
-	[self solveForVariable: f3];
-	
-	// Go a full step forward with the 2nd new slope
-	GLVariable *f4 = fFromY([[f3 scalarMultiply: deltaT] plus: y]);
-	
-	// yout = y + (Delta/6)*(
-	GLVariable *yout = [y plus: [[[f plus: f4] plus: [[f3 plus: f2] scalarMultiply: 2.0]] scalarMultiply: deltaT/6.0]];
-	[self solveForVariable: yout];
-    
-	return yout;
-}
-
-
-- (GLVariable *) rungeKuttaAdvanceY: (GLVariable *) y stepSize: (GLFloat) deltaT fFromY: (FfromY) fFromY
-{
-	GLVariable *f = fFromY(y);
-	// Half a step forward and find the new slope (f) at this point
-	GLVariable *f2 = fFromY([[f scalarMultiply: 0.5*deltaT] plus: y]);
-	// Find the new slope at this 2nd point
-	GLVariable *f3 = fFromY([[f2 scalarMultiply: 0.5*deltaT] plus: y]);	
-	// Go a full step forward with the 2nd new slope
-	GLVariable *f4 = fFromY([[f3 scalarMultiply: deltaT] plus: y]);
-	// yout = y + (Delta/6)*(
-	GLVariable *yout = [y plus: [[[f plus: f4] plus: [[f3 plus: f2] scalarMultiply: 2.0]] scalarMultiply: deltaT/6.0]];
-	
-	return yout;
-}
-
-- (NSArray *) rungeKuttaAdvanceYVector: (NSArray *) y stepSize: (GLFloat) deltaT fFromY: (FfromYVector) fFromY
-{
-	NSUInteger num = y.count;
-	
-	NSArray *f = fFromY(y);
-	
-	// Half a step forward and find the new slope (f) at this point
-	NSMutableArray *y2 = [[NSMutableArray alloc] initWithCapacity: num];
-	for (NSUInteger i=0; i < num; i++) {
-		[y2 addObject: [[[f objectAtIndex: i] scalarMultiply: 0.5*deltaT] plus: [y objectAtIndex: i]]];
-	}
-	NSArray *f2 = fFromY( y2 );
-	
-	// Find the new slope at this 2nd point
-	NSMutableArray *y3 = [[NSMutableArray alloc] initWithCapacity: num];
-	for (NSUInteger i=0; i < num; i++) {
-		[y3 addObject: [[[f2 objectAtIndex: i] scalarMultiply: 0.5*deltaT] plus: [y objectAtIndex: i]]];
-	}
-	NSArray *f3 = fFromY( y3 );
-	
-	// Go a full step forward with the 2nd new slope
-	NSMutableArray *y4 = [[NSMutableArray alloc] initWithCapacity: num];
-	for (NSUInteger i=0; i < num; i++) {
-		[y4 addObject: [[[f3 objectAtIndex: i] scalarMultiply: deltaT] plus: [y objectAtIndex: i]]];
-	}
-	NSArray *f4 = fFromY( y4 );
-	
-	NSMutableArray *yout = [[NSMutableArray alloc] initWithCapacity: num];
-	for (NSUInteger i=0; i < num; i++) {
-		[yout addObject: [[y objectAtIndex: i] plus: [[[[f objectAtIndex: i] plus: [f4 objectAtIndex: i]] plus: [[[f3 objectAtIndex: i] plus: [f2 objectAtIndex: i]] scalarMultiply: 2.0]] scalarMultiply: deltaT/6.0]]];
-	}
-	
-	return yout;
+	[pool setObject: diffOp forKey: name];
 }
 
 /************************************************/

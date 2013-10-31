@@ -67,43 +67,20 @@
 #pragma mark Differentiation
 #pragma mark
 
-// Returns the default set of differential operators that will be used by the variables.
-// The value set here will be the default, but can be overridden on a case by case basis
-// with individual variables.
+/**  Returns the linear transformation of the given name, if it can be found, nil otherwise.
+ @discussion This interface simply serves as storage for the GLLinearTransform class methods, to prevent duplicate transform generation.
+ @param name The name of the linear transformation.
+ @param dimensions The dimensions that we are transforming from.
+ @returns A GLLinearTransform with fromDimensions that match dimensions, and toDimensions that may be different.
+ */
+- (GLLinearTransform *) linearTransformWithName: (NSString *) name forDimensions: (NSArray *) dimensions;
 
-// Depends on whether or not the variable is real or complex, and the variables dimensions.
-- (id) defaultDifferentialOperatorPoolForVariable: (GLVariable *) aVariable;
-
-// Set the default differentiation basis for different orders (the size of the array should match the order).
-// If none is specified for a given order, one will be created for the basis of order 1, or if that doesn't exist
-// it will use the kGLExponentialBasis.
-- (void) setDefaultDifferentiationBasis:(NSArray *) aBasis forOrder: (NSUInteger) order;
-- (NSArray *) defaultDifferentiationBasisForOrder: (NSUInteger) order;
-
-/************************************************/
-/*		Integration / Time Stepping				*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Integration / Time Stepping
-#pragma mark
-
-// Model equation: dy/dt=f
-
-// In order to time step forward, you need to be able to compute the value of f, given y.
-// The FfromY block type takes y as an argument and expects you to return f.
-//typedef GLVariable * (^FfromY)(GLVariable *);
-//typedef NSArray * (^FfromYVector)(NSArray *);
-
-// Given dy/dt=f at some t(n), this computes y at t(n+1)
-// Inputs of y and f (at t=n), a time step delta, and a function to compute f given y.
-// Outputs a variable at t=n+delta.
-- (GLVariable *) rungeKuttaAdvanceY: (GLVariable *) y withF: (GLVariable *) f stepSize: (GLFloat) deltaT fFromY: (FfromY) aBlock;
-
-// Test op.
-- (GLVariable *) rungeKuttaAdvanceY: (GLVariable *) y stepSize: (GLFloat) deltaT fFromY: (FfromY) aBlock;
-- (NSArray *) rungeKuttaAdvanceYVector: (NSArray *) y stepSize: (GLFloat) deltaT fFromY: (FfromYVector) aBlock;
-
+/**  Add an operator to the pool so that it can be used later.
+ @discussion This interface simply serves as storage for the GLLinearTransform class methods, to prevent duplicate transform generation.
+ @param diffOp The linear transformation to be saved.
+ @param name The name of the linear transformation.
+ */
+- (void) setLinearTransform: (GLLinearTransform *) diffOp withName: (NSString *) name;
 
 @end
 

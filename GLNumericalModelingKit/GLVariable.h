@@ -263,8 +263,8 @@ typedef NSUInteger GLVariableSymmetry;
 #pragma mark Differential Operations - Primitive
 #pragma mark
 
-// Apply a differential operation.
-- (GLVariable *) differentiateWithOperator: (GLDifferentialOperator *) diffOperator;
+// Apply a differential operation. Transforms to the correct basis, then uses the diffOperator to transform the variable.
+- (GLVariable *) differentiateWithOperator: (GLLinearTransform *) diffOperator;
 
 /************************************************/
 /*		Differential Operations					*/
@@ -274,6 +274,11 @@ typedef NSUInteger GLVariableSymmetry;
 #pragma mark Differential Operations
 #pragma mark
 
+// All operators are assumed to use the differentiationBasis. So this means that calling "xxx" or any other string will cause,
+// 1. This variable to transform to the differentiationBasis, if needed
+// 2. A search for a GLLinearTransform with that name and -fromDimensions
+// 3. The operator to be applied to this function, and a new function to be returned.
+
 // Occasionally more convenient is to set a "Differential Operator Pool" to be associated with this variable.
 // The differential operator pool is a collection of *named* differential operators that can conviently
 // be referenced. For example, if you set the SpectralDifferentiationPool, then calling
@@ -281,9 +286,7 @@ typedef NSUInteger GLVariableSymmetry;
 //	2. [var xx];
 // extracts the differential operator named @"xx" from the pool, then calls -differentiate.
 
-@property(readwrite, strong, nonatomic) id differentialOperatorPool;
-
-// If it's set to nil (or an empty), it will use the equation default.
+// If it's set to nil (or an empty), it will use the dimension default.
 @property(readwrite, strong, nonatomic) NSArray *differentiationBasis;
 
 // Differentiate with one of the built-in (or saved) operators from the pool, e.g. "xxy".
@@ -324,5 +327,21 @@ typedef NSUInteger GLVariableSymmetry;
 // If the mutableDimension is evenly spaced, then it will be extended to length pointIndex+1, if necessary.
 // If the mutableDimension is not evenly spaced, then it must already have the correct value.
 - (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
+@end
+
+// These are thrown in here to surpress compiler warnings these (and higher order derivatives)
+// will be resolved dynamically at runtime if they exist (given the dimensions).
+@interface GLVariable (DifferentiationExtensions)
+
+@property(readonly) GLVariable* x;
+@property(readonly) GLVariable* y;
+@property(readonly) GLVariable* xx;
+@property(readonly) GLVariable* xy;
+@property(readonly) GLVariable* yy;
+@property(readonly) GLVariable* xxx;
+@property(readonly) GLVariable* xxy;
+@property(readonly) GLVariable* xyy;
+@property(readonly) GLVariable* yyy;
+
 @end
 

@@ -1,6 +1,7 @@
-This is pdfTeX, Version 3.1415926-2.3-1.40.12 (TeX Live 2011) (format=pdflatex 2012.6.13)  18 OCT 2013 13:02
+This is pdfTeX, Version 3.1415926-2.3-1.40.12 (TeX Live 2011) (format=pdflatex 2012.6.7)  31 OCT 2013 08:48
 entering extended mode
  \write18 enabled.
+ file:line:error style messages enabled.
  %&-line parsing enabled.
 **Transforms.tex
 (./Transforms.tex
@@ -358,16 +359,16 @@ Overfull \hbox (8.03549pt too wide) in paragraph at lines 529--530
 u-per-diag-o-nal ma-trix.To be ex-plicit, 
  []
 
-[16] [17] [18] [19]
-Overfull \hbox (14.42911pt too wide) in paragraph at lines 669--670
+[16] [17] [18] [19] [20]
+Overfull \hbox (14.42911pt too wide) in paragraph at lines 689--690
 []\OT1/cmr/m/n/10.95 Note there is still a dis-tinc-tion to be made be-tween tr
 ans-for-ma-tions to and from a kGLDeltaBa-
  []
 
-[20] [21] [22] [23] (./Transforms.aux) ) 
+[21] [22] [23] [24] (./Transforms.aux) ) 
 Here is how much of TeX's memory you used:
  2980 strings out of 493610
- 40603 string characters out of 3142404
+ 40603 string characters out of 3142405
  108712 words of memory out of 3000000
  6239 multiletter control sequences out of 15000+200000
  11866 words of font info for 45 fonts, out of 3000000 for 9000
@@ -391,10 +392,10 @@ s/cm/cmsy8.pfb></usr/local/texlive/2011/texmf-dist/fonts/type1/public/amsfonts/
 cm/cmti10.pfb></usr/local/texlive/2011/texmf-dist/fonts/type1/public/amsfonts/c
 m/cmtt10.pfb></usr/local/texlive/2011/texmf-dist/fonts/type1/public/amsfonts/sy
 mbols/msam10.pfb>
-Output written on Transforms.pdf (23 pages, 251518 bytes).
+Output written on Transforms.pdf (24 pages, 255010 bytes).
 PDF statistics:
- 147 PDF objects out of 1000 (max. 8388607)
- 103 compressed objects within 2 object streams
+ 150 PDF objects out of 1000 (max. 8388607)
+ 105 compressed objects within 2 object streams
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 
