@@ -66,10 +66,6 @@
 		8157ADFC17F9FD66002A6ED6 /* GLDSPFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADF817F9FD66002A6ED6 /* GLDSPFourierTransform.h */; };
 		8157ADFD17F9FD66002A6ED6 /* GLDSPFourierTransform.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADF917F9FD66002A6ED6 /* GLDSPFourierTransform.m */; };
 		8157ADFE17F9FD66002A6ED6 /* GLOpenCLFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADFA17F9FD66002A6ED6 /* GLOpenCLFourierTransform.h */; };
-		8157AE0417F9FDA7002A6ED6 /* GLDifferentialOperator.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE0017F9FDA7002A6ED6 /* GLDifferentialOperator.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		8157AE0517F9FDA7002A6ED6 /* GLDifferentialOperator.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AE0117F9FDA7002A6ED6 /* GLDifferentialOperator.m */; };
-		8157AE0617F9FDA7002A6ED6 /* GLDifferentialOperatorPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE0217F9FDA7002A6ED6 /* GLDifferentialOperatorPool.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		8157AE0717F9FDA7002A6ED6 /* GLDifferentialOperatorPool.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AE0317F9FDA7002A6ED6 /* GLDifferentialOperatorPool.m */; };
 		8157AE1417F9FDEB002A6ED6 /* GLNetCDFFile.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE0A17F9FDEB002A6ED6 /* GLNetCDFFile.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157AE1517F9FDEB002A6ED6 /* GLNetCDFFile.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AE0B17F9FDEB002A6ED6 /* GLNetCDFFile.m */; };
 		8157AE1617F9FDEB002A6ED6 /* GLNetCDFVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE0C17F9FDEB002A6ED6 /* GLNetCDFVariable.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -173,10 +169,6 @@
 		8157ADF917F9FD66002A6ED6 /* GLDSPFourierTransform.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLDSPFourierTransform.m; sourceTree = "<group>"; };
 		8157ADFA17F9FD66002A6ED6 /* GLOpenCLFourierTransform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLOpenCLFourierTransform.h; sourceTree = "<group>"; };
 		8157ADFB17F9FD66002A6ED6 /* GLOpenCLFourierTransform.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLOpenCLFourierTransform.m; sourceTree = "<group>"; };
-		8157AE0017F9FDA7002A6ED6 /* GLDifferentialOperator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLDifferentialOperator.h; sourceTree = "<group>"; };
-		8157AE0117F9FDA7002A6ED6 /* GLDifferentialOperator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLDifferentialOperator.m; sourceTree = "<group>"; };
-		8157AE0217F9FDA7002A6ED6 /* GLDifferentialOperatorPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLDifferentialOperatorPool.h; sourceTree = "<group>"; };
-		8157AE0317F9FDA7002A6ED6 /* GLDifferentialOperatorPool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLDifferentialOperatorPool.m; sourceTree = "<group>"; };
 		8157AE0A17F9FDEB002A6ED6 /* GLNetCDFFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLNetCDFFile.h; sourceTree = "<group>"; };
 		8157AE0B17F9FDEB002A6ED6 /* GLNetCDFFile.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLNetCDFFile.m; sourceTree = "<group>"; };
 		8157AE0C17F9FDEB002A6ED6 /* GLNetCDFVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLNetCDFVariable.h; sourceTree = "<group>"; };
@@ -342,10 +334,6 @@
 				8157ADE117F9FCE6002A6ED6 /* GLMemoryPool.h */,
 				8157ADE217F9FCE6002A6ED6 /* GLMemoryPool.m */,
 				8157AD6817F9FC96002A6ED6 /* Fourier Transforms */,
-				8157AE0017F9FDA7002A6ED6 /* GLDifferentialOperator.h */,
-				8157AE0117F9FDA7002A6ED6 /* GLDifferentialOperator.m */,
-				8157AE0217F9FDA7002A6ED6 /* GLDifferentialOperatorPool.h */,
-				8157AE0317F9FDA7002A6ED6 /* GLDifferentialOperatorPool.m */,
 			);
 			name = Primitives;
 			sourceTree = "<group>";
@@ -474,14 +462,12 @@
 				8157AD6417F9FC36002A6ED6 /* GLMatrixDescription.h in Headers */,
 				8157AE1F17F9FE01002A6ED6 /* Precision.h in Headers */,
 				8157AE1417F9FDEB002A6ED6 /* GLNetCDFFile.h in Headers */,
-				8157AE0617F9FDA7002A6ED6 /* GLDifferentialOperatorPool.h in Headers */,
 				8157ADC317F9FCDB002A6ED6 /* GLVariableOperations.h in Headers */,
 				8157ADD917F9FCDB002A6ED6 /* GLRungeKuttaOperation.h in Headers */,
 				8157AD5C17F9FC36002A6ED6 /* GLEquation.h in Headers */,
 				8157AE1617F9FDEB002A6ED6 /* GLNetCDFVariable.h in Headers */,
 				8157ADD717F9FCDB002A6ED6 /* GLIntegrationOperations.h in Headers */,
 				8157ADCD17F9FCDB002A6ED6 /* GLBasisTransformationOperations.h in Headers */,
-				8157AE0417F9FDA7002A6ED6 /* GLDifferentialOperator.h in Headers */,
 				81CABBF818089D7C00758DF1 /* GLTensor.h in Headers */,
 				8157ADDB17F9FCDB002A6ED6 /* GLOperationOptimizer.h in Headers */,
 				81CABBFC1808A11800758DF1 /* GLScalar.h in Headers */,
@@ -603,7 +589,6 @@
 				8157ADF017F9FCED002A6ED6 /* GLFFTWFourierTransform.m in Sources */,
 				8157ADFD17F9FD66002A6ED6 /* GLDSPFourierTransform.m in Sources */,
 				8157AD6317F9FC36002A6ED6 /* GLLinearTransform.m in Sources */,
-				8157AE0717F9FDA7002A6ED6 /* GLDifferentialOperatorPool.m in Sources */,
 				8157ADDC17F9FCDB002A6ED6 /* GLOperationOptimizer.m in Sources */,
 				81CABBF918089D7C00758DF1 /* GLTensor.m in Sources */,
 				8157AE1B17F9FDEB002A6ED6 /* GLNetCDFConcatenationOperation.m in Sources */,
@@ -612,7 +597,6 @@
 				8157ADCA17F9FCDB002A6ED6 /* GLVectorScalarOperations.m in Sources */,
 				8157ADE417F9FCE6002A6ED6 /* GLMemoryPool.m in Sources */,
 				8157AD6117F9FC36002A6ED6 /* GLVariable.m in Sources */,
-				8157AE0517F9FDA7002A6ED6 /* GLDifferentialOperator.m in Sources */,
 				81CABBFD1808A11800758DF1 /* GLScalar.m in Sources */,
 				8157ADC417F9FCDB002A6ED6 /* GLVariableOperations.m in Sources */,
 				8157AE1917F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.m in Sources */,
