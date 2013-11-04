@@ -19,7 +19,7 @@
 
 @implementation GLNegationOperation
 
-- (id) initWithOperand: (GLVariable *) variable;
+- (GLNegationOperation *) initWithFunction: (GLVariable *) variable;
 {
 	if (( self = [super initWithOperand: @[variable] ]))
 	{
@@ -52,7 +52,7 @@
 
 @implementation GLAbsoluteValueOperation
 
-- (id) initWithOperand: (GLVariable *) variable {
+- (GLAbsoluteValueOperation *) initWithFunction: (GLVariable *) variable {
 	return [self initWithOperand: variable shouldUseComplexArithmetic: YES];
 }
 
@@ -115,7 +115,7 @@
 
 @implementation GLExponentialOperation
 
-- (id) initWithOperand: (GLVariable *) variable;
+- (GLExponentialOperation *) initWithFunction: (GLVariable *) variable
 {
 	// If the operand is purely real, we don't need a complex number
 	GLDataFormat format = variable.isPurelyReal ? kGLRealDataFormat : kGLSplitComplexDataFormat;
@@ -185,7 +185,7 @@
 
 @implementation GLSineOperation
 
-- (id) initWithOperand: (GLVariable *) variable;
+- (GLSineOperation *) initWithFunction: (GLVariable *) variable
 {
 	if (( self = [super initWithOperand: @[variable] ]))
 	{
@@ -219,7 +219,7 @@
 
 @implementation GLCosineOperation
 
-- (id) initWithOperand: (GLVariable *) variable;
+- (GLCosineOperation *) initWithFunction: (GLVariable *) variable;
 {
 	if (( self = [super initWithOperand: @[variable] ]))
 	{
@@ -252,7 +252,7 @@
 
 @implementation GLInverseTangentOperation
 
-- (id) initWithOperand: (GLVariable *) variable;
+- (GLInverseTangentOperation *) initWithFunction: (GLVariable *) variable
 {
 	if (( self = [super initWithOperand: @[variable] ]))
 	{
@@ -284,7 +284,7 @@
 /************************************************/
 // variable = sqrt( variable )
 @implementation GLSquareRootOperation
-- (id) initWithOperand: (GLVariable *) variable;
+- (GLSquareRootOperation *) initWithFunction: (GLVariable *) variable
 {
 	if (( self = [super initWithOperand: @[variable] ]))
 	{
@@ -317,7 +317,7 @@
 
 @implementation  GLFourierTransformOperation
 
-- (id) initWithOperand: (GLVariable *) variable;
+- (GLFourierTransformOperation *) initWithFunction: (GLVariable *) variable
 {
 	NSMutableArray *transformedDimensions = [NSMutableArray array];
 	for (GLDimension *aDim in variable.dimensions) {
@@ -370,7 +370,7 @@
 
 @implementation GLSwapComplexOperation
 
-- (id) initWithOperand: (GLVariable *) variable
+- (GLSwapComplexOperation *) initWithFunction: (GLVariable *) variable
 {
 	GLVariable *resultVariable = [[variable class] variableOfComplexTypeWithDimensions: variable.dimensions forEquation: variable.equation];
 	resultVariable.isPurelyImaginary = variable.isPurelyReal;
@@ -414,7 +414,7 @@
 
 @implementation GLCopyVariableOperation
 
-- (id) initWithOperand: (GLVariable *) variable;
+- (GLCopyVariableOperation *) initWithFunction: (GLVariable *) variable
 {
 	if (( self = [super initWithOperand: @[variable]] ))
 	{
@@ -449,7 +449,7 @@
 
 @implementation GLMaxOperation
 
-- (id) initWithOperand: (GLVariable *) variable
+- (GLMaxOperation *) initWithFunction: (GLVariable *) variable
 {
 	GLVariable *resultVariable = [GLVariable variableOfRealTypeWithDimensions: [NSArray array] forEquation: variable.equation];
 	
@@ -475,7 +475,7 @@
 
 @implementation GLAverageOperation
 
-- (id) initWithOperand: (GLVariable *) variable dimensionIndex: (NSUInteger) index
+- (GLAverageOperation *) initWithFunction: (GLVariable *) variable dimensionIndex: (NSUInteger) index
 {
 	NSMutableArray *newDimensions = [variable.dimensions mutableCopy];
 	[newDimensions removeObjectAtIndex: index];

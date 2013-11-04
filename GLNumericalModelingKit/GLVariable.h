@@ -9,6 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <GLNumericalModelingKit/GLTensor.h>
 #import <GLNumericalModelingKit/GLDimension.h>
+#import <GLNumericalModelingKit/GLScalar.h>
 
 // If a symmetry exists, then function is assumed to be defined for negative
 // values with the given symmetry. For example, if the dimension has even symmetry,
@@ -125,25 +126,16 @@ typedef NSUInteger GLVariableSymmetry;
 #pragma mark Operations
 #pragma mark
 
-// C = A + B
-- (id) plus: (GLVariable *) otherVariable NS_RETURNS_NOT_RETAINED;
-
-// C = A - B
-- (id) minus: (GLVariable *) otherVariable NS_RETURNS_NOT_RETAINED;
-
-// C = A * B (will switch to spatial domain, if default)
-- (id) times: (GLVariable *) otherVariable NS_RETURNS_NOT_RETAINED;
-
 // C = A * B
-- (id) multiply: (GLVariable *) otherVariable NS_RETURNS_NOT_RETAINED;
+- (id) multiply: (GLVariable *) otherVariable;
 
 - (id) dividedBy: (GLVariable *) otherVariable;
 
 // C = A * B
-- (id) dot: (GLVariable *) otherVariable NS_RETURNS_NOT_RETAINED;
+- (id) dot: (GLVariable *) otherVariable;
 
 // C = max( abs(A), abs(B) ) element-wise
-- (id) absMax: (GLVariable *) otherVariable NS_RETURNS_NOT_RETAINED;
+- (id) absMax: (GLVariable *) otherVariable;
 
 // C = -A
 - (id) negate;
@@ -167,19 +159,19 @@ typedef NSUInteger GLVariableSymmetry;
 - (id) sqrt;
 
 // C = A + k
-- (id) scalarAdd: (GLFloat) aScalar NS_RETURNS_NOT_RETAINED;
+- (id) scalarAdd: (GLFloat) aScalar;
 
 // C = k*A
-- (id) scalarMultiply: (GLFloat) aScalar NS_RETURNS_NOT_RETAINED;
+- (id) scalarMultiply: (GLFloat) aScalar;
 
 // C = k/A
-- (id) scalarDivide: (GLFloat) aScalar NS_RETURNS_NOT_RETAINED;
+- (id) scalarDivide: (GLFloat) aScalar;
 
 // C = max( A, k )
-- (id) scalarMax: (GLFloat) aScalar NS_RETURNS_NOT_RETAINED;
+- (id) scalarMax: (GLFloat) aScalar;
 
 // C = A > k ? A : 0.0;
-- (id) zeroThreshold: (GLFloat) aScalar NS_RETURNS_NOT_RETAINED;
+- (id) zeroThreshold: (GLFloat) aScalar;
 
 - (id) clipToMin: (GLFloat) min max: (GLFloat) max;
 
@@ -196,7 +188,7 @@ typedef NSUInteger GLVariableSymmetry;
 
 // Matlab style. String should be @"start:end,start:end,..."
 - (id) setValue: (GLFloat) aScalar atIndices: (NSString *) string;
-- (id) setVariableValue: (GLVariable *) aScalarVariable atIndices: (NSString *) string;
+- (id) setVariableValue: (GLScalar *) aScalarVariable atIndices: (NSString *) string;
 
 - (id) transformToBasis: (NSArray *) orderedBasis;
 
@@ -212,7 +204,7 @@ typedef NSUInteger GLVariableSymmetry;
 
 - (id) duplicate;
 
-- (GLVariable *) interpolateAtPoints: (NSArray *) otherVariables NS_RETURNS_NOT_RETAINED;
+- (GLVariable *) interpolateAtPoints: (NSArray *) otherVariables;
 
 // Multiplies the variables and the dimensions by this scale factor.
 - (id) scaleVariableBy: (GLFloat) varScale withUnits: (NSString *) varUnits dimensionsBy: (GLFloat) dimScale units: (NSString *) dimUnits;
@@ -237,7 +229,7 @@ typedef NSUInteger GLVariableSymmetry;
 - (GLVariable *) variableFromIndexRange: (NSArray *) ranges;
 - (GLVariable *) variableFromIndexRangeString: (NSString *) indexString;
 
-- (GLVariable *) convertToSplitComplex;
+//- (GLVariable *) convertToSplitComplex;
 
 // This operation is minimilly restrictive.
 // You can concatenate an n dimensional variable with an n or n-1 dimensional variable.

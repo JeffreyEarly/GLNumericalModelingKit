@@ -570,7 +570,8 @@
 				GLFloat *b;
 				GLFloat *x;
 				if ( lastNonTrivialNonDenseIndex != NSNotFound && lastNonTrivialNonDenseIndex > denseIndex) {
-					
+					[NSException raise: @"NotYetImplemented" format: @"This case is not yet implemented."];
+					return;
 				} else {
 					M = &(MData[inEquationPos]);
 					b = &(bData[outEquationPos]);

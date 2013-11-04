@@ -135,47 +135,12 @@
 		
 		// Now we work further up the tree and deal with the parents.
 		GLVariableOperation *operation = variable.lastOperation;
-                
-		if (operation.operationType == kGLNullaryOperation)
-		{
-			return YES;
-		}
-		else if (operation.operationType == kGLUnaryOperation)
-		{
-			GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
-			return [self grabAllVariablesAndOperationsFromVariable: aUnaryOperation.operand forTopVariables: topVariables bottomVariables: bottomVariables];
-		}
-		else if (operation.operationType == kGLBinaryOperation)
-		{
-			GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
-			
-			// Do NOT put these methods into one if (a && b) call, otherwise the second one may not get executed. They
-			// need to execute every time!
-			BOOL a = [self grabAllVariablesAndOperationsFromVariable: aBinaryOperation.firstOperand forTopVariables: topVariables bottomVariables: bottomVariables];
-			BOOL b = [self grabAllVariablesAndOperationsFromVariable: aBinaryOperation.secondOperand forTopVariables: topVariables bottomVariables: bottomVariables];
-			
-			return a && b;
-		}
-		else if (operation.operationType == kGLUnaryVectorOperation) {
-			GLUnaryVectorOperation *aUnaryVectorOperation = (GLUnaryVectorOperation *) operation;
-			BOOL success = YES;
-			for (GLVariable *aVariable in aUnaryVectorOperation.operand) {
-				success &= [self grabAllVariablesAndOperationsFromVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
-			}
-			return success;
-		} else if (operation.operationType == kGLBinaryVectorOperation) {
-			GLBinaryVectorOperation *aBinaryVectorOperation = (GLBinaryVectorOperation *) operation;
-			BOOL success = YES;
-			for (GLVariable *aVariable in aBinaryVectorOperation.firstOperand) {
-				success &= [self grabAllVariablesAndOperationsFromVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
-			}
-			for (GLVariable *aVariable in aBinaryVectorOperation.secondOperand) {
-				success &= [self grabAllVariablesAndOperationsFromVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
-			}
-			return success;
-		}
 		
-		return NO;
+		BOOL success = YES;
+		for (GLVariable *aVariable in operation.operand) {
+			success &= [self grabAllVariablesAndOperationsFromVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
+		}
+		return success;
 	} else {
 		NSLog(@"Trying to record nodes, but pending operations for this variable are greater than 1. This violates our current assumptions.");
 		return NO;
@@ -212,42 +177,11 @@
 	
     NSMutableArray *varOpDescriptions = [[NSMutableArray alloc] init];
     NSMutableArray *opOpDescriptions = [[NSMutableArray alloc] init];
-	if (operation.operationType == kGLUnaryOperation) {
-		GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
-		[operands addObject: aUnaryOperation.operand];
-        
-        [varOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) aUnaryOperation.operand, (NSInteger) operation]];
-        
-        [opOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) aUnaryOperation.operand.lastOperation, (NSInteger) operation]];
-	} else if (operation.operationType == kGLBinaryOperation) {
-		GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
-		[operands addObject: aBinaryOperation.firstOperand];
-		[operands addObject: aBinaryOperation.secondOperand];
-        
-        [varOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) aBinaryOperation.firstOperand, (NSInteger) operation]];
-        [varOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in2:n [color=black, style=dotted];\n", (NSInteger) aBinaryOperation.secondOperand, (NSInteger) operation]];
-        
-        [opOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) aBinaryOperation.firstOperand.lastOperation, (NSInteger) operation]];
-        [opOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in2:n [color=black, style=dotted];\n", (NSInteger) aBinaryOperation.secondOperand.lastOperation, (NSInteger) operation]];
-	} else if (operation.operationType == kGLUnaryVectorOperation) {
-		GLUnaryVectorOperation *aUnaryVectorOperation = (GLUnaryVectorOperation *) operation;
-		[operands addObjectsFromArray: aUnaryVectorOperation.operand];
-        for (GLVariable *operandVar in aUnaryVectorOperation.operand) {
-            [varOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) operandVar, (NSInteger) operation]];
-            [opOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) operandVar.lastOperation, (NSInteger) operation]];
-        }
-	} else if (operation.operationType == kGLBinaryVectorOperation) {
-		GLBinaryVectorOperation *aBinarVectorOperation = (GLBinaryVectorOperation *) operation;
-		[operands addObjectsFromArray: aBinarVectorOperation.firstOperand];
-		[operands addObjectsFromArray: aBinarVectorOperation.secondOperand];
-        for (GLVariable *operandVar in aBinarVectorOperation.firstOperand) {
-            [varOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) operandVar, (NSInteger) operation]];
-            [opOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) operandVar.lastOperation, (NSInteger) operation]];
-        }
-        for (GLVariable *operandVar in aBinarVectorOperation.secondOperand) {
-            [varOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in2:n [color=black, style=dotted];\n", (NSInteger) operandVar, (NSInteger) operation]];
-            [opOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in2:n [color=black, style=dotted];\n", (NSInteger) operandVar.lastOperation, (NSInteger) operation]];
-        }
+
+	[operands addObjectsFromArray: operation.operand];
+	for (GLVariable *operandVar in operation.operand) {
+		[varOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) operandVar, (NSInteger) operation]];
+		[opOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) operandVar.lastOperation, (NSInteger) operation]];
 	}
 	
 	NSMutableArray *topVariableOperands = [[NSMutableArray alloc] init];
@@ -278,7 +212,7 @@
 	if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
 		//NSLog(@"This operation depends only on precomputed variables. We have not yet implemented the appropriate optimization to deal with this.");
         [self.operationOperationEdges addObject: [self serialBlockGraphVisDesciptionFromOperation: @"MasterOp" toOperation: [NSString stringWithFormat: @"%ld", (NSInteger) operation]]];
-	} else if ( operation.operationType == kGLNullaryOperation ) {
+	} else if ( operation.operand.count == 0 ) {
 		//[self incrementSerialBlockCountForOperation: (GLVariableOperation *) self];
         // This operation depends on nothing, so a 'master' needs to get it started
         [self.operationOperationEdges addObject: [self serialBlockGraphVisDesciptionFromOperation: @"MasterOp" toOperation: [NSString stringWithFormat: @"%ld", (NSInteger) operation]]];

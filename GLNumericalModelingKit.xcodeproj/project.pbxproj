@@ -38,14 +38,10 @@
 		8157ADCE17F9FCDB002A6ED6 /* GLBasisTransformationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB017F9FCDB002A6ED6 /* GLBasisTransformationOperations.m */; };
 		8157ADCF17F9FCDB002A6ED6 /* GLLinearTransformationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB117F9FCDB002A6ED6 /* GLLinearTransformationOperations.h */; };
 		8157ADD017F9FCDB002A6ED6 /* GLLinearTransformationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB217F9FCDB002A6ED6 /* GLLinearTransformationOperations.m */; };
-		8157ADD117F9FCDB002A6ED6 /* GLInterpolationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB317F9FCDB002A6ED6 /* GLInterpolationOperations.h */; };
-		8157ADD217F9FCDB002A6ED6 /* GLInterpolationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB417F9FCDB002A6ED6 /* GLInterpolationOperations.m */; };
 		8157ADD317F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB517F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADD417F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB617F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.m */; };
 		8157ADD517F9FCDB002A6ED6 /* GLDimensionalOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB717F9FCDB002A6ED6 /* GLDimensionalOperations.h */; };
 		8157ADD617F9FCDB002A6ED6 /* GLDimensionalOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB817F9FCDB002A6ED6 /* GLDimensionalOperations.m */; };
-		8157ADD717F9FCDB002A6ED6 /* GLIntegrationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB917F9FCDB002A6ED6 /* GLIntegrationOperations.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		8157ADD817F9FCDB002A6ED6 /* GLIntegrationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADBA17F9FCDB002A6ED6 /* GLIntegrationOperations.m */; };
 		8157ADD917F9FCDB002A6ED6 /* GLRungeKuttaOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBB17F9FCDB002A6ED6 /* GLRungeKuttaOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADDA17F9FCDB002A6ED6 /* GLRungeKuttaOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADBC17F9FCDB002A6ED6 /* GLRungeKuttaOperation.m */; };
 		8157ADDB17F9FCDB002A6ED6 /* GLOperationOptimizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBD17F9FCDB002A6ED6 /* GLOperationOptimizer.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -53,7 +49,6 @@
 		8157ADDD17F9FCDB002A6ED6 /* GLOperationVisualizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBF17F9FCDB002A6ED6 /* GLOperationVisualizer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADDE17F9FCDB002A6ED6 /* GLOperationVisualizer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADC017F9FCDB002A6ED6 /* GLOperationVisualizer.m */; };
 		8157ADDF17F9FCDB002A6ED6 /* GLMemoryOptimizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADC117F9FCDB002A6ED6 /* GLMemoryOptimizer.h */; };
-		8157ADE017F9FCDB002A6ED6 /* GLMemoryOptimizer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADC217F9FCDB002A6ED6 /* GLMemoryOptimizer.m */; };
 		8157ADE317F9FCE6002A6ED6 /* GLMemoryPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE117F9FCE6002A6ED6 /* GLMemoryPool.h */; };
 		8157ADE417F9FCE6002A6ED6 /* GLMemoryPool.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADE217F9FCE6002A6ED6 /* GLMemoryPool.m */; };
 		8157ADEB17F9FCED002A6ED6 /* GLFourierTransformPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE517F9FCED002A6ED6 /* GLFourierTransformPool.h */; };
@@ -139,14 +134,10 @@
 		8157ADB017F9FCDB002A6ED6 /* GLBasisTransformationOperations.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLBasisTransformationOperations.m; sourceTree = "<group>"; };
 		8157ADB117F9FCDB002A6ED6 /* GLLinearTransformationOperations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLLinearTransformationOperations.h; sourceTree = "<group>"; };
 		8157ADB217F9FCDB002A6ED6 /* GLLinearTransformationOperations.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLLinearTransformationOperations.m; sourceTree = "<group>"; };
-		8157ADB317F9FCDB002A6ED6 /* GLInterpolationOperations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLInterpolationOperations.h; sourceTree = "<group>"; };
-		8157ADB417F9FCDB002A6ED6 /* GLInterpolationOperations.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLInterpolationOperations.m; sourceTree = "<group>"; };
 		8157ADB517F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLSimpleInterpolationOperations.h; sourceTree = "<group>"; };
 		8157ADB617F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLSimpleInterpolationOperations.m; sourceTree = "<group>"; };
 		8157ADB717F9FCDB002A6ED6 /* GLDimensionalOperations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLDimensionalOperations.h; sourceTree = "<group>"; };
 		8157ADB817F9FCDB002A6ED6 /* GLDimensionalOperations.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLDimensionalOperations.m; sourceTree = "<group>"; };
-		8157ADB917F9FCDB002A6ED6 /* GLIntegrationOperations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLIntegrationOperations.h; sourceTree = "<group>"; };
-		8157ADBA17F9FCDB002A6ED6 /* GLIntegrationOperations.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLIntegrationOperations.m; sourceTree = "<group>"; };
 		8157ADBB17F9FCDB002A6ED6 /* GLRungeKuttaOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLRungeKuttaOperation.h; sourceTree = "<group>"; };
 		8157ADBC17F9FCDB002A6ED6 /* GLRungeKuttaOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLRungeKuttaOperation.m; sourceTree = "<group>"; };
 		8157ADBD17F9FCDB002A6ED6 /* GLOperationOptimizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLOperationOptimizer.h; sourceTree = "<group>"; };
@@ -355,14 +346,10 @@
 				8157ADB017F9FCDB002A6ED6 /* GLBasisTransformationOperations.m */,
 				8157ADB117F9FCDB002A6ED6 /* GLLinearTransformationOperations.h */,
 				8157ADB217F9FCDB002A6ED6 /* GLLinearTransformationOperations.m */,
-				8157ADB317F9FCDB002A6ED6 /* GLInterpolationOperations.h */,
-				8157ADB417F9FCDB002A6ED6 /* GLInterpolationOperations.m */,
 				8157ADB517F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.h */,
 				8157ADB617F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.m */,
 				8157ADB717F9FCDB002A6ED6 /* GLDimensionalOperations.h */,
 				8157ADB817F9FCDB002A6ED6 /* GLDimensionalOperations.m */,
-				8157ADB917F9FCDB002A6ED6 /* GLIntegrationOperations.h */,
-				8157ADBA17F9FCDB002A6ED6 /* GLIntegrationOperations.m */,
 				8157ADBB17F9FCDB002A6ED6 /* GLRungeKuttaOperation.h */,
 				8157ADBC17F9FCDB002A6ED6 /* GLRungeKuttaOperation.m */,
 				8157ADBD17F9FCDB002A6ED6 /* GLOperationOptimizer.h */,
@@ -466,7 +453,6 @@
 				8157ADD917F9FCDB002A6ED6 /* GLRungeKuttaOperation.h in Headers */,
 				8157AD5C17F9FC36002A6ED6 /* GLEquation.h in Headers */,
 				8157AE1617F9FDEB002A6ED6 /* GLNetCDFVariable.h in Headers */,
-				8157ADD717F9FCDB002A6ED6 /* GLIntegrationOperations.h in Headers */,
 				8157ADCD17F9FCDB002A6ED6 /* GLBasisTransformationOperations.h in Headers */,
 				81CABBF818089D7C00758DF1 /* GLTensor.h in Headers */,
 				8157ADDB17F9FCDB002A6ED6 /* GLOperationOptimizer.h in Headers */,
@@ -486,7 +472,6 @@
 				8157ADFC17F9FD66002A6ED6 /* GLDSPFourierTransform.h in Headers */,
 				8157ADCF17F9FCDB002A6ED6 /* GLLinearTransformationOperations.h in Headers */,
 				8157ADC717F9FCDB002A6ED6 /* GLNullaryOperations.h in Headers */,
-				8157ADD117F9FCDB002A6ED6 /* GLInterpolationOperations.h in Headers */,
 				8157ADE317F9FCE6002A6ED6 /* GLMemoryPool.h in Headers */,
 				8157ADED17F9FCED002A6ED6 /* GLFourierTransform.h in Headers */,
 				8157ADC517F9FCDB002A6ED6 /* GLUnaryOperations.h in Headers */,
@@ -581,9 +566,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8157ADEC17F9FCED002A6ED6 /* GLFourierTransformPool.m in Sources */,
-				8157ADD217F9FCDB002A6ED6 /* GLInterpolationOperations.m in Sources */,
 				8157AE1717F9FDEB002A6ED6 /* GLNetCDFVariable.m in Sources */,
-				8157ADE017F9FCDB002A6ED6 /* GLMemoryOptimizer.m in Sources */,
 				8157ADD617F9FCDB002A6ED6 /* GLDimensionalOperations.m in Sources */,
 				8157ADC617F9FCDB002A6ED6 /* GLUnaryOperations.m in Sources */,
 				8157ADF017F9FCED002A6ED6 /* GLFFTWFourierTransform.m in Sources */,
@@ -611,7 +594,6 @@
 				8157ADD417F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.m in Sources */,
 				8157ADCE17F9FCDB002A6ED6 /* GLBasisTransformationOperations.m in Sources */,
 				8157AD6517F9FC36002A6ED6 /* GLMatrixDescription.m in Sources */,
-				8157ADD817F9FCDB002A6ED6 /* GLIntegrationOperations.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -717,6 +699,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = "";
@@ -743,6 +726,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = "";

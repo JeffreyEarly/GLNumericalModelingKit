@@ -26,7 +26,7 @@ typedef void (^executionBlock)(NSArray *);
 #pragma mark
 
 // Returns the top most variables
-+ (NSSet *) topVariablesFromVariable: (GLVariable *) variable;
+//+ (NSSet *) topVariablesFromVariable: (GLVariable *) variable;
 
 //+ (unaryOperation) unaryOperationBlockFromTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
 //
@@ -45,19 +45,10 @@ typedef void (^executionBlock)(NSArray *);
 // 1. Initialize with the variables at the top of the tree, and the bottom of the tree.
 - (GLOperationOptimizer *) initWithTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
 
-// 5a. Returns an optimized unary operation block built from the execution blocks.
-// This will return nil if both the top and bottom variables array have a count of exactly 1.
-- (unaryOperation) unaryOperationBlock;
-
-// 5b. Returns an optimized binary operation block built from the execution blocks.
-// This will return nil if the number of top variables isn't exactly 2 and the number
-// of bottom variables isn't exactly 1.
-- (binaryOperation) binaryOperationBlock;
-
 // 5c. Returns an optimized unary vector block build from the execution blocks.
 // This will return nil if the number of top variables isn't the same as the number
 // of bottom variables.
-- (unaryVectorOperation) unaryVectorOperationBlock;
+- (variableOperation) operationBlock;
 
 // 6. Optional.
 // The NSMutableData objects required by the block operation, ordered exactly

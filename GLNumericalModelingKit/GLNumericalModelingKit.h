@@ -19,13 +19,7 @@
 #import <GLNumericalModelingKit/GLNetCDFVariable.h>
 #import <GLNumericalModelingKit/GLMatrixDescription.h>
 
-#import <GLNumericalModelingKit/GLDifferentialOperator.h>
-#import <GLNumericalModelingKit/GLDifferentialOperatorPool.h>
-#import <GLNumericalModelingKit/GLSpectralDifferentialOperator.h>
-#import <GLNumericalModelingKit/GLSpectralDifferentialOperatorPool.h>
-
 #import <GLNumericalModelingKit/GLVariableOperations.h>
-#import <GLNumericalModelingKit/GLIntegrationOperations.h>
 #import <GLNumericalModelingKit/GLRungeKuttaOperation.h>
 #import <GLNumericalModelingKit/GLSimpleInterpolationOperations.h>
 #import <GLNumericalModelingKit/GLBasisTransformationOperations.h>

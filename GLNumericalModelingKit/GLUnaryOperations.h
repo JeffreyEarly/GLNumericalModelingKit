@@ -15,7 +15,7 @@
 // Returns the negative of the variable.
 
 @interface GLNegationOperation : GLVariableOperation
-
+- (GLNegationOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -26,6 +26,7 @@
 
 @interface GLAbsoluteValueOperation : GLVariableOperation
 
+- (GLAbsoluteValueOperation *) initWithFunction: (GLVariable *) variable;
 // You can optionally set useComplexDivision to NO, and it will simply do an element-wise divide, ignoring complex math.
 - (id) initWithOperand: (GLVariable *) operand shouldUseComplexArithmetic: (BOOL) useComplexArithmetic;
 
@@ -38,7 +39,7 @@
 /************************************************/
 // variable = exponential( variable )
 @interface GLExponentialOperation : GLVariableOperation
-
+- (GLExponentialOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -46,7 +47,7 @@
 /************************************************/
 // variable = sin( variable )
 @interface GLSineOperation : GLVariableOperation
-
+- (GLSineOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -54,7 +55,7 @@
 /************************************************/
 // variable = cos( variable )
 @interface GLCosineOperation : GLVariableOperation
-
+- (GLCosineOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -62,7 +63,7 @@
 /************************************************/
 // variable = atan( variable )
 @interface GLInverseTangentOperation : GLVariableOperation
-
+- (GLInverseTangentOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -70,7 +71,7 @@
 /************************************************/
 // variable = sqrt( variable )
 @interface GLSquareRootOperation : GLVariableOperation
-
+- (GLSquareRootOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -78,7 +79,7 @@
 /************************************************/
 
 @interface GLFourierTransformOperation : GLVariableOperation
-
+- (GLFourierTransformOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -86,7 +87,7 @@
 /************************************************/
 
 @interface GLSwapComplexOperation : GLVariableOperation
-
+- (GLSwapComplexOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -94,7 +95,7 @@
 /************************************************/
 
 @interface GLCopyVariableOperation : GLVariableOperation
-
+- (GLCopyVariableOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -102,7 +103,7 @@
 /************************************************/
 
 @interface GLMaxOperation : GLVariableOperation
-
+- (GLMaxOperation *) initWithFunction: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -111,7 +112,7 @@
 
 @interface GLAverageOperation : GLVariableOperation
 
-- (id) initWithOperand: (GLVariable *) variable dimensionIndex: (NSUInteger) index;
+- (GLAverageOperation *) initWithFunction: (GLVariable *) variable dimensionIndex: (NSUInteger) index;
 @property NSUInteger dimIndex;
 
 @end

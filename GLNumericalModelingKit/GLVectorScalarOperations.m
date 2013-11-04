@@ -212,7 +212,6 @@
 
 @implementation GLPowerOperation
 
-#warning GLPowerOperation remains unoptimized
 - (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand
 {
 	if ( [[vOperand class] isSubclassOfClass: [GLLinearTransform class]] ) {

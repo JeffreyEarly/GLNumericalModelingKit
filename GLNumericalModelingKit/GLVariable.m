@@ -17,11 +17,9 @@
 #import "GLVectorScalarOperations.h"
 #import "GLVectorVectorOperations.h"
 #import "GLBasisTransformationOperations.h"
-#import "GLInterpolationOperations.h"
 #import "GLSimpleInterpolationOperations.h"
 #import "GLDimensionalOperations.h"
 
-#import "GLSpectralDifferentialOperatorPool.h"
 #import "GLMemoryPool.h"
 #import "GLNetCDFFile.h"
 
@@ -39,7 +37,7 @@
 #pragma mark GLVariable
 #pragma mark
 
-@interface GLFunction ()
+@interface GLVariable ()
 @property(readwrite, assign, nonatomic) NSUInteger nDataPoints;
 @property(readwrite, assign, nonatomic) NSUInteger nDataElements;
 @property(readwrite, assign, nonatomic) NSUInteger dataBytes;
@@ -436,142 +434,116 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark Operations
 #pragma mark
 
-- (GLVariable *) plus: (GLVariable *) otherVariable
-{
-	GLAdditionOperation *operation = [[GLAdditionOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-    operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
-}
-
-- (GLVariable *) minus: (GLVariable *) otherVariable
-{
-	GLSubtractionOperation *operation = [[GLSubtractionOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-    operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
-}
-
-- (GLVariable *) times: (GLVariable *) otherVariable
-{
-	GLMultiplicationOperation *operation;
-	if (prefersSpatialMultiplication) {
-		operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: [self spatialDomain] secondOperand: [otherVariable spatialDomain]];
-	} else {
-		operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-	}
-    operation = [self replaceWithExistingOperation: operation];
-	return operation.result;	
-}
-
 - (GLVariable *) multiply: (GLVariable *) otherVariable
 {
 	GLMultiplicationOperation *operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;	
+	return operation.result[0];
 }
 
 - (GLVariable *) dividedBy: (GLVariable *) otherVariable
 {
 	GLDivisionOperation *operation = [[GLDivisionOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) dot: (GLVariable *) otherVariable
 {
 	GLDotProductOperation *operation = [[GLDotProductOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;	
+	return operation.result[0];
 }
 
 - (GLVariable *) absMax: (GLVariable *) otherVariable
 {
 	GLAbsoluteLargestOperation *operation = [[GLAbsoluteLargestOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;	
+	return operation.result[0];
 }
 
 - (GLVariable *) exponentiate
 {	
-	GLExponentialOperation *operation = [[GLExponentialOperation alloc] initWithOperand: self];
+	GLExponentialOperation *operation = [[GLExponentialOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
-    return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) sin
 {	
-	GLSineOperation *operation = [[GLSineOperation alloc] initWithOperand: self];
+	GLSineOperation *operation = [[GLSineOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
-    return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) cos
 {	
-	GLCosineOperation *operation = [[GLCosineOperation alloc] initWithOperand: self];
+	GLCosineOperation *operation = [[GLCosineOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
-    return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) atan
 {
-	GLInverseTangentOperation *operation = [[GLInverseTangentOperation alloc] initWithOperand: self];
+	GLInverseTangentOperation *operation = [[GLInverseTangentOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
-    return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) sqrt
 {	
-	GLSquareRootOperation *operation = [[GLSquareRootOperation alloc] initWithOperand: self];
+	GLSquareRootOperation *operation = [[GLSquareRootOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
-    return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) negate
 {
-	GLNegationOperation *operation = [[GLNegationOperation alloc] initWithOperand: self];
+	GLNegationOperation *operation = [[GLNegationOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
-    return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) abs
 {
-	GLAbsoluteValueOperation *operation = [[GLAbsoluteValueOperation alloc] initWithOperand: self];
+	GLAbsoluteValueOperation *operation = [[GLAbsoluteValueOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
-    return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) scalarAdd: (GLFloat) aScalar
 {
 	GLScalarAddOperation *operation = [[GLScalarAddOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) scalarMultiply: (GLFloat) aScalar
 {	
 	GLScalarMultiplyOperation *operation = [[GLScalarMultiplyOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) scalarDivide: (GLFloat) aScalar
 {
 	GLScalarDivideOperation *operation = [[GLScalarDivideOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;	
+	return operation.result[0];
 }
 
 - (GLVariable *) scalarMax: (GLFloat) aScalar
 {
 	GLScalarThresholdOperation *operation = [[GLScalarThresholdOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;	
+	return operation.result[0];
 }
 
 - (GLVariable *) zeroThreshold: (GLFloat) aScalar
 {
 	GLZeroThresholdOperation *operation = [[GLZeroThresholdOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (id) clipToMin: (GLFloat) min max: (GLFloat) max
@@ -592,35 +564,35 @@ static BOOL prefersSpatialMultiplication = YES;
 {
 	GLPowerOperation *operation = [[GLPowerOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) max
 {
-	GLMaxOperation *operation = [[GLMaxOperation alloc] initWithOperand: self];
+	GLMaxOperation *operation = [[GLMaxOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) mean: (NSUInteger) index
 {
-	GLAverageOperation *operation = [[GLAverageOperation alloc] initWithOperand: self dimensionIndex: index];
+	GLAverageOperation *operation = [[GLAverageOperation alloc] initWithFunction: self dimensionIndex: index];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (id) setValue: (GLFloat) aScalar atIndices: (NSString *) string
 {
     GLSetValueOperation *operation = [[GLSetValueOperation alloc] initWithVectorOperand: self scalarOperand:aScalar indexString: string];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
-- (id) setVariableValue: (GLVariable *) aScalarVariable atIndices: (NSString *) string
+- (id) setVariableValue: (GLScalar *) aScalarVariable atIndices: (NSString *) string
 {
     GLSetVariableValueOperation *operation = [[GLSetVariableValueOperation alloc] initWithVectorOperand: self scalarVariableOperand: aScalarVariable indexString: string];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) transformToBasis: (NSArray *) orderedBasis
@@ -634,7 +606,7 @@ static BOOL prefersSpatialMultiplication = YES;
 		return self;
 	}
 //    operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) fourierTransform
@@ -669,15 +641,15 @@ static BOOL prefersSpatialMultiplication = YES;
 
 - (GLVariable *) swapComplex
 {
-	GLSwapComplexOperation *operation = [[GLSwapComplexOperation alloc] initWithOperand: self];
+	GLSwapComplexOperation *operation = [[GLSwapComplexOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) duplicate
 {
-	GLCopyVariableOperation *operation = [[GLCopyVariableOperation alloc] initWithOperand: self];
-    return operation.result;
+	GLCopyVariableOperation *operation = [[GLCopyVariableOperation alloc] initWithFunction: self];
+	return operation.result[0];
 }
 
 - (GLVariable *) interpolateAtPoints: (NSArray *) otherVariables
@@ -715,40 +687,40 @@ static BOOL prefersSpatialMultiplication = YES;
 		return self;
 	} else {
 		GLAddDimensionOperation *operation = [[GLAddDimensionOperation alloc] initWithOperand: self dimension: newDimension];
-		return operation.result;
+		return operation.result[0];
 	}
 }
 
-- (GLVariable *) convertToSplitComplex
-{
-	GLHalfToSplitComplexOperation *operation = [[GLHalfToSplitComplexOperation alloc] initWithOperand: self];
-	return operation.result;
-}
+//- (GLVariable *) convertToSplitComplex
+//{
+//	GLHalfToSplitComplexOperation *operation = [[GLHalfToSplitComplexOperation alloc] initWithOperand: self];
+//	return operation.result[0];
+//}
 
 - (GLVariable *) variableFromIndexRangeString: (NSString *) indexString
 {
     NSArray *ranges = [GLDimension rangesFromIndexString: indexString usingDimensions: self.dimensions];
 	GLSubdomainOperation *operation = [[GLSubdomainOperation alloc] initWithOperand: self indexRange: ranges flatten: YES];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) variableFromIndexRange: (NSArray *) ranges
 {
 	GLSubdomainOperation *operation = [[GLSubdomainOperation alloc] initWithOperand: self indexRange: ranges flatten: YES];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) variableByConcatenatingWithVariable: (GLVariable *) otherVariable alongExistingDimension: (GLDimension *) aDim
 {
 	NSUInteger index = [self.dimensions indexOfObject: aDim];
 	GLExistingDimensionConcatenationOperation *operation = [[GLExistingDimensionConcatenationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable dimensionIndex:index];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) variableByConcatenatingWithVariable: (GLVariable *) otherVariable alongNewDimension: (GLDimension *) aDim
 {
 	GLNewDimensionConcatenationOperation *operation = [[GLNewDimensionConcatenationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable dimension: aDim];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (GLVariable *) variableByConcatenatingWithVariable: (GLVariable *) otherVariable alongDimension: (GLDimension *) aDim

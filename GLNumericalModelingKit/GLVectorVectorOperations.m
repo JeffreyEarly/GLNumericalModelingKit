@@ -1163,163 +1163,150 @@
 @end
 
 /************************************************/
-/*		GLAbsoluteLargestOperation				*/
-/************************************************/
-// variable = max( abs(leftVariable), abs(rightVariable ) element-wise
-
-@implementation GLAbsoluteLargestOperation
-
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand
-{
-	if (( self = [super initWithFirstOperand:fOperand secondOperand:sOperand] )) {
-		self.result.isPurelyReal = self.firstOperand.isPurelyReal && self.secondOperand.isPurelyReal;
-		self.result.isPurelyImaginary = self.firstOperand.isPurelyImaginary && self.secondOperand.isPurelyImaginary;
-		
-		if (!self.firstOperand.dimensions.count && !self.secondOperand.dimensions.count)
-		{ // scalar-scalar multiplication
-			[NSException raise: @"MethodNotImplemented" format: @"This case has not yet been implemented."];
-		}
-		else if (!self.firstOperand.dimensions.count && self.secondOperand.dimensions.count)
-		{ // scalar-vector multiplication
-			if (!self.firstOperand.isComplex) {
-				NSUInteger nDataElements = self.secondOperand.nDataElements;
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-					vGL_vthr( (GLFloat *) sOperand.bytes, 1, (GLFloat *) fOperand.bytes, result.mutableBytes, 1, nDataElements);
-				};
-                self.graphvisDescription = [NSString stringWithFormat: @"element-wise max (real scalar, other)"];
-			}
-		}
-		else if (self.firstOperand.dimensions.count && !self.secondOperand.dimensions.count)
-		{ // vector-scalar multiplication
-			if (!self.secondOperand.isComplex) {
-				NSUInteger nDataElements = self.firstOperand.nDataElements;
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-					vGL_vthr( (GLFloat *) fOperand.bytes, 1, (GLFloat *) sOperand.bytes, result.mutableBytes, 1, nDataElements);
-				};
-                self.graphvisDescription = [NSString stringWithFormat: @"element-wise max (other, real scalar)"];
-			}
-		}
-		else
-		{
-			NSUInteger nDataElements = self.result.nDataElements;
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				vGL_vmaxmg( (GLFloat *) sOperand.bytes, 1, (GLFloat *) fOperand.bytes, 1, result.mutableBytes, 1, nDataElements);
-			};
-            self.graphvisDescription = [NSString stringWithFormat: @"element-wise max"];
-		}
-    }
-    return self;
-}
-
-- (BOOL) canOperateInPlace {
-	return YES;
-}
-
-@end
-
-/************************************************/
 /*		GLDivisionOperation						*/
 /************************************************/
 // variable = leftVariable / rightVariable
 @implementation GLDivisionOperation
 
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand {
-	return [self initWithFirstOperand: fOperand secondOperand: sOperand shouldUseComplexArithmetic: YES];
+- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B {
+	return [self initWithFirstOperand: A secondOperand: B shouldUseComplexArithmetic: YES];
 }
 
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand shouldUseComplexArithmetic: (BOOL) useComplexArithmetic
+- (id) initWithFirstOperand: (GLTensor *) op1 secondOperand: (GLTensor *) op2 shouldUseComplexArithmetic: (BOOL) useComplexArithmetic
 {
-	BOOL complexResult = fOperand.isComplex || sOperand.isComplex;
-	GLDataFormat format = complexResult ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLVariable *resultVariable = [[fOperand class] variableOfType: format withDimensions: fOperand.dimensions.count ? fOperand.dimensions : sOperand.dimensions forEquation: fOperand.equation];
+	GLDataFormat format = (op1.isPurelyReal && op2.isPurelyReal) ? kGLRealDataFormat : kGLSplitComplexDataFormat;
+	GLTensor *result;
+	variableOperation operation;
+	NSString *graphvisDescription;
 	
-	if (( self = [super initWithResult: resultVariable firstOperand:fOperand secondOperand: sOperand] ))
-	{
-		self.result.isPurelyReal = self.firstOperand.isPurelyReal && self.secondOperand.isPurelyReal;
-        self.useComplexArithmetic = useComplexArithmetic;
+	if (op1.rank == 0 && op2.rank == 0)
+	{	// c = a / b
+		result = [[GLScalar alloc] initWithType: format forEquation: op1.equation];
+		result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
+		result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 		
-		if (!self.firstOperand.dimensions.count && !self.secondOperand.dimensions.count)
-		{ // scalar-scalar division
-			if (!self.firstOperand.isComplex && !self.secondOperand.isComplex) {
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-					GLFloat *a = (GLFloat *) fOperand.bytes;
-					GLFloat *b = (GLFloat *) sOperand.bytes;
-					GLFloat *c = (GLFloat *) result.mutableBytes;
-					*c = (*a) / (*b);
-				};
-                self.graphvisDescription = @"division (real scalar, real scalar)";
-			} else {
-				[NSException raise: @"MethodNotImplemented" format: @"This case has not yet been implemented."];
-			}
+		if ( !op1.isComplex && !op2.isComplex) {
+			graphvisDescription = [NSString stringWithFormat: @"division (real scalar, real scalar)"];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *a = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *b = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *c = (GLFloat *) [resultArray[0] bytes];
+				*c = (*a) / (*b);
+			};
+		} else if ( !op1.isComplex && op2.isComplex) {
+			graphvisDescription = [NSString stringWithFormat: @"division (real scalar, complex scalar)"];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *a = (GLFloat *) [operandArray[0] bytes];
+				GLFloatComplex *b = (GLFloatComplex *) [operandArray[1] bytes];
+				GLFloatComplex *c = (GLFloatComplex *) [resultArray[0] bytes];
+				*c = (*a) / (*b);
+			};
+		} else if ( op1.isComplex && !op2.isComplex) {
+			graphvisDescription = [NSString stringWithFormat: @"division (complex scalar, real scalar)"];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloatComplex *a = (GLFloatComplex *) [operandArray[0] bytes];
+				GLFloat *b = (GLFloat *) [operandArray[1] bytes];
+				GLFloatComplex *c = (GLFloatComplex *) [resultArray[0] bytes];
+				*c = (*a) / (*b);
+			};
+		} else {
+			graphvisDescription = [NSString stringWithFormat: @"division (complex scalar, complex scalar)"];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloatComplex *a = (GLFloatComplex *) [operandArray[0] bytes];
+				GLFloatComplex *b = (GLFloatComplex *) [operandArray[1] bytes];
+				GLFloatComplex *c = (GLFloatComplex *) [resultArray[0] bytes];
+				*c = (*a) / (*b);
+			};
 		}
-		else if (!self.firstOperand.dimensions.count && self.secondOperand.dimensions.count)
-		{ // scalar-vector multiplication
-			if (!self.firstOperand.isComplex && !self.secondOperand.isComplex)  {
-				NSUInteger nDataElements = self.secondOperand.nDataElements;
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-					vGL_svdiv( (GLFloat *)fOperand.bytes, (GLFloat *)sOperand.bytes, 1, result.mutableBytes, 1, nDataElements);
-				};
-                self.graphvisDescription = @"division (real scalar, real vector)";
-			} else {
-				[NSException raise: @"MethodNotImplemented" format: @"This case has not yet been implemented."];
-			}
-		}
-		else if (self.firstOperand.dimensions.count && !self.secondOperand.dimensions.count)
-		{ // vector-scalar multiplication
-			if (!self.firstOperand.isComplex && !self.secondOperand.isComplex)  {
-				NSUInteger nDataElements = self.firstOperand.nDataElements;
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-					vGL_svdiv( (GLFloat *)sOperand.bytes, (GLFloat *)fOperand.bytes, 1, result.mutableBytes, 1, nDataElements);
-				};
-                self.graphvisDescription = @"division (real vector, real scalar)";
-			} else {
-				[NSException raise: @"MethodNotImplemented" format: @"This case has not yet been implemented."];
-			}
-		}
-		else
-		{
-			if (!self.firstOperand.isComplex && !self.secondOperand.isComplex) {
-				NSUInteger nDataElements = self.secondOperand.nDataElements;
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-					vGL_vdiv( (GLFloat *) sOperand.bytes, 1, (GLFloat *) fOperand.bytes, 1, result.mutableBytes, 1, nDataElements);
-				};
-                self.graphvisDescription = @"division (real, real)";
-			} else if (self.firstOperand.isComplex && self.secondOperand.isComplex && useComplexArithmetic == NO) {
-				NSUInteger nDataPoints = self.result.nDataPoints;
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-					
-					GLSplitComplex leftComplex = splitComplexFromData( fOperand );
-					GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-					GLSplitComplex destComplex = splitComplexFromData( result );
-					
-					vGL_vdiv( rightComplex.realp, 1, leftComplex.realp, 1, destComplex.realp, 1, nDataPoints);
-					vGL_vdiv( rightComplex.imagp, 1, leftComplex.imagp, 1, destComplex.imagp, 1, nDataPoints);
-				};
-                self.graphvisDescription = @"element-wise division (complex, complex)";
-			} else if (self.firstOperand.isComplex && !self.secondOperand.isComplex && useComplexArithmetic == YES ) {
-				NSUInteger nDataPoints = self.result.nDataPoints;
-				self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-					
-					GLSplitComplex leftComplex = splitComplexFromData( fOperand );
-					GLFloat *right = (GLFloat *)sOperand.bytes;
-					GLSplitComplex destComplex = splitComplexFromData( result );
-					
-					// C = B/A
-					vGL_vdiv( right, 1, leftComplex.realp, 1, destComplex.realp, 1, nDataPoints);
-					vGL_vdiv( right, 1, leftComplex.imagp, 1, destComplex.imagp, 1, nDataPoints);
-				};
-                self.graphvisDescription = @"division (complex, complex)";
-			}
-			else {
-				[NSException raise: @"MethodNotImplemented" format: @"This case has not yet been implemented."];
-			}
-		}
+	}
+	else if (op1.rank == 0 && op2.rank == 1)
+	{	// C^i = a / B^i
+		GLVariable *func2 = (GLVariable *) op2;
+		result = [GLVariable variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+		result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
+		result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 		
-		
+		if ( !op1.isComplex && !op2.isComplex) {
+			// C = a_real / B_real;
+			graphvisDescription = [NSString stringWithFormat: @"division (real scalar, real function)"];
+		} else if ( !op1.isComplex && op2.isComplex) {
+			// C = a_real / B_complex;
+			graphvisDescription = [NSString stringWithFormat: @"division (real scalar, complex function)"];
+		} else if ( op1.isComplex && !op2.isComplex) {
+			// C = a_complex / B_real
+			graphvisDescription = [NSString stringWithFormat: @"division (complex scalar, real function)"];
+		} else {
+			// C = a_complex / B_complex
+			graphvisDescription = [NSString stringWithFormat: @"division (complex scalar, complex function)"];
+		}
+	}
+	else if (op1.rank == 0 && op2.rank == 1)
+	{	// C^i = A^i / b
+		// This is just multiplication by a scalar 1/b.
 		
 	}
-
-	return self;
+	else if (op1.rank == 1 && op2.rank == 1)
+	{	// C^i = A^i / B^i
+		GLVariable *func1 = (GLVariable *) op1;
+		GLVariable *func2 = (GLVariable *) op2;
+		
+		if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
+			[NSException raise: @"DimensionsNotEqualException" format: @"Cannot add two functions of different dimensions"];
+		}
+		NSUInteger nDataPoints = op1.nDataPoints;
+		if ( !op1.isComplex && !op2.isComplex) {
+			// C = A_real / B_real;
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+				vGL_vdiv( B, 1, A, 1, C, 1, nDataPoints); // Note that vdiv does: C = B / A
+			};
+			graphvisDescription = [NSString stringWithFormat: @"division (real function, real function)"];
+		} else if ( !op1.isComplex && op2.isComplex) {
+			// C = A_real / B_complex;
+			graphvisDescription = [NSString stringWithFormat: @"division (real function, complex function)"];
+		} else if ( op1.isComplex && !op2.isComplex) {
+			// C = A_complex / B_real
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData([operandArray[0] bytes]);
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLSplitComplex C = splitComplexFromData([resultArray[0] bytes]);
+				vGL_vdiv( B, 1, A.realp, 1, C.realp, 1, nDataPoints); // Note that vdiv does: C = B / A
+				vGL_vdiv( B, 1, A.imagp, 1, C.imagp, 1, nDataPoints); // Note that vdiv does: C = B / A
+			};
+			graphvisDescription = [NSString stringWithFormat: @"division (complex function, real function)"];
+		} else {
+			// C = A_complex / B_complex
+			if (useComplexArithmetic) {
+				operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					GLSplitComplex A = splitComplexFromData([operandArray[0] bytes]);
+					GLSplitComplex B = splitComplexFromData([operandArray[1] bytes]);
+					GLSplitComplex C = splitComplexFromData([resultArray[0] bytes]);
+					vGL_zvdiv( &B, 1, &A, 1, &C, 1, nDataPoints); // Note that vdiv does: C = B / A
+				};
+				graphvisDescription = [NSString stringWithFormat: @"division (complex function, complex function)"];
+			} else {
+				operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+					GLSplitComplex A = splitComplexFromData([operandArray[0] bytes]);
+					GLSplitComplex B = splitComplexFromData([operandArray[1] bytes]);
+					GLSplitComplex C = splitComplexFromData([resultArray[0] bytes]);
+					vGL_vdiv( B.realp, 1, A.realp, 1, C.realp, 1, nDataPoints);
+					vGL_vdiv( B.imagp, 1, A.imagp, 1, C.imagp, 1, nDataPoints);
+				};
+				graphvisDescription = [NSString stringWithFormat: @"element-wise division (complex function, complex function)"];
+			}
+		}
+	}
+	
+	if (!operation) {
+		[NSException raise: @"UnableToFindImplementation" format: @"Cannot find the implementation for this operation."];
+	}
+	
+	if (( self = [super initWithResult: @[result] operand: @[op1, op2] buffers: @[] operation: operation] )) {
+		self.graphvisDescription = graphvisDescription;
+    }
+    return self;
 }
 
 - (BOOL) isEqualToOperation: (id) otherOperation {
@@ -1338,6 +1325,84 @@
 @end
 
 /************************************************/
+/*		GLAbsoluteLargestOperation				*/
+/************************************************/
+// variable = max( abs(leftVariable), abs(rightVariable ) element-wise
+
+@implementation GLAbsoluteLargestOperation
+
+- (id) initWithFirstOperand: (GLTensor *) fOperand secondOperand: (GLTensor *) sOperand;
+{
+	if (sOperand.rank != fOperand.rank) {
+		[NSException raise: @"RankMismatch" format: @"Both tensors must be of the same rank."];
+	}
+	
+	if (fOperand.isComplex != sOperand.isComplex) {
+		[NSException raise: @"FormatMismatch" format: @"Both tensors must be in the same format."];
+	}
+	
+    // We order the operands so that scalars are always in the first position.
+    // We can do this in this case because order doesn't matter for addition.
+    GLTensor *op1 = (sOperand.rank < fOperand.rank) ? sOperand : fOperand;
+    GLTensor *op2 = (sOperand.rank < fOperand.rank) ? fOperand : sOperand;
+    GLTensor *result;
+	NSUInteger nDataElements = op1.nDataElements;
+	NSString *graphvisDescription;
+	
+	if (fOperand.rank == 0)
+	{
+		result = [[GLScalar alloc] initWithType: fOperand.dataFormat forEquation: op1.equation];
+		graphvisDescription = @"element-wise max (scalar)";
+	}
+	else if (fOperand.rank == 1)
+	{
+		GLVariable *func1 = (GLVariable *) fOperand;
+		GLVariable *func2 = (GLVariable *) sOperand;
+		if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
+			[NSException raise: @"DimensionsNotEqualException" format: @"Cannot compare two functions of different dimensions"];
+		}
+		result = [[GLVariable alloc] initVariableOfType: func1.dataFormat withDimensions: func1.dimensions forEquation:func1.equation];
+		graphvisDescription = @"element-wise max (function)";
+	}
+	else if (fOperand.rank == 2)
+	{
+		GLLinearTransform *A = (GLLinearTransform *) fOperand;
+		GLLinearTransform *B = (GLLinearTransform *) sOperand;
+		if ( ![A.fromDimensions isEqualToArray: B.fromDimensions] ) {
+			[NSException raise: @"DimensionsNotEqualException" format: @"When comparing two matrices, the fromDimensions of A, must equal the fromDimensions of B."];
+		}
+		if ( ![A.toDimensions isEqualToArray: B.toDimensions] ) {
+			[NSException raise: @"DimensionsNotEqualException" format: @"When comparing two matrices, the toDimensions of A, must equal the toDimensions of B."];
+		}
+		if ( ![A.matrixDescription isEqualToMatrixDescription: B.matrixDescription] ) {
+			[NSException raise: @"UnsupportedMatrixFormatException" format: @"Cannot compare two matrices in different formats using this operation."];
+		}
+		result = [GLLinearTransform transformOfType: B.dataFormat withFromDimensions: B.fromDimensions toDimensions:B.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
+		graphvisDescription = @"element-wise max (matrix)";
+	}
+	result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
+	result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
+	
+	variableOperation operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+		GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+		GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+		GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+		vGL_vmaxmg( A, 1, B, 1, C, 1, nDataElements);
+	};
+	
+	if (( self = [super initWithResult: @[result] operand: @[op1, op2] buffers: @[] operation: operation] )) {
+		self.graphvisDescription = graphvisDescription;
+    }
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end
+
+/************************************************/
 /*		GLDotProductOperation					*/
 /************************************************/
 
@@ -1345,38 +1410,62 @@
 
 - (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand {
 	
-	BOOL complexResult = fOperand.isComplex || sOperand.isComplex;
-	GLDataFormat format = complexResult ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLVariable *resultVariable = [GLVariable variableOfType: format withDimensions: [NSArray array] forEquation: fOperand.equation];
-	
-	if (( self = [super initWithResult: resultVariable firstOperand:fOperand secondOperand: sOperand] ))
-	{
-		self.result.isPurelyReal = self.firstOperand.isPurelyReal && self.secondOperand.isPurelyReal;
-		NSUInteger nDataPoints = self.firstOperand.nDataPoints;
-		
-		if (!self.firstOperand.isComplex && !self.secondOperand.isComplex) {
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				vGL_dotpr( fOperand.bytes, 1, sOperand.bytes, 1, result.mutableBytes, nDataPoints);
-			};
-            self.graphvisDescription = @"dot (real, real)";
-		} else if (self.firstOperand.isComplex && self.secondOperand.isComplex) {
-			
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				
-				GLSplitComplex leftComplex = splitComplexFromData( fOperand );
-				GLSplitComplex rightComplex = splitComplexFromData( sOperand );
-				GLSplitComplex destComplex = splitComplexFromData( result );
-				
-				vGL_zdotpr( &leftComplex, 1, &rightComplex, 1, &destComplex, nDataPoints );
-			};
-            self.graphvisDescription = @"dot (complex, complex)";
-		} else {
-			[NSException raise: @"MethodNotImplemented" format: @"This case has not yet been implemented."];
-		}
-		
+	if ( ![fOperand.dimensions isEqualToArray: sOperand.dimensions] ) {
+		[NSException raise: @"DimensionsNotEqualException" format: @"Cannot dot two functions of different dimensions"];
 	}
 	
-	return self;
+	GLDataFormat format = fOperand.isComplex || sOperand.isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	GLScalar *result = [[GLScalar alloc] initWithType: format forEquation: fOperand.equation];
+	
+	GLVariable *op1 = (GLVariable *) fOperand;
+	GLVariable *op2 = (GLVariable *) sOperand;
+	variableOperation operation;
+	NSString *graphvisDescription;
+	NSUInteger nDataPoints = op1.nDataPoints;
+	
+	if ( !op1.isComplex && !op2.isComplex) {
+		// C = A_real • B_real;
+		operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+			GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+			GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+			vGL_dotpr( A, 1, B, 1, C, nDataPoints);
+		};
+		graphvisDescription = [NSString stringWithFormat: @"dot (real function, real function)"];
+	} else if ( !op1.isComplex && op2.isComplex) {
+		// C = A_real • B_complex;
+		operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+			GLSplitComplex B = splitComplexFromData([operandArray[1] bytes]);
+			GLFloatComplex *c = (GLFloatComplex *) [resultArray[0] bytes];
+			GLFloat *c_realp = (GLFloat *) c;
+			vGL_dotpr( A, 1, B.realp, 1, c_realp, nDataPoints);
+		};
+		graphvisDescription = [NSString stringWithFormat: @"dot (real function, complex function)"];
+	} else if ( op1.isComplex && !op2.isComplex) {
+		// C = A_complex / B_real
+		operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			GLSplitComplex A = splitComplexFromData([operandArray[0] bytes]);
+			GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+			GLFloatComplex *c = (GLFloatComplex *) [resultArray[0] bytes];
+			GLFloat *c_realp = (GLFloat *) c;
+			vGL_dotpr( A.realp, 1, B, 1, c_realp, nDataPoints);
+		};
+		graphvisDescription = [NSString stringWithFormat: @"dot (complex function, real function)"];
+	} else {
+		operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			GLSplitComplex A = splitComplexFromData([operandArray[0] bytes]);
+			GLSplitComplex B = splitComplexFromData([operandArray[1] bytes]);
+			GLSplitComplex C = splitComplexFromData([resultArray[0] bytes]);
+			vGL_zdotpr( &A, 1, &B, 1, &C, nDataPoints );
+		};
+		graphvisDescription = [NSString stringWithFormat: @"dot (complex function, complex function)"];
+	}
+	
+	if (( self = [super initWithResult: @[result] operand: @[op1, op2] buffers: @[] operation: operation] )) {
+		self.graphvisDescription = graphvisDescription;
+    }
+    return self;
 }
 
 @end
@@ -1395,17 +1484,17 @@
 	if (complexResult) [NSException raise: @"MethodNotImplemented" format: @"Complex numbers not implemented here."];
 	
 	GLDataFormat format = complexResult ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLVariable *resultVariable = [GLVariable variableOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
+	GLVariable *result= [GLVariable variableOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
 	
-    if (( self = [super initWithResult: resultVariable firstOperand: variable secondOperand: aScalarVariable]))
+	if (( self = [super initWithResult: @[result] operand: @[variable, aScalarVariable]]))
 	{
         self.indexString = indexString;
         
-        NSUInteger numBytes = self.result.nDataElements*sizeof(GLFloat);
+        NSUInteger numBytes = result.nDataElements*sizeof(GLFloat);
         
-        self.result.name = variable.name;
-		self.result.isPurelyReal = self.firstOperand.isPurelyReal;
-		self.result.isPurelyImaginary = self.firstOperand.isPurelyImaginary;
+        result.name = variable.name;
+		result.isPurelyReal = variable.isPurelyReal;
+		result.isPurelyImaginary = variable.isPurelyImaginary;
         
         if ( variable.dimensions.count == 1 )
 		{
@@ -1414,12 +1503,14 @@
             NSUInteger startIndex = fastRange.location;
             NSUInteger fastIndexLength = fastRange.length;
             
-            self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand)  {
-                GLFloat *toData = (GLFloat *) result.mutableBytes;
+            self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *b = (GLFloat *) [operandArray[1] bytes];
+                GLFloat *toData = (GLFloat *) [resultArray[0] bytes];
                 // first copy the data
-                memcpy( result.mutableBytes, fOperand.bytes,  numBytes );
+                memcpy( toData, A,  numBytes );
                 // then replace the value at the desired indices
-                vGL_vfill( (GLFloat *) sOperand.bytes, &toData[startIndex], 1, fastIndexLength);
+                vGL_vfill( b, &toData[startIndex], 1, fastIndexLength);
             };
             self.graphvisDescription = [NSString stringWithFormat: @"set leftVar=rightVar (1 dim)"];
 		}
@@ -1430,14 +1521,16 @@
             
             NSRange slowRange = [ranges[0] rangeValue];
 			
-            self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				// first copy the data
-				memcpy( result.mutableBytes, fOperand.bytes,  numBytes );
+            self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *b = (GLFloat *) [operandArray[1] bytes];
+                GLFloat *toData = (GLFloat *) [resultArray[0] bytes];
+                // first copy the data
+                memcpy( toData, A,  numBytes );
 				
-                GLFloat *toData = (GLFloat *) result.mutableBytes;
                 dispatch_apply(slowRange.length, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(size_t iteration) {
                     // then replace the value at the desired indices
-                    vGL_vfill( (GLFloat *)sOperand.bytes, &(toData[(slowRange.location + iteration)*fastDimLength + fastRange.location]), 1, fastRange.length);
+                    vGL_vfill( b, &(toData[(slowRange.location + iteration)*fastDimLength + fastRange.location]), 1, fastRange.length);
                     
                 });
             };
@@ -1452,11 +1545,13 @@
             NSRange yrange = [ranges[1] rangeValue];
             NSRange zrange = [ranges[2] rangeValue];
             
-            self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
+            self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *aScalar = (GLFloat *) [operandArray[1] bytes];
+                GLFloat *toData = (GLFloat *) [resultArray[0] bytes];
 				// first copy the data
-				memcpy( result.mutableBytes, fOperand.bytes,  numBytes );
-				GLFloat *aScalar = (GLFloat *) sOperand.bytes;
-                GLFloat *toData = (GLFloat *) result.mutableBytes;
+                memcpy( toData, A,  numBytes );
+				
                 for (NSUInteger i=xrange.location; i<xrange.location+xrange.length; i++) {
                     for (NSUInteger j=yrange.location; j<yrange.location+yrange.length; j++) {
                         for (NSUInteger k=zrange.location; k<zrange.location+zrange.length; k++) {

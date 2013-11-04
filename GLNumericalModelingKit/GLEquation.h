@@ -10,11 +10,9 @@
 
 #import <GLNumericalModelingKit/Precision.h>
 #import <GLNumericalModelingKit/GLVariableOperations.h>
-#import <GLNumericalModelingKit/GLIntegrationOperations.h>
 
 @class GLDimension, GLVariable, GLTensor;
 @interface GLEquation : NSObject
-
 
 // An equation can be thought of as the "controller" of the variables, in the MVC paradigm.
 
@@ -28,8 +26,7 @@
 // Okay, so, let's call these "Derived Variables".
 //
 // Why do we want the controller to know which variables are available? Because this allows simple inspection and inquiry about what can be displayed or recorded.
-// Furthermore, the inspector could also possibly trace back in time, digging into the netcdf file.
-
+// Furthermore, the inspector could also possibly trace back in time, digging into the netcdf file
 
 
 /************************************************/

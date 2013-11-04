@@ -8,7 +8,6 @@
 
 #import "GLOperationOptimizer.h"
 #import "GLMemoryPool.h"
-#import "GLMemoryOptimizer.h"
 
 #import "GLBasisTransformationOperations.h"
 
@@ -48,39 +47,39 @@
 #pragma mark
 
 
-+ (void) addVariable: (GLVariable *) variable toTopVariables: (NSMutableSet *) set
-{
-	GLVariableOperation *operation = variable.lastOperation;
-	
-	if (!operation) {
-		return;
-	} else if ( operation.operationType == kGLUnaryOperation) {
-		GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
-		if (aUnaryOperation.operand.pendingOperations.count) {
-			[self addVariable: aUnaryOperation.operand toTopVariables: set];
-		} else {
-			[set addObject: variable];
-		}
-	} else if ( operation.operationType == kGLBinaryOperation ) {
-		GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
-		if (aBinaryOperation.firstOperand.pendingOperations.count) {
-			[self addVariable: aBinaryOperation.firstOperand toTopVariables: set];
-		} else if (aBinaryOperation.secondOperand.pendingOperations.count) {
-			[self addVariable: aBinaryOperation.secondOperand toTopVariables: set];
-		} else {
-			[set addObject: variable];
-		}
-	}
-}
-
-+ (NSSet *) topVariablesFromVariable: (GLVariable *) variable
-{
-	NSMutableSet *set = [[NSMutableSet alloc] init];
-	
-	[self addVariable: variable toTopVariables: set];
-	
-	return set;
-}
+//+ (void) addVariable: (GLVariable *) variable toTopVariables: (NSMutableSet *) set
+//{
+//	GLVariableOperation *operation = variable.lastOperation;
+//	
+//	if (!operation) {
+//		return;
+//	} else if ( operation.operationType == kGLUnaryOperation) {
+//		GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
+//		if (aUnaryOperation.operand.pendingOperations.count) {
+//			[self addVariable: aUnaryOperation.operand toTopVariables: set];
+//		} else {
+//			[set addObject: variable];
+//		}
+//	} else if ( operation.operationType == kGLBinaryOperation ) {
+//		GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
+//		if (aBinaryOperation.firstOperand.pendingOperations.count) {
+//			[self addVariable: aBinaryOperation.firstOperand toTopVariables: set];
+//		} else if (aBinaryOperation.secondOperand.pendingOperations.count) {
+//			[self addVariable: aBinaryOperation.secondOperand toTopVariables: set];
+//		} else {
+//			[set addObject: variable];
+//		}
+//	}
+//}
+//
+//+ (NSSet *) topVariablesFromVariable: (GLVariable *) variable
+//{
+//	NSMutableSet *set = [[NSMutableSet alloc] init];
+//	
+//	[self addVariable: variable toTopVariables: set];
+//	
+//	return set;
+//}
 
 - (GLOperationOptimizer *) initWithTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables
 {
@@ -218,125 +217,7 @@
 	return success;
 }
 
-- (unaryOperation) unaryOperationBlock
-{
-	if (! [self createExecutionPlan]) {
-		return nil;
-	}
-	if (! [self assignMemoryBuffers]) {
-		return nil;
-	}
-	if (! [self createExecutionBlocks]) {
-		return nil;
-	}
-	
-	if ( self.bottomVariables.count == 1 && self.topVariables.count == 1)
-	{		
-		NSMutableArray *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
-		NSMapTable *parallelExecutionBlocks = [self parallelResponsibilitiesForOperation: (GLVariableOperation *) self];
-		if (groups.count != 0) {
-			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
-		}
-		if (parallelExecutionBlocks.count != 0 ) {
-			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
-		}
-		
-		// All five of these objects will be copied/referenced by the block.
-		dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
-		dispatch_group_t bottomGroup = self.bottomVariableGroup;
-		NSMutableArray *allGroups = [self allGroups];
-		NSArray *internalDataBuffers = self.internalDataBuffers;
-		
-		unaryOperation aBlock = ^(NSMutableData *bottomResult, NSData *topOperand) {			
-			// A unary operation only has one bottom variable, so we only need to entire it once.
-			// The group variable is in the group array, so it will automatically get incremented once.
-			// 1. Increment the group count once.
-			for (dispatch_group_t group in allGroups) {
-				dispatch_group_enter(group);
-			}
-			
-			NSMutableArray *dataBuffers = [[NSMutableArray alloc] initWithObjects: bottomResult, topOperand, nil];
-			[dataBuffers addObjectsFromArray: internalDataBuffers];
-			
-			for ( executionBlock anExecutionBlock in serialExecutionBlocks ) {
-				dispatch_async( globalQueue, ^{
-					anExecutionBlock( dataBuffers );
-				});
-			}
-			
-			dispatch_group_wait(bottomGroup, DISPATCH_TIME_FOREVER);
-		};
-		
-		return aBlock;
-	}
-	else
-	{
-		NSLog(@"Incorrect number of top variables (%lu) or bottom variables (%lu) to create a unaryOperation", self.topVariables.count, self.bottomVariables.count);
-		return nil;
-	}
-}
-
-- (binaryOperation) binaryOperationBlock
-{
-	if (! [self createExecutionPlan]) {
-		return nil;
-	}
-	if (! [self assignMemoryBuffers]) {
-		return nil;
-	}
-	if (! [self createExecutionBlocks]) {
-		return nil;
-	}
-	
-	if ( self.bottomVariables.count == 1 && self.topVariables.count == 2)
-	{		
-		NSMutableArray *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
-		NSMapTable *parallelExecutionBlocks = [self parallelResponsibilitiesForOperation: (GLVariableOperation *) self];
-		if (groups.count != 0) {
-			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
-		}
-		if (parallelExecutionBlocks.count != 0 ) {
-			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
-		}
-		
-		// All five of these objects will be copied/referenced by the block.
-		dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
-		dispatch_group_t bottomGroup = self.bottomVariableGroup;
-		NSMutableArray *allGroups = [self allGroups];
-		NSArray *internalDataBuffers = self.internalDataBuffers;
-		
-		binaryOperation aBlock = ^(NSMutableData *bottomResult, NSData *firstOperand, NSData *secondOperand) {			
-			// A unary operation only has one bottom variable, so we only need to entire it once.
-			// The group variable is in the group array, so it will automatically get incremented once.
-			// 1. Increment the group count once.
-			for (dispatch_group_t group in allGroups) {
-				dispatch_group_enter(group);
-			}
-			
-			NSMutableArray *dataBuffers = [[NSMutableArray alloc] initWithObjects: bottomResult, firstOperand, secondOperand, nil];
-			[dataBuffers addObjectsFromArray: internalDataBuffers];
-			
-			for ( executionBlock anExecutionBlock in serialExecutionBlocks ) {
-				dispatch_async( globalQueue, ^{
-					anExecutionBlock( dataBuffers );
-				});
-			}
-			
-			dispatch_group_wait(bottomGroup, DISPATCH_TIME_FOREVER);
-		};
-		
-		return aBlock;
-	}
-	else
-	{
-		NSLog(@"Incorrect number of top variables (%lu) or bottom variables (%lu) to create a unaryOperation", self.topVariables.count, self.bottomVariables.count);
-		return nil;
-	}
-}
-
-- (unaryVectorOperation) unaryVectorOperationBlock
+- (variableOperation) operationBlock
 {
 	if (! [self createExecutionPlan]) {
 		return nil;
@@ -368,7 +249,7 @@
 		NSMutableArray *allGroups = [self allGroups];
 		NSArray *internalDataBuffers = self.internalDataBuffers;
 				
-		unaryVectorOperation aBlock = ^(NSArray *bottomBuffers, NSArray *topBuffers) {
+		variableOperation aBlock = ^(NSArray *bottomBuffers, NSArray *topBuffers, NSArray *internalBuffers) {
 			
 			// A unary operation only has one bottom variable, so we only need to entire it once.
 			// The group variable is in the group array, so it will automatically get incremented once.
@@ -506,29 +387,12 @@
 	// We now determine the responsibilities of each parent.
 	// See the documentation for an explanation of the algorithm.
 	BOOL success = NO;
-	NSMutableArray *operands = [[NSMutableArray alloc] init];
-	
-	if (operation.operationType == kGLUnaryOperation) {
-		GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
-		[operands addObject: aUnaryOperation.operand];
-	} else if (operation.operationType == kGLBinaryOperation) {
-		GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
-		[operands addObject: aBinaryOperation.firstOperand];
-		[operands addObject: aBinaryOperation.secondOperand];
-	} else if (operation.operationType == kGLUnaryVectorOperation) {
-		GLUnaryVectorOperation *aUnaryVectorOperation = (GLUnaryVectorOperation *) operation;
-		[operands addObjectsFromArray: aUnaryVectorOperation.operand];
-	} else if (operation.operationType == kGLBinaryVectorOperation) {
-		GLBinaryVectorOperation *aBinarVectorOperation = (GLBinaryVectorOperation *) operation;
-		[operands addObjectsFromArray: aBinarVectorOperation.firstOperand];
-		[operands addObjectsFromArray: aBinarVectorOperation.secondOperand];
-	}
 	
 	NSMutableArray *topVariableOperands = [[NSMutableArray alloc] init];
 	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
 	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
 	
-	for (GLVariable *aVariable in operands) {
+	for (GLVariable *aVariable in operation.operand) {
 		if ( [topVariables containsObject: aVariable] ) {
 			[topVariableOperands addObject: aVariable];
 		} else if ( aVariable.pendingOperations.count == 0 ) {
@@ -548,7 +412,7 @@
 	
 	if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
 		NSLog(@"This operation depends only on precomputed variables. We have not yet implemented the appropriate optimization to deal with this.");
-	} else if ( operation.operationType == kGLNullaryOperation ) {
+	} else if ( operation.operand.count == 0 ) {
 		[self incrementSerialBlockCountForOperation: (GLVariableOperation *) self];
 	} else if ( topVariableOperands.count && !otherVariableOperandOperations.count ) {
 		[self incrementSerialBlockCountForOperation: (GLVariableOperation *) self];
@@ -581,29 +445,11 @@
 	
 	// We now determine the responsibilities of each parent.
 	// See the documentation for an explanation of the algorithm.
-	NSMutableArray *operands = [[NSMutableArray alloc] init];
-	
-	if (operation.operationType == kGLUnaryOperation) {
-		GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
-		[operands addObject: aUnaryOperation.operand];
-	} else if (operation.operationType == kGLBinaryOperation) {
-		GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
-		[operands addObject: aBinaryOperation.firstOperand];
-		[operands addObject: aBinaryOperation.secondOperand];
-	} else if (operation.operationType == kGLUnaryVectorOperation) {
-		GLUnaryVectorOperation *aUnaryVectorOperation = (GLUnaryVectorOperation *) operation;
-		[operands addObjectsFromArray: aUnaryVectorOperation.operand];
-	} else if (operation.operationType == kGLBinaryVectorOperation) {
-		GLBinaryVectorOperation *aBinarVectorOperation = (GLBinaryVectorOperation *) operation;
-		[operands addObjectsFromArray: aBinarVectorOperation.firstOperand];
-		[operands addObjectsFromArray: aBinarVectorOperation.secondOperand];
-	}
-	
 	NSMutableArray *topVariableOperands = [[NSMutableArray alloc] init];
 	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
 	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
 	
-	for (GLVariable *aVariable in operands) {
+	for (GLVariable *aVariable in operation.operand) {
 		if ( [topVariables containsObject: aVariable] ) {
 			[topVariableOperands addObject: aVariable];
 		} else if ( aVariable.pendingOperations.count == 0 ) {
@@ -674,50 +520,20 @@
 		
 		// Now we work further up the tree and deal with the parents.
 		GLVariableOperation *operation = variable.lastOperation;
-		if (operation.operationType == kGLNullaryOperation)
-		{
-			return YES;
+
+		BOOL success = YES;
+		for (GLVariable *aVariable in operation.operand) {
+			success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
 		}
-		else if (operation.operationType == kGLUnaryOperation)
-		{
-			GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
-			return [self assignUnoptimizedMemoryBufferToVariable: aUnaryOperation.operand forTopVariables: topVariables bottomVariables: bottomVariables];
+		
+		// If one of the result variables of an operation does not get used, it will not appear in this graph. However, it still needs a data buffer as the operation needs to write somewhere.
+#warning Might need to rethink this. Does this make sense anymore?
+		for (GLVariable *aVariable in operation.result) {
+			success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
 		}
-		else if (operation.operationType == kGLBinaryOperation)
-		{
-			GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
-			
-			// Do NOT put these methods into one if (a && b) call, otherwise the second one may not get executed. They
-			// need to execute every time!
-			BOOL a = [self assignUnoptimizedMemoryBufferToVariable: aBinaryOperation.firstOperand forTopVariables: topVariables bottomVariables: bottomVariables];
-			BOOL b = [self assignUnoptimizedMemoryBufferToVariable: aBinaryOperation.secondOperand forTopVariables: topVariables bottomVariables: bottomVariables];
-			
-			return a && b;
-		}
-		else if (operation.operationType == kGLUnaryVectorOperation) {
-			GLUnaryVectorOperation *aUnaryVectorOperation = (GLUnaryVectorOperation *) operation;
-			BOOL success = YES;
-			for (GLVariable *aVariable in aUnaryVectorOperation.operand) {
-				success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
-			}
-            
-            // If one of the result variables of an operation does not get used, it will not appear in this graph. However, it still needs a data buffer as the operation needs to write somewhere.
-            for (GLVariable *aVariable in aUnaryVectorOperation.result) {
-				success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
-			}
-            
-			return success;
-		} else if (operation.operationType == kGLBinaryVectorOperation) {
-			GLBinaryVectorOperation *aBinaryVectorOperation = (GLBinaryVectorOperation *) operation;
-			BOOL success = YES;
-			for (GLVariable *aVariable in aBinaryVectorOperation.firstOperand) {
-				success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
-			}
-			for (GLVariable *aVariable in aBinaryVectorOperation.secondOperand) {
-				success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
-			}
-			return success;
-		}
+		
+		return success;
+
 		
 		return NO;
 	} else {
@@ -838,30 +654,12 @@
 		return YES;
 	}
 	
-	NSMutableArray *operands = [[NSMutableArray alloc] init];
-	
-	if (operation.operationType == kGLUnaryOperation) {
-		GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
-		[operands addObject: aUnaryOperation.operand];
-	} else if (operation.operationType == kGLBinaryOperation) {
-		GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
-		[operands addObject: aBinaryOperation.firstOperand];
-		[operands addObject: aBinaryOperation.secondOperand];
-	} else if (operation.operationType == kGLUnaryVectorOperation) {
-		GLUnaryVectorOperation *aUnaryVectorOperation = (GLUnaryVectorOperation *) operation;
-		[operands addObjectsFromArray: aUnaryVectorOperation.operand];
-	} else if (operation.operationType == kGLBinaryVectorOperation) {
-		GLBinaryVectorOperation *aBinarVectorOperation = (GLBinaryVectorOperation *) operation;
-		[operands addObjectsFromArray: aBinarVectorOperation.firstOperand];
-		[operands addObjectsFromArray: aBinarVectorOperation.secondOperand];
-	}
-	
 	// Sort the operands into categories
 	NSMutableArray *topVariableOperands = [[NSMutableArray alloc] init];
 	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
 	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
 	
-	for (GLVariable *aVariable in operands) {
+	for (GLVariable *aVariable in operation.operand) {
 		if ( [topVariables containsObject: aVariable] ) {
 			[topVariableOperands addObject: aVariable];
 		} else if ( aVariable.pendingOperations.count == 0 ) {
@@ -920,164 +718,51 @@
                 });
 			};
 			
-			executionBlock theExecutionBlock;
+			NSMutableArray *resultIndices = [[NSMutableArray alloc] init];
+			NSMutableArray *operandIndices = [[NSMutableArray alloc] init];
+			for (GLVariable *aVariable in operation.result) {
+				NSUInteger anIndex = [self.allVariables indexOfObject: aVariable];
+				if (anIndex == NSNotFound) {
+					[NSException raise: @"Invalid index." format: @"The operation is malformed."];
+				} else {
+					[resultIndices addObject: @(anIndex)];
+				}
+			}
+			for (GLVariable *aVariable in operation.operand) {
+				NSUInteger anIndex = [self.allVariables indexOfObject: aVariable];
+				if (anIndex == NSNotFound) {
+					[NSException raise: @"Invalid index." format: @"The operation is malformed."];
+				} else {
+					[operandIndices addObject: @(anIndex)];
+				}
+			}
 			
-			if (operation.operationType == kGLNullaryOperation)
-			{
-				GLNullaryOperation *aNullaryOperation = (GLNullaryOperation *) operation;
-				nullaryOperation operationBlock = [aNullaryOperation blockOperation];
-				
-				NSUInteger resultIndex = [self.allVariables indexOfObject: aNullaryOperation.result];
-				
-				theExecutionBlock = ^( NSArray *dataBuffers ) {
-					NSMutableData *result = [dataBuffers objectAtIndex: resultIndex];
-					
-					// 1. Compute our own operation
-					operationBlock( result );
-					
-					// 2. Send off the children
-					childrenBlock( dataBuffers );
-				};
-			}
-			else if (operation.operationType == kGLUnaryOperation)
-			{
-				GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
-				unaryOperation operationBlock = [aUnaryOperation blockOperation];
-				
-				NSUInteger resultIndex = [self.allVariables indexOfObject: aUnaryOperation.result];
-				NSUInteger operandIndex = [self.allVariables indexOfObject: aUnaryOperation.operand];
-				
-				theExecutionBlock = ^( NSArray *dataBuffers ) {					
-					NSMutableData *result = [dataBuffers objectAtIndex: resultIndex];
-					NSData *operand = [dataBuffers objectAtIndex: operandIndex];
-					
-					// 1. Compute our own operation
-					operationBlock( result, operand );
-					
-					// 2. Send off the children
-					childrenBlock( dataBuffers );
-				};					
-			}
-			else if (operation.operationType == kGLBinaryOperation)
-			{
-				GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
-				binaryOperation operationBlock = [aBinaryOperation blockOperation];
-				
-				NSUInteger resultIndex = [self.allVariables indexOfObject: aBinaryOperation.result];
-				NSUInteger firstOperandIndex = [self.allVariables indexOfObject: aBinaryOperation.firstOperand];
-				NSUInteger secondOperandIndex = [self.allVariables indexOfObject: aBinaryOperation.secondOperand];
-				
-				if (resultIndex == NSNotFound || firstOperandIndex == NSNotFound || secondOperandIndex == NSNotFound) {
-					[NSException raise: @"Invalid index." format: @"The binary operation is malformed."];
+			NSMutableArray *result = [[NSMutableArray alloc] init];
+			NSMutableArray *operand = [[NSMutableArray alloc] init];
+			
+			variableOperation operationBlock = operation.operation;
+			executionBlock theExecutionBlock = ^( NSArray *dataBuffers ) {
+				for (NSNumber *anIndex in resultIndices) {
+					[result addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
 				}
 				
-				theExecutionBlock = ^( NSArray *dataBuffers ) {
-					NSMutableData *result = [dataBuffers objectAtIndex: resultIndex];
-					NSData *firstOperand = [dataBuffers objectAtIndex: firstOperandIndex];
-					NSData *secondOperand = [dataBuffers objectAtIndex: secondOperandIndex];
-					
-					// 1. Compute our own operation
-					operationBlock( result, firstOperand, secondOperand );
-					
-					// 2. Send off the children
-					childrenBlock( dataBuffers );
-				};
-			}
-			else if (operation.operationType == kGLUnaryVectorOperation)
-			{
-				GLUnaryVectorOperation *aUnaryVectorOperation = (GLUnaryVectorOperation *) operation;
-				unaryVectorOperation operationBlock = [aUnaryVectorOperation blockOperation];
-				
-				NSMutableArray *resultIndices = [[NSMutableArray alloc] init];
-				NSMutableArray *operandIndices = [[NSMutableArray alloc] init];
-				for (GLVariable *aVariable in aUnaryVectorOperation.result) {
-                    NSUInteger anIndex = [self.allVariables indexOfObject: aVariable];
-                    if (anIndex == NSNotFound) {
-                        [NSException raise: @"Invalid index." format: @"The operation is malformed."];
-                    } else {
-                        [resultIndices addObject: @(anIndex)];
-                    }     
-				}
-				for (GLVariable *aVariable in aUnaryVectorOperation.operand) {
-                    NSUInteger anIndex = [self.allVariables indexOfObject: aVariable];
-                    if (anIndex == NSNotFound) {
-                        [NSException raise: @"Invalid index." format: @"The operation is malformed."];
-                    } else {
-                        [operandIndices addObject: @(anIndex)];
-                    }
+				for (NSNumber *anIndex in operandIndices) {
+					[operand addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
 				}
 				
-				NSMutableArray *result = [[NSMutableArray alloc] init];
-				NSMutableArray *operand = [[NSMutableArray alloc] init];
+				// 1. Compute our own operation
+				operationBlock( result, operand, @[] );
 				
-				theExecutionBlock = ^( NSArray *dataBuffers ) {
-					for (NSNumber *anIndex in resultIndices) {
-						[result addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
-					}
-					
-					for (NSNumber *anIndex in operandIndices) {
-						[operand addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
-					}
-                    
-					// 1. Compute our own operation
-					operationBlock( result, operand );
-					
-					// 2. Send off the children
-					childrenBlock( dataBuffers );
-                    
-                    [result removeAllObjects];
-                    [operand removeAllObjects];
-				};
-			}
-			else if (operation.operationType == kGLBinaryVectorOperation)
-			{
-				GLBinaryVectorOperation *aBinaryVectorOperation = (GLBinaryVectorOperation *) operation;
-				binaryVectorOperation operationBlock = [aBinaryVectorOperation blockOperation];
+				// 2. Send off the children
+				childrenBlock( dataBuffers );
 				
-				NSMutableArray *resultIndices = [[NSMutableArray alloc] init];
-				NSMutableArray *firstOperandIndices = [[NSMutableArray alloc] init];
-				NSMutableArray *secondOperandIndices = [[NSMutableArray alloc] init];
-				for (GLVariable *aVariable in aBinaryVectorOperation.result) {
-					[resultIndices addObject: [NSNumber numberWithUnsignedInteger: [self.allVariables indexOfObject: aVariable]]];
-				}
-				for (GLVariable *aVariable in aBinaryVectorOperation.firstOperand) {
-					[firstOperandIndices addObject: [NSNumber numberWithUnsignedInteger: [self.allVariables indexOfObject: aVariable]]];
-				}
-				for (GLVariable *aVariable in aBinaryVectorOperation.secondOperand) {
-					[secondOperandIndices addObject: [NSNumber numberWithUnsignedInteger: [self.allVariables indexOfObject: aVariable]]];
-				}
-				
-				NSMutableArray *result = [[NSMutableArray alloc] init];
-				NSMutableArray *firstOperand = [[NSMutableArray alloc] init];
-				NSMutableArray *secondOperand = [[NSMutableArray alloc] init];
-				
-				theExecutionBlock = ^( NSArray *dataBuffers ) {
-					for (NSNumber *anIndex in resultIndices) {
-						[result addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
-					}
-					
-					for (NSNumber *anIndex in firstOperandIndices) {
-						[firstOperand addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
-					}
-					
-					for (NSNumber *anIndex in secondOperandIndices) {
-						[secondOperand addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
-					}
-					
-					// 1. Compute our own operation
-					operationBlock( result, firstOperand, secondOperand );
-					// 2. Send off the children
-					childrenBlock( dataBuffers );
-                    
-                    [result removeAllObjects];
-                    [firstOperand removeAllObjects];
-                    [secondOperand removeAllObjects];
-				};
-			}
+				[result removeAllObjects];
+				[operand removeAllObjects];
+			};
 			
 			if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
 				NSLog(@"This operation depends only on precomputed variables. We have not yet implemented the appropriate optimization to deal with this.");
-			} else if (operation.operationType == kGLNullaryOperation) {
+			} else if (operation.operand.count == 0) {
 				[self addSerialResponsibility: theExecutionBlock forOperation: (GLVariableOperation *) self];
 			} else if ( topVariableOperands.count && !otherVariableOperandOperations.count ) {
 				[self addSerialResponsibility: theExecutionBlock forOperation: (GLVariableOperation *) self];

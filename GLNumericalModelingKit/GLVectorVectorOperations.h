@@ -7,6 +7,7 @@
 //
 
 #import <GLNumericalModelingKit/GLVariableOperations.h>
+#import <GLNumericalModelingKit/GLScalar.h>
 
 /************************************************/
 /*		GLAdditionOperation						*/
@@ -47,37 +48,60 @@
 @end
 
 /************************************************/
-/*		GLAbsoluteLargestOperation				*/
-/************************************************/
-// variable = max( abs(leftVariable), abs(rightVariable ) element-wise
-@interface GLAbsoluteLargestOperation : GLBinaryOperation
-@end
-
-/************************************************/
 /*		GLDivisionOperation						*/
 /************************************************/
-// variable = leftVariable / rightVariable
-@interface GLDivisionOperation : GLBinaryOperation
+/** C = A / B. This operation takes scalar-scalar, scalar-vector and vector-vector arguments.
+ @param A An input scalar or vector.
+ @param B An input scalar or vector
+ @returns The result C.
+ */
+@interface GLDivisionOperation : GLVariableOperation
+
+- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
 
 // You can optionally set useComplexDivision to NO, and it will simply do an element-wise divide, ignoring complex math.
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand shouldUseComplexArithmetic: (BOOL) useComplexArithmetic;
+- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B shouldUseComplexArithmetic: (BOOL) useComplexArithmetic;
 @property BOOL useComplexArithmetic;
 
 @end
 
 /************************************************/
+/*		GLAbsoluteLargestOperation				*/
+/************************************************/
+/** C = max( abs(A), abs(B) ). This operation takes two tensors of the same rank, in the same format. Comparison is element-wise (no complex abs).
+ @param A An input scalar, function, or linear transform.
+ @param B An input scalar, function, or linear transform.
+ @returns The result C, a tensor of the same rank in the same format.
+ */
+@interface GLAbsoluteLargestOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
+@end
+
+
+/************************************************/
 /*		GLDotProductOperation					*/
 /************************************************/
 
-// variable = leftVariable dot rightVariable
-@interface GLDotProductOperation : GLBinaryOperation
+/** C =A • B. This computes the dot product of two functions.
+ @param A An input function.
+ @param B An input function.
+ @returns The result C, a scalar.
+ */
+@interface GLDotProductOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B;
 @end
 
 /************************************************/
 /*		GLSetVariableValueOperation				*/
 /************************************************/
 
-@interface GLSetVariableValueOperation : GLBinaryOperation
-- (id) initWithVectorOperand: (GLVariable *) variable scalarVariableOperand: (GLVariable *) aScalarVariable indexString: (NSString *) indexString;
+/** Sets the given scalar value to the desired index range. The index ranges are given in matlab style format.
+ @param aFunction An existing function.
+ @param aScalar Scalar that you wish to set.
+ @param indexString String indicating the index range.
+ @returns The result C, a function..
+ */
+@interface GLSetVariableValueOperation : GLVariableOperation
+- (id) initWithVectorOperand: (GLVariable *) aFunction scalarVariableOperand: (GLScalar *) aScalar indexString: (NSString *) indexString;
 @property(copy) NSString * indexString;
 @end

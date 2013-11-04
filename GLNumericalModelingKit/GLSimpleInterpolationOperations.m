@@ -21,7 +21,7 @@
 // 4) a vector with 1-fraction.
 // This is designed as the input for the bilinear interpolation algorithm.
 
-@interface GLDimensionalPositionOperation : GLUnaryVectorOperation
+@interface GLDimensionalPositionOperation : GLVariableOperation
 - (id) initWithPositionVector:(GLVariable *)positionVar dimension: (GLDimension *) dimension endPointPointBehavior: (GLInterpolationEndpointBehavior) behavior;
 @property(strong) GLDimension *dimension;
 @end
@@ -57,8 +57,8 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 	if ((self=[super initWithResult: @[lowerIndicesVar, upperIndicesVar, fractionVar, oneMinusFractionVar] operand: @[position]]))
 	{
         self.dimension = dimension;
-		GLFloat minIndex = 0.0;
-		GLFloat maxIndexX = dimension.nPoints-1;
+//		GLFloat minIndex = 0.0;
+//		GLFloat maxIndexX = dimension.nPoints-1;
 		GLFloat nx = dimension.nPoints;
         NSInteger n = dimension.nPoints;
 		
@@ -75,7 +75,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 			
 			if (behavior == kGLTruncationBehavior)
 			{
-				self.blockOperation = ^(NSArray *result, NSArray *operands) {
+				self.operation = ^(NSArray *result, NSArray *operands, NSArray *bufferArray) {
                     GLFloat *positions = (GLFloat *) [operands[0] bytes];
                     
                     GLFloat *lowerIndices = (GLFloat *) [result[0] mutableBytes];
@@ -131,7 +131,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
                 // Say position = -1.25.
                 // We want lower index to have nx-2, and upper index to have nx-1
                 // We want one minus frac to have 0.25 and frac to have 0.75.
-				self.blockOperation = ^(NSArray *result, NSArray *operands) {
+				self.operation = ^(NSArray *result, NSArray *operands, NSArray *bufferArray) {
                     GLFloat *positions = (GLFloat *) [operands[0] bytes];
                     
                     GLFloat *lowerIndices = (GLFloat *) [result[0] mutableBytes];
@@ -166,7 +166,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 			
 			if (behavior == kGLTruncationBehavior)
 			{
-				self.blockOperation = ^(NSArray *result, NSArray *operands) {
+				self.operation = ^(NSArray *result, NSArray *operands, NSArray *bufferArray) {
 					GLFloat *monotonicallyIncreasingValues = (GLFloat *) dimData.bytes;
                     GLFloat *positions = (GLFloat *) [operands[0] bytes];
                     
@@ -192,7 +192,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 			}
 			else if (behavior == kGLPeriodicBehavior)
 			{
-				self.blockOperation = ^(NSArray *result, NSArray *operands) {
+				self.operation = ^(NSArray *result, NSArray *operands, NSArray *bufferArray) {
 					GLFloat *monotonicallyIncreasingValues = (GLFloat *) dimData.bytes;
                     GLFloat *positions = (GLFloat *) [operands[0] bytes];
                     
@@ -244,7 +244,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 @end
 
 
-@interface GLOneDimLinearInterpolationOperation : GLUnaryVectorOperation
+@interface GLOneDimLinearInterpolationOperation : GLVariableOperation
 @end
 
 @implementation GLOneDimLinearInterpolationOperation
@@ -256,7 +256,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 	if (( self = [super initWithResult: @[resultVariable] operand: @[fOperand, lIndices, uIndices, frac]] )) {
 		
         NSUInteger numInterpPoints = frac.nDataPoints;
-		self.blockOperation = ^(NSArray *result, NSArray *operands) {
+		self.operation = ^(NSArray *result, NSArray *operands, NSArray *bufferArray) {
             GLFloat *f = (GLFloat *) [operands[0] bytes];
             GLFloat *lowerIndices = (GLFloat *) [operands[1] bytes];
             GLFloat *upperIndices = (GLFloat *) [operands[2] bytes];
@@ -275,7 +275,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 }
 @end
 
-@interface GLWeightedAverageOperation : GLBinaryVectorOperation
+@interface GLWeightedAverageOperation : GLVariableOperation
 - (id) initWithLeftVariables: (NSArray *) leftVars rightVariables: (NSArray *) rightVars leftWeighting: (GLVariable *) leftWeight rightWeighting: (GLVariable *) rightWeight;
 @end
 
@@ -293,20 +293,23 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
         inputArray[2*i+1] = rightVars[i];
 	}
     
-    if ( (self = [self initWithResult: resultArray firstOperand: inputArray secondOperand: @[leftWeight, rightWeight]]))
+	NSMutableArray *operandArray = [NSMutableArray arrayWithArray:@[leftWeight, rightWeight]];
+	[operandArray addObjectsFromArray: inputArray];
+	
+	if ( (self = [self initWithResult: resultArray operand: operandArray]))
     {
         dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
         NSUInteger numInterpPoints = leftWeight.nDataPoints;
         NSUInteger numInterpFunctions = leftVars.count;
         
-        self.blockOperation = ^(NSArray *result, NSArray *fOperand, NSArray *sOperand)
+		self.operation = ^(NSArray *result, NSArray *operands, NSArray *bufferArray)
         {
-            NSMutableData *left = [sOperand objectAtIndex: 0];
-            NSMutableData *right = [sOperand objectAtIndex: 1];
+            NSMutableData *left = [operands objectAtIndex: 0];
+            NSMutableData *right = [operands objectAtIndex: 1];
             
             dispatch_apply(numInterpFunctions, globalQueue, ^(size_t i){
-                NSMutableData *firstInterpData = [fOperand objectAtIndex: 2*i];
-                NSMutableData *secondInterpData = [fOperand objectAtIndex: 2*i+1];
+                NSMutableData *firstInterpData = [operands objectAtIndex: 2*(i+1)];
+                NSMutableData *secondInterpData = [operands objectAtIndex: 2*(i+1)+1];
                 NSMutableData *resultData = [result objectAtIndex: i];
                 
                 // (1-frac)*firstInterp + frac*secondInterp
@@ -366,7 +369,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 		if (( self = [super init] ))
 		{
 			self.result = partialInterpolations;
-			self.blockOperation = ^(NSArray *result, NSArray *fOperand, NSArray *sOperand) {};
+			self.operation = ^(NSArray *result, NSArray *fOperand, NSArray *sOperand) {};
 		}
 	}
 	else if ( sOperand.count == 2)
@@ -385,11 +388,11 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
         GLVariable *upperIndices1 = indexOperation1.result[1];
         GLVariable *fraction1 = indexOperation1.result[2];
         
-        GLVariable *lowerLower = [[lowerIndices0 scalarMultiply: strides[0].stride] plus: lowerIndices1];
-        GLVariable *lowerUpper = [[lowerIndices0 scalarMultiply: strides[0].stride] plus: upperIndices1];
+        GLVariable *lowerLower = [[lowerIndices0 times: @(strides[0].stride)] plus: lowerIndices1];
+        GLVariable *lowerUpper = [[lowerIndices0 times: @(strides[0].stride)] plus: upperIndices1];
         
-        GLVariable *upperLower = [[upperIndices0 scalarMultiply: strides[0].stride] plus: lowerIndices1];
-        GLVariable *upperUpper = [[upperIndices0 scalarMultiply: strides[0].stride] plus: upperIndices1];
+        GLVariable *upperLower = [[upperIndices0 times: @(strides[0].stride)] plus: lowerIndices1];
+        GLVariable *upperUpper = [[upperIndices0 times: @(strides[0].stride)] plus: upperIndices1];
         
 		NSMutableArray *leftVariables = [[NSMutableArray alloc] init];
         NSMutableArray *rightVariables = [[NSMutableArray alloc] init];
@@ -407,7 +410,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 		if (( self = [super init] ))
 		{
 			self.result = avgOp.result;
-			self.blockOperation = ^(NSArray *result, NSArray *fOperand, NSArray *sOperand) {};
+			self.operation = ^(NSArray *result, NSArray *fOperand, NSArray *sOperand) {};
 		}
 	}
     else if ( sOperand.count == 3)
@@ -475,7 +478,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 		if (( self = [super init] ))
 		{
 			self.result = avgOp.result;
-			self.blockOperation = ^(NSArray *result, NSArray *fOperand, NSArray *sOperand) {};
+			self.operation = ^(NSArray *result, NSArray *fOperand, NSArray *sOperand) {};
 		}
 	}
 	

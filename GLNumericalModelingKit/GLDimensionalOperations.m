@@ -353,12 +353,9 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 	}
 	
 	GLVariable *resultVariable = [GLVariable variableOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
-	if (( self = [super initWithResult: resultVariable firstOperand:fOperand secondOperand:sOperand] )) {
-		self.blockOperation = ^(NSMutableData *result, NSData *operand1, NSData *operand2) {
-			NSLog(@"Oh crap! You just called a function (GLExistingDimensionConcatenationOperation) that isn't yet implemented!");
-		};
-	}
-    
+	if ((self = [super initWithResult: @[resultVariable] operand: @[fOperand, sOperand]])) {
+		[NSException raise: @"NotYetImplemented" format: @"Oh crap! You just called a function (GLExistingDimensionConcatenationOperation) that isn't yet implemented!"];
+    }
     return self;
 }
 
@@ -445,17 +442,17 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 	
 	GLVariable *resultVariable = [GLVariable variableOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
 	
-	if (( self = [super initWithResult:resultVariable firstOperand:fOperand secondOperand:sOperand] )) {
+	if (( self = [super initWithResult: @[resultVariable] operand: @[fOperand,sOperand]] )) {
 		
-		NSUInteger n = self.firstOperand.nDataPoints;
-		size_t nBytes = self.firstOperand.nDataPoints*sizeof(GLFloat);
+		NSUInteger n = fOperand.nDataPoints;
+		size_t nBytes = fOperand.nDataPoints*sizeof(GLFloat);
 		
-		if ( self.result.isComplex )
+		if ( resultVariable.isComplex )
 		{
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-				GLSplitComplex firstData = splitComplexFromData( fOperand );
-				GLSplitComplex secondData = splitComplexFromData( sOperand );
-				GLSplitComplex toData = splitComplexFromData( result );
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex firstData = splitComplexFromData( operandArray[0] );
+				GLSplitComplex secondData = splitComplexFromData( operandArray[1] );
+				GLSplitComplex toData = splitComplexFromData( resultArray[0] );
 				
 				memcpy( toData.imagp, firstData.imagp, nBytes);
 				memcpy( toData.realp, firstData.realp, nBytes);
@@ -464,11 +461,11 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 			};
 		}
 		else {
-			self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				// If the dimension has 0 points, this should be alright.
-				const GLFloat *firstData = fOperand.bytes;
-				const GLFloat *secondData = sOperand.bytes;
-				GLFloat *toData = result.mutableBytes;
+				const GLFloat *firstData = (GLFloat *) [operandArray[0] bytes];;
+				const GLFloat *secondData = (GLFloat *) [operandArray[1] bytes];;
+				GLFloat *toData = (GLFloat *) [operandArray[0] mutableBytes];
 				
 				memcpy( toData, firstData, nBytes);
 				memcpy( &(toData[n]), secondData, nBytes);

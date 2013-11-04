@@ -7,12 +7,12 @@
 //
 
 #import <GLNumericalModelingKit/GLVariableOperations.h>
-#import <GLNumericalModelingKit/GLIntegrationOperations.h>
+#import <GLNumericalModelingKit/GLScalar.h>
 
 // You are computing dy/dt=f(t,y). This block is how you specify f, given the current time (t)
 // and the current point (y).
 // Here the first argument is *scalar* variable t (time).
-//typedef NSArray * (^FfromTYVector)(GLVariable *, NSArray *);
+typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
 
 /************************************************/
 /*		GLRungeKuttaOperation					*/
@@ -22,7 +22,7 @@
 #pragma mark GLRungeKuttaOperation
 #pragma mark
 
-@interface GLRungeKuttaOperation : GLUnaryVectorOperation
+@interface GLRungeKuttaOperation : GLVariableOperation
 
 // Classical 4th order Runge-Kutta time stepping with fixed time step.
 + (id) rungeKutta4AdvanceY: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) aBlock;

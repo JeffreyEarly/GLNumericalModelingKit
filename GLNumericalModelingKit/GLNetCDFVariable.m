@@ -10,7 +10,6 @@
 
 #import "GLDimension.h"
 #import "GLVariableOperations.h"
-#import "GLSpectralDifferentialOperatorPool.h"
 #import "GLMemoryPool.h"
 #import "GLNetCDFFile.h"
 #import "GLNetCDFFetchDataOperation.h"

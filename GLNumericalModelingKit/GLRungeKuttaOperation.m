@@ -17,6 +17,14 @@
 // This type is designed to take an array "y", and then write "f" to the appropriate data chunks that are fixed.
 typedef void (^stagePrepOperation)(NSArray *);
 
+BOOL isFinite( NSData *data, NSUInteger nDataElements )
+{
+	GLFloat *pointerValue = (GLFloat *) data.bytes;
+	for (NSUInteger i=0; i<nDataElements; i++) {
+		if ( !isfinite(pointerValue[i])) return NO;
+	}
+	return YES;
+}
 
 BOOL isZero( NSNumber *a )
 {
@@ -37,10 +45,10 @@ BOOL isOne( NSNumber *a )
 
 @property(nonatomic) GLFloat requestedTime;
 
-@property(strong) GLVariable *stepSizeVariable;
-@property(strong) GLVariable *lastStepSizeVariable;
-@property(strong) GLVariable *currentTimeVariable;
-@property(strong) GLVariable *requestedTimeVariable;
+@property(strong) GLScalar *stepSizeVariable;
+@property(strong) GLScalar *lastStepSizeVariable;
+@property(strong) GLScalar *currentTimeVariable;
+@property(strong) GLScalar *requestedTimeVariable;
 
 @property(strong) NSMutableData *stepSizeData;
 @property(strong) NSMutableData *lastStepSizeData;
@@ -138,10 +146,12 @@ BOOL isOne( NSNumber *a )
 - (id) initWithResult:(NSArray *)result operand:(NSArray *)operand
 {
 	if ((self=[super initWithResult: result operand: operand])) {
-		self.currentTimeVariable = [GLVariable variableOfRealTypeWithDimensions: @[] forEquation: [operand[0] equation]];
-		self.stepSizeVariable = [GLVariable variableOfRealTypeWithDimensions: @[] forEquation: [operand[0] equation]];
-		self.lastStepSizeVariable = [GLVariable variableOfRealTypeWithDimensions: @[] forEquation: [operand[0] equation]];
-		self.requestedTimeVariable = [GLVariable variableOfRealTypeWithDimensions: @[] forEquation: [operand[0] equation]];
+		GLEquation *equation =[operand[0] equation];
+		
+		self.currentTimeVariable = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: equation];
+		self.stepSizeVariable = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: equation];
+		self.lastStepSizeVariable = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: equation];
+		self.requestedTimeVariable = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: equation];
 		
 		self.currentTimeData = self.currentTimeVariable.data;
 		self.stepSizeData = self.stepSizeVariable.data;
@@ -168,10 +178,10 @@ BOOL isOne( NSNumber *a )
 {
 	NSUInteger numStages = a.count;
 	
-	GLVariable *time = [GLVariable variableOfRealTypeWithDimensions: @[] forEquation: [y[0] equation]];
+	GLScalar *time = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [y[0] equation]];
 	NSMutableArray *t = [NSMutableArray arrayWithCapacity: numStages];
 	for (NSUInteger i=0; i<a.count; i++) {
-		t[i] = [time scalarAdd: [a[0] doubleValue]*deltaT];
+		t[i] = [time plus: @([a[0] doubleValue]*deltaT)];
 	}
 	
 	// Store the value at each stage point
@@ -222,7 +232,7 @@ BOOL isOne( NSNumber *a )
 		unaryVectorOperation vectorBlock = optimizer.unaryVectorOperationBlock;
 		NSMutableArray *operandArray = [NSMutableArray arrayWithCapacity: yfull.count];
 		NSMutableData *tData = self.currentTimeData;
-		self.blockOperation = ^(NSArray *result, NSArray *operand) {
+		self.operation = ^(NSArray *result, NSArray *operand, NSArray *bufferArray) {
 			[operandArray addObjectsFromArray: operand];
 			[operandArray addObject: tData];
 			
@@ -282,7 +292,7 @@ BOOL isOne( NSNumber *a )
 	}
 	
 	// Take one step forward in time
-	self.blockOperation( resultBuffer, operandBuffer );
+	self.operation( resultBuffer, operandBuffer, @[] );
 	self.totalIterations = self.totalIterations + 1;
 	[self updateCurrentTime];
 	
@@ -300,7 +310,7 @@ BOOL isOne( NSNumber *a )
         
         while ( self.currentTime < time )
         {
-            self.blockOperation( resultBufferOut, resultBuffer );
+            self.operation( resultBufferOut, resultBuffer, @[] );
             self.totalIterations = self.totalIterations + 1;
             [self updateCurrentTime];
             
@@ -376,7 +386,7 @@ BOOL isOne( NSNumber *a )
 @interface GLAdaptiveRungeKuttaOperation ()
 
 - (id) initMethodWithCoefficientsA: (NSArray *) a b: (NSArray *) b c: (NSArray *) c d: (NSArray *) d y: (NSArray *) y stepSize: (GLFloat) deltaT fsal: (BOOL) isFSAL retainPreviousY: (BOOL) shouldRetainPreviousY  order: (NSUInteger) order fFromTY: (FfromTYVector) fFromY;
-- (NSArray *) interpolateAtTime: (GLVariable *) t currentTime: (GLVariable *) tNow lastStepSize: (GLVariable *) h yNow: (NSArray *) yNow  fNow: (NSArray *) fNow p: (NSArray *) polyCoeffs;
+- (NSArray *) interpolateAtTime: (GLScalar *) t currentTime: (GLScalar *) tNow lastStepSize: (GLScalar *) h yNow: (NSArray *) yNow  fNow: (NSArray *) fNow p: (NSArray *) polyCoeffs;
 
 
 
@@ -398,10 +408,10 @@ BOOL isOne( NSNumber *a )
 
 @property(nonatomic) GLFloat requestedTime;
 
-@property(strong) GLVariable *stepSizeVariable;
-@property(strong) GLVariable *lastStepSizeVariable;
-@property(strong) GLVariable *currentTimeVariable;
-@property(strong) GLVariable *requestedTimeVariable;
+@property(strong) GLScalar *stepSizeVariable;
+@property(strong) GLScalar *lastStepSizeVariable;
+@property(strong) GLScalar *currentTimeVariable;
+@property(strong) GLScalar *requestedTimeVariable;
 
 @property(strong) NSMutableData *stepSizeData;
 @property(strong) NSMutableData *lastStepSizeData;
@@ -536,8 +546,8 @@ BOOL isOne( NSNumber *a )
 	p[0] = [NSMutableArray array];
 	p[1] = [NSMutableArray array];
 	for (NSUInteger i=0; i<rk.nInputs; i++) {
-		p[0][i] = [[[rk.previousY[i] minus: rk.currentY[i]] scalarMultiply: 3.0] plus: [[rk.firstStageVariables[i] plus: [rk.lastStageVariables[i] scalarMultiply: 2]] multiply: rk.lastStepSizeVariable]];
-		p[1][i] = [[[rk.previousY[i] minus: rk.currentY[i]] scalarMultiply: 2.0] plus: [[rk.firstStageVariables[i] plus: rk.lastStageVariables[i]] multiply: rk.lastStepSizeVariable]];
+		p[0][i] = [[[rk.previousY[i] minus: rk.currentY[i]] times: @3.0] plus: [[rk.firstStageVariables[i] plus: [rk.lastStageVariables[i] times: @2.0]] times: rk.lastStepSizeVariable]];
+		p[1][i] = [[[rk.previousY[i] minus: rk.currentY[i]] times: @2.0] plus: [[rk.firstStageVariables[i] plus: rk.lastStageVariables[i]] times: rk.lastStepSizeVariable]];
 	}
 	
 	NSArray *yout = [rk interpolateAtTime: rk.requestedTimeVariable currentTime: rk.currentTimeVariable lastStepSize: rk.lastStepSizeVariable yNow: rk.currentY fNow: rk.lastStageVariables p: p];
@@ -706,9 +716,11 @@ BOOL isOne( NSNumber *a )
 	for (NSUInteger i=0; i < y.count; i++) {
 		GLAbsoluteValueOperation *absRelErr = [[GLAbsoluteValueOperation alloc] initWithOperand: [yout[i] multiply: relativeToleranceArray[i]] shouldUseComplexArithmetic: NO];
 		GLAbsoluteValueOperation *absYErr = [[GLAbsoluteValueOperation alloc] initWithOperand: yerr[i] shouldUseComplexArithmetic: NO];
-		GLDivisionOperation * op = [[GLDivisionOperation alloc] initWithFirstOperand: absYErr.result secondOperand: [absRelErr.result absMax: absoluteToleranceArray[i]] shouldUseComplexArithmetic: NO];
+		GLVariable *absRelErrResult = absRelErr.result[0];
+		GLVariable *absYErrResult = absYErr.result[0];
+		GLDivisionOperation * op = [[GLDivisionOperation alloc] initWithFirstOperand: absYErrResult secondOperand: [absRelErrResult absMax: absoluteToleranceArray[i]] shouldUseComplexArithmetic: NO];
 		[error addObject: op.result];
-		[errorVectorData addObject: op.result.data];
+		[errorVectorData addObject: [op.result[0] data]];
 	}
 	
 	// (*) The optimized operation graph takes a whole bunch of inputs
@@ -830,12 +842,12 @@ BOOL isOne( NSNumber *a )
 		NSArray *rtData = [NSArray arrayWithArray: self.relativeToleranceData];
 		NSArray *atData = [NSArray arrayWithArray: self.absoluteToleranceData];
 		NSArray *errData = [NSArray arrayWithArray: self.errorData];
-		NSMutableArray *fsData = [NSArray arrayWithArray: self.firstStageData];
-		NSMutableArray *lsData = [NSArray arrayWithArray: self.lastStageData];
+		NSMutableArray *fsData = [NSMutableArray arrayWithArray: self.firstStageData];
+		NSMutableArray *lsData = [NSMutableArray arrayWithArray: self.lastStageData];
 		NSArray *previousYData = [NSArray arrayWithArray: self.previousYData];
 		
-        __block NSUInteger overshoots = 0;
-		self.blockOperation = ^(NSArray *result, NSArray *operand) {
+//        __block NSUInteger overshoots = 0;
+		self.operation = ^(NSArray *result, NSArray *operand, NSArray *bufferArray) {
 			// The operand buffer must match the order of (*) above
 			[operandBuffer addObjectsFromArray: operand];
 			[operandBuffer addObject: timeData];
@@ -950,9 +962,9 @@ BOOL isOne( NSNumber *a )
 }
 
 // This roughly matches "evali" in RKSuite.
-- (NSArray *) interpolateAtTime: (GLVariable *) t currentTime: (GLVariable *) tNow lastStepSize: (GLVariable *) h yNow: (NSArray *) yNow  fNow: (NSArray *) fNow p: (NSArray *) polyCoeffs
+- (NSArray *) interpolateAtTime: (GLScalar *) t currentTime: (GLScalar *) tNow lastStepSize: (GLScalar *) h yNow: (NSArray *) yNow  fNow: (NSArray *) fNow p: (NSArray *) polyCoeffs
 {
-	GLVariable *sigma = [[t minus: tNow] dividedBy: h];
+	GLScalar *sigma = [[t minus: tNow] dividedBy: h];
 	
 	NSUInteger nCoeffs = polyCoeffs.count;
 	NSUInteger nInputs = yNow.count;
@@ -965,19 +977,19 @@ BOOL isOne( NSNumber *a )
 	// We start by multiply the highest coefficient by sigma (say, p[n]*sigma)
 	NSMutableArray *yout = [NSMutableArray arrayWithCapacity: nInputs];
 	for (NSUInteger i=0; i<nInputs; i++) {
-		yout[i] = [polyCoeffs[nCoeffs-1][i] multiply: sigma];
+		yout[i] = [polyCoeffs[nCoeffs-1][i] times: sigma];
 	}
 	
 	// Now we multiply lower and lower coefficients, polys = (((p[n]*sigma + p[n-1])*sigma +p[n-2])*sigma + p[n-3]*sigma)...
 	for (NSInteger n=nCoeffs-2; n>=0; n--) {
 		for (NSUInteger i=0; i<nInputs; i++) {
-			yout[i] = [[yout[i] plus: polyCoeffs[n][i]] multiply: sigma];
+			yout[i] = [[yout[i] plus: polyCoeffs[n][i]] times: sigma];
 		}
 	}
 	
 	// Finally, we add to those  (polys + h*f)*sigma + y
 	for (NSUInteger i=0; i<nInputs; i++) {
-		yout[i] = [[[yout[i] plus: [fNow[i] multiply: h]] multiply: sigma] plus: yNow[i]];
+		yout[i] = [[[yout[i] plus: [fNow[i] times: h]] times: sigma] plus: yNow[i]];
 	}
 	
 	return yout;

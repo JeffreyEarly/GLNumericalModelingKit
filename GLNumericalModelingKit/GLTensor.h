@@ -116,7 +116,7 @@ GLSplitComplex splitComplexFromData( NSData *data );
  @param otherVariableOrScalar An input scalar, vector or matrix.
  @returns A subclass of GLVariable with the same dimensions as the highest rank input.
  */
-- (GLTensor *) plus: (id) otherVariableOrScalar;
+- (instancetype) plus: (id) otherVariableOrScalar;
 
 /** Subtract two variables: result = receiving variable - otherVariableOrScalar.
  @discussion Subtracting two artibrary variables together doesn't always make sense and may cause an exception to be thrown. For example, subtracting a function to a matrix is undefined, and subtracting two matrices or two functions with different dimensions is also undefined. Subtracting a scalar always makes sense.

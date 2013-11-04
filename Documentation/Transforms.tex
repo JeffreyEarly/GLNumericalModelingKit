@@ -630,12 +630,13 @@ I think that I don't want to build in the $\epsilon$ scaling into the definition
 
 In a mixed basis we may have different values of wave numbers that are resolved, but we would still like the damping operator to be isotropic. Therefore, we need to define the filter cutoff in terms of an actual wavenumber. The sampleInterval is the Fourier frequency and the domainMin plus domainLength is the Nyquist frequency. Thus, we want to our filter cutoff to be a function of the Nyquist frequency.
 
+if $k_{\textrm{max}}$ is the largest resolved wavenumber (taking into account anti-aliasing) the SVV operator prevents wave numbers below $k_{\textrm{cutoff}}=\Delta k \left(\frac{k_{\textrm{max}}}{\Delta k} \right)^{\frac{3}{4}}$ from being damped at all. Wavenumbers between the cutoff and the max have reduced damping by some factor $Q(k)$ where $0<Q(k)<1$. The wavenumber with $Q(k)$ reduction can be found with,
 \begin{equation}
 Q(k) = 
 \begin{cases}
-0 & k < k_c \\
-\exp \left[ - \left( \frac{k-k_m}{k-k_c} \right)^2 \right] & k_c < k < k_m \\
-1 & k > k_m
+0 & k < k_{\textrm{cutoff}} \\
+\exp \left[ - \left( \frac{k-k_{\textrm{max}}}{k-k_{\textrm{cutoff}}} \right)^2 \right] & k_{\textrm{cutoff}} < k < k_{\textrm{max}} \\
+1 & k > k_{\textrm{max}}
 \end{cases}
 \end{equation}
 where $k_m$ is the minimum Nyquist frequency of the various dimensions and $k_c = \Delta \left(\frac{k_m}{\Delta}\right)^{3/4}$. The filter will therefore gently activate wavenumbers above $k_c$ until $k_m$ at which they're fully activated.

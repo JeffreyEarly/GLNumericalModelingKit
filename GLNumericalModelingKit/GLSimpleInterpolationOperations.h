@@ -38,6 +38,6 @@ typedef NSUInteger GLInterpolationEndpointBehavior;
 // GLInterpolationOperation *interp = [[GLInterpolationOperation alloc] initWithFirstOperand: @[f1,f2] secondOperand: @[pos]];
 //
 
-@interface GLSimpleInterpolationOperation : GLBinaryVectorOperation
-
+@interface GLSimpleInterpolationOperation : GLVariableOperation
+- (id) initWithFirstOperand: (NSArray *) fOperand secondOperand: (NSArray *) sOperand;
 @end

@@ -10,7 +10,6 @@
 #import "GLVariable.h"
 #import "GLDimension.h"
 #import "GLVariableOperations.h"
-#import "GLSpectralDifferentialOperatorPool.h"
 #import "GLLinearTransform.h"
 #import <fftw3.h>
 

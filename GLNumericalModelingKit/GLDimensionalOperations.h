@@ -53,7 +53,7 @@
 // The other dimensions must have the same number of points.
 // 
 // The result variable will have dimensions based on the recievers dimensions.
-@interface GLExistingDimensionConcatenationOperation : GLBinaryOperation
+@interface GLExistingDimensionConcatenationOperation : GLVariableOperation
 
 - (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand dimensionIndex: (NSUInteger) dimIndex;
 
@@ -67,7 +67,7 @@
 
 // The new dimension should have nPoints=2, otherwise a new dimension based on the same properties will be created.
 // The dimensions in the other two variables must be the same.
-@interface GLNewDimensionConcatenationOperation : GLBinaryOperation
+@interface GLNewDimensionConcatenationOperation : GLVariableOperation
 
 - (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand dimension: (GLDimension *) dim;
 

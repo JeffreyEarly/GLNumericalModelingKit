@@ -42,7 +42,7 @@ typedef	FFTSetupD	GLFFTSetup;
 #define	vGL_vclr	vDSP_vclrD
 #define vGL_vfill   vDSP_vfillD
 
-#define vGL_vmaxmg		vDSP_vmaxmgD
+#define vGL_vmaxmg		vDSP_vmaxmgD			// Vector maximum magnitude
 #define	vGL_maxv		vDSP_maxvD
 #define	vGL_minv		vDSP_minvD
 #define vGL_vthr		vDSP_vthrD
@@ -74,12 +74,13 @@ typedef	FFTSetupD	GLFFTSetup;
 #define	vGL_sve			vDSP_sveD
 #define	vGL_vsadd		vDSP_vsaddD
 #define	vGL_vmul		vDSP_vmulD
-#define vGL_zvmul		vDSP_zvmulD		// Complex vector multiply by complex vector
+#define vGL_zvmul		vDSP_zvmulD			// Complex vector multiply by complex vector
 #define	vGL_vneg		vDSP_vnegD
 #define vGL_vabs		vDSP_vabsD
 #define vGL_zvabs		vDSP_zvabsD
 #define	vGL_svdiv		vDSP_svdivD
-#define vGL_vdiv		vDSP_vdivD
+#define vGL_vdiv		vDSP_vdivD			// Vector divide
+#define vGL_zvdiv		vDSP_zvdivD			// Complex vector divide
 #define	vGL_vma			vDSP_vmaD
 #define	vGL_vsma		vDSP_vsmaD
 #define	vGL_vfrac		vDSP_vfracD
@@ -107,7 +108,7 @@ typedef	FFTSetup	GLFFTSetup;
 #define	vGL_vclr	vDSP_vclr
 #define vGL_vfill   vDSP_vfill
 
-#define vGL_vmaxmg		vDSP_vmaxmg
+#define vGL_vmaxmg		vDSP_vmaxmg			// Vector maximum magnitude
 #define	vGL_maxv		vDSP_maxv
 #define	vGL_minv		vDSP_minv
 #define vGL_vthr		vDSP_vthr
@@ -131,7 +132,7 @@ typedef	FFTSetup	GLFFTSetup;
 
 #define vGL_vrvrs		vDSP_vrvrs
 
-#define vGL_zvzsml		vDSP_zvzsml		// Complex vector multiply by complex scalar
+#define vGL_zvzsml		vDSP_zvzsml			// Complex vector multiply by complex scalar
 #define	vGL_vsmul		vDSP_vsmul
 #define	vGL_vadd		vDSP_vadd
 #define	vGL_vsmsa		vDSP_vsmsa
@@ -139,12 +140,13 @@ typedef	FFTSetup	GLFFTSetup;
 #define	vGL_sve			vDSP_sve
 #define	vGL_vsadd		vDSP_vsadd
 #define	vGL_vmul		vDSP_vmul
-#define vGL_zvmul		vDSP_zvmul		// Complex vector multiply by complex vector
+#define vGL_zvmul		vDSP_zvmul			// Complex vector multiply by complex vector
 #define	vGL_vneg		vDSP_vneg
 #define vGL_vabs		vDSP_vabs
 #define vGL_zvabs		vDSP_zvabs
 #define	vGL_svdiv		vDSP_svdiv
-#define vGL_vdiv		vDSP_vdiv
+#define vGL_vdiv		vDSP_vdiv			// Vector divide
+#define vGL_zvdiv		vDSP_zvdiv			// Complex vector divide
 #define	vGL_vma			vDSP_vma
 #define	vGL_vsma		vDSP_vsma
 
