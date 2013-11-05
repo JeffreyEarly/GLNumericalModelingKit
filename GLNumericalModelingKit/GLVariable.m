@@ -235,14 +235,17 @@ static BOOL prefersSpatialMultiplication = YES;
 // Copies the data from the other variable (now!) not a delayed operation.
 + (id) variableFromVariable: (GLVariable *) otherVariable
 {
-    [otherVariable solve];
-    
-	GLVariable *newVar = [[[self class] alloc] initVariableOfType: otherVariable.dataFormat withDimensions:otherVariable.dimensions forEquation:otherVariable.equation];
-	newVar.data = otherVariable.data;
-    for ( NSUInteger i=0; i<otherVariable.dimensions.count; i++) {
-        newVar.realSymmetry[i] = otherVariable.realSymmetry[i];
-        newVar.imaginarySymmetry[i] = otherVariable.imaginarySymmetry[i];
-    }
+//    [otherVariable solve];
+//    
+//	GLVariable *newVar = [[[self class] alloc] initVariableOfType: otherVariable.dataFormat withDimensions:otherVariable.dimensions forEquation:otherVariable.equation];
+//	newVar.data = otherVariable.data;
+//    for ( NSUInteger i=0; i<otherVariable.dimensions.count; i++) {
+//        newVar.realSymmetry[i] = otherVariable.realSymmetry[i];
+//        newVar.imaginarySymmetry[i] = otherVariable.imaginarySymmetry[i];
+//    }
+	
+	GLVariable *newVar = [otherVariable duplicate];
+	[newVar solve];
 	
 	return newVar;
 }
@@ -615,8 +618,7 @@ static BOOL prefersSpatialMultiplication = YES;
     if (self.isFrequencyDomain) {
         result = [self transformToBasis: @[@(kGLDeltaBasis)]];
     } else {
-        NSArray *array = self.differentiationBasis ?: [self.equation defaultDifferentiationBasisForOrder: self.dimensions.count];
-        result = [self transformToBasis: array];
+        result = [self transformToBasis: self.differentiationBasis];
     }		
 	return result;
 }

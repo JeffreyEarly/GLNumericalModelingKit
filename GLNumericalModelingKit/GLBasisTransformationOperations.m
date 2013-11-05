@@ -1159,8 +1159,9 @@ static BOOL _shouldAntiAlias = NO;
 		return nil;
 	}
 	
-    GLFourierTransformOperation *operation = [[GLFourierTransformOperation alloc] initWithOperand: @[variable]];
-    return operation;
+//    GLFourierTransformOperation *operation = [[GLFourierTransformOperation alloc] initWithOperand: @[variable]];
+//    return operation;
+	return nil;
 }
 
 @end

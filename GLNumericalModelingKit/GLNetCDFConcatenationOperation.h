@@ -29,7 +29,7 @@
 @property(readwrite, strong, nonatomic) GLMutableNetCDFVariable *firstOperand;
 @property(readwrite, strong, nonatomic) GLVariable *secondOperand;
 
-@property(readwrite, strong, nonatomic) GLVariable *result;
+//@property(readwrite, strong, nonatomic) GLVariable *result;
 
 // To be called after the result and operands are set.
 - (void) setupDependencies;

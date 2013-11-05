@@ -53,19 +53,19 @@
 
 - (NSString *) graphVisDescriptionFromOperation: (GLVariableOperation *) operation
 {
-    if (operation.operationType == kGLNullaryOperation) {
-        return [NSString stringWithFormat: @"\t%ld [label=\"<op> %@\"];\n", (NSInteger) operation, operation.graphvisDescription];
-    } else if (operation.operationType == kGLUnaryOperation) {
-		return [NSString stringWithFormat: @"\t%ld [label=\"<in1> | <op> %@\"];\n", (NSInteger) operation, operation.graphvisDescription];
-	} else if (operation.operationType == kGLBinaryOperation) {
-		return [NSString stringWithFormat: @"\t%ld [label=\"<in1> | <op> %@ | <in2>\"];\n", (NSInteger) operation, operation.graphvisDescription];
-	} else if (operation.operationType == kGLUnaryVectorOperation) {
-		return [NSString stringWithFormat: @"\t%ld [label=\"<in1> | <op> %@\"];\n", (NSInteger) operation, operation.graphvisDescription];
-	} else if (operation.operationType == kGLBinaryVectorOperation) {
-		return [NSString stringWithFormat: @"\t%ld [label=\"<in1> | <op> %@ | <in2>\"];\n", (NSInteger) operation, operation.graphvisDescription];
-	}
+//    if (operation.operationType == kGLNullaryOperation) {
+//        return [NSString stringWithFormat: @"\t%ld [label=\"<op> %@\"];\n", (NSInteger) operation, operation.graphvisDescription];
+//    } else if (operation.operationType == kGLUnaryOperation) {
+//		return [NSString stringWithFormat: @"\t%ld [label=\"<in1> | <op> %@\"];\n", (NSInteger) operation, operation.graphvisDescription];
+//	} else if (operation.operationType == kGLBinaryOperation) {
+//		return [NSString stringWithFormat: @"\t%ld [label=\"<in1> | <op> %@ | <in2>\"];\n", (NSInteger) operation, operation.graphvisDescription];
+//	} else if (operation.operationType == kGLUnaryVectorOperation) {
+//		return [NSString stringWithFormat: @"\t%ld [label=\"<in1> | <op> %@\"];\n", (NSInteger) operation, operation.graphvisDescription];
+//	} else if (operation.operationType == kGLBinaryVectorOperation) {
+//		return [NSString stringWithFormat: @"\t%ld [label=\"<in1> | <op> %@ | <in2>\"];\n", (NSInteger) operation, operation.graphvisDescription];
+//	}
     
-    return nil;
+    return [NSString stringWithFormat: @"\t%ld [label=\"<in1> | <op> %@\"];\n", (NSInteger) operation, operation.graphvisDescription];
 }
 
 - (NSString *) graphvisDescription

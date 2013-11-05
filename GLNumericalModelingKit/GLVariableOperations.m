@@ -9,6 +9,7 @@
 #import "GLVariableOperations.h"
 #import "GLDimension.h"
 #import "GLVariable.h"
+#import "GLMemoryPool.h"
 
 /************************************************/
 /*		GLVariableOperation						*/
@@ -50,7 +51,7 @@
         return NO;
     } else if (self.operand.count != op.operand.count) {
         return NO;
-    } else if (self.buffers.count != op.buffers.count) {
+    } else if (self.bufferLengths.count != op.bufferLengths.count) {
         return NO;
     }
 	
@@ -75,7 +76,7 @@
 	{
 		self.result = result;
 		self.operand = operand;
-		self.buffers = buffers;
+		self.bufferLengths = buffers;
 		self.operation = op;
 		
 		[self setupDependencies];
@@ -116,6 +117,10 @@
 
 - (void) main
 {
+	if (self.preOperation) {
+		self.preOperation();
+	}
+	
 	NSMutableArray *resultBuffer = [[NSMutableArray alloc] initWithCapacity: self.result.count];
 	NSMutableArray *operandBuffer = [[NSMutableArray alloc] initWithCapacity: self.operand.count];
 	for (GLVariable *variable in self.result) {
@@ -124,7 +129,23 @@
 	for (GLVariable *variable in self.operand) {
 		[operandBuffer addObject: variable.data];
 	}
-	self.operation( resultBuffer, operandBuffer, self.buffers );
+	
+	if (self.bufferLengths.count) {
+		NSMutableArray *dataBuffers = [[NSMutableArray alloc] initWithCapacity: self.bufferLengths.count];
+		for (NSNumber *num in self.bufferLengths) {
+			[dataBuffers addObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: num.unsignedIntegerValue]];
+		}
+		self.operation( resultBuffer, operandBuffer, dataBuffers );
+		for (NSMutableData *data in dataBuffers) {
+			[[GLMemoryPool sharedMemoryPool] returnData: data];
+		}
+	} else {
+		self.operation( resultBuffer, operandBuffer, nil );
+	}
+	
+	if (self.postOperation) {
+		self.postOperation();
+	}
 	
 	[self tearDownDependencies];
 }

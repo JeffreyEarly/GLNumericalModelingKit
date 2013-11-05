@@ -71,20 +71,14 @@
 		}
 	}	
 
-	if (( self = [super init] ))
+	if (( self = [super initWithResult: @[fOperand] operand: @[fOperand,sOperand]] ))
 	{
-		self.result = fOperand;
-		self.firstOperand = fOperand;
-		self.secondOperand = sOperand;
-		
 		// Now we mutate the dimension
 		if (newPoints) {
 			[mutableDimension addPointsFromArray: newPoints];
 		} else {
 			mutableDimension.nPoints = nPointsAfterMutation;
 		}
-		
-		[self setupDependencies];
 	}
     
     return self;
@@ -144,15 +138,9 @@
 	
 	[self.indexRanges insertObject:[NSValue valueWithRange: NSMakeRange(pointIndex, 1)] atIndex:mutableDimensionIndex];
 	
-	if (( self = [super init] ))
+	if (( self = [super initWithResult: @[fOperand] operand: @[fOperand,sOperand]] ))
 	{
-		self.result = fOperand;
-		self.firstOperand = fOperand;
-		self.secondOperand = sOperand;
-		
 		mutableDimension.nPoints = nPointsAfterMutation;
-		
-		[self setupDependencies];
 	}
     
     return self;
@@ -171,12 +159,12 @@
 		[self addDependency: op];
 	}
 
-	[self.result addOperation: self];
+	[self.result[0] addOperation: self];
 }
 
 - (void) tearDownDependencies
 {	
-	[self.result removeOperation: self];
+	[self.result[0] removeOperation: self];
 	self.result = nil;
 	self.firstOperand = nil;
 	self.secondOperand = nil;

@@ -201,6 +201,27 @@ GLSplitComplex splitComplexFromData( NSData *data )
 	return operation.result[0];
 }
 
+- (GLTensor *) multiply: (id) otherVariable
+{
+	GLVariableOperation *operation;
+	if ([[otherVariable class] isSubclassOfClass: [NSNumber class]]) {
+		operation  = [[GLScalarMultiplyOperation alloc] initWithVectorOperand: self scalarOperand: [(NSNumber *) otherVariable doubleValue]];
+	} else {
+		if ([[self class] isSubclassOfClass: [GLScalar class]] || [[otherVariable class] isSubclassOfClass: [GLScalar class]]) {
+			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
+		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
+			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
+		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
+			[NSException raise: @"InvalidOperation" format: @"You cannot left-multipy a function by a linear transformation"];
+		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
+			return [(GLLinearTransform *) self transform: otherVariable];
+		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
+			return [(GLLinearTransform *) self matrixMultiply: (GLLinearTransform *)otherVariable];
+		}
+	}
+	return nil;
+}
+
 - (GLTensor *) times: (id) otherVariable
 {
 	GLVariableOperation *operation;
@@ -210,11 +231,7 @@ GLSplitComplex splitComplexFromData( NSData *data )
 		if ([[self class] isSubclassOfClass: [GLScalar class]] || [[otherVariable class] isSubclassOfClass: [GLScalar class]]) {
 			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
 		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
-			if (prefersSpatialMultiplication) {
-				operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: [(GLVariable*)self spatialDomain] secondOperand: [(GLVariable*)otherVariable spatialDomain]];
-			} else {
-				operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-			}
+			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: [(GLVariable*)self spatialDomain] secondOperand: [(GLVariable*)otherVariable spatialDomain]];
 		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
 			[NSException raise: @"InvalidOperation" format: @"You cannot left-multipy a function by a linear transformation"];
 		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
@@ -222,8 +239,8 @@ GLSplitComplex splitComplexFromData( NSData *data )
 		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
 			return [(GLLinearTransform *) self matrixMultiply: (GLLinearTransform *)otherVariable];
 		}
-		
 	}
+	return nil;
 }
 
 /************************************************/

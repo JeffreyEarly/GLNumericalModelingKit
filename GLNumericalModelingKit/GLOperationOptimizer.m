@@ -114,7 +114,6 @@
 	
 	NSMutableSet *bottomOperations = [[NSMutableSet alloc] init];
 	for (GLVariable *bottomVariable in self.bottomVariables) {
-#warning This if statement might screw things up.
 		if (bottomVariable.lastOperation) [bottomOperations addObject: bottomVariable.lastOperation];
 	}
 	for (GLVariableOperation *operation in bottomOperations) {
@@ -192,7 +191,6 @@
 	self.bottomVariableGroup = dispatch_group_create();
 	NSMutableSet *bottomOperations = [[NSMutableSet alloc] init];
 	for (GLVariable *bottomVariable in self.bottomVariables) {
-#warning This if statement might screw things up.
 		if (bottomVariable.lastOperation) [bottomOperations addObject: bottomVariable.lastOperation];
 	}
 	for (GLVariableOperation *operation in bottomOperations) {
@@ -411,7 +409,7 @@
 //	}
 	
 	if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
-		NSLog(@"This operation depends only on precomputed variables. We have not yet implemented the appropriate optimization to deal with this.");
+		NSLog(@"This operation depends only on precomputed variables. This should not happen.");
 	} else if ( operation.operand.count == 0 ) {
 		[self incrementSerialBlockCountForOperation: (GLVariableOperation *) self];
 	} else if ( topVariableOperands.count && !otherVariableOperandOperations.count ) {
@@ -527,7 +525,6 @@
 		}
 		
 		// If one of the result variables of an operation does not get used, it will not appear in this graph. However, it still needs a data buffer as the operation needs to write somewhere.
-#warning Might need to rethink this. Does this make sense anymore?
 		for (GLVariable *aVariable in operation.result) {
 			success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
 		}
@@ -694,6 +691,7 @@
 			dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
 			dispatch_queue_t childrenQueue = self.childrenQueue;
             
+			// The childrenBlock is responsible for sending off the children to perform their duties.
 			executionBlock childrenBlock = ^( NSArray *dataBuffers ) {
 				// a. serial executions first
 				for ( executionBlock anExecutionBlock in serialExecutionBlocks ) {
@@ -718,8 +716,10 @@
                 });
 			};
 			
+			// Figure out the indices
 			NSMutableArray *resultIndices = [[NSMutableArray alloc] init];
 			NSMutableArray *operandIndices = [[NSMutableArray alloc] init];
+			NSMutableArray *bufferIndices = [[NSMutableArray alloc] init];
 			for (GLVariable *aVariable in operation.result) {
 				NSUInteger anIndex = [self.allVariables indexOfObject: aVariable];
 				if (anIndex == NSNotFound) {
@@ -736,12 +736,22 @@
 					[operandIndices addObject: @(anIndex)];
 				}
 			}
+			for (NSMutableData *aBuffer in operation.buffers) {
+				NSUInteger anIndex = [self.allVariables indexOfObject: aBuffer];
+				if (anIndex == NSNotFound) {
+					[NSException raise: @"Invalid index." format: @"The operation is malformed."];
+				} else {
+					[bufferIndices addObject: @(anIndex)];
+				}
+			}
 			
 			NSMutableArray *result = [[NSMutableArray alloc] init];
 			NSMutableArray *operand = [[NSMutableArray alloc] init];
+			NSMutableArray *buffer = [[NSMutableArray alloc] init];
 			
 			variableOperation operationBlock = operation.operation;
 			executionBlock theExecutionBlock = ^( NSArray *dataBuffers ) {
+				// Note that we do not call -objectsAtIndexes because order is important.
 				for (NSNumber *anIndex in resultIndices) {
 					[result addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
 				}
@@ -750,14 +760,19 @@
 					[operand addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
 				}
 				
+				for (NSNumber *anIndex in bufferIndices) {
+					[buffer addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
+				}
+				
 				// 1. Compute our own operation
-				operationBlock( result, operand, @[] );
+				operationBlock( result, operand, buffer );
 				
 				// 2. Send off the children
 				childrenBlock( dataBuffers );
 				
 				[result removeAllObjects];
 				[operand removeAllObjects];
+				[buffer removeAllObjects];
 			};
 			
 			if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {

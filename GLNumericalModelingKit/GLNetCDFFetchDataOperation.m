@@ -40,13 +40,12 @@
 	}
 	if (invalidRange) return nil;
 	
-	if (( self = [super init] ))
+	if (!aResult) {
+		aResult = [[GLVariable alloc] initVariableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
+	}
+	
+	if (( self = [super initWithResult: @[aResult] operand: @[]] ))
 	{
-		if (aResult) {
-			self.result = aResult;
-		} else {
-			self.result = [[GLVariable alloc] initVariableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
-		}
 		self.file = variable.file;
 		self.isComplex = variable.isComplex;
 		self.variableID = variable.variableID;
@@ -65,24 +64,14 @@
 @synthesize variableID;
 @synthesize imagpVariableID;
 
-- (void) setupDependencies
-{
-	[self.result addOperation: self];
-}
-
-- (void) tearDownDependencies
-{	
-	[self.result removeOperation: self];
-	self.file = nil;
-}
-
 @synthesize theRanges;
 @synthesize shouldFlatten;
 
 - (void) main
 {
+	GLVariable *theResult = self.result[0];
 	if (self.isComplex) {
-		GLSplitComplex split = self.result.splitComplex;
+		GLSplitComplex split = theResult.splitComplex;
 		if ( sizeof(GLFloat) == sizeof(double) ) {
 			[self.file readDoubleVariableWithID: self.variableID intoBuffer: split.realp indexRange: self.theRanges];
 			[self.file readDoubleVariableWithID: self.imagpVariableID intoBuffer: split.imagp indexRange: self.theRanges];
@@ -92,9 +81,9 @@
 		}
 	} else {
 		if ( sizeof(GLFloat) == sizeof(double) ) {
-			[self.file readDoubleVariableWithID: self.variableID intoData: self.result.data indexRange: self.theRanges];
+			[self.file readDoubleVariableWithID: self.variableID intoData: theResult.data indexRange: self.theRanges];
 		} else {
-			[self.file readFloatVariableWithID: self.variableID intoData: self.result.data indexRange: self.theRanges];
+			[self.file readFloatVariableWithID: self.variableID intoData: theResult.data indexRange: self.theRanges];
 		}
 	}
 	

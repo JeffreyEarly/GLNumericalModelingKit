@@ -36,29 +36,60 @@ typedef void (^variableOperation)(NSArray *, NSArray *, NSArray *);
 
 @interface GLVariableOperation : NSOperation
 
-@property BOOL isEnqueued;
-
-// Returns YES if the result buffer can be the same as an operand buffer.
-@property(readonly) BOOL canOperateInPlace;
-
-- (BOOL) isEqualToOperation: (id) otherOperation;
-
-@property(readwrite, copy, nonatomic) NSString *graphvisDescription;
-
-
+/** Creates a new variable operation objects.
+ @param result An array of GLVariable objects that store the results from the operation.
+ @param operand An array of GLVariable objects that store the operands of the operation.
+ @param buffers An array of NSMutableData objects used a buffers during the operations.
+ @param op The actual operation that performs the calculation on the raw buffers.
+ @returns A new variable operation object.
+ */
 - (id) initWithResult: (NSArray *) result operand: (NSArray *) operand buffers: (NSArray *) buffers operation: (variableOperation) op;
 
-// This assumes that there are no internal buffers necessary, and that the operation will be set later.
+/** Creates a new variable operation objects.
+ @discussion This assumes that there are no internal buffers necessary, and that the operation will be set later.
+ @param result An array of GLVariable objects that store the results from the operation.
+ @param operand An array of GLVariable objects that store the operands of the operation.
+ @returns A new variable operation object.
+ */
 - (id) initWithResult: (NSArray *) result operand: (NSArray *) operand;
 
-// This assumes that the result variables are the same type as the operand variables.
+/** Creates a new variable operation objects.
+ @discussion This assumes that there are no internal buffers necessary, and that the operation will be set later.
+ @discussion This also assumes that the result variables are the same type as the operand variables.
+ @param operand An array of GLVariable objects that store the operands of the operation.
+ @returns A new variable operation object.
+ */
 - (id) initWithOperand: (NSArray *) operand;
 
+/// An array of GLVariable objects that store the results from the operation.
 @property(readwrite, strong, nonatomic) NSArray *result;
-@property(readwrite, strong, nonatomic) NSArray *operand;
-@property(readwrite, strong, nonatomic) NSArray *buffers;
 
+/// An array of GLVariable objects that store the operands of the operation.
+@property(readwrite, strong, nonatomic) NSArray *operand;
+
+/// An array of NSNumbers objects indicating the length, in bytes, of the buffers required during the operations. It is NOT guaranteed that these will be the same objects at run time, so don't store something in these buffers that you need to refer to later.
+@property(readwrite, strong, nonatomic) NSArray *bufferLengths;
+
+/// The operation that performs the calculation on the raw buffers
 @property(copy) variableOperation operation;
+
+/// If set, this block will be run sometime before the variableOperation is executed. This would be a logical place create a specific buffer to be used a runtime.
+@property(copy) dispatch_block_t preOperation;
+
+/// If set, this block will be run sometime after the variableOperation is executed. Useful for deallocating/cleaning up.
+@property(copy) dispatch_block_t postOperation;
+
+/// Whether or not this operation is already on the queue, slated to be run.
+@property BOOL isEnqueued;
+
+/// Returns YES if the result buffer can be the same as an operand buffer.
+@property(readonly) BOOL canOperateInPlace;
+
+/// Returns yes if another operation is of the same class, and has the same result and operand variables.
+- (BOOL) isEqualToOperation: (id) otherOperation;
+
+/// A description of this operation appropriate for output to graphvis.
+@property(readwrite, copy, nonatomic) NSString *graphvisDescription;
 
 @end
 

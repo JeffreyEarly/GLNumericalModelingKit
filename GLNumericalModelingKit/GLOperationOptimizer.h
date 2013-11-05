@@ -42,6 +42,14 @@ typedef void (^executionBlock)(NSArray *);
 #pragma mark Primary Interface
 #pragma mark
 
+// November 5th, 2013
+// Precomputed variables should be stored in the preOperation---or actually just *stored* and referred to later.
+// Top and bottom variables don't need a memory buffer.
+// Internal variables should create a bufferLengths array, and also add other internal variables to that.
+// The idea is that our internal buffers, in theory, can be swapped in an out. So, we don't want to make the precomputed variables act like one of those.
+
+
+
 // 1. Initialize with the variables at the top of the tree, and the bottom of the tree.
 - (GLOperationOptimizer *) initWithTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
 

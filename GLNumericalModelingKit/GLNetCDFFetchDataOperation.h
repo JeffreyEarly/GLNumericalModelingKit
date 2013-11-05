@@ -27,8 +27,6 @@
 @property int variableID;
 @property int imagpVariableID;
 
-@property(readwrite, strong, nonatomic) GLVariable *result;
-
 // To be called after the result and operands are set.
 - (void) setupDependencies;
 
