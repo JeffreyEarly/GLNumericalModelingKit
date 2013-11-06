@@ -272,5 +272,20 @@ Starting from the bottom variables, the algorithm asks for an execution block to
 
 Once all of the execution blocks have been created, it is then possible to construct the final unaryOperation, binaryOperation, or unaryVectorOperation block. This final block is responsible for handling all the execution blocks associated with the top variables, but also has two additional responsibilities. First, it must create the array of data buffers from its input arguments and the internal buffers that gets passed down to all of the execution blocks. Second, it must enter all the groups that will later be exited by its dependents (including the execution blocks associated with the bottom variables).
 
+\section{New Algorithm}
+
+The core algorithm for treating dependencies remains the same. However, some changes to the final block creation and variable storage have been changed.
+
+The new key idea is that the optimizer creates a GLVariableOperation subclass, which can be used over and over again.
+
+There are five types of variables that the optimizer has to manage.
+\begin{enumerate}
+\item TopVariables will become the operands of the optimized operation. They are copied and stored so that they can be compared to future input.
+\item BottomVariables will become the results of the optimized operation. They are copied and stored so that they can be used for future output.
+\item PrecomputedVariables will have their data copied so they can be used directly in the optimized operation block.
+\item InternalVariables will become buffers in the optimized operation, so they do not need to be retained, although their size will need to be captured.
+\item InternalBuffers will remain buffers in the optimized operations, so they also do not need to be retained.
+\end{enumerate}
+
 
 \end{document}  

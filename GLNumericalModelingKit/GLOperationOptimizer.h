@@ -85,8 +85,8 @@ typedef void (^executionBlock)(NSArray *);
 // An ordered list of all the internal variables.
 @property(strong) NSMutableArray *internalVariables;
 
-// bottomVariables, topVariables, internalVariables;
-@property(strong) NSMutableArray *allVariables;
+// bottomVariables, topVariables, precomputedVariables, internalVariables and buffers;
+@property(strong) NSMutableArray *allVariablesAndBuffers;
 
 @property dispatch_queue_t childrenQueue;
 
@@ -107,7 +107,15 @@ typedef void (^executionBlock)(NSArray *);
 // The one exception is that the top-most responsibilities will be assigned to self.
 - (BOOL) mapPreliminariesWithOperation: (GLVariableOperation *) operation forTopVariables: (NSArray *) topVariables;
 
-@property NSMapTable *variableDataMap;
+/// Map from precomputed variables to their NSData chunk.
+@property NSMapTable *precomputedVariableDataMap;
+
+/// Map from *internal* variables to a GLBuffer. Two variables may point to the same buffer, depending on the sophistication of the memory optimizer.
+@property NSMapTable *internalVariableBufferMap;
+
+/// Array of all internal buffers the operations depend on.
+@property NSMutableArray *internalBufferArray;
+
 @property NSHashTable *finishedMappingOperations;
 @property NSMapTable *operationSerialBlockCountMap;
 @property NSMapTable *operationParallelBlockCountMap;

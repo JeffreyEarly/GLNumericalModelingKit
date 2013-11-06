@@ -10,7 +10,7 @@
 
 #import <GLNumericalModelingKit/Precision.h>
 #import <GLNumericalModelingKit/GLVariable.h>
-
+#import <GLNumericalModelingKit/GLBuffer.h>
 
 // GLVariableOperations operate on the data associated GLVariables.
 //
@@ -36,22 +36,32 @@ typedef void (^variableOperation)(NSArray *, NSArray *, NSArray *);
 
 @interface GLVariableOperation : NSOperation
 
+/** Creates a new variable operation class optimized for the operation graph defined by the given operand and result variables.
+ @discussion Instances of this class should be created with -initWithOperand.
+ @param operandVariables An array of GLVariable objects that define the 'top' of the operation graph.
+ @param resultVariables An array of GLVariable objects that define the 'bottom' of the operation graph.
+ @returns A new GLVariableOperation subclass..
+ */
++ (Class) variableOperationSubclassWithOperand: (NSArray *) operandVariables result: (NSArray *) resultVariables;
+
 /** Creates a new variable operation objects.
+ @discussion Do not call this method on a fully implemented subclass or you will overwrite the internal behavior.
  @param result An array of GLVariable objects that store the results from the operation.
  @param operand An array of GLVariable objects that store the operands of the operation.
  @param buffers An array of NSMutableData objects used a buffers during the operations.
  @param op The actual operation that performs the calculation on the raw buffers.
  @returns A new variable operation object.
  */
-- (id) initWithResult: (NSArray *) result operand: (NSArray *) operand buffers: (NSArray *) buffers operation: (variableOperation) op;
+- (instancetype) initWithResult: (NSArray *) result operand: (NSArray *) operand buffers: (NSArray *) buffers operation: (variableOperation) op;
 
 /** Creates a new variable operation objects.
+ @discussion Do not call this method on a fully implemented subclass or you will overwrite the internal behavior.
  @discussion This assumes that there are no internal buffers necessary, and that the operation will be set later.
  @param result An array of GLVariable objects that store the results from the operation.
  @param operand An array of GLVariable objects that store the operands of the operation.
  @returns A new variable operation object.
  */
-- (id) initWithResult: (NSArray *) result operand: (NSArray *) operand;
+- (instancetype) initWithResult: (NSArray *) result operand: (NSArray *) operand;
 
 /** Creates a new variable operation objects.
  @discussion This assumes that there are no internal buffers necessary, and that the operation will be set later.
@@ -59,7 +69,7 @@ typedef void (^variableOperation)(NSArray *, NSArray *, NSArray *);
  @param operand An array of GLVariable objects that store the operands of the operation.
  @returns A new variable operation object.
  */
-- (id) initWithOperand: (NSArray *) operand;
+- (instancetype) initWithOperand: (NSArray *) operand;
 
 /// An array of GLVariable objects that store the results from the operation.
 @property(readwrite, strong, nonatomic) NSArray *result;
@@ -67,8 +77,8 @@ typedef void (^variableOperation)(NSArray *, NSArray *, NSArray *);
 /// An array of GLVariable objects that store the operands of the operation.
 @property(readwrite, strong, nonatomic) NSArray *operand;
 
-/// An array of NSNumbers objects indicating the length, in bytes, of the buffers required during the operations. It is NOT guaranteed that these will be the same objects at run time, so don't store something in these buffers that you need to refer to later.
-@property(readwrite, strong, nonatomic) NSArray *bufferLengths;
+/// An array of GLBuffer objects indicating the length, in bytes, of the buffers required during the operations.
+@property(readwrite, strong, nonatomic) NSArray *buffer;
 
 /// The operation that performs the calculation on the raw buffers
 @property(copy) variableOperation operation;

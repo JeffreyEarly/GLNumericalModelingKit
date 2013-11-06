@@ -25,7 +25,7 @@
 	NSArray *_bottomVariables;
 	NSMutableArray *_internalDataBuffers;
 	NSMutableArray *_internalVariables;
-	NSMutableArray *_allVariables;
+	NSMutableArray *_allVariablesAndBuffers;
     NSHashTable *_hasDataBuffer;
     dispatch_queue_t _childrenQueue;
 }
@@ -34,7 +34,7 @@
 @synthesize bottomVariables = _bottomVariables;
 @synthesize internalDataBuffers=_internalDataBuffers;
 @synthesize internalVariables=_internalVariables;
-@synthesize allVariables=_allVariables;
+@synthesize allVariablesAndBuffers=_allVariablesAndBuffers;
 @synthesize alreadyInitialized;
 @synthesize childrenQueue=_childrenQueue;
 
@@ -84,7 +84,13 @@
 - (GLOperationOptimizer *) initWithTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables
 {
 	if ((self=[super init])) {
-		self.variableDataMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
+		
+		self.topVariables = topVariables;
+		self.bottomVariables = bottomVariables;
+		self.precomputedVariableDataMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
+		self.internalVariableBufferMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
+		self.internalBufferArray = [NSMutableArray array];
+		
 		self.operationSerialBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
 		self.operationParallelBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
 		self.operationParallelGroupCountMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
@@ -99,8 +105,7 @@
 		
         self.childrenQueue = dispatch_queue_create("com.earlyinnovations.operationOptimizer.childrenQueue", 0);
         
-		self.topVariables = topVariables;
-		self.bottomVariables = bottomVariables;		
+
 	}
 	return self;
 }
@@ -175,17 +180,17 @@
 - (BOOL) createExecutionBlocks
 {
 	// Now we move the internal map to two arrays that are in 1-1 correspondence.
-	self.internalVariables = [[NSMutableArray alloc] initWithCapacity: self.variableDataMap.count];
-	self.internalDataBuffers = [[NSMutableArray alloc] initWithCapacity: self.variableDataMap.count];
-	for ( GLVariable *aVariable in self.variableDataMap ) {
+	self.internalVariables = [NSMutableArray array];
+	self.internalDataBuffers = [NSMutableArray array];
+	for ( GLVariable *aVariable in self.internalVariableBufferMap ) {
 		[self.internalVariables addObject: aVariable];
-		[self.internalDataBuffers addObject: [self.variableDataMap objectForKey: aVariable]];
+		[self.internalDataBuffers addObject: [self.internalVariableBufferMap objectForKey: aVariable]];
 	}
 	
 	// We build a carefully ordered array of all the variables to be referenced.
-	self.allVariables = [[NSMutableArray alloc] initWithArray: self.bottomVariables];
-	[self.allVariables addObjectsFromArray: self.topVariables];
-	[self.allVariables addObjectsFromArray: self.internalVariables];
+	self.allVariablesAndBuffers = [[NSMutableArray alloc] initWithArray: self.bottomVariables];
+	[self.allVariablesAndBuffers addObjectsFromArray: self.topVariables];
+	[self.allVariablesAndBuffers addObjectsFromArray: self.internalVariables];
 	
 	// All bottom variables are responsible for exiting a group that can be monitored to determine when we're done executing.
 	self.bottomVariableGroup = dispatch_group_create();
@@ -245,7 +250,7 @@
 		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
 		dispatch_group_t bottomGroup = self.bottomVariableGroup;
 		NSMutableArray *allGroups = [self allGroups];
-		NSArray *internalDataBuffers = self.internalDataBuffers;
+		NSArray *precomputedBuffers = self.precomputedBuffers;
 				
 		variableOperation aBlock = ^(NSArray *bottomBuffers, NSArray *topBuffers, NSArray *internalBuffers) {
 			
@@ -256,10 +261,11 @@
 				dispatch_group_enter(group);
 			}
 
-			
+			// Follow our strict buffer order.
 			NSMutableArray *dataBuffers = [[NSMutableArray alloc] initWithArray: bottomBuffers];
 			[dataBuffers addObjectsFromArray: topBuffers];
-			[dataBuffers addObjectsFromArray: internalDataBuffers];
+			[dataBuffers addObjectsFromArray: precomputedBuffers];
+			[dataBuffers addObjectsFromArray: internalBuffers];
             
 			for ( executionBlock anExecutionBlock in serialExecutionBlocks ) {
 				dispatch_async( globalQueue, ^{
@@ -287,7 +293,7 @@
 #pragma mark Preliminary Mapping
 #pragma mark
 
-@synthesize variableDataMap;
+@synthesize internalVariableBufferMap;
 @synthesize operationSerialBlockCountMap;
 @synthesize operationParallelBlockCountMap;
 @synthesize operationParallelGroupCountMap;
@@ -501,7 +507,7 @@
 	{
 		// Precomputed variables are a dead end. It's values are fixed and already populated.
 		// So we simply need to grab a copy of its data and exit the recusion.
-		[self.variableDataMap setObject: [variable.data copy] forKey: variable];
+		[self.internalVariableBufferMap setObject: [variable.data copy] forKey: variable];
 		return YES;
 	}
 	else if (variable.pendingOperations.count == 1)
@@ -512,7 +518,7 @@
 			self.totalMemoryBuffersAllocated = self.totalMemoryBuffersAllocated + 1;
 			
 			// Here we fetch a data object, of appropriate size, for the variable.
-			[self.variableDataMap setObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: variable.dataBytes] forKey: variable];
+			[self.internalVariableBufferMap setObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: variable.dataBytes] forKey: variable];
 			[self.hasDataBuffer addObject: variable];
 		}
 		
@@ -721,7 +727,7 @@
 			NSMutableArray *operandIndices = [[NSMutableArray alloc] init];
 			NSMutableArray *bufferIndices = [[NSMutableArray alloc] init];
 			for (GLVariable *aVariable in operation.result) {
-				NSUInteger anIndex = [self.allVariables indexOfObject: aVariable];
+				NSUInteger anIndex = [self.allVariablesAndBuffers indexOfObject: aVariable];
 				if (anIndex == NSNotFound) {
 					[NSException raise: @"Invalid index." format: @"The operation is malformed."];
 				} else {
@@ -729,15 +735,15 @@
 				}
 			}
 			for (GLVariable *aVariable in operation.operand) {
-				NSUInteger anIndex = [self.allVariables indexOfObject: aVariable];
+				NSUInteger anIndex = [self.allVariablesAndBuffers indexOfObject: aVariable];
 				if (anIndex == NSNotFound) {
 					[NSException raise: @"Invalid index." format: @"The operation is malformed."];
 				} else {
 					[operandIndices addObject: @(anIndex)];
 				}
 			}
-			for (NSMutableData *aBuffer in operation.buffers) {
-				NSUInteger anIndex = [self.allVariables indexOfObject: aBuffer];
+			for (GLBuffer *aBuffer in operation.buffer) {
+				NSUInteger anIndex = [self.allVariablesAndBuffers indexOfObject: aBuffer];
 				if (anIndex == NSNotFound) {
 					[NSException raise: @"Invalid index." format: @"The operation is malformed."];
 				} else {

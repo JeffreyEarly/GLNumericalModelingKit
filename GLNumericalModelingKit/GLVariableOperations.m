@@ -17,6 +17,24 @@
 
 @interface GLVariableOperation ()
 
++ (void) setVariableOperationPrototype: (variableOperation) opPrototype forSubclass: (Class) subclass;
++ (variableOperation) variableOperationPrototypeForSubclass: (Class) subclass;
+
++ (void) setOperandPrototype: (NSArray *) operandPrototype forSubclass: (Class) subclass;
++ (NSArray *) operandPrototypeForSubclass: (Class) subclass;
+
++ (void) setResultPrototype: (NSArray *) resultPrototype forSubclass: (Class) subclass;
++ (NSArray *) resultrototypeForSubclass: (Class) subclass;
+
++ (void) setBufferLengthsPrototype: (NSArray *) bufferLengthsPrototype forSubclass: (Class) subclass;
++ (NSArray *) bufferLengthsPrototypeForSubclass: (Class) subclass;
+
++ (void) setPreOperationPrototype: (dispatch_block_t) preOpPrototype forSubclass: (Class) subclass;
++ (dispatch_block_t) preOperationPrototypeForSubclass: (Class) subclass;
+
++ (void) setPostOperationPrototype: (dispatch_block_t) postOperationPrototype forSubclass: (Class) subclass;
++ (dispatch_block_t) postOperationPrototypeForSubclass: (Class) subclass;
+
 // To be called after the result and operands are set.
 - (void) setupDependencies;
 
@@ -26,6 +44,13 @@
 @end
 
 @implementation GLVariableOperation : NSOperation
+
+static NSMapTable *classVariableOperationTable = nil;
+static NSMapTable *classOperandTable = nil;
+static NSMapTable *classResultTable = nil;
+static NSMapTable *classBufferLengthTable = nil;
+static NSMapTable *classPreOperationTable = nil;
+static NSMapTable *classPostOperationTable = nil;
 
 - (id) init
 {
@@ -51,7 +76,7 @@
         return NO;
     } else if (self.operand.count != op.operand.count) {
         return NO;
-    } else if (self.bufferLengths.count != op.bufferLengths.count) {
+    } else if (self.buffer.count != op.buffer.count) {
         return NO;
     }
 	
@@ -76,7 +101,7 @@
 	{
 		self.result = result;
 		self.operand = operand;
-		self.bufferLengths = buffers;
+		self.buffer = buffers;
 		self.operation = op;
 		
 		[self setupDependencies];
@@ -130,10 +155,10 @@
 		[operandBuffer addObject: variable.data];
 	}
 	
-	if (self.bufferLengths.count) {
-		NSMutableArray *dataBuffers = [[NSMutableArray alloc] initWithCapacity: self.bufferLengths.count];
-		for (NSNumber *num in self.bufferLengths) {
-			[dataBuffers addObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: num.unsignedIntegerValue]];
+	if (self.buffer.count) {
+		NSMutableArray *dataBuffers = [[NSMutableArray alloc] initWithCapacity: self.buffer.count];
+		for (GLBuffer *aBuffer in self.buffer) {
+			[dataBuffers addObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: aBuffer.numBytes]];
 		}
 		self.operation( resultBuffer, operandBuffer, dataBuffers );
 		for (NSMutableData *data in dataBuffers) {
