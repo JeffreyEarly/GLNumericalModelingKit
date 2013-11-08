@@ -263,7 +263,6 @@
 	
 	GLVariable *x = [GLVariable variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLVariable *f = [[[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0] scalarAdd: 1.0];
-//	GLLinearTransform *matrix = [GLLinearTransform dftMatrixFromDimension: f.dimensions[0] forEquation: equation];
     GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLExponentialBasis forEquation:equation];
 	GLVariable *f_tilde = [matrix transform: f];
 	[f_tilde solve];
@@ -282,7 +281,6 @@
 		}
 	}
 	
-//	GLLinearTransform *matrix_inverse = [GLLinearTransform idftMatrixFromDimension: f_tilde.dimensions[0] forEquation:equation];
     GLLinearTransform *matrix_inverse = [GLLinearTransform discreteTransformFromDimension: f_tilde.dimensions[0] toBasis: kGLDeltaBasis forEquation:equation];
 	GLVariable *f_tilde_tilde = [matrix_inverse transform: f_tilde];
 	[f_tilde_tilde solve];
@@ -305,7 +303,6 @@
 	
 	GLVariable *x = [GLVariable variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLVariable *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
-//	GLLinearTransform *matrix = [GLLinearTransform cosineTransformMatrixFromDimension: f.dimensions[0] forEquation: equation];
     GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLCosineHalfShiftBasis forEquation:equation];
 	GLVariable *f_tilde = [matrix transform: f];
 	[f_tilde solve];
@@ -320,7 +317,6 @@
 		}
 	}
 	
-//	GLLinearTransform *matrix_inverse = [GLLinearTransform inverseCosineTransformMatrixFromDimension: f_tilde.dimensions[0] forEquation:equation];
     GLLinearTransform *matrix_inverse = [GLLinearTransform discreteTransformFromDimension: f_tilde.dimensions[0] toBasis: kGLDeltaBasis forEquation:equation];
 	GLVariable *f_tilde_tilde = [matrix_inverse transform: f_tilde];
 	[f_tilde_tilde solve];
