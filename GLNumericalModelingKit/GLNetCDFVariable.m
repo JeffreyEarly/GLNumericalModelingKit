@@ -107,7 +107,7 @@
 - (GLVariable *) variableFromIndexRange: (NSArray *) ranges
 {
 	GLNetCDFFetchDataOperation *operation = [[GLNetCDFFetchDataOperation alloc] initWithNetCDFVariable: self indexRange: ranges flatten: YES];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (NSString *) matrixDescription

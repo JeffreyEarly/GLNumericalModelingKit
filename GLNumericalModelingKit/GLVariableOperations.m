@@ -11,6 +11,7 @@
 #import "GLVariable.h"
 #import "GLMemoryPool.h"
 #import "GLOperationOptimizer.h"
+#import "GLLinearTransform.h"
 #import <objc/runtime.h>
 
 /************************************************/
@@ -170,8 +171,17 @@
 	if (( self = [super init] ))
 	{
 		NSMutableArray *array = [[NSMutableArray alloc] initWithCapacity: operand.count];
-		for (GLVariable *variable in operand) {
-			[array addObject: [[variable class] variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
+		for (GLTensor *variable in operand) {
+			if (variable.rank == 0) {
+				GLScalar *scalar = (GLScalar *) variable;
+				[array addObject: [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation]];
+			} else if (variable.rank == 1) {
+				GLVariable *function = (GLVariable *) variable;
+				[array addObject: [[function class] variableOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation]];
+			}  else if (variable.rank == 2) {
+				GLLinearTransform *matrix = (GLLinearTransform *) variable;
+				[array addObject: [GLLinearTransform transformOfType: matrix.dataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil]];
+			}
 		}
 		self.result = array;
 		self.operand = operand;
