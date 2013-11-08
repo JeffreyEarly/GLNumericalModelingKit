@@ -278,10 +278,10 @@ The core algorithm for treating dependencies remains the same. However, some cha
 
 The new key idea is that the optimizer creates a GLVariableOperation subclass, which can be used over and over again.
 
-There are five types of variables that the optimizer has to manage.
+There are five types of variables that the optimizer has to manage. Note that the first four types require a buffer in one-to-one correspondence with a variable, whereas the last type requires a group of buffers in correspondence with an operation.
 \begin{enumerate}
-\item TopVariables will become the operands of the optimized operation. They are copied and stored so that they can be compared to future input.
-\item BottomVariables will become the results of the optimized operation. They are copied and stored so that they can be used for future output.
+\item TopVariables will become the operands of the optimized operation. They are copied (without data) and stored so that they can be compared to future input.
+\item BottomVariables will become the results of the optimized operation. They are copied (without data) and stored so that they can be used for future output.
 \item PrecomputedVariables will have their data copied so they can be used directly in the optimized operation block.
 \item InternalVariables will become buffers in the optimized operation, so they do not need to be retained, although their size will need to be captured.
 \item InternalBuffers will remain buffers in the optimized operations, so they also do not need to be retained.

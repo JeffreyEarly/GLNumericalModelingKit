@@ -24,7 +24,7 @@
 	NSArray *_topVariables;
 	NSArray *_bottomVariables;
 	NSMutableArray *_internalDataBuffers;
-	NSMutableArray *_internalVariables;
+	NSMutableArray *_internalVariablesAndBuffers;
 	NSMutableArray *_allVariablesAndBuffers;
     NSHashTable *_hasDataBuffer;
     dispatch_queue_t _childrenQueue;
@@ -33,7 +33,7 @@
 @synthesize topVariables = _topVariables;
 @synthesize bottomVariables = _bottomVariables;
 @synthesize internalDataBuffers=_internalDataBuffers;
-@synthesize internalVariables=_internalVariables;
+@synthesize internalVariablesAndBuffers=_internalVariablesAndBuffers;
 @synthesize allVariablesAndBuffers=_allVariablesAndBuffers;
 @synthesize alreadyInitialized;
 @synthesize childrenQueue=_childrenQueue;
@@ -46,40 +46,85 @@
 #pragma mark Convenience Methods
 #pragma mark
 
-
-//+ (void) addVariable: (GLVariable *) variable toTopVariables: (NSMutableSet *) set
-//{
-//	GLVariableOperation *operation = variable.lastOperation;
-//	
-//	if (!operation) {
-//		return;
-//	} else if ( operation.operationType == kGLUnaryOperation) {
-//		GLUnaryOperation *aUnaryOperation = (GLUnaryOperation *) operation;
-//		if (aUnaryOperation.operand.pendingOperations.count) {
-//			[self addVariable: aUnaryOperation.operand toTopVariables: set];
-//		} else {
-//			[set addObject: variable];
-//		}
-//	} else if ( operation.operationType == kGLBinaryOperation ) {
-//		GLBinaryOperation *aBinaryOperation = (GLBinaryOperation *) operation;
-//		if (aBinaryOperation.firstOperand.pendingOperations.count) {
-//			[self addVariable: aBinaryOperation.firstOperand toTopVariables: set];
-//		} else if (aBinaryOperation.secondOperand.pendingOperations.count) {
-//			[self addVariable: aBinaryOperation.secondOperand toTopVariables: set];
-//		} else {
-//			[set addObject: variable];
-//		}
-//	}
-//}
-//
-//+ (NSSet *) topVariablesFromVariable: (GLVariable *) variable
-//{
-//	NSMutableSet *set = [[NSMutableSet alloc] init];
-//	
-//	[self addVariable: variable toTopVariables: set];
-//	
-//	return set;
-//}
+- (void) createOptimizedOperation
+{
+    if (! [self createExecutionPlan]) {
+		return;
+	}
+	if (! [self assignMemoryBuffers]) {
+		return;
+	}
+	if (! [self createExecutionBlocks]) {
+		return;
+	}
+	
+	NSLog(@"Total memory buffers allocated: %lu", self.totalMemoryBuffersAllocated);
+	
+	if ( self.bottomVariables.count && self.topVariables.count )
+	{
+		NSMutableArray *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
+		NSMapTable *parallelExecutionBlocks = [self parallelResponsibilitiesForOperation: (GLVariableOperation *) self];
+		if (groups.count != 0) {
+			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
+		}
+		if (parallelExecutionBlocks.count != 0 ) {
+			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
+		}
+		
+		// All five of these objects will be copied/referenced by the block.
+		dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
+		dispatch_group_t bottomGroup = self.bottomVariableGroup;
+		NSMutableArray *allGroups = [self allGroups];
+		NSArray *precomputedBuffers = self.precomputedVariablesData;
+        
+		variableOperation aBlock = ^(NSArray *bottomBuffers, NSArray *topBuffers, NSArray *internalBuffers) {
+			
+			// A unary operation only has one bottom variable, so we only need to entire it once.
+			// The group variable is in the group array, so it will automatically get incremented once.
+			// 1. Increment the group count once.
+			for (dispatch_group_t group in allGroups) {
+				dispatch_group_enter(group);
+			}
+            
+			// Follow our strict buffer order.
+			NSMutableArray *dataBuffers = [[NSMutableArray alloc] initWithArray: bottomBuffers];
+			[dataBuffers addObjectsFromArray: topBuffers];
+			[dataBuffers addObjectsFromArray: precomputedBuffers];
+			[dataBuffers addObjectsFromArray: internalBuffers];
+            
+			for ( executionBlock anExecutionBlock in serialExecutionBlocks ) {
+				dispatch_async( globalQueue, ^{
+					anExecutionBlock( dataBuffers );
+				});
+			}
+			
+			dispatch_group_wait(bottomGroup, DISPATCH_TIME_FOREVER);
+		};
+		
+        // 1. set the operation block
+		self.operationBlock = aBlock;
+        
+        // 2. the internal data buffer array should already be created during the -createExecutionBlocks method.
+        
+        // 3. create the operand variable prototypes.
+        self.operandVariablePrototypes = [NSMutableArray array];
+        for (GLVariable *variable in self.topVariables) {
+            [self.operandVariablePrototypes addObject: [GLVariable variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
+        }
+        
+        // 4. create the result variable prototypes.
+        self.resultVariablePrototypes = [NSMutableArray array];
+        for (GLVariable *variable in self.bottomVariables) {
+            [self.resultVariablePrototypes addObject: [GLVariable variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
+        }
+        
+	}
+	else
+	{
+		NSLog(@"Incorrect number of top variables (%lu) or bottom variables (%lu) to create a unaryOperation", self.topVariables.count, self.bottomVariables.count);
+	}
+}
 
 - (GLOperationOptimizer *) initWithTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables
 {
@@ -89,6 +134,7 @@
 		self.bottomVariables = bottomVariables;
 		self.precomputedVariableDataMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
 		self.internalVariableBufferMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
+        self.internalBufferBufferMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
 		self.internalBufferArray = [NSMutableArray array];
 		
 		self.operationSerialBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
@@ -105,10 +151,18 @@
 		
         self.childrenQueue = dispatch_queue_create("com.earlyinnovations.operationOptimizer.childrenQueue", 0);
         
-
+        [self createOptimizedOperation];
 	}
 	return self;
 }
+
+/************************************************/
+/*		Create Execution Plan					*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Create Execution Plan
+#pragma mark
 
 - (BOOL) createExecutionPlan
 {
@@ -143,155 +197,105 @@
 	return success;
 }
 
-- (BOOL) assignMemoryBuffers
-{	
-	BOOL success = YES;
-	for (GLVariable *variable in self.bottomVariables) {
-		success &= [self assignUnoptimizedMemoryBufferToVariable: variable forTopVariables: self.topVariables bottomVariables:self.bottomVariables];
-	}
-	return success;
-}
-
-//- (BOOL) assignMemoryBuffers
-//{	
-//	GLMemoryOptimizer *memoryOptimizer = [[GLMemoryOptimizer alloc] initWithTopVariables: self.topVariables bottomVariables: self.bottomVariables];
-//	
-//	for (GLVariable *variable in self.bottomVariables) {
-//		[memoryOptimizer mapAllGraphCyclesStartingWithVariable: variable];
-//	}
-//	
-//	for (GLVariable *variable in self.bottomVariables) {
-//		[memoryOptimizer mapChildrenStartingWithVariable: variable];
-//	}
-//
-//	for (GLVariable *variable in self.bottomVariables) {
-//		[memoryOptimizer mapAllReachableVariablesStartingWithVariable: variable];
-//	}
-//		
-//	for (GLVariable *variable in self.bottomVariables) {
-//		[memoryOptimizer assignMemoryBufferToParentsAndVariable: variable];
-//	}
-//	
-//	self.variableDataMap = memoryOptimizer.variableDataMap;
-//	
-//	return YES;
-//}
-
-- (BOOL) createExecutionBlocks
+- (BOOL) mapPreliminariesWithOperation: (GLVariableOperation *) operation forTopVariables: (NSArray *) topVariables
 {
-	// Now we move the internal map to two arrays that are in 1-1 correspondence.
-	self.internalVariables = [NSMutableArray array];
-	self.internalDataBuffers = [NSMutableArray array];
-	for ( GLVariable *aVariable in self.internalVariableBufferMap ) {
-		[self.internalVariables addObject: aVariable];
-		[self.internalDataBuffers addObject: [self.internalVariableBufferMap objectForKey: aVariable]];
+	if ( [self.finishedMappingOperations containsObject: operation] ) {
+		return YES;
+	} else {
+		[self.finishedMappingOperations addObject: operation];
 	}
 	
-	// We build a carefully ordered array of all the variables to be referenced.
-	self.allVariablesAndBuffers = [[NSMutableArray alloc] initWithArray: self.bottomVariables];
-	[self.allVariablesAndBuffers addObjectsFromArray: self.topVariables];
-	[self.allVariablesAndBuffers addObjectsFromArray: self.internalVariables];
-	
-	// All bottom variables are responsible for exiting a group that can be monitored to determine when we're done executing.
-	self.bottomVariableGroup = dispatch_group_create();
-	NSMutableSet *bottomOperations = [[NSMutableSet alloc] init];
-	for (GLVariable *bottomVariable in self.bottomVariables) {
-		if (bottomVariable.lastOperation) [bottomOperations addObject: bottomVariable.lastOperation];
-	}
-	for (GLVariableOperation *operation in bottomOperations) {
-		[self addGroupResponsibility: self.bottomVariableGroup forOperation: operation];
-	}
-	
+	// We now determine the responsibilities of each parent.
+	// See the documentation for an explanation of the algorithm.
 	BOOL success = NO;
-	NSUInteger rationalCutoff = [self totalDependencies]+1;
-	NSUInteger totalLoops = 0;
-	while (!success && totalLoops < rationalCutoff) {
-		success = YES;
-		for (GLVariableOperation *operation in bottomOperations) {
-			success &= [self createExecutionBlockFromOperation: operation forTopVariables: self.topVariables bottomVariables: self.bottomVariables];
+	
+	NSMutableArray *topVariableOperands = [[NSMutableArray alloc] init];
+	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
+	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
+	
+	for (GLVariable *aVariable in operation.operand) {
+		if ( [topVariables containsObject: aVariable] ) {
+			[topVariableOperands addObject: aVariable];
+		} else if ( aVariable.pendingOperations.count == 0 ) {
+			[precomputedVariableOperands addObject: aVariable];
+		} else {
+			if ( ![otherVariableOperandOperations containsObject: aVariable.lastOperation] ) {
+				[otherVariableOperandOperations addObject: aVariable.lastOperation];
+			}
 		}
-		totalLoops++;
 	}
 	
-	if (!success) {
-		NSLog(@"Apparently the algorithm failed to converge.");
+    //	static NSUInteger basisTransformCount = 0;
+    //	if ( [[operation class] isSubclassOfClass: [GLBasisTransformOperation class]]) {
+    //		basisTransformCount++;
+    //		NSLog(@"%lu -- %@", basisTransformCount, [operation description]);
+    //	}
+	
+	if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
+		NSLog(@"This operation depends only on precomputed variables. This should not happen.");
+	} else if ( operation.operand.count == 0 ) {
+		[self incrementSerialBlockCountForOperation: (GLVariableOperation *) self];
+	} else if ( topVariableOperands.count && !otherVariableOperandOperations.count ) {
+		[self incrementSerialBlockCountForOperation: (GLVariableOperation *) self];
+	} else if ( otherVariableOperandOperations.count == 1 ) {
+		[self incrementSerialBlockCountForOperation: [otherVariableOperandOperations objectAtIndex: 0]];
+	} else if ( otherVariableOperandOperations.count > 1 ){
+		[self incrementParallelBlockCountForOperation: [otherVariableOperandOperations objectAtIndex: 0]];
+		for (NSUInteger i=1; i<otherVariableOperandOperations.count; i++) {
+			[self incrementParallelGroupCountForOperation: [otherVariableOperandOperations objectAtIndex: i]];
+		}
+	} else {
+		NSLog(@"Ack!!! This case should never happen if my logic is correct");
+	}
+	
+	success = YES;
+	for (GLVariableOperation *anOperation in otherVariableOperandOperations) {
+		success &= [self mapPreliminariesWithOperation: anOperation forTopVariables: topVariables];
 	}
 	
 	return success;
 }
 
-- (variableOperation) operationBlock
+- (BOOL) precomputeVariablesWithOperation: (GLVariableOperation *) operation forTopVariables: (NSArray *) topVariables
 {
-	if (! [self createExecutionPlan]) {
-		return nil;
-	}
-	if (! [self assignMemoryBuffers]) {
-		return nil;
-	}
-	if (! [self createExecutionBlocks]) {
-		return nil;
+	if ( [self.finishedMappingOperations containsObject: operation] ) {
+		return YES;
+	} else {
+		[self.finishedMappingOperations addObject: operation];
 	}
 	
-	NSLog(@"Total memory buffers allocated: %lu", self.totalMemoryBuffersAllocated);
+	// We now determine the responsibilities of each parent.
+	// See the documentation for an explanation of the algorithm.
+	NSMutableArray *topVariableOperands = [[NSMutableArray alloc] init];
+	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
+	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
 	
-	if ( self.bottomVariables.count && self.topVariables.count )
-	{		
-		NSMutableArray *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
-		NSMapTable *parallelExecutionBlocks = [self parallelResponsibilitiesForOperation: (GLVariableOperation *) self];
-		if (groups.count != 0) {
-			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
-		}
-		if (parallelExecutionBlocks.count != 0 ) {
-			NSLog(@"The top variable should never have groups to manage. Something went wrong.");
-		}
-		
-		// All five of these objects will be copied/referenced by the block.
-		dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
-		dispatch_group_t bottomGroup = self.bottomVariableGroup;
-		NSMutableArray *allGroups = [self allGroups];
-		NSArray *precomputedBuffers = self.precomputedBuffers;
-				
-		variableOperation aBlock = ^(NSArray *bottomBuffers, NSArray *topBuffers, NSArray *internalBuffers) {
-			
-			// A unary operation only has one bottom variable, so we only need to entire it once.
-			// The group variable is in the group array, so it will automatically get incremented once.
-			// 1. Increment the group count once.
-			for (dispatch_group_t group in allGroups) {
-				dispatch_group_enter(group);
+	for (GLVariable *aVariable in operation.operand) {
+		if ( [topVariables containsObject: aVariable] ) {
+			[topVariableOperands addObject: aVariable];
+		} else if ( aVariable.pendingOperations.count == 0 ) {
+			[precomputedVariableOperands addObject: aVariable];
+		} else {
+			if ( ![otherVariableOperandOperations containsObject: aVariable.lastOperation] ) {
+				[otherVariableOperandOperations addObject: aVariable.lastOperation];
 			}
-
-			// Follow our strict buffer order.
-			NSMutableArray *dataBuffers = [[NSMutableArray alloc] initWithArray: bottomBuffers];
-			[dataBuffers addObjectsFromArray: topBuffers];
-			[dataBuffers addObjectsFromArray: precomputedBuffers];
-			[dataBuffers addObjectsFromArray: internalBuffers];
-            
-			for ( executionBlock anExecutionBlock in serialExecutionBlocks ) {
-				dispatch_async( globalQueue, ^{
-					anExecutionBlock( dataBuffers );
-				});
-			}
-			
-			dispatch_group_wait(bottomGroup, DISPATCH_TIME_FOREVER);
-		};
-		
-		return aBlock;
+		}
 	}
-	else
-	{
-		NSLog(@"Incorrect number of top variables (%lu) or bottom variables (%lu) to create a unaryOperation", self.topVariables.count, self.bottomVariables.count);
-		return nil;
+	
+    BOOL success = YES;
+	if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
+		NSLog(@"This operation depends only on precomputed variables. It will be computed now.");
+        GLEquation *equation = [topVariables.lastObject equation];
+        [equation solveForOperation: operation waitUntilFinished: YES];
+        success = NO;
 	}
+	
+	for (GLVariableOperation *anOperation in otherVariableOperandOperations) {
+		success &= [self precomputeVariablesWithOperation: anOperation forTopVariables: topVariables];
+	}
+	
+	return success;
 }
-
-/************************************************/
-/*		Preliminary Mapping						*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Preliminary Mapping
-#pragma mark
 
 @synthesize internalVariableBufferMap;
 @synthesize operationSerialBlockCountMap;
@@ -380,115 +384,48 @@
 	return total;
 }
 
-- (BOOL) mapPreliminariesWithOperation: (GLVariableOperation *) operation forTopVariables: (NSArray *) topVariables
-{	
-	if ( [self.finishedMappingOperations containsObject: operation] ) {
-		return YES;
-	} else {
-		[self.finishedMappingOperations addObject: operation];
-	}
-	
-	// We now determine the responsibilities of each parent.
-	// See the documentation for an explanation of the algorithm.
-	BOOL success = NO;
-	
-	NSMutableArray *topVariableOperands = [[NSMutableArray alloc] init];
-	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
-	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
-	
-	for (GLVariable *aVariable in operation.operand) {
-		if ( [topVariables containsObject: aVariable] ) {
-			[topVariableOperands addObject: aVariable];
-		} else if ( aVariable.pendingOperations.count == 0 ) {
-			[precomputedVariableOperands addObject: aVariable];
-		} else {
-			if ( ![otherVariableOperandOperations containsObject: aVariable.lastOperation] ) {
-				[otherVariableOperandOperations addObject: aVariable.lastOperation];
-			}
-		}
-	}
-	
-//	static NSUInteger basisTransformCount = 0;
-//	if ( [[operation class] isSubclassOfClass: [GLBasisTransformOperation class]]) {
-//		basisTransformCount++;
-//		NSLog(@"%lu -- %@", basisTransformCount, [operation description]);
-//	}
-	
-	if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
-		NSLog(@"This operation depends only on precomputed variables. This should not happen.");
-	} else if ( operation.operand.count == 0 ) {
-		[self incrementSerialBlockCountForOperation: (GLVariableOperation *) self];
-	} else if ( topVariableOperands.count && !otherVariableOperandOperations.count ) {
-		[self incrementSerialBlockCountForOperation: (GLVariableOperation *) self];
-	} else if ( otherVariableOperandOperations.count == 1 ) {
-		[self incrementSerialBlockCountForOperation: [otherVariableOperandOperations objectAtIndex: 0]];
-	} else if ( otherVariableOperandOperations.count > 1 ){
-		[self incrementParallelBlockCountForOperation: [otherVariableOperandOperations objectAtIndex: 0]];
-		for (NSUInteger i=1; i<otherVariableOperandOperations.count; i++) {
-			[self incrementParallelGroupCountForOperation: [otherVariableOperandOperations objectAtIndex: i]];
-		}
-	} else {
-		NSLog(@"Ack!!! This case should never happen if my logic is correct");
-	}
-	
-	success = YES;
-	for (GLVariableOperation *anOperation in otherVariableOperandOperations) {
-		success &= [self mapPreliminariesWithOperation: anOperation forTopVariables: topVariables];
-	}	
-	
-	return success;
-}
-
-- (BOOL) precomputeVariablesWithOperation: (GLVariableOperation *) operation forTopVariables: (NSArray *) topVariables
-{	
-	if ( [self.finishedMappingOperations containsObject: operation] ) {
-		return YES;
-	} else {
-		[self.finishedMappingOperations addObject: operation];
-	}
-	
-	// We now determine the responsibilities of each parent.
-	// See the documentation for an explanation of the algorithm.
-	NSMutableArray *topVariableOperands = [[NSMutableArray alloc] init];
-	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
-	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
-	
-	for (GLVariable *aVariable in operation.operand) {
-		if ( [topVariables containsObject: aVariable] ) {
-			[topVariableOperands addObject: aVariable];
-		} else if ( aVariable.pendingOperations.count == 0 ) {
-			[precomputedVariableOperands addObject: aVariable];
-		} else {
-			if ( ![otherVariableOperandOperations containsObject: aVariable.lastOperation] ) {
-				[otherVariableOperandOperations addObject: aVariable.lastOperation];
-			}
-		}
-	}
-	
-    BOOL success = YES;
-	if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
-		NSLog(@"This operation depends only on precomputed variables. It will be computed now.");
-        GLEquation *equation = [topVariables.lastObject equation];
-        [equation solveForOperation: operation waitUntilFinished: YES];
-        success = NO;
-	}
-	
-	for (GLVariableOperation *anOperation in otherVariableOperandOperations) {
-		success &= [self precomputeVariablesWithOperation: anOperation forTopVariables: topVariables];
-	}	
-	
-	return success;
-}
-
-
 
 /************************************************/
-/*		Internal Data Buffers					*/
+/*		Assign Memory Buffers					*/
 /************************************************/
 
 #pragma mark -
-#pragma mark Internal Data Buffers
+#pragma mark Assign Memory Buffers
 #pragma mark
+
+- (BOOL) assignMemoryBuffers
+{
+	BOOL success = YES;
+	for (GLVariable *variable in self.bottomVariables) {
+		success &= [self assignUnoptimizedMemoryBufferToVariable: variable forTopVariables: self.topVariables bottomVariables:self.bottomVariables];
+	}
+	return success;
+}
+
+//- (BOOL) assignMemoryBuffers
+//{
+//	GLMemoryOptimizer *memoryOptimizer = [[GLMemoryOptimizer alloc] initWithTopVariables: self.topVariables bottomVariables: self.bottomVariables];
+//
+//	for (GLVariable *variable in self.bottomVariables) {
+//		[memoryOptimizer mapAllGraphCyclesStartingWithVariable: variable];
+//	}
+//
+//	for (GLVariable *variable in self.bottomVariables) {
+//		[memoryOptimizer mapChildrenStartingWithVariable: variable];
+//	}
+//
+//	for (GLVariable *variable in self.bottomVariables) {
+//		[memoryOptimizer mapAllReachableVariablesStartingWithVariable: variable];
+//	}
+//
+//	for (GLVariable *variable in self.bottomVariables) {
+//		[memoryOptimizer assignMemoryBufferToParentsAndVariable: variable];
+//	}
+//
+//	self.variableDataMap = memoryOptimizer.variableDataMap;
+//
+//	return YES;
+//}
 
 @synthesize hasDataBuffer=_hasDataBuffer;
 @synthesize totalMemoryBuffersAllocated;
@@ -507,7 +444,7 @@
 	{
 		// Precomputed variables are a dead end. It's values are fixed and already populated.
 		// So we simply need to grab a copy of its data and exit the recusion.
-		[self.internalVariableBufferMap setObject: [variable.data copy] forKey: variable];
+        [self.precomputedVariableDataMap setObject: [variable.data copy] forKey: variable];
 		return YES;
 	}
 	else if (variable.pendingOperations.count == 1)
@@ -518,12 +455,22 @@
 			self.totalMemoryBuffersAllocated = self.totalMemoryBuffersAllocated + 1;
 			
 			// Here we fetch a data object, of appropriate size, for the variable.
-			[self.internalVariableBufferMap setObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: variable.dataBytes] forKey: variable];
+			[self.internalVariableBufferMap setObject: [[GLBuffer alloc] initWithLength: variable.dataBytes] forKey: variable];
 			[self.hasDataBuffer addObject: variable];
 		}
 		
 		// Now we work further up the tree and deal with the parents.
 		GLVariableOperation *operation = variable.lastOperation;
+        
+        // But first, let's handle the buffers for this operation
+        if ( ![self.hasDataBuffer containsObject: operation])
+        {
+            for (GLBuffer *buffer in operation.buffer) {
+                [self.internalBufferBufferMap setObject: [[GLBuffer alloc] initWithLength: buffer.numBytes] forKey: buffer];
+                self.totalMemoryBuffersAllocated = self.totalMemoryBuffersAllocated + 1;
+            }
+            [self.hasDataBuffer addObject: operation];
+        }
 
 		BOOL success = YES;
 		for (GLVariable *aVariable in operation.operand) {
@@ -552,6 +499,62 @@
 #pragma mark -
 #pragma mark Execution Plan Creation
 #pragma mark
+
+- (BOOL) createExecutionBlocks
+{
+	// Now we move the internal map to two arrays that are in 1-1 correspondence.
+	self.internalVariablesAndBuffers = [NSMutableArray array];
+	self.internalDataBuffers = [NSMutableArray array];
+	for ( GLVariable *aVariable in self.internalVariableBufferMap ) {
+		[self.internalVariablesAndBuffers addObject: aVariable];
+		[self.internalDataBuffers addObject: [self.internalVariableBufferMap objectForKey: aVariable]];
+	}
+    for ( GLVariable *aVariable in self.internalBufferBufferMap ) {
+		[self.internalVariablesAndBuffers addObject: aVariable];
+		[self.internalDataBuffers addObject: [self.internalBufferBufferMap objectForKey: aVariable]];
+	}
+	
+    // Also move this internal map to two arrays that are in 1-1 correspondence.
+    self.precomputedVariables = [NSMutableArray array];
+	self.precomputedVariablesData = [NSMutableArray array];
+    for ( GLVariable *aVariable in self.precomputedVariableDataMap ) {
+		[self.precomputedVariables addObject: aVariable];
+		[self.precomputedVariablesData addObject: [self.precomputedVariableDataMap objectForKey: aVariable]];
+	}
+    
+	// We build a carefully ordered array of all the variables to be referenced.
+	self.allVariablesAndBuffers = [[NSMutableArray alloc] initWithArray: self.bottomVariables];
+	[self.allVariablesAndBuffers addObjectsFromArray: self.topVariables];
+    [self.allVariablesAndBuffers addObjectsFromArray: self.precomputedVariables];
+	[self.allVariablesAndBuffers addObjectsFromArray: self.internalVariablesAndBuffers];
+	
+	// All bottom variables are responsible for exiting a group that can be monitored to determine when we're done executing.
+	self.bottomVariableGroup = dispatch_group_create();
+	NSMutableSet *bottomOperations = [[NSMutableSet alloc] init];
+	for (GLVariable *bottomVariable in self.bottomVariables) {
+		if (bottomVariable.lastOperation) [bottomOperations addObject: bottomVariable.lastOperation];
+	}
+	for (GLVariableOperation *operation in bottomOperations) {
+		[self addGroupResponsibility: self.bottomVariableGroup forOperation: operation];
+	}
+	
+	BOOL success = NO;
+	NSUInteger rationalCutoff = [self totalDependencies]+1;
+	NSUInteger totalLoops = 0;
+	while (!success && totalLoops < rationalCutoff) {
+		success = YES;
+		for (GLVariableOperation *operation in bottomOperations) {
+			success &= [self createExecutionBlockFromOperation: operation forTopVariables: self.topVariables bottomVariables: self.bottomVariables];
+		}
+		totalLoops++;
+	}
+	
+	if (!success) {
+		NSLog(@"Apparently the algorithm failed to converge.");
+	}
+	
+	return success;
+}
 
 @synthesize finishedOperations;
 @synthesize operationGroupArrayMap;

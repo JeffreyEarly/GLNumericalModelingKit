@@ -18,23 +18,6 @@ typedef void (^executionBlock)(NSArray *);
 @interface GLOperationOptimizer : NSObject
 
 /************************************************/
-/*		Convenience Methods						*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Convenience Methods
-#pragma mark
-
-// Returns the top most variables
-//+ (NSSet *) topVariablesFromVariable: (GLVariable *) variable;
-
-//+ (unaryOperation) unaryOperationBlockFromTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
-//
-//+ (binaryOperation) binaryOperationBlockFromTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
-//
-//+ (unaryVectorOperation) unaryVectorOperationBlockFromTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
-
-/************************************************/
 /*		Primary Interface						*/
 /************************************************/
 
@@ -42,61 +25,31 @@ typedef void (^executionBlock)(NSArray *);
 #pragma mark Primary Interface
 #pragma mark
 
-// November 5th, 2013
-// Precomputed variables should be stored in the preOperation---or actually just *stored* and referred to later.
-// Top and bottom variables don't need a memory buffer.
-// Internal variables should create a bufferLengths array, and also add other internal variables to that.
-// The idea is that our internal buffers, in theory, can be swapped in an out. So, we don't want to make the precomputed variables act like one of those.
-
-
-
-// 1. Initialize with the variables at the top of the tree, and the bottom of the tree.
+// Initialize with the variables at the top of the tree, and the bottom of the tree.
 - (GLOperationOptimizer *) initWithTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
 
 // 5c. Returns an optimized unary vector block build from the execution blocks.
 // This will return nil if the number of top variables isn't the same as the number
 // of bottom variables.
-- (variableOperation) operationBlock;
+@property(copy) variableOperation operationBlock;
 
-// 6. Optional.
-// The NSMutableData objects required by the block operation, ordered exactly
-// the same as the internalVariables array. The block operation has an identical
-// array, so they won't disappear until the block does, however if you want to return them
-// to the sharedMemoryPool, you'll need to hold onto the objects in the array.
+// Ordered list of GLBuffer objects.
 @property(strong) NSMutableArray *internalDataBuffers;
 
+@property(strong) NSMutableArray *operandVariablePrototypes;
+
+@property(strong) NSMutableArray *resultVariablePrototypes;
+
 /************************************************/
-/*		Internal Interface						*/
+/*		Create Execution Plan					*/
 /************************************************/
 
 #pragma mark -
-#pragma mark Internal Interface
+#pragma mark Create Execution Plan
 #pragma mark
 
-// 2. Returns YES if it was able to create an execution plan. If NO, then don't proceed.
+// Step 1---returns YES if it was able to create an execution plan. If NO, then don't proceed.
 - (BOOL) createExecutionPlan;
-
-// 3. Returns YES if it was able to properly assign internal memory buffers. If NO, then don't proceed.
-- (BOOL) assignMemoryBuffers;
-
-// 4. Returns YES if it was able to create the execution blocks. If NO, then don't proceed.
-- (BOOL) createExecutionBlocks;
-
-// An ordered list of all the internal variables.
-@property(strong) NSMutableArray *internalVariables;
-
-// bottomVariables, topVariables, precomputedVariables, internalVariables and buffers;
-@property(strong) NSMutableArray *allVariablesAndBuffers;
-
-@property dispatch_queue_t childrenQueue;
-
-/************************************************/
-/*		Preliminary Mapping						*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Preliminary Mapping
-#pragma mark
 
 // Hunts down variables which need to be precomputed.
 - (BOOL) precomputeVariablesWithOperation: (GLVariableOperation *) operation forTopVariables: (NSArray *) topVariables;
@@ -107,16 +60,10 @@ typedef void (^executionBlock)(NSArray *);
 // The one exception is that the top-most responsibilities will be assigned to self.
 - (BOOL) mapPreliminariesWithOperation: (GLVariableOperation *) operation forTopVariables: (NSArray *) topVariables;
 
-/// Map from precomputed variables to their NSData chunk.
-@property NSMapTable *precomputedVariableDataMap;
-
-/// Map from *internal* variables to a GLBuffer. Two variables may point to the same buffer, depending on the sophistication of the memory optimizer.
-@property NSMapTable *internalVariableBufferMap;
-
-/// Array of all internal buffers the operations depend on.
-@property NSMutableArray *internalBufferArray;
-
+/// A hash table containing operations which have had their connections fully mapped.
 @property NSHashTable *finishedMappingOperations;
+
+// The following store all the information about those dependencies.
 @property NSMapTable *operationSerialBlockCountMap;
 @property NSMapTable *operationParallelBlockCountMap;
 @property NSMapTable *operationParallelGroupCountMap;
@@ -133,30 +80,64 @@ typedef void (^executionBlock)(NSArray *);
 - (NSUInteger) totalDependencies;
 
 /************************************************/
-/*		Internal Data Buffers					*/
+/*		Assign Memory Buffers					*/
 /************************************************/
 
 #pragma mark -
-#pragma mark Internal Data Buffers
+#pragma mark Assign Memory Buffers
 #pragma mark
 
-@property NSHashTable *hasDataBuffer;
+// Step 2---returns YES if it was able to properly assign internal memory buffers. If NO, then don't proceed.
+- (BOOL) assignMemoryBuffers;
 
-@property NSUInteger totalMemoryBuffersAllocated;
-
+// Creates a memory buffer for each internal variable and copies the data from pre-computed variables.
 // It also creates an appropriately sized data object that each operation can use.
-// At the moment the data allocation is completely unoptimized.
+// This is the most inefficient memory assignment possible.
 - (BOOL) assignUnoptimizedMemoryBufferToVariable: (GLVariable *) variable forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
 
+/// A hash table containing variables and operations which have a data buffer assigned.
+@property NSHashTable *hasDataBuffer;
+
+/// Map from precomputed variables to their NSData chunk.
+@property NSMapTable *precomputedVariableDataMap;
+
+/// Map from *internal* variables to a GLBuffer. Two variables may point to the same buffer, depending on the sophistication of the memory optimizer.
+@property NSMapTable *internalVariableBufferMap;
+
+/// Map from the *internal* buffers to a new GLBuffer.
+@property NSMapTable *internalBufferBufferMap;
+
+/// Total number of GLBuffer objects created for this operation.
+@property NSUInteger totalMemoryBuffersAllocated;
+
 /************************************************/
-/*		Execution Plan Creation					*/
+/*		Create Execution Blocks					*/
 /************************************************/
 
 #pragma mark -
 #pragma mark Execution Plan Creation
 #pragma mark
 
+// Step 3---returns YES if it was able to create the execution blocks. If NO, then don't proceed.
+- (BOOL) createExecutionBlocks;
+
+// An ordered list of all the internal variables, followed by the internal buffers.
+// This list maps one-to-one to the -internalDataBuffer array, which contains corresponding buffers.
+@property(strong) NSMutableArray *internalVariablesAndBuffers;
+
+// These take the -precomputedVariableDataMap and move it to one-to-one arrays.
+@property(strong) NSMutableArray *precomputedVariables;
+@property(strong) NSMutableArray *precomputedVariablesData;
+
+// bottomVariables, topVariables, precomputedVariables, internalVariables and buffers;
+@property(strong) NSMutableArray *allVariablesAndBuffers;
+
+@property dispatch_queue_t childrenQueue;
+
 @property NSUInteger totalTopVariablesCreated;
+
+/// Array of all internal buffers the operations depend on.
+@property NSMutableArray *internalBufferArray;
 
 // Returns yes its executionBlock and all the parents are successfully created, no otherwise.
 - (BOOL) createExecutionBlockFromOperation: (GLVariableOperation *) operation forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;

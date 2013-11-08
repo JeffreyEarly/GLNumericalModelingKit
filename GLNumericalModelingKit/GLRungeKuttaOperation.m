@@ -8,11 +8,18 @@
 
 #import "GLRungeKuttaOperation.h"
 
-#import "GLOperationOptimizer.h"
 #import "GLMemoryPool.h"
 #import "GLUnaryOperations.h"
 #import "GLVectorVectorOperations.h"
 #import "GLOperationVisualizer.h"
+
+/************************************************/
+/*		GLRungeKuttaOperation					*/
+/************************************************/
+
+#pragma mark -
+#pragma mark GLRungeKuttaOperation
+#pragma mark
 
 // This type is designed to take an array "y", and then write "f" to the appropriate data chunks that are fixed.
 typedef void (^stagePrepOperation)(NSArray *);
@@ -219,6 +226,10 @@ BOOL isOne( NSNumber *a )
 	
 	NSMutableArray *yfull = [NSMutableArray arrayWithArray: y];
 	[yfull addObject: time];
+    
+    Class RungeKuttaTimeStepClass = [GLVariableOperation variableOperationSubclassWithOperand: yfull result: yout];
+    
+    
 	GLOperationOptimizer *optimizer = [[GLOperationOptimizer alloc] initWithTopVariables: yfull bottomVariables: yout];
 	
 	// Re-create similar variables, but without the dependencies.
@@ -382,6 +393,14 @@ BOOL isOne( NSNumber *a )
 }
 
 @end
+
+/************************************************/
+/*		GLAdaptiveRungeKuttaOperation			*/
+/************************************************/
+
+#pragma mark -
+#pragma mark GLAdaptiveRungeKuttaOperation
+#pragma mark
 
 @interface GLAdaptiveRungeKuttaOperation ()
 
