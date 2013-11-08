@@ -219,6 +219,11 @@ GLSplitComplex splitComplexFromData( NSData *data )
 			return [(GLLinearTransform *) self matrixMultiply: (GLLinearTransform *)otherVariable];
 		}
 	}
+    
+    if (operation) {
+        operation = [self replaceWithExistingOperation: operation];
+        return operation.result[0];
+    }
 	return nil;
 }
 
@@ -240,6 +245,10 @@ GLSplitComplex splitComplexFromData( NSData *data )
 			return [(GLLinearTransform *) self matrixMultiply: (GLLinearTransform *)otherVariable];
 		}
 	}
+    if (operation) {
+        operation = [self replaceWithExistingOperation: operation];
+        return operation.result[0];
+    }
 	return nil;
 }
 

@@ -436,7 +436,7 @@
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
                 GLFloat *xVal = (GLFloat *) x.data.bytes;
                 
-                GLFloatComplex value = cos(M_PI*kVal[row[0]]*xVal[col[0]])/x.nPoints ;
+                GLFloatComplex value = cos(2*M_PI*kVal[row[0]]*xVal[col[0]])/x.nPoints ;
                 
                 return value;
             }];
@@ -450,7 +450,7 @@
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
                 GLFloat *xVal = (GLFloat *) x.data.bytes;
                 
-                GLFloatComplex value = sin(M_PI*kVal[row[0]]*xVal[col[0]])/x.nPoints ;
+                GLFloatComplex value = sin(2*M_PI*kVal[row[0]]*xVal[col[0]])/x.nPoints ;
                 
                 return value;
             }];
@@ -463,39 +463,37 @@
         GLDimension *x = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLDeltaBasis strictlyPositive: NO];
         if (k.basisFunction == kGLExponentialBasis)
         {   // This is the IDFT---inverse discrete Fourier transform
-            GLLinearTransform *idft = [self transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+            GLLinearTransform *idft = [self transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
                 GLFloat *xVal = (GLFloat *) x.data.bytes;
                 
-                GLFloatComplex value = cos(2*M_PI*kVal[col[0]]*xVal[row[0]]) - I*sin(2*M_PI*kVal[col[0]]*xVal[row[0]]);
+                GLFloatComplex value = cos(2*M_PI*kVal[col[0]]*xVal[row[0]]) + I*sin(2*M_PI*kVal[col[0]]*xVal[row[0]]);
                 
                 return value;
             }];
             
             return idft;
         }
-        else if (aBasis == kGLCosineHalfShiftBasis)
+        else if (k.basisFunction == kGLCosineHalfShiftBasis)
         {   // This is the IDCT---inverse discrete cosine transform
-            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
-            GLLinearTransform *idct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+            GLLinearTransform *idct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
                 GLFloat *xVal = (GLFloat *) x.data.bytes;
                 
-                GLFloatComplex value = col[0]==0 ? 1.0 : 2.0*cos(M_PI*kVal[col[0]]*xVal[row[0]]);
+                GLFloatComplex value = col[0]==0 ? 1.0 : 2.0*cos(2*M_PI*kVal[col[0]]*xVal[row[0]]);
                 
                 return value;
             }];
             
             return idct;
         }
-        else if (aBasis == kGLSineHalfShiftBasis)
+        else if (k.basisFunction == kGLSineHalfShiftBasis)
         {   // This is the IDST---inverse discrete sine transform
-            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
-            GLLinearTransform *idst = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+            GLLinearTransform *idst = [self transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
                 GLFloat *xVal = (GLFloat *) x.data.bytes;
                 
-                GLFloatComplex value = col[0]==x.nPoints-1 ? pow(-1.0,x.nPoints) : 2.0*sin(M_PI*kVal[col[0]]*xVal[row[0]]);
+                GLFloatComplex value = col[0]==x.nPoints-1 ? pow(-1.0,x.nPoints) : 2.0*sin(2*M_PI*kVal[col[0]]*xVal[row[0]]);
                 
                 return value;
             }];
@@ -800,22 +798,22 @@
         }
     }
 		
-	if (numDenseIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 1 && numDenseIndices == 0) {
+	if (numDenseIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 1 && numIdentityIndices == 0) {
 		// Tridiagonal matrix transformations.
 		GLTriadiagonalTransformOperation *operation = [[GLTriadiagonalTransformOperation alloc] initWithLinearTransformation: self function: x];
 		operation = [self replaceWithExistingOperation: operation];
 		return operation.result[0];
-	} else if (numDenseIndices == 1 && numDiagonalIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numDenseIndices == 0) {
+	} else if (numDenseIndices == 1 && numDiagonalIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numIdentityIndices == 0) {
 		// Dense matrix transformations.
 		GLDenseMatrixTransformOperation *operation = [[GLDenseMatrixTransformOperation alloc] initWithLinearTransformation: self function: x];
 		operation = [self replaceWithExistingOperation: operation];
 		return operation.result[0];
-	}  else if (numDenseIndices == 0 && numIdentityIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numDenseIndices == 0) {
+	}  else if (numDenseIndices == 0 && numIdentityIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numIdentityIndices == 0) {
 		// Diagonal matrix transformation
 		GLMultiplicationOperation *operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: x];
 		operation = [self replaceWithExistingOperation: operation];
 		return operation.result[0];
-	}  else if (numDenseIndices == 0 && numIdentityIndices == 0 && numTriIndices == 0 && numDenseIndices == 0) {
+	}  else if (numDenseIndices == 0 && numIdentityIndices == 0 && numTriIndices == 0 && numIdentityIndices == 0) {
 		// General diagonal matrix transformation
 		GLSingleDiagonalTransformOperation *operation = [[GLSingleDiagonalTransformOperation alloc] initWithLinearTransformation: self function: x];
 		operation = [self replaceWithExistingOperation: operation];

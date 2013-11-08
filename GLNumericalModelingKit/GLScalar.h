@@ -16,4 +16,7 @@
 - (GLScalar *) initWithType: (GLDataFormat) format forEquation: (GLEquation *) anEquation;
 - (GLScalar *) initWithValue: (GLFloatComplex) aValue forEquation: (GLEquation *) anEquation;
 
+
+- (id) dividedBy: (id) otherVariable;
+
 @end

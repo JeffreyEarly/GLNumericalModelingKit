@@ -465,11 +465,17 @@ static NSMapTable *transformSpatialDimensionMap = nil;
         {
             // 0..fc -- negative frequencies ignored, as they're found with the 
             // Same as the cosine transform above, but the actual domain length should have been treated as one point longer, as if it were periodic.
-            if (spatialDimension.isPeriodic) {
+            if (spatialDimension.gridType == kGLInteriorGrid) {
                 _domainLength = ((GLFloat) spatialDimension.nPoints-1)/(2*(spatialDimension.domainLength));
             } else {
-                _domainLength = ((GLFloat) spatialDimension.nPoints-1)/(2*(spatialDimension.domainLength+spatialDimension.sampleInterval));
+                NSLog(@"Inappropriate grid type!");
+                if (spatialDimension.isPeriodic) {
+                    _domainLength = ((GLFloat) spatialDimension.nPoints-1)/(2*(spatialDimension.domainLength));
+                } else {
+                    _domainLength = ((GLFloat) spatialDimension.nPoints-1)/(2*(spatialDimension.domainLength+spatialDimension.sampleInterval));
+                }
             }
+            
             _nPoints = spatialDimension.nPoints;
             sampleInterval = _domainLength / ( (double) (self.nPoints-1));
         }
@@ -490,10 +496,15 @@ static NSMapTable *transformSpatialDimensionMap = nil;
         {
             // 0..fc -- negative frequencies ignored, as they're found with the 
             // Same as the cosine transform above, but the actual domain length should have been treated as one point longer, as if it were periodic.
-            if (spatialDimension.isPeriodic) {
+            if (spatialDimension.gridType == kGLInteriorGrid) {
                 _domainLength = ((GLFloat) spatialDimension.nPoints-1)/(2*(spatialDimension.domainLength));
             } else {
-                _domainLength = ((GLFloat) spatialDimension.nPoints-1)/(2*(spatialDimension.domainLength+spatialDimension.sampleInterval));
+                NSLog(@"Inappropriate grid type!");
+                if (spatialDimension.isPeriodic) {
+                    _domainLength = ((GLFloat) spatialDimension.nPoints-1)/(2*(spatialDimension.domainLength));
+                } else {
+                    _domainLength = ((GLFloat) spatialDimension.nPoints-1)/(2*(spatialDimension.domainLength+spatialDimension.sampleInterval));
+                }
             }
             _nPoints = spatialDimension.nPoints;
             sampleInterval = _domainLength / ( (double) (self.nPoints-1));

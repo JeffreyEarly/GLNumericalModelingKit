@@ -124,7 +124,7 @@ GLSplitComplex splitComplexFromData( NSData *data );
  @param otherVariableOrScalar An input scalar, vector or matrix.
  @returns A subclass of GLVariable with the same dimensions as the highest rank input.
  */
-- (GLTensor *) minus: (id) otherVariableOrScalar;
+- (instancetype) minus: (id) otherVariableOrScalar;
 
 /** Multiplies two variables together: result = receiving variable * otherVariableOrScalar.
  @discussion This operation is treated differently depending on the receiver and otherVariable class.
@@ -136,14 +136,14 @@ GLSplitComplex splitComplexFromData( NSData *data );
  @param otherVariableOrScalar An input scalar, vector or matrix.
  @returns A subclass of GLVariable.
  */
-- (GLTensor *) multiply: (id) otherVariableOrScalar;
+- (id) multiply: (id) otherVariableOrScalar;
 
 /** Multiplies two variables together: result = receiving variable * otherVariableOrScalar, after transforming back into the spatial domain.
  @discussion This is the same as multiply, but transforms variables into the spatial domain (if necessary) before multiplying.
   @param otherVariableOrScalar An input scalar, vector or matrix.
  @returns A subclass of GLVariable.
  */
-- (GLTensor *) times: (id) otherVariableOrScalar;
+- (id) times: (id) otherVariableOrScalar;
 
 /************************************************/
 /*		Reading & Writing						*/

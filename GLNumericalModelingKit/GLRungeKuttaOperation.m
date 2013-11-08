@@ -12,6 +12,7 @@
 #import "GLUnaryOperations.h"
 #import "GLVectorVectorOperations.h"
 #import "GLOperationVisualizer.h"
+#import "GLOperationOptimizer.h"
 
 /************************************************/
 /*		GLRungeKuttaOperation					*/
@@ -22,7 +23,7 @@
 #pragma mark
 
 // This type is designed to take an array "y", and then write "f" to the appropriate data chunks that are fixed.
-typedef void (^stagePrepOperation)(NSArray *);
+typedef void (^stagePrepOperation)(NSArray *, NSArray *);
 
 BOOL isFinite( NSData *data, NSUInteger nDataElements )
 {
@@ -46,7 +47,7 @@ BOOL isOne( NSNumber *a )
 @interface GLRungeKuttaOperation ()
 - (id) initMethodWithCoefficientsA: (NSArray *) a b: (NSArray *) b c: (NSArray *) c y: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) aBlock;
 
-@property(strong) NSArray *dataBuffers;
+@property(strong) NSMutableArray *dataBuffers;
 @property GLFloat stepSize;
 @property NSUInteger nInputs;
 
@@ -77,6 +78,7 @@ BOOL isOne( NSNumber *a )
 // This will need to be called anytime that y is reset.
 @property BOOL stageIsPrepped;
 @property(copy) stagePrepOperation prepStageOperation;
+@property(strong) NSMutableArray *prepStageDataBuffers;
 
 @end
 
@@ -227,32 +229,28 @@ BOOL isOne( NSNumber *a )
 	NSMutableArray *yfull = [NSMutableArray arrayWithArray: y];
 	[yfull addObject: time];
     
-    Class RungeKuttaTimeStepClass = [GLVariableOperation variableOperationSubclassWithOperand: yfull result: yout];
-    
-    
 	GLOperationOptimizer *optimizer = [[GLOperationOptimizer alloc] initWithTopVariables: yfull bottomVariables: yout];
 	
-	// Re-create similar variables, but without the dependencies.
-	NSMutableArray *result = [[NSMutableArray alloc] initWithCapacity: yout.count];
-	for (GLVariable *variable in yout) {
-		[result addObject: [GLVariable variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
-	}
-	
-	if ((self=[self initWithResult: result operand: y])) {
+	if ((self=[self initWithResult: optimizer.resultVariablePrototypes operand: y])) {
 		
-		unaryVectorOperation vectorBlock = optimizer.unaryVectorOperationBlock;
+		variableOperation vectorBlock = optimizer.operationBlock;
 		NSMutableArray *operandArray = [NSMutableArray arrayWithCapacity: yfull.count];
 		NSMutableData *tData = self.currentTimeData;
 		self.operation = ^(NSArray *result, NSArray *operand, NSArray *bufferArray) {
 			[operandArray addObjectsFromArray: operand];
 			[operandArray addObject: tData];
 			
-			vectorBlock( result, operandArray);
+			vectorBlock( result, operandArray, bufferArray);
 			
 			[operandArray removeAllObjects];
 		};
 		
-		self.dataBuffers = optimizer.internalDataBuffers;
+        // Go ahead and allocate the memory for those buffers.
+        self.dataBuffers = [NSMutableArray array];
+		for (GLBuffer *aBuffer in optimizer.internalDataBuffers) {
+			[self.dataBuffers addObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: aBuffer.numBytes]];
+		}
+        
 		self.currentY = y;
 		self.stepSize = deltaT;
 		self.lastStepSize = deltaT;
@@ -298,7 +296,7 @@ BOOL isOne( NSNumber *a )
 	// If the algorithm isFSAL, then we plan on using the last stage from the previous time step.
 	// However, if there was no previous time step, then the stage won't actually be there and we need to compute it!
 	if (self.isFSAL && !self.stageIsPrepped) {
-		self.prepStageOperation( operandBuffer );
+		self.prepStageOperation( operandBuffer, self.prepStageDataBuffers );
 		self.stageIsPrepped = YES;
 	}
 	
@@ -421,7 +419,8 @@ BOOL isOne( NSNumber *a )
 // Hold onto all the stages, in case we want to interpolate
 @property(strong) NSArray *stageVariables;
 
-@property(copy) unaryVectorOperation interpolationOperation;
+@property(copy) variableOperation interpolationOperation;
+@property(strong) NSMutableArray *interpolationBuffers;
 
 // Re-declared
 
@@ -584,7 +583,7 @@ BOOL isOne( NSNumber *a )
 	[bottomVariables addObjectsFromArray: yout];
 	
 	GLOperationOptimizer *optimizer = [[GLOperationOptimizer alloc] initWithTopVariables: topVariables bottomVariables: bottomVariables];
-	unaryVectorOperation vectorBlock = optimizer.unaryVectorOperationBlock;
+	variableOperation vectorBlock = optimizer.operationBlock;
 	
 //	GLOperationVisualizer *visualizer = [[GLOperationVisualizer alloc] initWithTopVariables: topVariables bottomVariables: bottomVariables];
 //	NSLog(@"%@", visualizer.graphvisDescription);
@@ -598,18 +597,19 @@ BOOL isOne( NSNumber *a )
 	[operandBuffer addObject: rk.lastStepSizeData];
 	
 	NSMutableArray *fullOperandBuffer = [[NSMutableArray alloc] init];
-	unaryVectorOperation interpBlock = ^(NSArray *result, NSArray *operand) {
+	variableOperation interpBlock = ^(NSArray *result, NSArray *operand, NSArray *bufferArray) {
 		[fullOperandBuffer addObjectsFromArray: operand];
 		[fullOperandBuffer addObjectsFromArray: operandBuffer];
 		
-		vectorBlock( result, fullOperandBuffer );
+		vectorBlock( result, fullOperandBuffer, bufferArray );
 		[fullOperandBuffer removeAllObjects];
 	};
 	
 	rk.interpolationOperation = interpBlock;
-	NSMutableArray *internalBuffers = [NSMutableArray arrayWithArray: optimizer.internalDataBuffers];
-	[internalBuffers addObjectsFromArray: rk.dataBuffers];
-	rk.dataBuffers = internalBuffers;
+    rk.interpolationBuffers = [NSMutableArray array];
+    for (GLBuffer *aBuffer in optimizer.internalDataBuffers) {
+        [rk.interpolationBuffers addObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: aBuffer.numBytes]];
+    }
 	
 	[yout makeObjectsPerformSelector:@selector(solve)];
 	
@@ -774,19 +774,14 @@ BOOL isOne( NSNumber *a )
 	
 	GLOperationOptimizer *optimizer = [[GLOperationOptimizer alloc] initWithTopVariables: topVariables bottomVariables: bottomVariables];
 	
-	// Re-create result variables, but without the dependencies.
-	NSMutableArray *resultVars = [[NSMutableArray alloc] initWithCapacity: yout.count];
-	for (GLVariable *variable in yout) {
-		[resultVars addObject: [GLVariable variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
-	}
-    
-//        GLOperationVisualizer *visualizer = [[GLOperationVisualizer alloc] initWithTopVariables: topVariables bottomVariables:bottomVariables];
-//        NSLog(@"%@", visualizer.graphvisDescription);
-	
-	if ((self=[self initWithResult: resultVars operand: y])) {
+	if ((self=[self initWithResult: optimizer.resultVariablePrototypes operand: y])) {
 		
-		unaryVectorOperation vectorBlock = optimizer.unaryVectorOperationBlock;
-		self.dataBuffers = optimizer.internalDataBuffers;
+		variableOperation vectorBlock = optimizer.operationBlock;
+		// Go ahead and allocate the memory for those buffers.
+        self.dataBuffers = [NSMutableArray array];
+		for (GLBuffer *aBuffer in optimizer.internalDataBuffers) {
+			[self.dataBuffers addObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: aBuffer.numBytes]];
+		}
 		self.currentY = y;
 		self.stepSize = deltaT;
 		self.isFSAL = isFSAL;
@@ -816,24 +811,25 @@ BOOL isOne( NSNumber *a )
 			[stagePrepBottomVariables addObjectsFromArray: f[0]];
 			
 			GLOperationOptimizer *stagePrepOptimizer = [[GLOperationOptimizer alloc] initWithTopVariables: stagePrepTopVariables bottomVariables: stagePrepBottomVariables];
-			unaryVectorOperation prepOperation = stagePrepOptimizer.unaryVectorOperationBlock;
+			variableOperation prepOperation = stagePrepOptimizer.operationBlock;
 			
 			NSMutableArray *operandBuffer = [[NSMutableArray alloc] init];
 			NSMutableData *timeData = self.currentTimeData;
 			NSMutableData *timeStepData = self.stepSizeData;
 			NSArray *lData = [NSArray arrayWithArray: self.lastStageData];
-			self.prepStageOperation = ^(NSArray *operand) {
+			self.prepStageOperation = ^(NSArray *operand, NSArray *theBuffers) {
 				[operandBuffer addObjectsFromArray: operand];
 				[operandBuffer addObject: timeData];
 				[operandBuffer addObject: timeStepData];
 				
-				prepOperation( lData, operandBuffer );
+				prepOperation( lData, operandBuffer, theBuffers );
 				[operandBuffer removeAllObjects];
 			};
 			
-			NSMutableArray *internalBuffers = [NSMutableArray arrayWithArray: stagePrepOptimizer.internalDataBuffers];
-			[internalBuffers addObjectsFromArray: self.dataBuffers];
-			self.dataBuffers = internalBuffers;
+            self.prepStageDataBuffers = [NSMutableArray array];
+            for (GLBuffer *aBuffer in stagePrepOptimizer.internalDataBuffers) {
+                [self.prepStageDataBuffers addObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: aBuffer.numBytes]];
+            }
 		}
 		
 		
@@ -899,7 +895,7 @@ BOOL isOne( NSNumber *a )
 			// This loop is pretty much straight out of Price et. al, Chapter 16.2
 			while (1) {
 				// Time step
-				vectorBlock( resultBuffer, operandBuffer );
+				vectorBlock( resultBuffer, operandBuffer, bufferArray );
 				
 				// Find the max error
 				for (NSUInteger i=0; i<num; i++) {
@@ -968,7 +964,7 @@ BOOL isOne( NSNumber *a )
 //		[ydiff solve];
 //		[fdiff solve];
 		
-		self.interpolationOperation( resultBuffer, operandBuffer);
+		self.interpolationOperation( resultBuffer, operandBuffer, self.interpolationBuffers);
 		
 //		ydiff = [[self.previousY[0] minus: yout[0]] spatialDomain];
 //		[ydiff solve];

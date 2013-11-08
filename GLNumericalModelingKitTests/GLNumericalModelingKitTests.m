@@ -13,7 +13,8 @@
 
 @end
 
-#define fequal(a,b) (fabs((a) - (b)) < 10*FLT_EPSILON)
+// First check if their difference is less than precision, then do the same, but scaled by the magnitude.
+#define fequal(a,b) ((fabs((a) - (b)) < 10*FLT_EPSILON) || (fabs(((a) - (b))/a) < 10*FLT_EPSILON))
 
 @implementation GLNumericalModelingKitTests
 
@@ -111,7 +112,7 @@
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:0.0 length:4.0];
 	GLVariable *var = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
-	GLVariable *result = [var scalarMultiply: 2.0];
+	GLVariable *result = [var times: @(2.0)];
 	[result solve];
 	GLFloat *output = result.pointerValue;
 	
@@ -130,7 +131,7 @@
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:0.0 length:4.0];
 	GLVariable *var = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
-	GLVariable *result = [var scalarAdd: 1.0];
+	GLVariable *result = [var plus: @(1.0)];
 	[result solve];
 	GLFloat *output = result.pointerValue;
 	
@@ -262,7 +263,8 @@
 	
 	GLVariable *x = [GLVariable variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLVariable *f = [[[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0] scalarAdd: 1.0];
-	GLLinearTransform *matrix = [GLLinearTransform dftMatrixFromDimension: f.dimensions[0] forEquation: equation];
+//	GLLinearTransform *matrix = [GLLinearTransform dftMatrixFromDimension: f.dimensions[0] forEquation: equation];
+    GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLExponentialBasis forEquation:equation];
 	GLVariable *f_tilde = [matrix transform: f];
 	[f_tilde solve];
 	GLSplitComplex output = f_tilde.splitComplex;
@@ -280,7 +282,8 @@
 		}
 	}
 	
-	GLLinearTransform *matrix_inverse = [GLLinearTransform idftMatrixFromDimension: f_tilde.dimensions[0] forEquation:equation];
+//	GLLinearTransform *matrix_inverse = [GLLinearTransform idftMatrixFromDimension: f_tilde.dimensions[0] forEquation:equation];
+    GLLinearTransform *matrix_inverse = [GLLinearTransform discreteTransformFromDimension: f_tilde.dimensions[0] toBasis: kGLDeltaBasis forEquation:equation];
 	GLVariable *f_tilde_tilde = [matrix_inverse transform: f_tilde];
 	[f_tilde_tilde solve];
 	
@@ -302,7 +305,8 @@
 	
 	GLVariable *x = [GLVariable variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLVariable *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
-	GLLinearTransform *matrix = [GLLinearTransform cosineTransformMatrixFromDimension: f.dimensions[0] forEquation: equation];
+//	GLLinearTransform *matrix = [GLLinearTransform cosineTransformMatrixFromDimension: f.dimensions[0] forEquation: equation];
+    GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLCosineHalfShiftBasis forEquation:equation];
 	GLVariable *f_tilde = [matrix transform: f];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
@@ -316,7 +320,8 @@
 		}
 	}
 	
-	GLLinearTransform *matrix_inverse = [GLLinearTransform inverseCosineTransformMatrixFromDimension: f_tilde.dimensions[0] forEquation:equation];
+//	GLLinearTransform *matrix_inverse = [GLLinearTransform inverseCosineTransformMatrixFromDimension: f_tilde.dimensions[0] forEquation:equation];
+    GLLinearTransform *matrix_inverse = [GLLinearTransform discreteTransformFromDimension: f_tilde.dimensions[0] toBasis: kGLDeltaBasis forEquation:equation];
 	GLVariable *f_tilde_tilde = [matrix_inverse transform: f_tilde];
 	[f_tilde_tilde solve];
 	
@@ -550,7 +555,7 @@
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLChebyshevEndpointGrid nPoints: 8 domainMin: -1.0 length: 2.0];
 	
 	GLVariable *x = [GLVariable variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
-	GLVariable *f = [[[x times: x] scalarMultiply: 2.0] scalarAdd: -1.0];
+	GLVariable *f = [[[x times: x] times: @(2.0)] plus: @(-1.0)];
 	GLVariable *f_tilde = [f transformToBasis:@[@(kGLChebyshevBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
@@ -591,8 +596,8 @@
 	
 	GLEquation *equation = [[GLEquation alloc] init];
 	
-	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-	GLLinearTransform *B = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim] toDimensions: @[yDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
+	GLLinearTransform *B = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim] toDimensions: @[yDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
 	
 	GLFloat *a = A.pointerValue;
 	a[0] = 0.11; a[1] = 0.12; a[2] = 0.13;
@@ -608,7 +613,7 @@
 	[C solve];
 	
 	GLFloat expected[4] = { 367.76, 368.12, 674.06, 674.72 };
-	
+	   
 	for (int i=0; i<4; i++) {
 		if ( !fequal(output[i], expected[i]) ) {
 			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
@@ -623,8 +628,8 @@
 	
 	GLEquation *equation = [[GLEquation alloc] init];
 	
-	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
-	GLLinearTransform *B = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[xDim] toDimensions: @[yDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
+	GLLinearTransform *B = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[xDim] toDimensions: @[yDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
 	
 	GLSplitComplex x = A.splitComplex;
 	x.realp[0] = 1.0; x.realp[1] = 0.0; x.realp[2] = 1.0;
@@ -663,7 +668,7 @@
 	
 	GLEquation *equation = [[GLEquation alloc] init];
 	
-	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation];
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
 	
 	GLFloat *a = A.pointerValue;
 	a[0] = 1.0; a[1] = 2.0; a[2] = 0.0;

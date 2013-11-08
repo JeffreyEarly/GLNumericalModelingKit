@@ -7,6 +7,7 @@
 //
 
 #import "GLScalar.h"
+#import "GLVectorVectorOperations.h"
 
 @interface GLScalar ()
 @property(readwrite, assign, nonatomic) NSUInteger nDataPoints;
@@ -54,6 +55,13 @@
 
 - (NSUInteger) rank {
 	return 0;
+}
+
+- (id) dividedBy: (id) otherVariable
+{
+	GLDivisionOperation *operation = [[GLDivisionOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
 }
 
 @end
