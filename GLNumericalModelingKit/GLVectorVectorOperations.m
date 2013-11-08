@@ -901,7 +901,7 @@
 			}
 			else if (op1.rank == 1) {
 				GLVariable *func1 = (GLVariable *) op1;
-				if (didSwap) {
+				if (!didSwap) {
 					[NSException raise: @"TensorMultiplicationMismatch" format: @"Cannot left-multiply a function with a linear transformation"];
 				}
 				if ( ![B.fromDimensions isEqualToArray: func1.dimensions] ) {

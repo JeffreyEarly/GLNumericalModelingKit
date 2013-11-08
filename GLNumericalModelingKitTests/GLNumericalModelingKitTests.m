@@ -262,7 +262,7 @@
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 8 domainMin: 0.0 length: 1.0];
 	
 	GLVariable *x = [GLVariable variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
-	GLVariable *f = [[[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0] scalarAdd: 1.0];
+	GLVariable *f = [[[[x times: @(2*2*M_PI)] sin] times: @(3.0)] plus: @(1.0)];
     GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLExponentialBasis forEquation:equation];
 	GLVariable *f_tilde = [matrix transform: f];
 	[f_tilde solve];
@@ -687,4 +687,42 @@
 	}
 }
 
+/************************************************/
+/*		Differential							*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Differential
+#pragma mark
+
+- (void) test1DExponentialBasisDifferentiation
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 8 domainMin: 0.0 length: 1.0];
+    xDim.name = @"x";
+	
+	GLVariable *x = [GLVariable variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLVariable *f = [[[[x times: @(2*2*M_PI)] sin] times: @(3.0)] plus: @(1.0)];
+    
+    GLVariable *fdiff = [[f x] spatialDomain];
+    GLVariable *fdiff_expected = [[[x times: @(2*2*M_PI)] cos] times: @(3.0*2*2*M_PI)];
+    
+    [fdiff solve];
+    [fdiff_expected solve];
+    
+    GLFloat *output = fdiff.pointerValue;
+	GLFloat *expected = fdiff_expected.pointerValue;
+    
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
 @end
+
+
+
+

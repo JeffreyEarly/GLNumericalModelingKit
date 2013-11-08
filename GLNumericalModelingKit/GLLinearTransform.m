@@ -377,7 +377,7 @@
         } else {
 			NSMutableArray *spatialDimensions = [NSMutableArray arrayWithCapacity: dimensions.count];
 			for (GLDimension *dim in dimensions) {
-				[spatialDimensions addObject: dim.isFrequencyDomain ? [[GLDimension alloc] initAsFourierTransformOfDimension: dim] : dim];
+				[spatialDimensions addObject: dim.isFrequencyDomain ? [[GLDimension alloc] initAsDimension:dim transformedToBasis:kGLDeltaBasis strictlyPositive:NO] : dim];
 			}
 			
             NSMutableArray *derivatives = [NSMutableArray arrayWithCapacity: spatialDimensions.count];
