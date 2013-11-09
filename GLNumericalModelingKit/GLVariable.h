@@ -85,8 +85,8 @@ typedef NSUInteger GLVariableSymmetry;
 @property(readonly, assign, nonatomic) BOOL isFrequencyDomain;
 
 // The symmetry (none, even, or odd) of each dimension.
-@property(readwrite, assign, nonatomic) NSMutableArray *realSymmetry;
-@property(readwrite, assign, nonatomic) NSMutableArray *imaginarySymmetry;
+@property(readwrite, strong, nonatomic) NSMutableArray *realSymmetry;
+@property(readwrite, strong, nonatomic) NSMutableArray *imaginarySymmetry;
 
 // Returns YES if the variable is Hermitian,  H(-f)=H†(f).
 @property(readonly, assign, nonatomic) BOOL isHermitian;

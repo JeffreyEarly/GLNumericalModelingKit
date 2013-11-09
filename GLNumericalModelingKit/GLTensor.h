@@ -25,6 +25,8 @@ GLSplitComplex splitComplexFromData( NSData *data );
 @class GLVariableOperation, GLEquation;
 @interface GLTensor : NSObject
 
++ (GLTensor *) variableWithPrototype: (GLTensor *) anotherVariable;
+
 // Not to be called directly. Only to be used by the subclasses.
 - (id) initWithType: (GLDataFormat) dataFormat withEquation: (GLEquation *) theEquation;
 

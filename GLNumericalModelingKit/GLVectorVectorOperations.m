@@ -121,7 +121,7 @@
 					implementationCase = 7;
 				} else {
 					graphvisDescription = [NSString stringWithFormat: @"add (complex function, complex function)"];
-					implementationCase = 8;
+					implementationCase = 5;
 				}
 			}
 			

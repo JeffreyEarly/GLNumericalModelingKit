@@ -36,6 +36,21 @@ GLSplitComplex splitComplexFromData( NSData *data )
 
 @implementation GLTensor
 
++ (GLTensor *) variableWithPrototype: (GLTensor *) variable
+{
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        return [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLVariable *function = (GLVariable *) variable;
+        return [[function class] variableOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        GLLinearTransform *matrix = (GLLinearTransform *) variable;
+        return [GLLinearTransform transformOfType: matrix.dataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil];
+    }
+    return nil;
+}
+
 - (id) initWithType: (GLDataFormat) dataFormat withEquation: (GLEquation *) theEquation
 {
 	if (!theEquation) {

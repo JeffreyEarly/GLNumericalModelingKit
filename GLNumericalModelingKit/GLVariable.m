@@ -289,8 +289,8 @@ static BOOL prefersSpatialMultiplication = YES;
 		// defined on each dimension.
 		_nDataPoints = 1;
 		_nDataElements = 1;
-		_realSymmetry = [NSMutableArray array];
-		_imaginarySymmetry = [NSMutableArray array];
+		self.realSymmetry = [NSMutableArray array];
+		self.imaginarySymmetry = [NSMutableArray array];
 		for ( GLDimension *aDim in theDimensions ) {
             NSUInteger idx = [theDimensions indexOfObject: aDim];
             
@@ -300,6 +300,8 @@ static BOOL prefersSpatialMultiplication = YES;
             if (aDim.basisFunction == kGLDeltaBasis) {
                 self.realSymmetry[idx] = @(kGLNoSymmetry);
                 self.imaginarySymmetry[idx] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
+                NSLog(@"%@", [self.realSymmetry description]);
+                NSLog(@"%@", [self.imaginarySymmetry description]);
             } else if (aDim.basisFunction == kGLCosineBasis || aDim.basisFunction == kGLCosineHalfShiftBasis) {
                 self.realSymmetry[idx] = @(kGLEvenSymmetry);
                 self.imaginarySymmetry[idx] = @(kGLZeroSymmetry);

@@ -124,15 +124,32 @@
 @synthesize canOperateInPlace;
 - (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand
 {
-	if ( [[vOperand class] isSubclassOfClass: [GLLinearTransform class]] ) {
-		[NSException raise: @"InvalidOperation" format: @"Cannot scalar divide a matrix."];
-	}
+    GLTensor *result;
+    if (vOperand.rank == 0) {
+        GLScalar *scalar = (GLScalar *) vOperand;
+        result = [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation];
+    } else if (vOperand.rank == 1) {
+        GLVariable *function = (GLVariable *) vOperand;
+        result = [[function class] variableOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (vOperand.rank == 2) {
+        GLLinearTransform *aTransform = (GLLinearTransform *) vOperand;
+        GLMatrixDescription *matrix = aTransform.matrixDescription;
+        for (NSUInteger i=0; i<matrix.nDimensions; i++) {
+            if (matrix.strides[i].format != kGLDiagonalMatrixFormat) {
+                [NSException raise: @"BadFormat" format: @"This operation type can only transform with matrices in a diagonal format."];
+            }
+        }
+        
+        result = [GLLinearTransform transformOfType: aTransform.dataFormat withFromDimensions: aTransform.toDimensions toDimensions:aTransform.fromDimensions inFormat:aTransform.matrixFormats forEquation:aTransform.equation matrix: nil];
+    }
 	
-	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
+	if (( self = [super initWithResult: @[result] operand: @[vOperand]] ))
 	{
+        self.scalarOperand = sOperand;
+        
 		GLVariable *resultVariable = self.result[0];
 		GLVariable *operandVariable = self.operand[0];
-		
+        
 		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
 		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
 				

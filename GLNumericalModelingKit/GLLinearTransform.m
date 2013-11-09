@@ -10,6 +10,7 @@
 #import "GLEquation.h"
 #import "GLDimension.h"
 #import "GLVectorVectorOperations.h"
+#import "GLVectorScalarOperations.h"
 
 #import "GLLinearTransformationOperations.h"
 
@@ -924,7 +925,36 @@
 
 - (GLLinearTransform *) inverse
 {
-    GLMatrixInversionOperation *operation = [[GLMatrixInversionOperation alloc] initWithLinearTransformation: self];
+    NSUInteger numIdentityIndices = 0;
+	NSUInteger numDiagonalIndices = 0;
+	NSUInteger numSubDiagonalIndices = 0;
+	NSUInteger numSuperDiagonalIndices = 0;
+	NSUInteger numTriIndices = 0;
+	NSUInteger numDenseIndices = 0;
+	for ( NSNumber *num in self.matrixFormats ) {
+        if ([num unsignedIntegerValue] == kGLIdentityMatrixFormat) {
+			numIdentityIndices++;
+        } else if ([num unsignedIntegerValue] == kGLDiagonalMatrixFormat) {
+			numDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLSubdiagonalMatrixFormat) {
+			numSubDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLSuperdiagonalMatrixFormat) {
+			numSuperDiagonalIndices++;
+        } else if ([num unsignedIntegerValue] == kGLTridiagonalMatrixFormat) {
+			numTriIndices++;
+        } else if ([num unsignedIntegerValue] == kGLDenseMatrixFormat) {
+			numDenseIndices++;
+        }
+    }
+    
+    GLVariableOperation *operation;
+    if (numIdentityIndices == 0 && numDiagonalIndices !=0 && numSubDiagonalIndices == 0  && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numDenseIndices == 0 ) {
+        operation = [[GLScalarDivideOperation alloc] initWithVectorOperand: self scalarOperand: 1.0];
+    }
+    else if (numIdentityIndices == 0 && numDiagonalIndices ==0 && numSubDiagonalIndices == 0  && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numDenseIndices != 0) {
+        operation = [[GLMatrixInversionOperation alloc] initWithLinearTransformation: self];
+    }
+    
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }

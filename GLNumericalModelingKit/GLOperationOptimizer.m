@@ -109,14 +109,14 @@
         
         // 3. create the operand variable prototypes.
         self.operandVariablePrototypes = [NSMutableArray array];
-        for (GLVariable *variable in self.topVariables) {
-            [self.operandVariablePrototypes addObject: [GLVariable variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
+        for (GLTensor *variable in self.topVariables) {
+            [self.operandVariablePrototypes addObject: [GLTensor variableWithPrototype: variable]];
         }
         
         // 4. create the result variable prototypes.
         self.resultVariablePrototypes = [NSMutableArray array];
-        for (GLVariable *variable in self.bottomVariables) {
-            [self.resultVariablePrototypes addObject: [GLVariable variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
+        for (GLTensor *variable in self.bottomVariables) {
+            [self.resultVariablePrototypes addObject: [GLTensor variableWithPrototype: variable]];
         }
         
 	}
@@ -445,6 +445,7 @@
 		// Precomputed variables are a dead end. It's values are fixed and already populated.
 		// So we simply need to grab a copy of its data and exit the recusion.
         [self.precomputedVariableDataMap setObject: [variable.data copy] forKey: variable];
+        [self.hasDataBuffer addObject: variable];
 		return YES;
 	}
 	else if (variable.pendingOperations.count == 1)
@@ -478,9 +479,10 @@
 		}
 		
 		// If one of the result variables of an operation does not get used, it will not appear in this graph. However, it still needs a data buffer as the operation needs to write somewhere.
-		for (GLVariable *aVariable in operation.result) {
-			success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
-		}
+#warning This was probably added for interpolation? Not sure.
+//		for (GLVariable *aVariable in operation.result) {
+//			success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
+//		}
 		
 		return success;
 
