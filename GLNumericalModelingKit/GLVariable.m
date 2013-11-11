@@ -300,8 +300,6 @@ static BOOL prefersSpatialMultiplication = YES;
             if (aDim.basisFunction == kGLDeltaBasis) {
                 self.realSymmetry[idx] = @(kGLNoSymmetry);
                 self.imaginarySymmetry[idx] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
-                NSLog(@"%@", [self.realSymmetry description]);
-                NSLog(@"%@", [self.imaginarySymmetry description]);
             } else if (aDim.basisFunction == kGLCosineBasis || aDim.basisFunction == kGLCosineHalfShiftBasis) {
                 self.realSymmetry[idx] = @(kGLEvenSymmetry);
                 self.imaginarySymmetry[idx] = @(kGLZeroSymmetry);
@@ -438,13 +436,6 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark -
 #pragma mark Operations
 #pragma mark
-
-- (GLVariable *) multiply: (GLVariable *) otherVariable
-{
-	GLMultiplicationOperation *operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-    operation = [self replaceWithExistingOperation: operation];
-	return operation.result[0];
-}
 
 - (GLVariable *) dividedBy: (GLVariable *) otherVariable
 {

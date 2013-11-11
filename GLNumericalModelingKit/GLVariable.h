@@ -126,9 +126,6 @@ typedef NSUInteger GLVariableSymmetry;
 #pragma mark Operations
 #pragma mark
 
-// C = A * B
-- (id) multiply: (GLVariable *) otherVariable;
-
 - (id) dividedBy: (GLVariable *) otherVariable;
 
 // C = A * B

@@ -16,6 +16,9 @@
 // First check if their difference is less than precision, then do the same, but scaled by the magnitude.
 #define fequal(a,b) ((fabs((a) - (b)) < 10*FLT_EPSILON) || (fabs(((a) - (b))/a) < 10*FLT_EPSILON))
 
+// Set your own precision
+#define fequalprec(a,b,prec) ((fabs((a) - (b)) < prec) || (fabs(((a) - (b))/a) < prec))
+
 @implementation GLNumericalModelingKitTests
 
 - (void)setUp
@@ -716,6 +719,110 @@
     
 	for (int i=0; i<4; i++) {
 		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
+/************************************************/
+/*		Optimizer                               */
+/************************************************/
+
+#pragma mark -
+#pragma mark Optimizer
+#pragma mark
+
+- (void) testOperationOptimizer
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:0.0 length:4.0];
+	GLVariable *var = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	GLVariable *result = [[var times: @(2.0)] plus: @(1.0)];
+    
+    Class newOperationClass = [GLVariableOperation variableOperationSubclassWithOperand: @[var] result: @[result]];
+    GLVariableOperation *newOperation = [[newOperationClass alloc] initWithOperand: @[var]];
+    
+    GLVariable *newResult = newOperation.result[0];
+	[newResult solve];
+	GLFloat *output = newResult.pointerValue;
+	
+	GLFloat expected[4] = {1.0, 3.0, 5.0, 7.0};
+	
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+    
+//    GLOperationVisualizer *vizualizer = [[GLOperationVisualizer alloc] initWithTopVariables: @[var] bottomVariables:@[result]];
+//    NSLog(@"%@", vizualizer.graphvisDescription);
+}
+
+- (void) testRungeKutta4thOrderIntegration
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 64 domainMin: 0 length: 20];
+    xDim.name = @"x";
+    GLVariable *x = [GLVariable variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation:equation];
+    GLFloat x0 = 11;
+    GLVariable *gaussian = [[[[x plus: @(-x0)] times: [x plus: @(-x0)]] negate] exponentiate];
+    
+    GLFloat cfl = 0.25;
+    GLFloat timeStep = cfl * xDim.sampleInterval;
+    
+    GLRungeKuttaOperation *integrator = [GLRungeKuttaOperation rungeKutta4AdvanceY: @[[gaussian frequencyDomain]] stepSize: timeStep fFromTY: ^(GLScalar *t, NSArray *ynew) {
+        return @[[ynew[0] diff:@"x"]];
+    }];
+    
+    // We stepped forward 20 steps in time
+    gaussian = [[integrator stepForwardToTime: timeStep*20][0] spatialDomain];
+    
+    // Compute the analytical solution 20 steps forward
+    GLFloat x10 = x0-integrator.currentTime;
+    GLVariable *gaussian10 = [[[[x plus: @(-x10)] times: [x plus: @(-x10)]] negate] exponentiate];
+    
+    GLFloat *output = gaussian.pointerValue;
+    GLFloat *expected = gaussian10.pointerValue;
+    
+    // We expected 4th order Runge-Kutta to give use relative accuracies of 10^(-4)
+    for (int i=0; i<xDim.nPoints; i++) {
+		if ( !fequalprec(output[i], expected[i], 1e-4) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+    
+//    NSLog(@"%@", integrator.graphvisDescription);
+}
+
+- (void) testRungeKutta23Integration
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 64 domainMin: 0 length: 20];
+    xDim.name = @"x";
+    GLVariable *x = [GLVariable variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation:equation];
+    GLFloat x0 = 11;
+    GLVariable *gaussian = [[[[x plus: @(-x0)] times: [x plus: @(-x0)]] negate] exponentiate];
+    
+    GLFloat cfl = 0.25;
+    GLFloat timeStep = cfl * xDim.sampleInterval;
+    
+    GLRungeKuttaOperation *integrator = [GLAdaptiveRungeKuttaOperation rungeKutta23AdvanceY: @[[gaussian frequencyDomain]] stepSize: timeStep fFromTY: ^(GLScalar *t, NSArray *ynew) {
+        return @[[ynew[0] diff:@"x"]];
+    }];
+    
+    // We stepped forward 20 steps in time
+    gaussian = [[integrator stepForwardToTime: timeStep*20][0] spatialDomain];
+    
+    // Compute the analytical solution 20 steps forward
+    GLFloat x10 = x0-integrator.currentTime;
+    GLVariable *gaussian10 = [[[[x plus: @(-x10)] times: [x plus: @(-x10)]] negate] exponentiate];
+    
+    GLFloat *output = gaussian.pointerValue;
+    GLFloat *expected = gaussian10.pointerValue;
+    
+    // We expected 4th order Runge-Kutta to give use relative accuracies of 10^(-4)
+    for (int i=0; i<xDim.nPoints; i++) {
+		if ( !fequalprec(output[i], expected[i], 2e-3) ) {
 			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
 		}
 	}

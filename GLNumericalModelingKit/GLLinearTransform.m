@@ -45,7 +45,7 @@
 
 - (NSString *) matrixDescriptionString
 {
-	NSUInteger n = self.matrixDescription.strides[0].rowStride;
+	NSUInteger n = [[self.fromDimensions lastObject] nPoints]; //self.matrixDescription.strides[0].rowStride;
 	n = n==0?1:n;
 	NSMutableString *descrip = [NSMutableString string];
 	
@@ -120,6 +120,39 @@
 	}
 	
 	return descrip;
+}
+
+- (NSString *) graphvisDescription
+{
+    NSMutableString *extra = [NSMutableString stringWithFormat: @""];
+    if (self.name) [extra appendFormat: @"%@:", self.name];
+	[extra appendString: self.isComplex ? @"complex" : @"real"];
+	if (self.isRealPartZero) [extra appendString:@", zero real part"];
+    if (self.isComplex && self.isImaginaryPartZero) [extra appendString:@", zero imaginary part"];
+	if (self.isHermitian) [extra appendString: @"hermitian"];
+    for (GLDimension *dim in self.fromDimensions) {
+        [extra appendFormat: @"\\n%@", dim.graphvisDescription];
+    }
+    [extra appendString: @"->"];
+    for (GLDimension *dim in self.toDimensions) {
+        [extra appendFormat: @"\\n%@", dim.graphvisDescription];
+    }
+    
+    return extra;
+}
+
+- (NSString *) description
+{
+    //	return [NSString stringWithFormat: @"%@ <0x%lx> (%@: %lu points)", NSStringFromClass([self class]), (NSUInteger) self, self.name, self.nDataPoints];
+	NSMutableString *extra = [NSMutableString stringWithFormat: @""];
+	[extra appendString: self.isComplex ? @"complex variable with" : @"real variable with"];
+	[extra appendString: self.isRealPartZero ? @" zero real part" : @" nonzero real part"];
+	[extra appendString: self.isImaginaryPartZero ? @", zero imaginary part" : @", nonzero imaginary part"];
+	[extra appendString: self.isHermitian ? @" and has hermitian symmetry." : @"."];
+	
+    //return [NSString stringWithFormat: @"%@ <0x%lx> (%@: %lu points) %@\n", NSStringFromClass([self class]), (NSUInteger) self, self.name, self.nDataPoints, extra];
+    
+	return [NSString stringWithFormat: @"%@ <0x%lx> (%@: %lu points) %@\n%@", NSStringFromClass([self class]), (NSUInteger) self, self.name, self.nDataPoints, extra, [self matrixDescriptionString]];
 }
 
 /************************************************/
@@ -597,6 +630,7 @@
         transformMatrix theMatrixBlock = matrixBlocks[0];
         GLFloatComplex value = theMatrixBlock(&(row[0]), &(col[0]));
         for (NSUInteger i=1;i<matrixBlocks.count;i++) {
+            theMatrixBlock = matrixBlocks[i];
             value *= theMatrixBlock(&(row[i]), &(col[i]));
         }
         return value;

@@ -1249,10 +1249,15 @@
 	{	// C^i = A^i / B^i
 		GLVariable *func1 = (GLVariable *) op1;
 		GLVariable *func2 = (GLVariable *) op2;
+        
+        result = [GLVariable variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+		result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
+		result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 		
 		if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
-			[NSException raise: @"DimensionsNotEqualException" format: @"Cannot add two functions of different dimensions"];
+			[NSException raise: @"DimensionsNotEqualException" format: @"Cannot divide two functions of different dimensions"];
 		}
+        
 		NSUInteger nDataPoints = op1.nDataPoints;
 		if ( !op1.isComplex && !op2.isComplex) {
 			// C = A_real / B_real;
@@ -1333,10 +1338,6 @@
 
 - (id) initWithFirstOperand: (GLTensor *) fOperand secondOperand: (GLTensor *) sOperand;
 {
-	if (sOperand.rank != fOperand.rank) {
-		[NSException raise: @"RankMismatch" format: @"Both tensors must be of the same rank."];
-	}
-	
 	if (fOperand.isComplex != sOperand.isComplex) {
 		[NSException raise: @"FormatMismatch" format: @"Both tensors must be in the same format."];
 	}
@@ -1348,23 +1349,36 @@
     GLTensor *result;
 	NSUInteger nDataElements = op1.nDataElements;
 	NSString *graphvisDescription;
-	
-	if (fOperand.rank == 0)
+	NSUInteger implementationCase = 0;
+    
+	if (op1.rank == 0)
 	{
-		result = [[GLScalar alloc] initWithType: fOperand.dataFormat forEquation: op1.equation];
-		graphvisDescription = @"element-wise max (scalar)";
+        if (op2.rank == 0) {
+            implementationCase = 1;
+            result = [[GLScalar alloc] initWithType: op2.dataFormat forEquation: op2.equation];
+            graphvisDescription = @"element-wise max (scalar)";
+        } else {
+            implementationCase = 2;
+            result = [GLTensor variableWithPrototype: op2];
+            graphvisDescription = @"element-wise max (scalar, vector)";
+        }
 	}
-	else if (fOperand.rank == 1)
+	else if (op1.rank == 1)
 	{
-		GLVariable *func1 = (GLVariable *) fOperand;
-		GLVariable *func2 = (GLVariable *) sOperand;
-		if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
-			[NSException raise: @"DimensionsNotEqualException" format: @"Cannot compare two functions of different dimensions"];
-		}
-		result = [[GLVariable alloc] initVariableOfType: func1.dataFormat withDimensions: func1.dimensions forEquation:func1.equation];
-		graphvisDescription = @"element-wise max (function)";
+        if (op2.rank == 1) {
+            GLVariable *func1 = (GLVariable *) fOperand;
+            GLVariable *func2 = (GLVariable *) sOperand;
+            if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
+                [NSException raise: @"DimensionsNotEqualException" format: @"Cannot compare two functions of different dimensions"];
+            }
+            implementationCase = 1;
+            result = [GLTensor variableWithPrototype: op2];
+            graphvisDescription = @"element-wise max (function)";
+        } else {
+            [NSException raise: @"FormatMismatch" format: @"You can't compare a function with a linear transform."];
+        }
 	}
-	else if (fOperand.rank == 2)
+	else if (op1.rank == 2)
 	{
 		GLLinearTransform *A = (GLLinearTransform *) fOperand;
 		GLLinearTransform *B = (GLLinearTransform *) sOperand;
@@ -1377,18 +1391,29 @@
 		if ( ![A.matrixDescription isEqualToMatrixDescription: B.matrixDescription] ) {
 			[NSException raise: @"UnsupportedMatrixFormatException" format: @"Cannot compare two matrices in different formats using this operation."];
 		}
-		result = [GLLinearTransform transformOfType: B.dataFormat withFromDimensions: B.fromDimensions toDimensions:B.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
+		implementationCase = 1;
+		result = [GLTensor variableWithPrototype: op2];
 		graphvisDescription = @"element-wise max (matrix)";
 	}
 	result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
 	result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
 	
-	variableOperation operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-		GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-		GLFloat *B = (GLFloat *) [operandArray[1] bytes];
-		GLFloat *C = (GLFloat *) [resultArray[0] bytes];
-		vGL_vmaxmg( A, 1, B, 1, C, 1, nDataElements);
-	};
+    variableOperation operation;
+    if (implementationCase == 1) {
+        operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+            GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+            GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+            GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+            vGL_vmaxmg( A, 1, B, 1, C, 1, nDataElements);
+        };
+    } else if (implementationCase == 2) {
+        operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+            GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+            GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+            GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+            vGL_vthr( B, 1, A, C, 1, nDataElements);
+        };
+    }
 	
 	if (( self = [super initWithResult: @[result] operand: @[op1, op2] buffers: @[] operation: operation] )) {
 		self.graphvisDescription = graphvisDescription;

@@ -225,6 +225,10 @@
 		}
 	}
 	
+    if (!operation.operation) {
+        [NSException raise:@"OperationWithoutImplementation" format:@"This operation does not have an implementation!"];
+    }
+    
     //	static NSUInteger basisTransformCount = 0;
     //	if ( [[operation class] isSubclassOfClass: [GLBasisTransformOperation class]]) {
     //		basisTransformCount++;
@@ -760,7 +764,7 @@
 			NSMutableArray *operand = [[NSMutableArray alloc] init];
 			NSMutableArray *buffer = [[NSMutableArray alloc] init];
 			
-			variableOperation operationBlock = operation.operation;
+			variableOperation operationBlock = operation.operation;            
 			executionBlock theExecutionBlock = ^( NSArray *dataBuffers ) {
 				// Note that we do not call -objectsAtIndexes because order is important.
 				for (NSNumber *anIndex in resultIndices) {

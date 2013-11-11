@@ -24,16 +24,15 @@
 // It is similarly assumed that an individual dimension may be associated with multiple variables 
 // and multiple NetCDF files.
 
-enum {
+typedef NS_ENUM(NSUInteger, GLGridType) {
 	kGLEndpointGrid = 0,		// A good grid for finite differencing
 	kGLInteriorGrid = 1,		// A good grid for transforming to a sine or cosine basis
 	kGLPeriodicGrid = 2,		// A good grid for transforming to an exponential basis.
 	kGLChebyshevEndpointGrid = 3, // aka, 'extrema' or 'Lobatto' grid
 	kGLChebyshevInteriorGrid = 4 // aka, 'roots' or 'Gauss' grid
 };
-typedef NSUInteger GLGridType;
 
-enum {
+typedef NS_ENUM(NSUInteger, GLBasisFunction) {
 	kGLDeltaBasis = 0,			// Spatial domain
     kGLExponentialBasis = 1,	// Frequency domain
 	kGLCosineBasis = 2,			// Frequency domain
@@ -42,7 +41,6 @@ enum {
 	kGLSineHalfShiftBasis = 5,	// Frequency domain
 	kGLChebyshevBasis = 6
 };
-typedef NSUInteger GLBasisFunction;
 
 @class GLMutableDimension;
 @interface GLDimension : NSObject

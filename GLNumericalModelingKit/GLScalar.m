@@ -64,4 +64,16 @@
 	return operation.result[0];
 }
 
+- (NSString *) graphvisDescription
+{
+    NSMutableString *extra = [NSMutableString stringWithFormat: @""];
+    if (self.name) [extra appendFormat: @"%@:", self.name];
+	[extra appendString: self.isComplex ? @"complex" : @"real"];
+	if (self.isRealPartZero) [extra appendString:@", zero real part"];
+    if (self.isComplex && self.isImaginaryPartZero) [extra appendString:@", zero imaginary part"];
+	[extra appendString: @"scalar"];
+    
+    return extra;
+}
+
 @end
