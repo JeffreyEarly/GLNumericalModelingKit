@@ -920,7 +920,7 @@ BOOL isOne( NSNumber *a )
 		NSMutableArray *lsData = [NSMutableArray arrayWithArray: self.lastStageData];
 		NSArray *previousYData = [NSArray arrayWithArray: self.previousYData];
 		
-        __block NSUInteger overshoots = 0;
+//        __block NSUInteger overshoots = 0;
 		self.operation = ^(NSArray *result, NSArray *operand, NSArray *bufferArray) {
 			// The operand buffer must match the order of (*) above
 			[operandBuffer addObjectsFromArray: operand];
@@ -967,12 +967,12 @@ BOOL isOne( NSNumber *a )
 				if (error <= 1.0) {
 					break;
 				} else {
-                    GLFloat aaa = *step;
+//                    GLFloat aaa = *step;
 					GLFloat htemp = safety* (*step) * pow(error, -1./order);
 					(*step) = 0.1 * (*step) >= htemp ? 0.1 * (*step) : htemp;
-                    NSLog(@"damn, overshot. was %f, trying %f", aaa, *step);
-                    overshoots++;
-                    NSLog(@"Overshots: %lu", overshoots);
+//                    NSLog(@"damn, overshot. was %f, trying %f", aaa, *step);
+//                    overshoots++;
+//                    NSLog(@"Overshots: %lu", overshoots);
 				}
 			}
 			
