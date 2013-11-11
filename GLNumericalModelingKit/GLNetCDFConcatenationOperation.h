@@ -26,17 +26,6 @@
 // If the mutableDimension is not evenly spaced, then it must already have the correct value.
 - (id) initWithFirstOperand: (GLMutableNetCDFVariable *) fOperand lowerDimensionalSecondOperand: (GLVariable *) sOperand alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex index: (NSUInteger) pointIndex;
 
-@property(readwrite, strong, nonatomic) GLMutableNetCDFVariable *firstOperand;
-@property(readwrite, strong, nonatomic) GLVariable *secondOperand;
-
-//@property(readwrite, strong, nonatomic) GLVariable *result;
-
-// To be called after the result and operands are set.
-- (void) setupDependencies;
-
-// To be called after the operation is complete.
-- (void) tearDownDependencies;
-
 @property(strong) NSMutableArray *indexRanges;
 
 @end

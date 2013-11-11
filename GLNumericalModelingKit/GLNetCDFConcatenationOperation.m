@@ -12,8 +12,6 @@
 
 @implementation GLNetCDFConcatenationOperation
 
-@synthesize indexRanges;
-
 - (id) initWithFirstOperand: (GLMutableNetCDFVariable *) fOperand secondOperand: (GLVariable *) sOperand alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex;
 {
 	// At this point we don't know how to handle variables that aren't of the same type.
@@ -70,7 +68,7 @@
 			[self.indexRanges addObject: [NSValue valueWithRange: NSMakeRange(0, rightDim.nPoints)]];
 		}
 	}	
-
+[NSException raise: @"NotYetImplemented" format: @"This operation needs to mimic the operation below"];
 	if (( self = [super initWithResult: @[fOperand] operand: @[fOperand,sOperand]] ))
 	{
 		// Now we mutate the dimension
@@ -138,61 +136,58 @@
 	
 	[self.indexRanges insertObject:[NSValue valueWithRange: NSMakeRange(pointIndex, 1)] atIndex:mutableDimensionIndex];
 	
-	if (( self = [super initWithResult: @[fOperand] operand: @[fOperand,sOperand]] ))
+	variableOperation operation;
+	GLLowLevelNetCDF *file = fOperand.file;
+	NSArray *indexRanges = self.indexRanges;
+	if (fOperand.isComplex)
 	{
-		mutableDimension.nPoints = nPointsAfterMutation;
-	}
-    
-    return self;
-}
-
-@synthesize result;
-@synthesize firstOperand;
-@synthesize secondOperand;
-
-- (void) setupDependencies
-{
-	for ( NSOperation *op in self.firstOperand.pendingOperations ) {
-		[self addDependency: op];
-	}
-	for ( NSOperation *op in self.secondOperand.pendingOperations ) {
-		[self addDependency: op];
-	}
-
-	[self.result[0] addOperation: self];
-}
-
-- (void) tearDownDependencies
-{	
-	[self.result[0] removeOperation: self];
-	self.result = nil;
-	self.firstOperand = nil;
-	self.secondOperand = nil;
-}
-
--(void) main
-{
-	if (self.firstOperand.isComplex)
-	{
-		GLSplitComplex split = self.secondOperand.splitComplex;
-		NSData *imagp = [NSData dataWithBytes:split.imagp length:self.secondOperand.nDataPoints*sizeof(GLFloat)];
+		int variableID = fOperand.variableID;
+		int imagpVariableID = fOperand.imagpVariableID;
+		NSUInteger nDataPoints = sOperand.nDataPoints;
+		
 		if (sizeof(GLFloat)==sizeof(float)) {
-			[self.firstOperand.file writeFloatData:self.secondOperand.data toVariableWithID:self.firstOperand.variableID atIndexRange:self.indexRanges];
-			[self.firstOperand.file writeFloatData:imagp toVariableWithID:self.firstOperand.imagpVariableID atIndexRange:self.indexRanges];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex split = splitComplexFromData(operandArray[0]);
+				NSData *realp = [NSData dataWithBytes:split.realp length: nDataPoints*sizeof(GLFloat)];
+				NSData *imagp = [NSData dataWithBytes:split.imagp length: nDataPoints*sizeof(GLFloat)];
+				[file writeFloatData: realp toVariableWithID:variableID atIndexRange:indexRanges];
+				[file writeFloatData: imagp toVariableWithID:imagpVariableID atIndexRange: indexRanges];
+				[fOperand removeOperation: self];
+			};
 		} else {
-			[self.firstOperand.file writeDoubleData:self.secondOperand.data toVariableWithID:self.firstOperand.variableID atIndexRange:self.indexRanges];
-			[self.firstOperand.file writeDoubleData:imagp toVariableWithID:self.firstOperand.imagpVariableID atIndexRange:self.indexRanges];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex split = splitComplexFromData(operandArray[0]);
+				NSData *realp = [NSData dataWithBytes:split.realp length: nDataPoints*sizeof(GLFloat)];
+				NSData *imagp = [NSData dataWithBytes:split.imagp length: nDataPoints*sizeof(GLFloat)];
+				[file writeDoubleData: realp toVariableWithID:variableID atIndexRange:indexRanges];
+				[file writeDoubleData: imagp toVariableWithID:imagpVariableID atIndexRange: indexRanges];
+				[fOperand removeOperation: self];
+			};
 		}
 	}
 	else
 	{
+		int variableID = fOperand.variableID;
 		if (sizeof(GLFloat)==sizeof(float)) {
-			[self.firstOperand.file writeFloatData:self.secondOperand.data toVariableWithID:self.firstOperand.variableID atIndexRange:self.indexRanges];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				[file writeFloatData: operandArray[0] toVariableWithID:variableID atIndexRange:indexRanges];
+				[fOperand removeOperation: self];
+			};
 		} else {
-			[self.firstOperand.file writeDoubleData:self.secondOperand.data toVariableWithID:self.firstOperand.variableID atIndexRange:self.indexRanges];
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				[file writeDoubleData: operandArray[0] toVariableWithID:variableID atIndexRange:indexRanges];
+				[fOperand removeOperation: self];
+			};
 		}
 	}
-	[self tearDownDependencies];
+	
+	if (( self = [super initWithResult: @[] operand: @[sOperand] buffers: @[] operation: operation] ))
+	{
+		mutableDimension.nPoints = nPointsAfterMutation;
+		[fOperand addOperation: self];
+	}
+    
+    return self;
 }
 
 @end
