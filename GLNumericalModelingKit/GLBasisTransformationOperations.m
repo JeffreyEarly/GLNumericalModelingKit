@@ -908,12 +908,13 @@ static BOOL _shouldAntiAlias = NO;
 //                fftwf_execute_split_dft_c2r( plan, fbar.realp, fbar.imagp, f );
 //            };
 			
-#warning We are inefficiently copying to a buffer because the input is destroyed.
+			// We are inefficiently copying to a buffer because the input is destroyed.
 			NSUInteger numBytes = variable.nDataElements*sizeof(GLFloat);
-			NSMutableData *buffer = [[GLMemoryPool sharedMemoryPool] dataWithLength: numBytes];
+			self.buffer = @[[[GLBuffer alloc] initWithLength: numBytes]];
 			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				NSMutableData *result = resultArray[0];
 				NSMutableData *operand = operandArray[0];
+				NSMutableData *buffer = bufferArray[0];
 				
                 GLFloat *f = (void *) result.mutableBytes;
 				memcpy(buffer.mutableBytes, operand.bytes, numBytes);
