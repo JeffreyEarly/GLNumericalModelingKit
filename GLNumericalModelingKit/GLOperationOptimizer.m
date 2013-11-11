@@ -482,11 +482,17 @@
 			success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
 		}
 		
-		// If one of the result variables of an operation does not get used, it will not appear in this graph. However, it still needs a data buffer as the operation needs to write somewhere.
-#warning This was probably added for interpolation? Not sure.
-//		for (GLVariable *aVariable in operation.result) {
-//			success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
-//		}
+		// If one of the result variables of this operation does not get used, it will not appear in this graph. However, it still needs a data buffer as the operation needs to write somewhere.
+		for (GLVariable *aVariable in operation.result) {
+			if ( ![self.hasDataBuffer containsObject: aVariable] )
+			{
+				self.totalMemoryBuffersAllocated = self.totalMemoryBuffersAllocated + 1;
+				
+				// Here we fetch a data object, of appropriate size, for the variable.
+				[self.internalVariableBufferMap setObject: [[GLBuffer alloc] initWithLength: aVariable.dataBytes] forKey: aVariable];
+				[self.hasDataBuffer addObject: aVariable];
+			}
+		}
 		
 		return success;
 
