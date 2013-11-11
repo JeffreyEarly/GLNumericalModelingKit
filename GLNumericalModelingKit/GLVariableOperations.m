@@ -230,12 +230,12 @@
 - (void) setupDependencies
 {
 	for (GLVariable *variable in self.operand) {
-		if (variable.lastOperation && ![self.dependencies containsObject:variable.lastOperation]) {
+		if (variable.lastOperation && ![self.dependencies containsObject:variable.lastOperation] && variable.lastOperation !=self) {
 			[self addDependency: variable.lastOperation];
 		}
 	}
 	for (GLVariable *variable in self.result) {
-		if (variable.lastOperation && ![self.dependencies containsObject:variable.lastOperation]) {
+		if (variable.lastOperation && ![self.dependencies containsObject:variable.lastOperation] && variable.lastOperation !=self) {
 			[self addDependency: variable.lastOperation];
 		}
 	}
