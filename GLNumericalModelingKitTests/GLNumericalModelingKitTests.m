@@ -789,7 +789,7 @@
 		if ( !fequalprec(output[i], expected[i], 1e-4) ) {
 			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
 		}
-	}    
+	}
 }
 
 - (void) testRungeKutta23Integration
