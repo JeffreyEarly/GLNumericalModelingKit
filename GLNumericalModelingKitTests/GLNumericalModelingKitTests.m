@@ -789,9 +789,7 @@
 		if ( !fequalprec(output[i], expected[i], 1e-4) ) {
 			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
 		}
-	}
-    
-//    NSLog(@"%@", integrator.graphvisDescription);
+	}    
 }
 
 - (void) testRungeKutta23Integration
@@ -814,7 +812,8 @@
     gaussian = [[integrator stepForwardToTime: timeStep*20][0] spatialDomain];
     
     // Compute the analytical solution 20 steps forward
-    GLFloat x10 = x0-integrator.currentTime;
+	// Do NOT extract the 'currentTime' from the integrator. It will have returned an interpolated value!
+    GLFloat x10 = x0-timeStep*20;
     GLVariable *gaussian10 = [[[[x plus: @(-x10)] times: [x plus: @(-x10)]] negate] exponentiate];
     
     GLFloat *output = gaussian.pointerValue;
@@ -822,7 +821,7 @@
     
     // We expected 4th order Runge-Kutta to give use relative accuracies of 10^(-4)
     for (int i=0; i<xDim.nPoints; i++) {
-		if ( !fequalprec(output[i], expected[i], 2e-3) ) {
+		if ( !fequalprec(output[i], expected[i], 1e-3) ) {
 			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
 		}
 	}
