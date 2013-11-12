@@ -198,7 +198,6 @@
 	return YES;
 }
 
-#warning The concatenation operations are blocking!
 - (void) concatenateWithVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex
 {
 	GLVariableOperation *operation = [[GLNetCDFConcatenationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable alongDimensionAtIndex: mutableDimensionIndex];
