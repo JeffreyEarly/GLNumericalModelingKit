@@ -106,28 +106,28 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 #pragma mark
 
 + (GLDimension *) dimensionXWithNPoints: (NSUInteger) numPoints length: (GLFloat) theLength;{
-	GLDimension *aDim = [[GLDimension alloc] initPeriodicDimension:YES nPoints:numPoints domainMin:0 length:theLength];
+	GLDimension *aDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:numPoints domainMin:0 length:theLength];
 	aDim.name = @"x";
 	aDim.units = @"unitless";	
 	aDim.basisFunction = kGLDeltaBasis;
 	return aDim;
 }
 + (GLDimension *) dimensionYWithNPoints: (NSUInteger) numPoints length: (GLFloat) theLength;{
-	GLDimension *aDim = [[GLDimension alloc] initPeriodicDimension:YES nPoints:numPoints domainMin:0 length:theLength];
+	GLDimension *aDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:numPoints domainMin:0 length:theLength];
 	aDim.name = @"y";
 	aDim.units = @"unitless";
 	aDim.basisFunction = kGLDeltaBasis;
 	return aDim;
 }
 + (GLDimension *) dimensionZWithNPoints: (NSUInteger) numPoints length: (GLFloat) theLength;{
-	GLDimension *aDim = [[GLDimension alloc] initPeriodicDimension:YES nPoints:numPoints domainMin:0 length:theLength];
+	GLDimension *aDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:numPoints domainMin:0 length:theLength];
 	aDim.name = @"z";
 	aDim.units = @"unitless";
 	aDim.basisFunction = kGLDeltaBasis;
 	return aDim;
 }
 + (GLMutableDimension *) dimensionT {
-	GLMutableDimension *aDim = [[GLMutableDimension alloc] initPeriodicDimension:NO nPoints:1 domainMin:0 sampleInterval: 1.0];
+	GLMutableDimension *aDim = [[GLMutableDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:1 domainMin:0 length:0];
 	aDim.name = @"t";
 	aDim.units = @"unitless";
 	aDim.basisFunction = kGLDeltaBasis;
@@ -141,81 +141,6 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 #pragma mark -
 #pragma mark Initialization
 #pragma mark
-
-- (GLDimension *) initPeriodicDimension: (BOOL) periodic nPoints: (NSUInteger) numPoints domainMin: (GLFloat) theMin sampleInterval: (GLFloat) interval
-{
-	if ((self = [super init]))
-	{
-		isEvenlySampled = YES;
-		isPeriodic = periodic;
-		_nPoints = numPoints;
-		_domainMin = theMin;
-		sampleInterval = interval;
-				
-		if (isPeriodic) {
-			_gridType = kGLPeriodicGrid;
-			_domainLength = ( (double) _nPoints) * sampleInterval;
-			_differentiationBasis = kGLExponentialBasis;
-		}
-		else {
-			_gridType = kGLEndpointGrid;
-			if (_nPoints == 0) {
-				_domainLength = 0;
-			} else {
-				_domainLength = ( (double) (_nPoints-1)) * sampleInterval;
-			}
-			_differentiationBasis = kGLDeltaBasis;
-		}
-		
-		self.basisFunction = kGLDeltaBasis;
-		isMutable = NO;
-		_isStrictlyPositive = _domainMin >= 0.0;
-		
-		dataBytes = _nPoints*sizeof(GLFloat);
-		data =[NSMutableData dataWithLength: dataBytes];
-		[self populateEvenlySampledValues];
-	}
-	
-	return self;
-}
-
-- (GLDimension *) initPeriodicDimension: (BOOL) periodic nPoints: (NSUInteger) numPoints domainMin: (GLFloat) theMin length: (GLFloat) theLength
-{
-	if ((self = [super init]))
-	{
-		isEvenlySampled = YES;
-		isPeriodic = periodic;
-		_nPoints = numPoints;
-		_domainMin = theMin;
-		_domainLength = theLength;
-		
-		if (isPeriodic) {
-			_gridType = kGLPeriodicGrid;
-			if (_nPoints > 0) {
-				sampleInterval = _domainLength / ( (double) _nPoints);
-			}
-			_differentiationBasis = kGLExponentialBasis;
-		}
-		else {
-			_gridType = kGLEndpointGrid;
-			if (_nPoints > 1) {
-				sampleInterval = _domainLength / ( (double) (_nPoints-1));
-			} else {
-				sampleInterval = 0;
-			}
-			_differentiationBasis = kGLDeltaBasis;
-		}
-		
-		self.basisFunction = kGLDeltaBasis;
-		isMutable = NO;
-		
-		dataBytes = _nPoints*sizeof(GLFloat);
-		data =[NSMutableData dataWithLength: dataBytes];
-		[self populateEvenlySampledValues];
-	}
-	
-	return self;
-}
 
 - (GLDimension *) initDimensionWithGrid: (GLGridType) gridType nPoints: (NSUInteger) numPoints domainMin: (GLFloat) theMin length: (GLFloat) theLength
 {
@@ -287,8 +212,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 - (GLDimension *) initWithNPoints: (NSUInteger) numPoints values: (NSData *) values
 {
 	if (numPoints < 1) {
-		NSLog(@"Cannot initialize an unevenly sampled dimension with less than 1 point.");
-		return nil;
+        [NSException raise: @"BadFormatException" format:@"Cannot initialize an unevenly sampled dimension with less than 1 point."];
 	}
 	
 	if ((self = [super init]))
@@ -318,8 +242,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 - (GLDimension *) initWithPoints: (NSArray *) pointsArray
 {
 	if (pointsArray.count < 1) {
-		NSLog(@"Cannot initialize an unevenly sampled dimension with less than 1 point.");
-		return nil;
+        [NSException raise: @"BadFormatException" format:@"Cannot initialize an unevenly sampled dimension with less than 1 point."];
 	}
 	
 	if ((self = [super init]))
@@ -377,19 +300,22 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	
 	// If we're switching between the DCT-I and DST-I basis, we need a *different* spatial dimension
 	if ( existingDimension.basisFunction == kGLCosineBasis && basis == kGLSineBasis ) {
-		GLFloat aMin = spatialDimension.domainMin;
-		GLFloat aSampleInterval = spatialDimension.domainLength / ( (GLFloat) spatialDimension.nPoints+1);
-		NSString *aName = spatialDimension.name;
-		NSString *aUnits = spatialDimension.units;
-		spatialDimension = [[GLDimension alloc] initPeriodicDimension: NO nPoints: spatialDimension.nPoints domainMin: aMin + aSampleInterval sampleInterval: aSampleInterval];
-		spatialDimension.name = aName;
-		spatialDimension.units = aUnits;
+        [NSException raise: @"DeprecationException" format:@"This functionality might be deprecated."];
+//		GLFloat aMin = spatialDimension.domainMin;
+//		GLFloat aSampleInterval = spatialDimension.domainLength / ( (GLFloat) spatialDimension.nPoints+1);
+//		NSString *aName = spatialDimension.name;
+//		NSString *aUnits = spatialDimension.units;
+//        ;
+//		spatialDimension = [[GLDimension alloc] initPeriodicDimension: NO nPoints: spatialDimension.nPoints domainMin: aMin + aSampleInterval sampleInterval: aSampleInterval];
+//		spatialDimension.name = aName;
+//		spatialDimension.units = aUnits;
 	} else if ( existingDimension.basisFunction == kGLSineBasis && basis == kGLCosineBasis ) {
-		NSString *aName = spatialDimension.name;
-		NSString *aUnits = spatialDimension.units;
-		spatialDimension = [[GLDimension alloc] initPeriodicDimension: NO nPoints: spatialDimension.nPoints domainMin: spatialDimension.domainMin-spatialDimension.sampleInterval length: spatialDimension.domainLength+2*spatialDimension.sampleInterval];
-		spatialDimension.name = aName;
-		spatialDimension.units = aUnits;
+        [NSException raise: @"DeprecationException" format:@"This functionality might be deprecated."];
+//		NSString *aName = spatialDimension.name;
+//		NSString *aUnits = spatialDimension.units;
+//		spatialDimension = [[GLDimension alloc] initPeriodicDimension: NO nPoints: spatialDimension.nPoints domainMin: spatialDimension.domainMin-spatialDimension.sampleInterval length: spatialDimension.domainLength+2*spatialDimension.sampleInterval];
+//		spatialDimension.name = aName;
+//		spatialDimension.units = aUnits;
 	}
 	
 	if ((self = [super init]))
@@ -756,7 +682,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	
 	GLDimension *aDim;
 	if (self.isEvenlySampled) {
-		aDim= [[GLDimension alloc] initPeriodicDimension: NO nPoints: range.length domainMin: minValue length: maxValue];
+		aDim= [[GLDimension alloc] initDimensionWithGrid: self.gridType nPoints: range.length domainMin: minValue length: maxValue];
 	} else {
 		aDim = [[GLDimension alloc] initWithPoints: [self.points objectsAtIndexes: [NSIndexSet indexSetWithIndexesInRange: range]]];
 	}

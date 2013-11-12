@@ -129,7 +129,7 @@
         GLScalar *scalar = (GLScalar *) vOperand;
         result = [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation];
     } else if (vOperand.rank == 1) {
-        GLVariable *function = (GLVariable *) vOperand;
+        GLFunction *function = (GLFunction *) vOperand;
         result = [[function class] variableOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation];
     }  else if (vOperand.rank == 2) {
         GLLinearTransform *aTransform = (GLLinearTransform *) vOperand;
@@ -147,8 +147,8 @@
 	{
         self.scalarOperand = sOperand;
         
-		GLVariable *resultVariable = self.result[0];
-		GLVariable *operandVariable = self.operand[0];
+		GLFunction *resultVariable = self.result[0];
+		GLFunction *operandVariable = self.operand[0];
         
 		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
 		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
@@ -237,7 +237,7 @@
 	
 	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
 	{
-		GLVariable *resultVariable = self.result[0];
+		GLFunction *resultVariable = self.result[0];
 		NSUInteger nDataElements = resultVariable.nDataElements;
 		
 		GLFloat localScalar = self.scalarOperand;
@@ -273,7 +273,7 @@
 {
 	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
 	{
-		GLVariable *resultVariable = self.result[0];
+		GLFunction *resultVariable = self.result[0];
 		NSUInteger nDataElements = resultVariable.nDataElements;
 		GLFloat localScalar = self.scalarOperand;
 		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
@@ -303,7 +303,7 @@
 {
 	if (( self = [super initWithVectorOperand: vOperand scalarOperand: sOperand] ))
 	{
-		GLVariable *resultVariable = self.result[0];
+		GLFunction *resultVariable = self.result[0];
 		NSUInteger nDataElements = resultVariable.nDataElements;
 		GLFloat localScalar = self.scalarOperand;
 		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
@@ -335,7 +335,7 @@
 	{
         self.firstScalarOperand = fsOperand;
         self.secondScalarOperand = ssOperand;
-		GLVariable *resultVariable = self.result[0];
+		GLFunction *resultVariable = self.result[0];
 		NSUInteger nDataElements = resultVariable.nDataElements;
 		GLFloat min = fsOperand;
 		GLFloat max = ssOperand;
@@ -375,17 +375,17 @@
 
 - (id) initWithVectorOperand: (GLTensor *) aTensor scalarOperand: (GLFloat) aScalar indexString: (NSString *) indexString
 {
-	if ( ![[aTensor class] isSubclassOfClass: [GLVariable class]] ) {
+	if ( ![[aTensor class] isSubclassOfClass: [GLFunction class]] ) {
 		[NSException raise: @"InvalidOperation" format: @"Can only set the value of a function."];
 	}
 	
-	GLVariable *variable = (GLVariable *) aTensor;
+	GLFunction *variable = (GLFunction *) aTensor;
     NSArray *ranges = [GLDimension rangesFromIndexString: indexString usingDimensions: variable.dimensions];
     
     if (( self = [super initWithVectorOperand: variable scalarOperand: aScalar] ))
 	{
-		GLVariable *resultVariable = self.result[0];
-		GLVariable *operandVariable = self.operand[0];
+		GLFunction *resultVariable = self.result[0];
+		GLFunction *operandVariable = self.operand[0];
 
         self.indexString = indexString;
         
@@ -496,21 +496,21 @@
 
 -(id) initWithOperand: (GLTensor *) aTensor variableScale: (GLFloat) sOperand units: (NSString *) varUnits dimensionScale: (GLFloat) dimScale translation: (GLFloat) delta units: (NSString *) dimUnits
 {
-	if ( ![[aTensor class] isSubclassOfClass: [GLVariable class]] ) {
+	if ( ![[aTensor class] isSubclassOfClass: [GLFunction class]] ) {
 		[NSException raise: @"InvalidOperation" format: @"Can only set the value of a function."];
 	}
 	
-	GLVariable *vOperand = (GLVariable *) aTensor;
+	GLFunction *vOperand = (GLFunction *) aTensor;
 	NSMutableArray *newDims = [NSMutableArray arrayWithCapacity: vOperand.dimensions.count];
 	for (GLDimension *dim in vOperand.dimensions) {
 		[newDims addObject: [dim scaledBy: dimScale translatedBy: delta withUnits: dimUnits]];
 	}
-	GLVariable *result = [[vOperand class] variableOfType: vOperand.dataFormat withDimensions: newDims forEquation: vOperand.equation];
+	GLFunction *result = [[vOperand class] variableOfType: vOperand.dataFormat withDimensions: newDims forEquation: vOperand.equation];
 	result.units = varUnits;
 	if (( self = [super initWithResult: @[result] operand: @[vOperand]] ))
 	{
-		GLVariable *resultVariable = self.result[0];
-		GLVariable *operandVariable = self.operand[0];
+		GLFunction *resultVariable = self.result[0];
+		GLFunction *operandVariable = self.operand[0];
 		
 		self.scalarOperand = sOperand;
 		self.dimScale = dimScale;

@@ -15,7 +15,7 @@
 // Returns nil if the variable already has that dimension.
 @interface GLAddDimensionOperation : GLVariableOperation
 
-- (id) initWithOperand: (GLVariable *) variable dimension: (GLDimension *) dim;
+- (id) initWithOperand: (GLFunction *) variable dimension: (GLDimension *) dim;
 
 // If the dimension is mutable, we need to log the number of points at the time of creation.
 @property(readwrite, strong, nonatomic) GLDimension *theDimension;
@@ -34,7 +34,7 @@
 // If the -shouldFlatten flag is set, this will cause any dimensions of length 1 to be eliminated.
 @interface GLSubdomainOperation : GLVariableOperation
 
-- (id) initWithOperand: (GLVariable *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag;
+- (id) initWithOperand: (GLFunction *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag;
 
 @property(readwrite, strong, nonatomic) NSArray *theRanges;
 @property(readwrite, assign, nonatomic) BOOL shouldFlatten;
@@ -55,7 +55,7 @@
 // The result variable will have dimensions based on the recievers dimensions.
 @interface GLExistingDimensionConcatenationOperation : GLVariableOperation
 
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand dimensionIndex: (NSUInteger) dimIndex;
+- (id) initWithFirstOperand: (GLFunction *) fOperand secondOperand: (GLFunction *) sOperand dimensionIndex: (NSUInteger) dimIndex;
 
 @property(readwrite, strong, nonatomic) GLDimension *theDimension;
 
@@ -69,7 +69,7 @@
 // The dimensions in the other two variables must be the same.
 @interface GLNewDimensionConcatenationOperation : GLVariableOperation
 
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand dimension: (GLDimension *) dim;
+- (id) initWithFirstOperand: (GLFunction *) fOperand secondOperand: (GLFunction *) sOperand dimension: (GLDimension *) dim;
 
 @end
 
@@ -86,6 +86,6 @@
 
 @interface GLZeroPadOperation : GLVariableOperation
 
-- (id) initWithOperand: (GLVariable *) variable newDimensions: (NSArray *) newDimensions basis: (NSArray *) basis;
+- (id) initWithOperand: (GLFunction *) variable newDimensions: (NSArray *) newDimensions basis: (NSArray *) basis;
 @property(readwrite, strong, nonatomic) NSArray *projectedDimensions;
 @end

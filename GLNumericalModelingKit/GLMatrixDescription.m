@@ -15,7 +15,7 @@
 
 @implementation GLMatrixDescription
 
-- (GLMatrixDescription *) initWithVariable: (GLVariable *) variable
+- (GLMatrixDescription *) initWithVariable: (GLFunction *) variable
 {
     if ((self=[super init])) {
         self.nDimensions = variable.dimensions.count;

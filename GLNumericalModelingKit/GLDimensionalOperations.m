@@ -15,7 +15,7 @@
 
 @implementation GLAddDimensionOperation
 
-- (id) initWithOperand: (GLVariable *) variable dimension: (GLDimension *) dim
+- (id) initWithOperand: (GLFunction *) variable dimension: (GLDimension *) dim
 {
 	if ([variable.dimensions containsObject: dim]) {
 		return nil;
@@ -24,13 +24,13 @@
 	NSMutableArray *newDimensions = [NSMutableArray arrayWithObject: dim];
 	[newDimensions addObjectsFromArray: variable.dimensions];
 	
-	GLVariable *resultVariable = [GLVariable variableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
+	GLFunction *resultVariable = [GLFunction variableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
 	resultVariable.name = variable.name;
 	resultVariable.units = variable.units;
 	
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
-		GLVariable *operandVariable = self.operand[0];
+		GLFunction *operandVariable = self.operand[0];
 		
 		self.theDimension = dim;
 		self.nPoints = dim.nPoints;
@@ -86,7 +86,7 @@
 // If the -shouldFlatten flag is set, this will cause any dimensions of length 1 to be eliminated.
 @implementation GLSubdomainOperation
 
-- (id) initWithOperand: (GLVariable *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag
+- (id) initWithOperand: (GLFunction *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag
 {
 	self.shouldFlatten = aFlag;
 	
@@ -110,11 +110,11 @@
 	}
 	if (invalidRange) return nil;
 	
-	GLVariable *resultVariable = [GLVariable variableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
+	GLFunction *resultVariable = [GLFunction variableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
 	
 	if (( self = [super initWithResult:@[resultVariable] operand:@[variable]] ))
 	{
-		GLVariable *operandVariable = self.operand[0];
+		GLFunction *operandVariable = self.operand[0];
 		self.theRanges = ranges;
 		NSArray *dimensions = operandVariable.dimensions;
         NSMutableString *rangeDescrip = [[NSMutableString alloc] initWithString: @"("];
@@ -294,7 +294,7 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 // An array of size mxn concatenated with an array of size pxn produces an array of sized (m+p)xn
 // An array of size mxn concatenated with an array of size n produces an array of sized (m+1)xn
 
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand dimensionIndex: (NSUInteger) dimIndex
+- (id) initWithFirstOperand: (GLFunction *) fOperand secondOperand: (GLFunction *) sOperand dimensionIndex: (NSUInteger) dimIndex
 {
 	NSMutableArray *resultDimensions = [NSMutableArray arrayWithArray: fOperand.dimensions];
 	
@@ -310,7 +310,7 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 				if (!leftDim.isEvenlySampled) {
 					[NSException raise: @"DimensionsException" format: @"The dimension of concatenation must be evenly sampled."];
 				}
-				GLDimension *newDimension = [[GLDimension alloc] initPeriodicDimension:leftDim.isPeriodic nPoints:leftDim.nPoints+rightDim.nPoints domainMin:leftDim.domainMin sampleInterval:leftDim.sampleInterval];
+                GLDimension *newDimension = [[GLDimension alloc] initDimensionWithGrid: leftDim.gridType nPoints: leftDim.nPoints+rightDim.nPoints domainMin:leftDim.domainMin length: leftDim.domainLength+rightDim.domainLength];
 				[resultDimensions replaceObjectAtIndex: dimIndex withObject: newDimension];
 			}
 			else
@@ -328,7 +328,7 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 		if (!oldDimension.isEvenlySampled) {
 			[NSException raise: @"DimensionsException" format: @"The dimension of concatenation must be evenly sampled."];
 		}
-		GLDimension *newDimension = [[GLDimension alloc] initPeriodicDimension:oldDimension.isPeriodic nPoints:oldDimension.nPoints+1 domainMin:oldDimension.domainMin sampleInterval:oldDimension.sampleInterval];
+        GLDimension *newDimension = [[GLDimension alloc] initDimensionWithGrid: oldDimension.gridType nPoints: oldDimension.nPoints+1 domainMin:oldDimension.domainMin length: oldDimension.domainLength+oldDimension.sampleInterval];
 		[resultDimensions replaceObjectAtIndex: dimIndex withObject: newDimension];
 		[reducedDimensions removeObjectAtIndex: dimIndex];
 		
@@ -352,7 +352,7 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 		[NSException raise: @"MethodNotYetImplemented" format: @"Cannot perform a binary operation on two variables that are not either both complex or both real."]; return nil;
 	}
 	
-	GLVariable *resultVariable = [GLVariable variableOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
+	GLFunction *resultVariable = [GLFunction variableOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
 	if ((self = [super initWithResult: @[resultVariable] operand: @[fOperand, sOperand]])) {
 		[NSException raise: @"NotYetImplemented" format: @"Oh crap! You just called a function (GLExistingDimensionConcatenationOperation) that isn't yet implemented!"];
     }
@@ -427,7 +427,7 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 
 @implementation GLNewDimensionConcatenationOperation
 
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand dimension: (GLDimension *) dim
+- (id) initWithFirstOperand: (GLFunction *) fOperand secondOperand: (GLFunction *) sOperand dimension: (GLDimension *) dim
 {	
 	if ( ![fOperand.dimensions isEqualToArray: sOperand.dimensions] ) {
         [NSException raise: @"DimensionsNotEqualException" format: @"Cannot add two variables of different dimensions"]; return nil;
@@ -436,11 +436,11 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 		[NSException raise: @"MethodNotYetImplemented" format: @"Cannot perform a binary operation on two variables that are not either both complex or both real."]; return nil;
 	}
     
-	GLDimension *theDimension = dim.nPoints==2 ? dim : [[GLDimension alloc] initPeriodicDimension: dim.isPeriodic nPoints: 2 domainMin: dim.domainMin sampleInterval:dim.sampleInterval];
+	GLDimension *theDimension = dim.nPoints==2 ? dim : [[GLDimension alloc] initDimensionWithGrid: dim.gridType nPoints: 2 domainMin:dim.domainMin length: 2*dim.sampleInterval];
 	NSMutableArray *resultDimensions = [NSMutableArray arrayWithObject: theDimension];
 	[resultDimensions addObjectsFromArray: fOperand.dimensions];
 	
-	GLVariable *resultVariable = [GLVariable variableOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
+	GLFunction *resultVariable = [GLFunction variableOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
 	
 	if (( self = [super initWithResult: @[resultVariable] operand: @[fOperand,sOperand]] )) {
 		
@@ -552,13 +552,13 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 
 @implementation GLZeroPadOperation
 
-- (id) initWithOperand: (GLVariable *) variable newDimensions: (NSArray *) newDimensions basis: (NSArray *) basis
+- (id) initWithOperand: (GLFunction *) variable newDimensions: (NSArray *) newDimensions basis: (NSArray *) basis
 {
     if (variable.dimensions.count != newDimensions.count) {
         [NSException raise: @"DimensionsException" format: @"You must have the same number of dimensions."];
     }
     
-    GLVariable *lowResTransformedVariable = [variable transformToBasis: basis];
+    GLFunction *lowResTransformedVariable = [variable transformToBasis: basis];
     
     NSMutableArray *highResDimensions = [NSMutableArray array];
     for (NSUInteger i=0; i<lowResTransformedVariable.dimensions.count; i++) {
@@ -566,14 +566,14 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
         [highResDimensions addObject: dim];
     }
     
-	GLVariable *resultVariable = [GLVariable variableOfType: lowResTransformedVariable.dataFormat withDimensions: highResDimensions forEquation: variable.equation];
+	GLFunction *resultVariable = [GLFunction variableOfType: lowResTransformedVariable.dataFormat withDimensions: highResDimensions forEquation: variable.equation];
 	
 	if (( self = [super initWithResult:@[resultVariable] operand:@[lowResTransformedVariable]] ))
 	{		
 		if ( highResDimensions.count == 2 )
 		{
-			GLVariable *resultVariable = self.result[0];
-			GLVariable *operandVariable = self.operand[0];
+			GLFunction *resultVariable = self.result[0];
+			GLFunction *operandVariable = self.operand[0];
 			
             NSUInteger nDataElements = resultVariable.nDataElements;
             NSUInteger nKPoints = [operandVariable.dimensions[0] nPoints];

@@ -20,8 +20,8 @@
 		8157AD5D17F9FC36002A6ED6 /* GLEquation.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5217F9FC36002A6ED6 /* GLEquation.m */; };
 		8157AD5E17F9FC36002A6ED6 /* GLDimension.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5317F9FC36002A6ED6 /* GLDimension.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157AD5F17F9FC36002A6ED6 /* GLDimension.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5417F9FC36002A6ED6 /* GLDimension.m */; };
-		8157AD6017F9FC36002A6ED6 /* GLVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5517F9FC36002A6ED6 /* GLVariable.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		8157AD6117F9FC36002A6ED6 /* GLVariable.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5617F9FC36002A6ED6 /* GLVariable.m */; };
+		8157AD6017F9FC36002A6ED6 /* GLFunction.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5517F9FC36002A6ED6 /* GLFunction.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8157AD6117F9FC36002A6ED6 /* GLFunction.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5617F9FC36002A6ED6 /* GLFunction.m */; };
 		8157AD6217F9FC36002A6ED6 /* GLLinearTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5717F9FC36002A6ED6 /* GLLinearTransform.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157AD6317F9FC36002A6ED6 /* GLLinearTransform.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5817F9FC36002A6ED6 /* GLLinearTransform.m */; };
 		8157AD6417F9FC36002A6ED6 /* GLMatrixDescription.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5917F9FC36002A6ED6 /* GLMatrixDescription.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -118,8 +118,8 @@
 		8157AD5217F9FC36002A6ED6 /* GLEquation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLEquation.m; sourceTree = "<group>"; };
 		8157AD5317F9FC36002A6ED6 /* GLDimension.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLDimension.h; sourceTree = "<group>"; };
 		8157AD5417F9FC36002A6ED6 /* GLDimension.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLDimension.m; sourceTree = "<group>"; };
-		8157AD5517F9FC36002A6ED6 /* GLVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLVariable.h; sourceTree = "<group>"; };
-		8157AD5617F9FC36002A6ED6 /* GLVariable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLVariable.m; sourceTree = "<group>"; };
+		8157AD5517F9FC36002A6ED6 /* GLFunction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLFunction.h; sourceTree = "<group>"; };
+		8157AD5617F9FC36002A6ED6 /* GLFunction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLFunction.m; sourceTree = "<group>"; };
 		8157AD5717F9FC36002A6ED6 /* GLLinearTransform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLLinearTransform.h; sourceTree = "<group>"; };
 		8157AD5817F9FC36002A6ED6 /* GLLinearTransform.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLLinearTransform.m; sourceTree = "<group>"; };
 		8157AD5917F9FC36002A6ED6 /* GLMatrixDescription.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLMatrixDescription.h; sourceTree = "<group>"; };
@@ -283,8 +283,8 @@
 				81CABBF718089D7C00758DF1 /* GLTensor.m */,
 				81CABBFA1808A11800758DF1 /* GLScalar.h */,
 				81CABBFB1808A11800758DF1 /* GLScalar.m */,
-				8157AD5517F9FC36002A6ED6 /* GLVariable.h */,
-				8157AD5617F9FC36002A6ED6 /* GLVariable.m */,
+				8157AD5517F9FC36002A6ED6 /* GLFunction.h */,
+				8157AD5617F9FC36002A6ED6 /* GLFunction.m */,
 				813629FA182AC8C1001A8E1D /* GLBuffer.h */,
 				813629FB182AC8C1001A8E1D /* GLBuffer.m */,
 				8157AD5717F9FC36002A6ED6 /* GLLinearTransform.h */,
@@ -464,7 +464,7 @@
 				8157ADDB17F9FCDB002A6ED6 /* GLOperationOptimizer.h in Headers */,
 				81CABBFC1808A11800758DF1 /* GLScalar.h in Headers */,
 				813629FC182AC8C1001A8E1D /* GLBuffer.h in Headers */,
-				8157AD6017F9FC36002A6ED6 /* GLVariable.h in Headers */,
+				8157AD6017F9FC36002A6ED6 /* GLFunction.h in Headers */,
 				8157ADCB17F9FCDB002A6ED6 /* GLVectorVectorOperations.h in Headers */,
 				8157AE1C17F9FDEB002A6ED6 /* GLLowLevelNetCDF.h in Headers */,
 				8157AE1817F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.h in Headers */,
@@ -586,7 +586,7 @@
 				8157AE1D17F9FDEB002A6ED6 /* GLLowLevelNetCDF.m in Sources */,
 				8157ADCA17F9FCDB002A6ED6 /* GLVectorScalarOperations.m in Sources */,
 				8157ADE417F9FCE6002A6ED6 /* GLMemoryPool.m in Sources */,
-				8157AD6117F9FC36002A6ED6 /* GLVariable.m in Sources */,
+				8157AD6117F9FC36002A6ED6 /* GLFunction.m in Sources */,
 				81CABBFD1808A11800758DF1 /* GLScalar.m in Sources */,
 				8157ADC417F9FCDB002A6ED6 /* GLVariableOperations.m in Sources */,
 				8157AE1917F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.m in Sources */,

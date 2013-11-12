@@ -146,7 +146,7 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 + (GLLinearTransform *) spectralVanishingViscosityFilterWithDimensions: (NSArray *) dimensions scaledForAntialiasing: (BOOL) isAntialiasing forEquation: (GLEquation *) equation;
 
 // Assuming the linear transform was initialized with fromDims that match the diagonalVariable and a format of diag in each dimension
-- (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable;
+- (void) setVariableAlongDiagonal: (GLFunction *) diagonalVariable;
 
 // Starting with the subdiagonal, diagonal, superdiagonal.
 - (void) setVariablesAlongTridiagonal: (NSArray *) tridiagonalVariables;
@@ -211,13 +211,13 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
  @param x A function with dimensions matching the fromDimensions of this linear transformation
  @returns A transformed function with dimensions matching the toDimensions of this linear transformation
  */
-- (GLVariable *) transform: (GLVariable *) x;
+- (GLFunction *) transform: (GLFunction *) x;
 
 /** Returns x in the equation A x = b, where A is this linear transformation
  @param x A function with dimensions matching the toDimensions of this linear transformation
  @returns A solution function with dimensions matching the fromDimensions of this linear transformation
  */
-- (GLVariable *) solve: (GLVariable *) b;
+- (GLFunction *) solve: (GLFunction *) b;
 
 - (GLLinearTransform *) inverse;
 

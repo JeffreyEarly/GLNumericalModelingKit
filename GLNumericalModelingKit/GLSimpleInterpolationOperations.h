@@ -8,13 +8,12 @@
 
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 
-enum {
+typedef NS_ENUM(NSUInteger, GLInterpolationEndpointBehavior) {
 	kGLTruncationBehavior = 0,
 	kGLPeriodicBehavior = 1,
 	kGLReflectionBehavior = 2,
 	kGLHalfShiftReflectionBehavior = 3
 };
-typedef NSUInteger GLInterpolationEndpointBehavior;
 
 /************************************************/
 /*		GLInterpolationOperation				*/

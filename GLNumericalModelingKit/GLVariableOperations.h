@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 
 #import <GLNumericalModelingKit/Precision.h>
-#import <GLNumericalModelingKit/GLVariable.h>
+#import <GLNumericalModelingKit/GLFunction.h>
 #import <GLNumericalModelingKit/GLBuffer.h>
 
 // GLVariableOperations operate on the data associated GLVariables.

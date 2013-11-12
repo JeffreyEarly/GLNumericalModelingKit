@@ -10,7 +10,7 @@
 
 // Need to make this thread-safe for adding variables.
 
-@class GLDimension, GLVariable, GLLowLevelNetCDF, GLNetCDFVariable, GLEquation;
+@class GLDimension, GLFunction, GLLowLevelNetCDF, GLNetCDFVariable, GLEquation;
 @interface GLNetCDFFile : NSObject
 
 /************************************************/
@@ -72,7 +72,7 @@
 // No strong reference to the variable is made. A GLNetCDFVariable is returned. No data is fetched.
 // You cannot add a variable that doesn't have any valid data, unless it's a mutable variable.
 // The returned variable will be mutable if dimensions dicate.
-- (id) addVariable: (GLVariable *) variable;
+- (id) addVariable: (GLFunction *) variable;
 
 - (GLDimension *) dimensionWithName: (NSString *) name;
 - (GLNetCDFVariable *) variableWithName: (NSString *) name;

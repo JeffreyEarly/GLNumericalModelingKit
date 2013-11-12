@@ -22,7 +22,7 @@
 // This is designed as the input for the bilinear interpolation algorithm.
 
 @interface GLDimensionalPositionOperation : GLVariableOperation
-- (id) initWithPositionVector:(GLVariable *)positionVar dimension: (GLDimension *) dimension endPointPointBehavior: (GLInterpolationEndpointBehavior) behavior;
+- (id) initWithPositionVector:(GLFunction *)positionVar dimension: (GLDimension *) dimension endPointPointBehavior: (GLInterpolationEndpointBehavior) behavior;
 @property(strong) GLDimension *dimension;
 @end
 
@@ -47,12 +47,12 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 	}
 }
 
-- (id) initWithPositionVector:(GLVariable *) position dimension: (GLDimension *) dimension endPointPointBehavior: (GLInterpolationEndpointBehavior) behavior
+- (id) initWithPositionVector:(GLFunction *) position dimension: (GLDimension *) dimension endPointPointBehavior: (GLInterpolationEndpointBehavior) behavior
 {
-	GLVariable *lowerIndicesVar = [GLVariable variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
-	GLVariable *upperIndicesVar = [GLVariable variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
-	GLVariable *fractionVar = [GLVariable variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
-	GLVariable *oneMinusFractionVar = [GLVariable variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
+	GLFunction *lowerIndicesVar = [GLFunction variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
+	GLFunction *upperIndicesVar = [GLFunction variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
+	GLFunction *fractionVar = [GLFunction variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
+	GLFunction *oneMinusFractionVar = [GLFunction variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
 	
 	if ((self=[super initWithResult: @[lowerIndicesVar, upperIndicesVar, fractionVar, oneMinusFractionVar] operand: @[position]]))
 	{
@@ -250,9 +250,9 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 @implementation GLOneDimLinearInterpolationOperation
 
 // The first operand is the function we're approximating, the second function is the (fractional) indices that we're approximating it at.
-- (id) initWithFunction:(GLVariable *)fOperand lowerIndices: (GLVariable *) lIndices upperIndices: (GLVariable *) uIndices fraction: (GLVariable *) frac
+- (id) initWithFunction:(GLFunction *)fOperand lowerIndices: (GLFunction *) lIndices upperIndices: (GLFunction *) uIndices fraction: (GLFunction *) frac
 {
-	GLVariable *resultVariable = [GLVariable variableOfRealTypeWithDimensions: frac.dimensions forEquation: frac.equation];
+	GLFunction *resultVariable = [GLFunction variableOfRealTypeWithDimensions: frac.dimensions forEquation: frac.equation];
 	if (( self = [super initWithResult: @[resultVariable] operand: @[fOperand, lIndices, uIndices, frac]] )) {
 		
         NSUInteger numInterpPoints = frac.nDataPoints;
@@ -276,18 +276,18 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 @end
 
 @interface GLWeightedAverageOperation : GLVariableOperation
-- (id) initWithLeftVariables: (NSArray *) leftVars rightVariables: (NSArray *) rightVars leftWeighting: (GLVariable *) leftWeight rightWeighting: (GLVariable *) rightWeight;
+- (id) initWithLeftVariables: (NSArray *) leftVars rightVariables: (NSArray *) rightVars leftWeighting: (GLFunction *) leftWeight rightWeighting: (GLFunction *) rightWeight;
 @end
 
 @implementation GLWeightedAverageOperation
 
-- (id) initWithLeftVariables: (NSArray *) leftVars rightVariables: (NSArray *) rightVars leftWeighting: (GLVariable *) leftWeight rightWeighting: (GLVariable *) rightWeight;
+- (id) initWithLeftVariables: (NSArray *) leftVars rightVariables: (NSArray *) rightVars leftWeighting: (GLFunction *) leftWeight rightWeighting: (GLFunction *) rightWeight;
 {
     
     NSMutableArray *resultArray = [[NSMutableArray alloc] init];
     NSMutableArray *inputArray = [[NSMutableArray alloc] init];
 	for (NSUInteger i=0; i<leftVars.count; i++) {
-        GLVariable *resultVariable = [GLVariable variableOfRealTypeWithDimensions: [leftVars[i] dimensions] forEquation: [leftVars[i] equation]];
+        GLFunction *resultVariable = [GLFunction variableOfRealTypeWithDimensions: [leftVars[i] dimensions] forEquation: [leftVars[i] equation]];
         [resultArray addObject: resultVariable];
         inputArray[2*i] = leftVars[i];
         inputArray[2*i+1] = rightVars[i];
@@ -327,7 +327,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 
 - (id) initWithFirstOperand: (NSArray *) fOperand secondOperand: (NSArray *) sOperand
 {
-	for (GLVariable *fVariable in fOperand) {
+	for (GLFunction *fVariable in fOperand) {
 		if (fVariable.dimensions.count != sOperand.count) {
 			[NSException raise: @"MethodNotImplemented" format: @"Position vector must have the same dimensionality as the functions being interpolated."];
 		}
@@ -340,14 +340,14 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 	NSMutableArray *resultArray = [[NSMutableArray alloc] init];
 	NSArray *dimensions = [[fOperand lastObject] dimensions];
 	
-	for (GLVariable *fVariable in fOperand) {
+	for (GLFunction *fVariable in fOperand) {
 		if ( fVariable.isComplex ) {
 			[NSException raise: @"MethodNotImplemented" format: @"Interpolation can only be done at real points."];
 		} else if ( ![fVariable.dimensions isEqualToArray: dimensions] ) {
 			[NSException raise: @"IllegalDimensions" format: @"All variables being interpolated must have the same dimensions."];
 		} else {
 			// The resulting variables will have the same length as the requested interpolation points.
-			GLVariable *resultVariable = [GLVariable variableOfRealTypeWithDimensions:[[sOperand lastObject] dimensions] forEquation:[[sOperand lastObject] equation]];
+			GLFunction *resultVariable = [GLFunction variableOfRealTypeWithDimensions:[[sOperand lastObject] dimensions] forEquation:[[sOperand lastObject] equation]];
 			[resultArray addObject: resultVariable];
 		}
 	}
@@ -355,12 +355,12 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 	if ( sOperand.count == 1)
 	{
 		GLDimensionalPositionOperation *indexOperation = [[GLDimensionalPositionOperation alloc] initWithPositionVector: sOperand.lastObject dimension: dimensions.lastObject endPointPointBehavior: [dimensions.lastObject isPeriodic] ? kGLPeriodicBehavior : kGLTruncationBehavior];
-		GLVariable *lowerIndices = indexOperation.result[0];
-        GLVariable *upperIndices = indexOperation.result[1];
-        GLVariable *fraction = indexOperation.result[2];
+		GLFunction *lowerIndices = indexOperation.result[0];
+        GLFunction *upperIndices = indexOperation.result[1];
+        GLFunction *fraction = indexOperation.result[2];
 		
 		NSMutableArray *partialInterpolations = [[NSMutableArray alloc] init];
-		for (GLVariable *fVariable in fOperand) {
+		for (GLFunction *fVariable in fOperand) {
 			GLOneDimLinearInterpolationOperation *interp = [[GLOneDimLinearInterpolationOperation alloc] initWithFunction: fVariable lowerIndices:lowerIndices upperIndices: upperIndices fraction: fraction];
 			[partialInterpolations addObject: interp.result[0]];
 		}
@@ -378,25 +378,25 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
         GLDataStride *strides = matrixDescription.strides;
         
         GLDimensionalPositionOperation *indexOperation0 = [[GLDimensionalPositionOperation alloc] initWithPositionVector: sOperand[0] dimension: dimensions[0] endPointPointBehavior: [dimensions[0] isPeriodic] ? kGLPeriodicBehavior : kGLTruncationBehavior];
-		GLVariable *lowerIndices0 = indexOperation0.result[0];
-        GLVariable *upperIndices0 = indexOperation0.result[1];
-        GLVariable *fraction0 = indexOperation0.result[2];
-        GLVariable *oneMinusfraction0 = indexOperation0.result[3];
+		GLFunction *lowerIndices0 = indexOperation0.result[0];
+        GLFunction *upperIndices0 = indexOperation0.result[1];
+        GLFunction *fraction0 = indexOperation0.result[2];
+        GLFunction *oneMinusfraction0 = indexOperation0.result[3];
         
         GLDimensionalPositionOperation *indexOperation1 = [[GLDimensionalPositionOperation alloc] initWithPositionVector: sOperand[1] dimension: dimensions[1] endPointPointBehavior: [dimensions[1] isPeriodic] ? kGLPeriodicBehavior : kGLTruncationBehavior];
-		GLVariable *lowerIndices1 = indexOperation1.result[0];
-        GLVariable *upperIndices1 = indexOperation1.result[1];
-        GLVariable *fraction1 = indexOperation1.result[2];
+		GLFunction *lowerIndices1 = indexOperation1.result[0];
+        GLFunction *upperIndices1 = indexOperation1.result[1];
+        GLFunction *fraction1 = indexOperation1.result[2];
         
-        GLVariable *lowerLower = [[lowerIndices0 times: @(strides[0].stride)] plus: lowerIndices1];
-        GLVariable *lowerUpper = [[lowerIndices0 times: @(strides[0].stride)] plus: upperIndices1];
+        GLFunction *lowerLower = [[lowerIndices0 times: @(strides[0].stride)] plus: lowerIndices1];
+        GLFunction *lowerUpper = [[lowerIndices0 times: @(strides[0].stride)] plus: upperIndices1];
         
-        GLVariable *upperLower = [[upperIndices0 times: @(strides[0].stride)] plus: lowerIndices1];
-        GLVariable *upperUpper = [[upperIndices0 times: @(strides[0].stride)] plus: upperIndices1];
+        GLFunction *upperLower = [[upperIndices0 times: @(strides[0].stride)] plus: lowerIndices1];
+        GLFunction *upperUpper = [[upperIndices0 times: @(strides[0].stride)] plus: upperIndices1];
         
 		NSMutableArray *leftVariables = [[NSMutableArray alloc] init];
         NSMutableArray *rightVariables = [[NSMutableArray alloc] init];
-		for (GLVariable *fVariable in fOperand) {
+		for (GLFunction *fVariable in fOperand) {
 			GLOneDimLinearInterpolationOperation *firstInterp = [[GLOneDimLinearInterpolationOperation alloc] initWithFunction: fVariable lowerIndices:lowerLower upperIndices: lowerUpper fraction: fraction1];
 			GLOneDimLinearInterpolationOperation *secondInterp = [[GLOneDimLinearInterpolationOperation alloc] initWithFunction: fVariable lowerIndices:upperLower upperIndices: upperUpper fraction: fraction1];
 			
@@ -419,37 +419,37 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
         GLDataStride *strides = matrixDescription.strides;
         
         GLDimensionalPositionOperation *indexOperation0 = [[GLDimensionalPositionOperation alloc] initWithPositionVector: sOperand[0] dimension: dimensions[0] endPointPointBehavior: [dimensions[0] isPeriodic] ? kGLPeriodicBehavior : kGLTruncationBehavior];
-		GLVariable *lowerIndices0 = indexOperation0.result[0];
-        GLVariable *upperIndices0 = indexOperation0.result[1];
-        GLVariable *fraction0 = indexOperation0.result[2];
-        GLVariable *oneMinusfraction0 = indexOperation0.result[3];
+		GLFunction *lowerIndices0 = indexOperation0.result[0];
+        GLFunction *upperIndices0 = indexOperation0.result[1];
+        GLFunction *fraction0 = indexOperation0.result[2];
+        GLFunction *oneMinusfraction0 = indexOperation0.result[3];
         
         GLDimensionalPositionOperation *indexOperation1 = [[GLDimensionalPositionOperation alloc] initWithPositionVector: sOperand[1] dimension: dimensions[1] endPointPointBehavior: [dimensions[1] isPeriodic] ? kGLPeriodicBehavior : kGLTruncationBehavior];
-		GLVariable *lowerIndices1 = indexOperation1.result[0];
-        GLVariable *upperIndices1 = indexOperation1.result[1];
-        GLVariable *fraction1 = indexOperation1.result[2];
-        GLVariable *oneMinusfraction1 = indexOperation1.result[3];
+		GLFunction *lowerIndices1 = indexOperation1.result[0];
+        GLFunction *upperIndices1 = indexOperation1.result[1];
+        GLFunction *fraction1 = indexOperation1.result[2];
+        GLFunction *oneMinusfraction1 = indexOperation1.result[3];
         
         GLDimensionalPositionOperation *indexOperation2 = [[GLDimensionalPositionOperation alloc] initWithPositionVector: sOperand[2] dimension: dimensions[2] endPointPointBehavior: [dimensions[2] isPeriodic] ? kGLPeriodicBehavior : kGLTruncationBehavior];
-		GLVariable *lowerIndices2 = indexOperation2.result[0];
-        GLVariable *upperIndices2 = indexOperation2.result[1];
-        GLVariable *fraction2 = indexOperation2.result[2];
+		GLFunction *lowerIndices2 = indexOperation2.result[0];
+        GLFunction *upperIndices2 = indexOperation2.result[1];
+        GLFunction *fraction2 = indexOperation2.result[2];
         
-        GLVariable *lowerLowerLower = [[[[lowerIndices0 scalarMultiply: strides[1].nPoints] plus: lowerIndices1] scalarMultiply: strides[2].nPoints] plus: lowerIndices2];
-        GLVariable *lowerLowerUpper = [[[[lowerIndices0 scalarMultiply: strides[1].nPoints] plus: lowerIndices1] scalarMultiply: strides[2].nPoints] plus: upperIndices2];
+        GLFunction *lowerLowerLower = [[[[lowerIndices0 scalarMultiply: strides[1].nPoints] plus: lowerIndices1] scalarMultiply: strides[2].nPoints] plus: lowerIndices2];
+        GLFunction *lowerLowerUpper = [[[[lowerIndices0 scalarMultiply: strides[1].nPoints] plus: lowerIndices1] scalarMultiply: strides[2].nPoints] plus: upperIndices2];
         
-        GLVariable *lowerUpperLower = [[[[lowerIndices0 scalarMultiply: strides[1].nPoints] plus: upperIndices1] scalarMultiply: strides[2].nPoints] plus: lowerIndices2];
-        GLVariable *lowerUpperUpper = [[[[lowerIndices0 scalarMultiply: strides[1].nPoints] plus: upperIndices1] scalarMultiply: strides[2].nPoints] plus: upperIndices2];
+        GLFunction *lowerUpperLower = [[[[lowerIndices0 scalarMultiply: strides[1].nPoints] plus: upperIndices1] scalarMultiply: strides[2].nPoints] plus: lowerIndices2];
+        GLFunction *lowerUpperUpper = [[[[lowerIndices0 scalarMultiply: strides[1].nPoints] plus: upperIndices1] scalarMultiply: strides[2].nPoints] plus: upperIndices2];
         
-        GLVariable *upperLowerLower = [[[[upperIndices0 scalarMultiply: strides[1].nPoints] plus: lowerIndices1] scalarMultiply: strides[2].nPoints] plus: lowerIndices2];
-        GLVariable *upperLowerUpper = [[[[upperIndices0 scalarMultiply: strides[1].nPoints] plus: lowerIndices1] scalarMultiply: strides[2].nPoints] plus: upperIndices2];
+        GLFunction *upperLowerLower = [[[[upperIndices0 scalarMultiply: strides[1].nPoints] plus: lowerIndices1] scalarMultiply: strides[2].nPoints] plus: lowerIndices2];
+        GLFunction *upperLowerUpper = [[[[upperIndices0 scalarMultiply: strides[1].nPoints] plus: lowerIndices1] scalarMultiply: strides[2].nPoints] plus: upperIndices2];
         
-        GLVariable *upperUpperLower = [[[[upperIndices0 scalarMultiply: strides[1].nPoints] plus: upperIndices1] scalarMultiply: strides[2].nPoints] plus: lowerIndices2];
-        GLVariable *upperUpperUpper = [[[[upperIndices0 scalarMultiply: strides[1].nPoints] plus: upperIndices1] scalarMultiply: strides[2].nPoints] plus: upperIndices2];
+        GLFunction *upperUpperLower = [[[[upperIndices0 scalarMultiply: strides[1].nPoints] plus: upperIndices1] scalarMultiply: strides[2].nPoints] plus: lowerIndices2];
+        GLFunction *upperUpperUpper = [[[[upperIndices0 scalarMultiply: strides[1].nPoints] plus: upperIndices1] scalarMultiply: strides[2].nPoints] plus: upperIndices2];
         
 		NSMutableArray *leftVariables = [[NSMutableArray alloc] init];
         NSMutableArray *rightVariables = [[NSMutableArray alloc] init];
-		for (GLVariable *fVariable in fOperand) {
+		for (GLFunction *fVariable in fOperand) {
 			GLOneDimLinearInterpolationOperation *firstInterp = [[GLOneDimLinearInterpolationOperation alloc] initWithFunction: fVariable lowerIndices:lowerLowerLower upperIndices: lowerLowerUpper fraction: fraction2];
 			GLOneDimLinearInterpolationOperation *secondInterp = [[GLOneDimLinearInterpolationOperation alloc] initWithFunction: fVariable lowerIndices:lowerUpperLower upperIndices: lowerUpperUpper fraction: fraction2];
 			

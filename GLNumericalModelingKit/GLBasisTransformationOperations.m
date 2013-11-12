@@ -85,17 +85,17 @@ static BOOL _shouldAntiAlias = NO;
 }
 
 // antialiasingFilter = 1 if k < (2/3)K_max, 0 otherwise
-+ (GLVariable *) antialiasingFilterFromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation
++ (GLFunction *) antialiasingFilterFromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation
 {
 	GLFloat minNyquist;
 	GLFloat minSampleInterval;
 	
-	GLVariable *bigK;
+	GLFunction *bigK;
 	for (GLDimension *dim in dimensions) {
 		if (dim.basisFunction == kGLDeltaBasis) {
 			continue;
 		}
-		GLVariable *k = [GLVariable variableOfRealTypeFromDimension: dim withDimensions: dimensions forEquation: equation];
+		GLFunction *k = [GLFunction variableOfRealTypeFromDimension: dim withDimensions: dimensions forEquation: equation];
 		GLFloat nyquist = dim.domainMin + dim.domainLength;
 		if (!bigK) {
 			bigK = [k multiply: k];
@@ -119,7 +119,7 @@ static BOOL _shouldAntiAlias = NO;
 	
 	
 	// expf( -alpha * powf( (k-max)/(k-cutoff), p) );
-	GLVariable *filter = [GLVariable variableOfRealTypeWithDimensions: dimensions forEquation: equation];
+	GLFunction *filter = [GLFunction variableOfRealTypeWithDimensions: dimensions forEquation: equation];
 	
 	[bigK solve];
 	
@@ -136,7 +136,7 @@ static BOOL _shouldAntiAlias = NO;
 	return filter;
 }
 
-+ (id) basisTransformationWithOperand: (GLVariable *) variable destinationBasis: (NSArray *) toBasis
++ (id) basisTransformationWithOperand: (GLFunction *) variable destinationBasis: (NSArray *) toBasis
 {
     // If only one basis was specified, assume it was intended for all dimensions
     if ( toBasis.count == 1 && variable.dimensions.count > 1) {
@@ -270,7 +270,7 @@ static BOOL _shouldAntiAlias = NO;
 	//	At this point is appears as if we're transforming back to the grid, so we need to anti-alias
 	//
 	if ([GLBasisTransformOperation shouldAntialias]) {
-		GLVariable *aa = [self antialiasingFilterFromDimensions: variable.dimensions forEquation: variable.equation];
+		GLFunction *aa = [self antialiasingFilterFromDimensions: variable.dimensions forEquation: variable.equation];
 		variable = [variable multiply: aa];
 	}
 	
@@ -493,8 +493,8 @@ static BOOL _shouldAntiAlias = NO;
     [basisDescription deleteCharactersInRange: NSMakeRange(basisDescription.length-2, 2)];
     [basisDescription appendString: @")"];
     
-    if (((GLVariable *)self.operand[0]).name) {
-        return [NSString stringWithFormat: @"%@\t<0x%lx> (%@) %@", NSStringFromClass([self class]), (NSUInteger) self, ((GLVariable *)self.operand[0]).name, basisDescription];
+    if (((GLFunction *)self.operand[0]).name) {
+        return [NSString stringWithFormat: @"%@\t<0x%lx> (%@) %@", NSStringFromClass([self class]), (NSUInteger) self, ((GLFunction *)self.operand[0]).name, basisDescription];
     } else {
         return [NSString stringWithFormat: @"%@\t<0x%lx> %@", NSStringFromClass([self class]), (NSUInteger) self, basisDescription];
     }
@@ -512,7 +512,7 @@ static BOOL _shouldAntiAlias = NO;
 
 @implementation GLRealToRealTransformOperation
 
-- (id) initWithOperand: (GLVariable *) variable destinationBasis: (NSArray *) toBasis
+- (id) initWithOperand: (GLFunction *) variable destinationBasis: (NSArray *) toBasis
 {
     if (!variable.isPurelyReal) {
 		[NSException raise: @"VariableNotRealException" format: @"A real-to-real transformation can only act on a real variable."];
@@ -553,7 +553,7 @@ static BOOL _shouldAntiAlias = NO;
     }
     
     // Okay, we're good to go!
-    GLVariable *resultVariable = [GLVariable variableOfRealTypeWithDimensions: finalDimensions forEquation: variable.equation];
+    GLFunction *resultVariable = [GLFunction variableOfRealTypeWithDimensions: finalDimensions forEquation: variable.equation];
     resultVariable.name = variable.name;
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
@@ -717,7 +717,7 @@ static BOOL _shouldAntiAlias = NO;
 
 @implementation GLRealToComplexTransformOperation
 
-- (id) initWithOperand: (GLVariable *) variable destinationBasis: (NSArray *) toBasis
+- (id) initWithOperand: (GLFunction *) variable destinationBasis: (NSArray *) toBasis
 {   
 	if (variable.dimensions.count != toBasis.count) {
 		[NSException raise: @"DimensionsNotEqualException" format: @"The destination basis must be specified for all dimensions."];
@@ -784,11 +784,11 @@ static BOOL _shouldAntiAlias = NO;
     }
     
     // Okay, we're good to go!
-    GLVariable *resultVariable;
+    GLFunction *resultVariable;
     if (forwardRank) {
-        resultVariable = [GLVariable variableOfComplexTypeWithDimensions: finalDimensions forEquation: variable.equation];
+        resultVariable = [GLFunction variableOfComplexTypeWithDimensions: finalDimensions forEquation: variable.equation];
     } else {
-        resultVariable = [GLVariable variableOfRealTypeWithDimensions: finalDimensions forEquation: variable.equation];
+        resultVariable = [GLFunction variableOfRealTypeWithDimensions: finalDimensions forEquation: variable.equation];
     }
     
     resultVariable.name = variable.name;
@@ -949,7 +949,7 @@ static BOOL _shouldAntiAlias = NO;
 
 @implementation GLComplexToComplexTransformOperation
 
-- (id) initWithOperand: (GLVariable *) variable destinationBasis: (NSArray *) toBasis
+- (id) initWithOperand: (GLFunction *) variable destinationBasis: (NSArray *) toBasis
 {   
 	if (variable.dimensions.count != toBasis.count) {
 		[NSException raise: @"DimensionsNotEqualException" format: @"The destination basis must be specified for all dimensions."];
@@ -996,7 +996,7 @@ static BOOL _shouldAntiAlias = NO;
     }
     
     // Okay, we're good to go!
-    GLVariable *resultVariable = [GLVariable variableOfComplexTypeWithDimensions: finalDimensions forEquation: variable.equation];
+    GLFunction *resultVariable = [GLFunction variableOfComplexTypeWithDimensions: finalDimensions forEquation: variable.equation];
     resultVariable.name = variable.name;
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
@@ -1129,7 +1129,7 @@ static BOOL _shouldAntiAlias = NO;
 
 @implementation GLMatrixFFTTransformOperation
 
-+ (id) basisTransformationWithOperand: (GLVariable *) variable destinationBasis: (NSArray *) toBasis
++ (id) basisTransformationWithOperand: (GLFunction *) variable destinationBasis: (NSArray *) toBasis
 {
     // If only one basis was specified, assume it was intended for all dimensions
     if ( toBasis.count == 1 && variable.dimensions.count > 1) {

@@ -330,7 +330,7 @@ BOOL isOne( NSNumber *a )
 		[yout addObject: newVar];
 		[resultBuffer addObject: newVar.data];
 	}
-	for (GLVariable *variable in self.currentY) {
+	for (GLFunction *variable in self.currentY) {
 		[operandBuffer addObject: variable.data];
 	}
 	
@@ -540,10 +540,10 @@ BOOL isOne( NSNumber *a )
 	d[5] = @(1./4.);
 	
 	GLAdaptiveRungeKuttaOperation *rk = [[GLAdaptiveRungeKuttaOperation alloc] initMethodWithCoefficientsA: a b: b c: c d: d y: y stepSize: deltaT fsal: NO retainPreviousY: NO order: order fFromTY: aBlock];
-	for (GLVariable *rt in rk.relativeToleranceVariables) {
+	for (GLFunction *rt in rk.relativeToleranceVariables) {
 		*(rt.pointerValue) = 1e-5;
 	}
-	for (GLVariable *at in rk.absoluteToleranceVariables) {
+	for (GLFunction *at in rk.absoluteToleranceVariables) {
 		*(at.pointerValue) = 1e-6;
 	}
 	
@@ -583,10 +583,10 @@ BOOL isOne( NSNumber *a )
 	d[3] = @(1./8.);
 	
 	GLAdaptiveRungeKuttaOperation *rk = [[GLAdaptiveRungeKuttaOperation alloc] initMethodWithCoefficientsA: a b: b c: c d: d y: y stepSize: deltaT fsal: YES retainPreviousY: YES order: order fFromTY: aBlock];
-	for (GLVariable *rt in rk.relativeToleranceVariables) {
+	for (GLFunction *rt in rk.relativeToleranceVariables) {
 		*(rt.pointerValue) = 1e-3;
 	}
-	for (GLVariable *at in rk.absoluteToleranceVariables) {
+	for (GLFunction *at in rk.absoluteToleranceVariables) {
 		*(at.pointerValue) = 1e-6;
 	}
 	
@@ -667,7 +667,7 @@ BOOL isOne( NSNumber *a )
 		self.relativeToleranceVariables = [[NSMutableArray alloc] initWithCapacity: operand.count];
 		self.absoluteToleranceVariables = [[NSMutableArray alloc] initWithCapacity: operand.count];
 		self.errorData = [[NSMutableArray alloc] initWithCapacity: operand.count];
-		for (GLVariable *variable in operand ) {
+		for (GLFunction *variable in operand ) {
 			[self.relativeToleranceVariables addObject: [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [operand[0] equation]]];
 			[self.absoluteToleranceVariables addObject: [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [operand[0] equation]]];
 			[self.errorVariables addObject: [GLTensor variableWithPrototype: variable]];
@@ -704,8 +704,8 @@ BOOL isOne( NSNumber *a )
 	if (shouldRetainPreviousY) {
         NSUInteger i=0;
 		yold = [NSMutableArray array];
-		for (GLVariable *var in y ) {
-            GLVariable *vardup = [var duplicate];
+		for (GLFunction *var in y ) {
+            GLFunction *vardup = [var duplicate];
 			[yold addObject: vardup];
             var.name = [NSString stringWithFormat:@"yin_%lu",i];
             vardup.name = [NSString stringWithFormat:@"yin_%lu_old",i];
@@ -722,7 +722,7 @@ BOOL isOne( NSNumber *a )
 		// Compute y at this stage location
 		yp[i] = [NSMutableArray arrayWithArray: y];
 		for (NSUInteger n=0; n<y.count; n++) {
-			GLVariable *ftotal;
+			GLFunction *ftotal;
 			for (NSUInteger j=0; j<i; j++) {
 				if (!isZero(b[i][j])) {
 					if ( isOne(b[i][j])) ftotal = !ftotal ? f[j][n] : [ftotal plus: f[j][n]];
@@ -739,7 +739,7 @@ BOOL isOne( NSNumber *a )
 	// Now compute the value of y at the very end
 	NSMutableArray *yout = [NSMutableArray arrayWithArray: y];
 	for (NSUInteger n=0; n<y.count; n++) {
-		GLVariable *ftotal;
+		GLFunction *ftotal;
 		for (NSUInteger i=0; i<numStages; i++) {
 			if (!isZero(c[i])) {
 				if ( isOne( c[i]) ) ftotal = !ftotal ? f[i][n] : [ftotal plus: f[i][n]];
@@ -752,7 +752,7 @@ BOOL isOne( NSNumber *a )
 	// compute the error
 	NSMutableArray *yerr = [NSMutableArray arrayWithCapacity: y.count];
 	for (NSUInteger n=0; n<y.count; n++) {
-		GLVariable *ftotal;
+		GLFunction *ftotal;
 		for (NSUInteger i=0; i<numStages; i++) {
 			NSNumber *dc = @([c[i] doubleValue] - [d[i] doubleValue]);
 			if (!isZero(dc)) {
@@ -769,8 +769,8 @@ BOOL isOne( NSNumber *a )
 	for (NSUInteger i=0; i<y.count; i++) {
 		[relativeToleranceArray addObject: [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [y[0] equation]]];
 		[absoluteToleranceArray addObject: [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [y[0] equation]]];
-        [(GLVariable *) relativeToleranceArray[i] setName: [NSString stringWithFormat: @"rel_tolerance_yin[%ld]",(unsigned long)i]];
-        [(GLVariable *) absoluteToleranceArray[i] setName: [NSString stringWithFormat: @"abs_tolerance_yin[%ld]",(unsigned long)i]];
+        [(GLFunction *) relativeToleranceArray[i] setName: [NSString stringWithFormat: @"rel_tolerance_yin[%ld]",(unsigned long)i]];
+        [(GLFunction *) absoluteToleranceArray[i] setName: [NSString stringWithFormat: @"abs_tolerance_yin[%ld]",(unsigned long)i]];
 	}
 	
 	// *element-wise*
@@ -851,11 +851,11 @@ BOOL isOne( NSNumber *a )
 			self.firstStageData = [NSMutableArray array];
 			self.lastStageVariables = [NSMutableArray array];
 			self.lastStageData = [NSMutableArray array];
-			for (GLVariable *variable in f[0]) {
+			for (GLFunction *variable in f[0]) {
 				[self.firstStageVariables addObject: [GLTensor variableWithPrototype: variable]];
 				[self.firstStageData addObject: [[self.firstStageVariables lastObject] data]];
 			}
-			for (GLVariable *variable in f[numStages-1]) {
+			for (GLFunction *variable in f[numStages-1]) {
 				[self.lastStageVariables addObject: [GLTensor variableWithPrototype: variable]];
 				[self.lastStageData addObject: [[self.lastStageVariables lastObject] data]];
 			}
@@ -1011,7 +1011,7 @@ BOOL isOne( NSNumber *a )
 			[yout addObject: newVar];
 			[resultBuffer addObject: newVar.data];
 		}
-		for (GLVariable *variable in self.currentY) {
+		for (GLFunction *variable in self.currentY) {
 			[operandBuffer addObject: variable.data];
 		}
 		

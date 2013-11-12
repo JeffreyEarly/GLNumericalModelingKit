@@ -22,10 +22,6 @@
 //#include <libMatrixFFT/vdspUtils.h>
 //#include <libMatrixFFT/complexBufUtils.h>
 
-typedef enum {
-	kGLSpectralDifferentiation = 1
-} GLDifferentiationType;
-
 #ifndef _GLPRECISION_
 #define _GLPRECISION_
 

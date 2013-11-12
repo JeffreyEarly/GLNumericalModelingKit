@@ -6,7 +6,7 @@
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
-#import "GLVariable.h"
+#import "GLFunction.h"
 #import "GLEquation.h"
 #import "GLDimension.h"
 #import "GLLinearTransform.h"
@@ -37,7 +37,7 @@
 #pragma mark GLVariable
 #pragma mark
 
-@interface GLVariable ()
+@interface GLFunction ()
 @property(readwrite, assign, nonatomic) NSUInteger nDataPoints;
 @property(readwrite, assign, nonatomic) NSUInteger nDataElements;
 @property(readwrite, assign, nonatomic) NSUInteger dataBytes;
@@ -45,7 +45,7 @@
 
 static BOOL prefersSpatialMultiplication = YES;
 
-@implementation GLVariable
+@implementation GLFunction
 
 /************************************************/
 /*		Class Methods							*/
@@ -84,7 +84,7 @@ static BOOL prefersSpatialMultiplication = YES;
 // Returns a variable built from the given dimension
 + (id) variableOfRealTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
-	GLVariable *aVariable = [self variableOfRealTypeWithDimensions: theDimensions forEquation: equation];
+	GLFunction *aVariable = [self variableOfRealTypeWithDimensions: theDimensions forEquation: equation];
 	aVariable.name = aDimension.name;
 	aVariable.units = aDimension.units;
 	GLFloat *f = aVariable.pointerValue;
@@ -110,7 +110,7 @@ static BOOL prefersSpatialMultiplication = YES;
 
 + (id) variableOfComplexTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
-	GLVariable *aVariable = [self variableOfComplexTypeWithDimensions: theDimensions forEquation: equation];
+	GLFunction *aVariable = [self variableOfComplexTypeWithDimensions: theDimensions forEquation: equation];
 	aVariable.name = aDimension.name;
 	aVariable.units = aDimension.units;
 	GLSplitComplex f= aVariable.splitComplex;
@@ -174,7 +174,7 @@ static BOOL prefersSpatialMultiplication = YES;
         return [self variableOfComplexTypeFromDimension: aDimension withDimensions: theDimensions forEquation: equation];
     }
     
-	GLVariable *aVariable = [self variableOfType: format withDimensions: theDimensions forEquation: equation];
+	GLFunction *aVariable = [self variableOfType: format withDimensions: theDimensions forEquation: equation];
 	aVariable.name = aDimension.name;
 	aVariable.units = aDimension.units;
 	GLFloat *f = aVariable.pointerValue;
@@ -205,7 +205,7 @@ static BOOL prefersSpatialMultiplication = YES;
 
 + (id) variableWithRandomValuesBetween: (GLFloat) min and: (GLFloat) max withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
-	GLVariable *var = [self variableOfRealTypeWithDimensions: theDimensions forEquation: equation];
+	GLFunction *var = [self variableOfRealTypeWithDimensions: theDimensions forEquation: equation];
 	GLRandomNumberOperation *rand = [[GLRandomNumberOperation alloc] initWithResult: var firstScalarOperand: min secondScalarOperand: max];
 	return rand.result;
 }
@@ -233,7 +233,7 @@ static BOOL prefersSpatialMultiplication = YES;
 }
 
 // Copies the data from the other variable (now!) not a delayed operation.
-+ (id) variableFromVariable: (GLVariable *) otherVariable
++ (id) variableFromVariable: (GLFunction *) otherVariable
 {
 //    [otherVariable solve];
 //    
@@ -244,7 +244,7 @@ static BOOL prefersSpatialMultiplication = YES;
 //        newVar.imaginarySymmetry[i] = otherVariable.imaginarySymmetry[i];
 //    }
 	
-	GLVariable *newVar = [otherVariable duplicate];
+	GLFunction *newVar = [otherVariable duplicate];
 	[newVar solve];
 	
 	return newVar;
@@ -437,105 +437,105 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark Operations
 #pragma mark
 
-- (GLVariable *) dividedBy: (GLVariable *) otherVariable
+- (GLFunction *) dividedBy: (GLFunction *) otherVariable
 {
 	GLDivisionOperation *operation = [[GLDivisionOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) dot: (GLVariable *) otherVariable
+- (GLFunction *) dot: (GLFunction *) otherVariable
 {
 	GLDotProductOperation *operation = [[GLDotProductOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) absMax: (GLVariable *) otherVariable
+- (GLFunction *) absMax: (GLFunction *) otherVariable
 {
 	GLAbsoluteLargestOperation *operation = [[GLAbsoluteLargestOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) exponentiate
+- (GLFunction *) exponentiate
 {	
 	GLExponentialOperation *operation = [[GLExponentialOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) sin
+- (GLFunction *) sin
 {	
 	GLSineOperation *operation = [[GLSineOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) cos
+- (GLFunction *) cos
 {	
 	GLCosineOperation *operation = [[GLCosineOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) atan
+- (GLFunction *) atan
 {
 	GLInverseTangentOperation *operation = [[GLInverseTangentOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) sqrt
+- (GLFunction *) sqrt
 {	
 	GLSquareRootOperation *operation = [[GLSquareRootOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) negate
+- (GLFunction *) negate
 {
 	GLNegationOperation *operation = [[GLNegationOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) abs
+- (GLFunction *) abs
 {
 	GLAbsoluteValueOperation *operation = [[GLAbsoluteValueOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) scalarAdd: (GLFloat) aScalar
+- (GLFunction *) scalarAdd: (GLFloat) aScalar
 {
 	GLScalarAddOperation *operation = [[GLScalarAddOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) scalarMultiply: (GLFloat) aScalar
+- (GLFunction *) scalarMultiply: (GLFloat) aScalar
 {	
 	GLScalarMultiplyOperation *operation = [[GLScalarMultiplyOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) scalarDivide: (GLFloat) aScalar
+- (GLFunction *) scalarDivide: (GLFloat) aScalar
 {
 	GLScalarDivideOperation *operation = [[GLScalarDivideOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) scalarMax: (GLFloat) aScalar
+- (GLFunction *) scalarMax: (GLFloat) aScalar
 {
 	GLScalarThresholdOperation *operation = [[GLScalarThresholdOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) zeroThreshold: (GLFloat) aScalar
+- (GLFunction *) zeroThreshold: (GLFloat) aScalar
 {
 	GLZeroThresholdOperation *operation = [[GLZeroThresholdOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
@@ -556,21 +556,21 @@ static BOOL prefersSpatialMultiplication = YES;
 //	return operation.result;
 //}
 
-- (GLVariable *) pow: (GLFloat) aScalar
+- (GLFunction *) pow: (GLFloat) aScalar
 {
 	GLPowerOperation *operation = [[GLPowerOperation alloc] initWithVectorOperand: self scalarOperand: aScalar];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) max
+- (GLFunction *) max
 {
 	GLMaxOperation *operation = [[GLMaxOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) mean: (NSUInteger) index
+- (GLFunction *) mean: (NSUInteger) index
 {
 	GLAverageOperation *operation = [[GLAverageOperation alloc] initWithFunction: self dimensionIndex: index];
     operation = [self replaceWithExistingOperation: operation];
@@ -591,7 +591,7 @@ static BOOL prefersSpatialMultiplication = YES;
 	return operation.result[0];
 }
 
-- (GLVariable *) transformToBasis: (NSArray *) orderedBasis
+- (GLFunction *) transformToBasis: (NSArray *) orderedBasis
 {
 #if MatrixFFT
     GLBasisTransformOperation *operation = [GLMatrixFFTTransformOperation basisTransformationWithOperand: self destinationBasis: orderedBasis];
@@ -605,9 +605,9 @@ static BOOL prefersSpatialMultiplication = YES;
 	return operation.result[0];
 }
 
-- (GLVariable *) fourierTransform
+- (GLFunction *) fourierTransform
 {
-    GLVariable *result;
+    GLFunction *result;
     if (self.isFrequencyDomain) {
         result = [self transformToBasis: @[@(kGLDeltaBasis)]];
     } else {
@@ -616,7 +616,7 @@ static BOOL prefersSpatialMultiplication = YES;
 	return result;
 }
 
-- (GLVariable *) frequencyDomain
+- (GLFunction *) frequencyDomain
 {
 	if (self.isFrequencyDomain) {
 		return self;
@@ -625,7 +625,7 @@ static BOOL prefersSpatialMultiplication = YES;
 	}
 }
 
-- (GLVariable *) spatialDomain
+- (GLFunction *) spatialDomain
 {
 	if (!self.isFrequencyDomain) {
 		return self;
@@ -634,20 +634,20 @@ static BOOL prefersSpatialMultiplication = YES;
 	}
 }
 
-- (GLVariable *) swapComplex
+- (GLFunction *) swapComplex
 {
 	GLSwapComplexOperation *operation = [[GLSwapComplexOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
-- (GLVariable *) duplicate
+- (GLFunction *) duplicate
 {
 	GLCopyVariableOperation *operation = [[GLCopyVariableOperation alloc] initWithFunction: self];
 	return operation.result[0];
 }
 
-- (GLVariable *) interpolateAtPoints: (NSArray *) otherVariables
+- (GLFunction *) interpolateAtPoints: (NSArray *) otherVariables
 {
 	GLSimpleInterpolationOperation *operation = [[GLSimpleInterpolationOperation alloc] initWithFirstOperand: [NSArray arrayWithObject: self] secondOperand: otherVariables];
     operation = [self replaceWithExistingOperation: operation];
@@ -676,7 +676,7 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark
 
 // This prepends the newDimension to the dimension list. The dimension should have 1 point, if it has more, the values will simply be copied.
-- (GLVariable *) variableByAddingDimension: (GLDimension *) newDimension
+- (GLFunction *) variableByAddingDimension: (GLDimension *) newDimension
 {
 	if ([self.dimensions containsObject: newDimension]) {
 		return self;
@@ -692,33 +692,33 @@ static BOOL prefersSpatialMultiplication = YES;
 //	return operation.result[0];
 //}
 
-- (GLVariable *) variableFromIndexRangeString: (NSString *) indexString
+- (GLFunction *) variableFromIndexRangeString: (NSString *) indexString
 {
     NSArray *ranges = [GLDimension rangesFromIndexString: indexString usingDimensions: self.dimensions];
 	GLSubdomainOperation *operation = [[GLSubdomainOperation alloc] initWithOperand: self indexRange: ranges flatten: YES];
 	return operation.result[0];
 }
 
-- (GLVariable *) variableFromIndexRange: (NSArray *) ranges
+- (GLFunction *) variableFromIndexRange: (NSArray *) ranges
 {
 	GLSubdomainOperation *operation = [[GLSubdomainOperation alloc] initWithOperand: self indexRange: ranges flatten: YES];
 	return operation.result[0];
 }
 
-- (GLVariable *) variableByConcatenatingWithVariable: (GLVariable *) otherVariable alongExistingDimension: (GLDimension *) aDim
+- (GLFunction *) variableByConcatenatingWithVariable: (GLFunction *) otherVariable alongExistingDimension: (GLDimension *) aDim
 {
 	NSUInteger index = [self.dimensions indexOfObject: aDim];
 	GLExistingDimensionConcatenationOperation *operation = [[GLExistingDimensionConcatenationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable dimensionIndex:index];
 	return operation.result[0];
 }
 
-- (GLVariable *) variableByConcatenatingWithVariable: (GLVariable *) otherVariable alongNewDimension: (GLDimension *) aDim
+- (GLFunction *) variableByConcatenatingWithVariable: (GLFunction *) otherVariable alongNewDimension: (GLDimension *) aDim
 {
 	GLNewDimensionConcatenationOperation *operation = [[GLNewDimensionConcatenationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable dimension: aDim];
 	return operation.result[0];
 }
 
-- (GLVariable *) variableByConcatenatingWithVariable: (GLVariable *) otherVariable alongDimension: (GLDimension *) aDim
+- (GLFunction *) variableByConcatenatingWithVariable: (GLFunction *) otherVariable alongDimension: (GLDimension *) aDim
 {
 	if ([self.dimensions containsObject: aDim]) {
 		return [self variableByConcatenatingWithVariable: otherVariable alongExistingDimension:aDim];
@@ -735,9 +735,9 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark Differential Operations - Primitive
 #pragma mark
 
-- (GLVariable *) differentiateWithOperator: (GLLinearTransform *) diffOperator
+- (GLFunction *) differentiateWithOperator: (GLLinearTransform *) diffOperator
 {
-    GLVariable *transformedVariable = [self transformToBasis: self.differentiationBasis];
+    GLFunction *transformedVariable = [self transformToBasis: self.differentiationBasis];
     return [diffOperator transform: transformedVariable];
 }
 
@@ -760,7 +760,7 @@ static BOOL prefersSpatialMultiplication = YES;
 	return _differentiationBasis;
 }
 
-- (GLVariable *) diff: (NSString *) operatorName
+- (GLFunction *) diff: (NSString *) operatorName
 {
 	GLLinearTransform *diffOperator = [GLLinearTransform linearTransformWithName: operatorName forDimensions: [self dimensionsTransformedToBasis: self.differentiationBasis] equation: self.equation];
 	if (!diffOperator) {
@@ -770,9 +770,9 @@ static BOOL prefersSpatialMultiplication = YES;
 	return [self differentiateWithOperator: diffOperator];
 }
 
-- (GLVariable *) differentiate: (NSString *) operatorName byTransformingToBasis: (NSArray *) orderedBasis
+- (GLFunction *) differentiate: (NSString *) operatorName byTransformingToBasis: (NSArray *) orderedBasis
 {
-    GLVariable *transformedVariable = [self transformToBasis: orderedBasis];
+    GLFunction *transformedVariable = [self transformToBasis: orderedBasis];
     transformedVariable.differentiationBasis = orderedBasis;
     return [transformedVariable diff: operatorName];
 }
@@ -953,19 +953,19 @@ static BOOL prefersSpatialMultiplication = YES;
 	return YES;
 }
 
-- (void) concatenateWithVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex
+- (void) concatenateWithVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex
 {
 	NSLog(@"Method not yet implemented: - (void) concatenateWithVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex");
 }
 
-- (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex
+- (void) concatenateWithLowerDimensionalVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex
 {
 	NSLog(@"Method not yet implemented:- (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;");
 }
 
 @end
 
-@implementation GLVariable (DifferentiationExtensions)
+@implementation GLFunction (DifferentiationExtensions)
 
 @dynamic x, y, xx, xy, yy, xxx, xxy, xyy, yyy;
 

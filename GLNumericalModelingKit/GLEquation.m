@@ -7,7 +7,7 @@
 //
 
 #import "GLEquation.h"
-#import "GLVariable.h"
+#import "GLFunction.h"
 #import "GLDimension.h"
 #import "GLVariableOperations.h"
 #import "GLLinearTransform.h"

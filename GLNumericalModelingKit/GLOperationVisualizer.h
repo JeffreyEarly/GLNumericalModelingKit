@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import <GLNumericalModelingKit/GLEquation.h>
-#import <GLNumericalModelingKit/GLVariable.h>
+#import <GLNumericalModelingKit/GLFunction.h>
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 
 @interface GLOperationVisualizer : NSObject

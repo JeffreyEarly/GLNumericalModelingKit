@@ -8,7 +8,7 @@
 
 #import "GLVariableOperations.h"
 #import "GLDimension.h"
-#import "GLVariable.h"
+#import "GLFunction.h"
 #import "GLMemoryPool.h"
 #import "GLOperationOptimizer.h"
 #import "GLLinearTransform.h"
@@ -176,7 +176,7 @@
 				GLScalar *scalar = (GLScalar *) variable;
 				[array addObject: [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation]];
 			} else if (variable.rank == 1) {
-				GLVariable *function = (GLVariable *) variable;
+				GLFunction *function = (GLFunction *) variable;
 				[array addObject: [[function class] variableOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation]];
 			}  else if (variable.rank == 2) {
 				GLLinearTransform *matrix = (GLLinearTransform *) variable;
@@ -200,10 +200,10 @@
 	
 	NSMutableArray *resultBuffer = [[NSMutableArray alloc] initWithCapacity: self.result.count];
 	NSMutableArray *operandBuffer = [[NSMutableArray alloc] initWithCapacity: self.operand.count];
-	for (GLVariable *variable in self.result) {
+	for (GLFunction *variable in self.result) {
 		[resultBuffer addObject: variable.data];
 	}
-	for (GLVariable *variable in self.operand) {
+	for (GLFunction *variable in self.operand) {
 		[operandBuffer addObject: variable.data];
 	}
 	
@@ -229,24 +229,24 @@
 
 - (void) setupDependencies
 {
-	for (GLVariable *variable in self.operand) {
+	for (GLFunction *variable in self.operand) {
 		if (variable.lastOperation && ![self.dependencies containsObject:variable.lastOperation] && variable.lastOperation !=self) {
 			[self addDependency: variable.lastOperation];
 		}
 	}
-	for (GLVariable *variable in self.result) {
+	for (GLFunction *variable in self.result) {
 		if (variable.lastOperation && ![self.dependencies containsObject:variable.lastOperation] && variable.lastOperation !=self) {
 			[self addDependency: variable.lastOperation];
 		}
 	}
-	for (GLVariable *variable in self.result) {
+	for (GLFunction *variable in self.result) {
 		[variable addOperation: self];
 	}
 }
 
 - (void) tearDownDependencies
 {
-	for (GLVariable *variable in self.result) {
+	for (GLFunction *variable in self.result) {
 		[variable removeOperation: self];
 	}
 	self.result = nil;
@@ -365,7 +365,7 @@ static NSMapTable *classPostOperationTable = nil;
         
         NSArray *resultPrototypes = [GLOptimizedVariableOperation resultPrototypeForSubclassWithName: NSStringFromClass(self.class)];
 		NSMutableArray *array = [NSMutableArray array];
-		for (GLVariable *variable in resultPrototypes) {
+		for (GLFunction *variable in resultPrototypes) {
 			[array addObject: [[variable class] variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
 		}
 		self.result = array;

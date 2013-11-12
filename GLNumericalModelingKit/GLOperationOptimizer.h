@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import <GLNumericalModelingKit/GLEquation.h>
-#import <GLNumericalModelingKit/GLVariable.h>
+#import <GLNumericalModelingKit/GLFunction.h>
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 
 typedef void (^executionBlock)(NSArray *);
@@ -93,7 +93,7 @@ typedef void (^executionBlock)(NSArray *);
 // Creates a memory buffer for each internal variable and copies the data from pre-computed variables.
 // It also creates an appropriately sized data object that each operation can use.
 // This is the most inefficient memory assignment possible.
-- (BOOL) assignUnoptimizedMemoryBufferToVariable: (GLVariable *) variable forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
+- (BOOL) assignUnoptimizedMemoryBufferToVariable: (GLFunction *) variable forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
 
 /// A hash table containing variables and operations which have a data buffer assigned.
 @property NSHashTable *hasDataBuffer;

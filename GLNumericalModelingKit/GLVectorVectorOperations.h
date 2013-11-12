@@ -88,7 +88,7 @@
  @returns The result C, a scalar.
  */
 @interface GLDotProductOperation : GLVariableOperation
-- (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B;
+- (id) initWithFirstOperand: (GLFunction *) A secondOperand: (GLFunction *) B;
 @end
 
 /************************************************/
@@ -102,6 +102,6 @@
  @returns The result C, a function..
  */
 @interface GLSetVariableValueOperation : GLVariableOperation
-- (id) initWithVectorOperand: (GLVariable *) aFunction scalarVariableOperand: (GLScalar *) aScalar indexString: (NSString *) indexString;
+- (id) initWithVectorOperand: (GLFunction *) aFunction scalarVariableOperand: (GLScalar *) aScalar indexString: (NSString *) indexString;
 @property(copy) NSString * indexString;
 @end

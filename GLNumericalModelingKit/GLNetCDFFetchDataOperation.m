@@ -16,7 +16,7 @@
 }
 
 
-- (id) initWithResult: (GLVariable *) aResult netCDFVariable: (GLNetCDFVariable *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag
+- (id) initWithResult: (GLFunction *) aResult netCDFVariable: (GLNetCDFVariable *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag
 {
 	self.shouldFlatten = aFlag;
 	
@@ -41,7 +41,7 @@
 	if (invalidRange) return nil;
 	
 	if (!aResult) {
-		aResult = [[GLVariable alloc] initVariableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
+		aResult = [[GLFunction alloc] initVariableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
 	}
 	
 	if (( self = [super initWithResult: @[aResult] operand: @[]] ))
@@ -69,7 +69,7 @@
 
 - (void) main
 {
-	GLVariable *theResult = self.result[0];
+	GLFunction *theResult = self.result[0];
 	if (self.isComplex) {
 		GLSplitComplex split = theResult.splitComplex;
 		if ( sizeof(GLFloat) == sizeof(double) ) {

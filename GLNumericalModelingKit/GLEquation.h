@@ -11,7 +11,7 @@
 #import <GLNumericalModelingKit/Precision.h>
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 
-@class GLDimension, GLVariable, GLTensor;
+@class GLDimension, GLFunction, GLTensor;
 @interface GLEquation : NSObject
 
 // An equation can be thought of as the "controller" of the variables, in the MVC paradigm.

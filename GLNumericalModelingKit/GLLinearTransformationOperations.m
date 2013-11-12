@@ -23,11 +23,11 @@
 
 @implementation GLSingleDiagonalTransformOperation
 
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function
 {
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
 	
     if (linearTransform.name && function.name) {
         result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
@@ -136,7 +136,7 @@
 
 @implementation GLTriadiagonalTransformOperation
 
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function
 {
     if ( ![linearTransform.fromDimensions isEqualToArray: function.dimensions] ) {
         [NSException raise: @"DimensionsNotEqualException" format: @"From dimensions of the linear operator must equal the operand vector."];
@@ -171,7 +171,7 @@
     
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
 	
     if (linearTransform.name && function.name) {
         result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
@@ -266,7 +266,7 @@
 
 @implementation GLDenseMatrixTransformOperation
 
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function
 {
     if ( ![linearTransform.fromDimensions isEqualToArray: function.dimensions] ) {
         [NSException raise: @"DimensionsNotEqualException" format: @"From dimensions of the linear operator must equal the operand vector."];
@@ -284,7 +284,7 @@
 
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
 	
     if (linearTransform.name && function.name) {
         result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
@@ -359,7 +359,7 @@
 
 @implementation GLTriadiagonalSolverOperation
 
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function
 {
     if ( ![linearTransform.toDimensions isEqualToArray: function.dimensions] ) {
         [NSException raise: @"DimensionsNotEqualException" format: @"Destination dimensions of the linear operator must equal the resultant vector."];
@@ -386,7 +386,7 @@
 	
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
     
 	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
         
@@ -478,7 +478,7 @@
 
 @implementation GLDenseMatrixSolver
 
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function
 {
     if ( ![linearTransform.toDimensions isEqualToArray: function.dimensions] ) {
         [NSException raise: @"DimensionsNotEqualException" format: @"Destination dimensions of the linear operator must equal the resultant vector."];
@@ -511,7 +511,7 @@
     
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLVariable *result = [GLVariable variableOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
     
 	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
         

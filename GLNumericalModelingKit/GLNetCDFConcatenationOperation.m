@@ -12,7 +12,7 @@
 
 @implementation GLNetCDFConcatenationOperation
 
-- (id) initWithFirstOperand: (GLMutableNetCDFVariable *) fOperand secondOperand: (GLVariable *) sOperand alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex;
+- (id) initWithFirstOperand: (GLMutableNetCDFVariable *) fOperand secondOperand: (GLFunction *) sOperand alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex;
 {
 	// At this point we don't know how to handle variables that aren't of the same type.
 	if ( fOperand.isComplex != sOperand.isComplex ) {
@@ -82,7 +82,7 @@
     return self;
 }
 
-- (id) initWithFirstOperand: (GLMutableNetCDFVariable *) fOperand lowerDimensionalSecondOperand: (GLVariable *) sOperand alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex index: (NSUInteger) pointIndex
+- (id) initWithFirstOperand: (GLMutableNetCDFVariable *) fOperand lowerDimensionalSecondOperand: (GLFunction *) sOperand alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex index: (NSUInteger) pointIndex
 {
 	// The mutable dimension had better be a dimension of the first operand.
 	if (mutableDimensionIndex >= fOperand.dimensions.count) {

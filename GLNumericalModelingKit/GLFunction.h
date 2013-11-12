@@ -14,16 +14,15 @@
 // If a symmetry exists, then function is assumed to be defined for negative
 // values with the given symmetry. For example, if the dimension has even symmetry,
 // then any function defined on this dimension is assumed to have values f(-x), x<0.
-enum {
+typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 	kGLNoSymmetry = 0,          // No known symmetry
     kGLZeroSymmetry = 1,        // The value is zero (and therefore both even and odd symmetric)
 	kGLEvenSymmetry = 2,        // Even symmetry, H(-f)=H(f)
 	kGLOddSymmetry = 3          // Odd symmetry, H(-f)=-H(f)
 };
-typedef NSUInteger GLVariableSymmetry;
 
 @class GLEquation, GLVariableOperation, GLDifferentialOperator;
-@interface GLVariable : GLTensor
+@interface GLFunction : GLTensor
 
 // Variables do not get computed immediately and should only be computed when absolutely needed or a choke point has been reached.
 // This minimizes the amount of memory and computation required. If we computed a variable's value immediately (like [psi x]),
@@ -66,7 +65,7 @@ typedef NSUInteger GLVariableSymmetry;
 + (id) variableOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 
 // Copies the data from the other variable (now!) not a delayed operation.
-+ (id) variableFromVariable: (GLVariable *) otherVariable;
++ (id) variableFromVariable: (GLFunction *) otherVariable;
 
 
 /************************************************/
@@ -126,13 +125,13 @@ typedef NSUInteger GLVariableSymmetry;
 #pragma mark Operations
 #pragma mark
 
-- (id) dividedBy: (GLVariable *) otherVariable;
+- (id) dividedBy: (GLFunction *) otherVariable;
 
 // C = A * B
-- (id) dot: (GLVariable *) otherVariable;
+- (id) dot: (GLFunction *) otherVariable;
 
 // C = max( abs(A), abs(B) ) element-wise
-- (id) absMax: (GLVariable *) otherVariable;
+- (id) absMax: (GLFunction *) otherVariable;
 
 // C = -A
 - (id) negate;
@@ -201,7 +200,7 @@ typedef NSUInteger GLVariableSymmetry;
 
 - (id) duplicate;
 
-- (GLVariable *) interpolateAtPoints: (NSArray *) otherVariables;
+- (GLFunction *) interpolateAtPoints: (NSArray *) otherVariables;
 
 // Multiplies the variables and the dimensions by this scale factor.
 - (id) scaleVariableBy: (GLFloat) varScale withUnits: (NSString *) varUnits dimensionsBy: (GLFloat) dimScale units: (NSString *) dimUnits;
@@ -223,8 +222,8 @@ typedef NSUInteger GLVariableSymmetry;
 
 // Returns a variable with only the elements indicated by by the array of ranges.
 // The size of the ranges array must match the number of dimensions.
-- (GLVariable *) variableFromIndexRange: (NSArray *) ranges;
-- (GLVariable *) variableFromIndexRangeString: (NSString *) indexString;
+- (GLFunction *) variableFromIndexRange: (NSArray *) ranges;
+- (GLFunction *) variableFromIndexRangeString: (NSString *) indexString;
 
 //- (GLVariable *) convertToSplitComplex;
 
@@ -235,14 +234,14 @@ typedef NSUInteger GLVariableSymmetry;
 // The other dimensions must have the same number of points.
 // 
 // The result variable will have dimensions based on the receiver's dimensions.
-- (GLVariable *) variableByConcatenatingWithVariable: (GLVariable *) otherVariable alongExistingDimension: (GLDimension *) aDim;
+- (GLFunction *) variableByConcatenatingWithVariable: (GLFunction *) otherVariable alongExistingDimension: (GLDimension *) aDim;
 
 // The new dimension should have nPoints=2, otherwise a new dimension based on the same properties will be created.
 // The dimensions in the other two variables must be the same.
-- (GLVariable *) variableByConcatenatingWithVariable: (GLVariable *) otherVariable alongNewDimension: (GLDimension *) aDim;
+- (GLFunction *) variableByConcatenatingWithVariable: (GLFunction *) otherVariable alongNewDimension: (GLDimension *) aDim;
 
 // Short cut to one of the two operations above, depending on whether or not the dimension exists.
-- (GLVariable *) variableByConcatenatingWithVariable: (GLVariable *) otherVariable alongDimension: (GLDimension *) aDim;
+- (GLFunction *) variableByConcatenatingWithVariable: (GLFunction *) otherVariable alongDimension: (GLDimension *) aDim;
 
 /************************************************/
 /*		Differential Operations	- Primitive		*/
@@ -253,7 +252,7 @@ typedef NSUInteger GLVariableSymmetry;
 #pragma mark
 
 // Apply a differential operation. Transforms to the correct basis, then uses the diffOperator to transform the variable.
-- (GLVariable *) differentiateWithOperator: (GLLinearTransform *) diffOperator;
+- (GLFunction *) differentiateWithOperator: (GLLinearTransform *) diffOperator;
 
 /************************************************/
 /*		Differential Operations					*/
@@ -279,9 +278,9 @@ typedef NSUInteger GLVariableSymmetry;
 @property(readwrite, strong, nonatomic) NSArray *differentiationBasis;
 
 // Differentiate with one of the built-in (or saved) operators from the pool, e.g. "xxy".
-- (GLVariable *) diff: (NSString *) operatorName;
+- (GLFunction *) diff: (NSString *) operatorName;
 
-- (GLVariable *) differentiate: (NSString *) operatorName byTransformingToBasis: (NSArray *) orderedBasis;
+- (GLFunction *) differentiate: (NSString *) operatorName byTransformingToBasis: (NSArray *) orderedBasis;
 
 
 // The one and only initializer for a variable.
@@ -290,7 +289,7 @@ typedef NSUInteger GLVariableSymmetry;
 @end
 
 
-@interface GLMutableVariable : GLVariable
+@interface GLMutableVariable : GLFunction
 
 /************************************************/
 /*		Dimension Gymnastics					*/
@@ -309,28 +308,28 @@ typedef NSUInteger GLVariableSymmetry;
 // The dimensions at indices other than mutableDimensionIndex must have the same number of points.
 // The dimensions at mutableDimensionIndex do not need to match. If the first operand's dimension is evenly spaced
 // then it will be extended, otherwise the values from the second operand's dimension will be added.
-- (void) concatenateWithVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex;
+- (void) concatenateWithVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex;
 
 // The receiver must be n-dimensional and the other variable must be (n-1)-dimensional.
 // The (n-1) dimensions of the two variables must have the same number of points.
 // If the mutableDimension is evenly spaced, then it will be extended to length pointIndex+1, if necessary.
 // If the mutableDimension is not evenly spaced, then it must already have the correct value.
-- (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
+- (void) concatenateWithLowerDimensionalVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
 @end
 
 // These are thrown in here to surpress compiler warnings these (and higher order derivatives)
 // will be resolved dynamically at runtime if they exist (given the dimensions).
-@interface GLVariable (DifferentiationExtensions)
+@interface GLFunction (DifferentiationExtensions)
 
-@property(readonly) GLVariable* x;
-@property(readonly) GLVariable* y;
-@property(readonly) GLVariable* xx;
-@property(readonly) GLVariable* xy;
-@property(readonly) GLVariable* yy;
-@property(readonly) GLVariable* xxx;
-@property(readonly) GLVariable* xxy;
-@property(readonly) GLVariable* xyy;
-@property(readonly) GLVariable* yyy;
+@property(readonly) GLFunction* x;
+@property(readonly) GLFunction* y;
+@property(readonly) GLFunction* xx;
+@property(readonly) GLFunction* xy;
+@property(readonly) GLFunction* yy;
+@property(readonly) GLFunction* xxx;
+@property(readonly) GLFunction* xxy;
+@property(readonly) GLFunction* xyy;
+@property(readonly) GLFunction* yyy;
 
 @end
 

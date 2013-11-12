@@ -79,7 +79,7 @@
 // variable = clip(operand, min, max)
 @interface GLClipOperation : GLVariableOperation
 
-- (id) initWithVectorOperand: (GLVariable *) vOperand firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand;
+- (id) initWithVectorOperand: (GLFunction *) vOperand firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand;
 
 @property GLFloat firstScalarOperand;
 @property GLFloat secondScalarOperand;
@@ -92,7 +92,7 @@
 
 @interface GLSetValueOperation : GLVectorScalarOperation
 
-- (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand indexString: (NSString *) indexString;
+- (id) initWithVectorOperand: (GLFunction *) vOperand scalarOperand: (GLFloat) sOperand indexString: (NSString *) indexString;
 @property(copy) NSString * indexString;
 
 @end
@@ -102,7 +102,7 @@
 /************************************************/
 
 @interface GLScaleOperation : GLVectorScalarOperation
--(id) initWithOperand: (GLVariable *) vOperand variableScale: (GLFloat) sOperand units: (NSString *) varUnits dimensionScale: (GLFloat) dimScale translation: (GLFloat) delta units: (NSString *) dimUnits;
+-(id) initWithOperand: (GLFunction *) vOperand variableScale: (GLFloat) sOperand units: (NSString *) varUnits dimensionScale: (GLFloat) dimScale translation: (GLFloat) delta units: (NSString *) dimUnits;
 @property(readwrite, assign, nonatomic) GLFloat dimScale;
 @property(readwrite, assign, nonatomic) GLFloat dimTranslation;
 @end

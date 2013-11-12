@@ -724,7 +724,7 @@
 	return filter;
 }
 
-- (void) setVariableAlongDiagonal: (GLVariable *) diagonalVariable
+- (void) setVariableAlongDiagonal: (GLFunction *) diagonalVariable
 {
     if (self.matrixDescription.nDimensions == 1)
     {
@@ -809,7 +809,7 @@
 #pragma mark Operations
 #pragma mark
 
-- (GLVariable *) transform: (GLVariable *) x
+- (GLFunction *) transform: (GLFunction *) x
 {
 	NSUInteger numIdentityIndices = 0;
 	NSUInteger numDiagonalIndices = 0;
@@ -861,7 +861,7 @@
 	return nil;
 }
 
-- (GLVariable *) solve: (GLVariable *) b
+- (GLFunction *) solve: (GLFunction *) b
 {
 	NSUInteger numIdentityIndices = 0;
 	NSUInteger numDiagonalIndices = 0;

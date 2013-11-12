@@ -22,7 +22,7 @@
  @returns The transformed function, b.
  */
 @interface GLSingleDiagonalTransformOperation : GLVariableOperation
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
 /************************************************/
@@ -34,7 +34,7 @@
  @returns The solution function, b.
  */
 @interface GLTriadiagonalTransformOperation : GLVariableOperation
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
 /************************************************/
@@ -46,7 +46,7 @@
  @returns The solution function, b.
  */
 @interface GLDenseMatrixTransformOperation : GLVariableOperation
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
 
@@ -64,7 +64,7 @@
  @returns The solution function, x.
  */
 @interface GLTriadiagonalSolverOperation : GLVariableOperation
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
 
@@ -77,7 +77,7 @@
  @returns The solution function, x.
  */
 @interface GLDenseMatrixSolver : GLVariableOperation
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLVariable *) function;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
 

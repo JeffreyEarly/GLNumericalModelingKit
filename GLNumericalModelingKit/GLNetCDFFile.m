@@ -9,7 +9,7 @@
 #import "GLNetCDFFile.h"
 
 #import "GLDimension.h"
-#import "GLVariable.h"
+#import "GLFunction.h"
 #import "GLLowLevelNetCDF.h"
 #import "GLEquation.h"
 #import "GLNetCDFVariable.h"
@@ -32,8 +32,9 @@ static NSString *GLNetCDFSchemaUniqueVariableIDKey = @"uniqueVariableID";
 
 static NSString *GLNetCDFSchemaBasisFunctionKey = @"basisFunction";
 static NSString *GLNetCDFSchemaGridTypeKey = @"gridType";
+static NSString *GLNetCDFSchemaDomainLengthKey = @"domainLength";
 
-static NSInteger GLCurrentNetCDFSchemaVersion = 11;
+static NSInteger GLCurrentNetCDFSchemaVersion = 12;
 
 /************************************************/
 /*		Private Methods 						*/
@@ -57,7 +58,7 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 11;
 - (void) loadFromFileUsingGLNetCDFSchema: (NSDictionary *) fileProperties;
 - (void) loadFromFileWithUnknownSource: (NSDictionary *) fileProperties;
 - (GLDimension *) createDimensionFromProperties: (NSDictionary *) dimProperties variables: (NSMutableArray *) vars;
-- (GLVariable *) createVariableFromProperties: (NSDictionary *) varProperties;
+- (GLFunction *) createVariableFromProperties: (NSDictionary *) varProperties;
 
 @end
 
@@ -175,20 +176,14 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 11;
 			
 			NSDictionary *dimensionProperties = [self.file propertiesOfDimensionWithID: dimensionID];
 			int dimPoints = [[dimensionProperties objectForKey: GLDimensionLengthKey] intValue];
-			
+			GLGridType grid = [variableAttributes[GLNetCDFSchemaGridTypeKey] unsignedIntegerValue];
+            
 			GLDimension * dimension;
 			Class GLDimensionClass = [variableAttributes[GLNetCDFSchemaMutableKey] boolValue] ? [GLMutableDimension class] : [GLDimension class];
-			if ( [variableAttributes[GLNetCDFSchemaIsEvenlySampledKey] boolValue] )
-			{	// If it's evenly sampled, we don't even need to read in the data---we just use the metadata.
-				BOOL isPeriodic = [variableAttributes[GLNetCDFSchemaIsPeridiocKey] boolValue];
-				GLFloat sampleInterval = [variableAttributes[GLNetCDFSchemaSampleIntervalKey] doubleValue];
-				GLFloat domainMin = [variableAttributes[GLNetCDFSchemaDomainMinimumKey] doubleValue];
-				
-				dimension = [[GLDimensionClass alloc] initPeriodicDimension: isPeriodic nPoints: dimPoints domainMin: domainMin sampleInterval: sampleInterval];
-			}
-			else
-			{	// Otherwise, we pull out the data and build the dimension.
-				NSArray *indexRange = [NSArray arrayWithObject: [NSValue valueWithRange: NSMakeRange(0, dimPoints)]];
+            
+            if (grid == kGLUnevenGrid)
+            {
+                NSArray *indexRange = [NSArray arrayWithObject: [NSValue valueWithRange: NSMakeRange(0, dimPoints)]];
 				NSMutableData *buffer = [[NSMutableData alloc] initWithLength: dimPoints*sizeof(GLFloat)];
 				if ( sizeof(GLFloat) == sizeof(double) ) {
 					[self.file readDoubleVariableWithID: variableID intoData: buffer indexRange: indexRange];
@@ -196,15 +191,21 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 11;
 					[self.file readFloatVariableWithID: variableID intoData: buffer indexRange: indexRange];
 				}
 				dimension = [[GLDimension alloc] initWithNPoints: dimPoints values: buffer];
-			}
+            }
+            else
+            {
+                GLFloat domainLength = [variableAttributes[GLNetCDFSchemaDomainLengthKey] doubleValue];
+				GLFloat domainMin = [variableAttributes[GLNetCDFSchemaDomainMinimumKey] doubleValue];
+				
+				dimension = [[GLDimensionClass alloc] initDimensionWithGrid: grid nPoints: dimPoints domainMin: domainMin length: domainLength];
+            }
+            
 			if ( variableAttributes[GLNetCDFSchemaBasisFunctionKey] ) {
 				dimension.basisFunction = [variableAttributes[GLNetCDFSchemaBasisFunctionKey] unsignedIntegerValue];
 			}
-			if ( variableAttributes[GLNetCDFSchemaGridTypeKey] ) {
-				dimension.gridType = [variableAttributes[GLNetCDFSchemaGridTypeKey] unsignedIntegerValue];
-			}
+
 			if (!dimension) {
-				NSLog(@"GLNetCDFFile.m: something went horribly wrong. Unable to build a dimension from a known schema.");
+                [NSException raise: @"GLNetCDFReadVariableException" format:@"GLNetCDFFile.m: something went horribly wrong. Unable to build a dimension from a known schema."];
 				continue;
 			}
 			dimension.name = variableProperties[GLVariableNameKey];
@@ -340,7 +341,7 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 11;
 	// Finally, create the variables
 	for ( NSDictionary *varProperties in vars )
 	{
-		GLVariable *aVariable = [self createVariableFromProperties: varProperties];
+		GLFunction *aVariable = [self createVariableFromProperties: varProperties];
 		
 		if (aVariable) {
 			[_variables addObject:aVariable];
@@ -419,7 +420,7 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 11;
 		dimension.name = dimName;
 		[self.dimensionVariableIDMapTable setObject: [NSNumber numberWithInteger: varID] forKey: dimension];
 	} else {
-		dimension = [[GLDimensionClass alloc] initPeriodicDimension: NO nPoints: dimPoints domainMin:0.0 sampleInterval:1.0];
+        dimension = [[GLDimensionClass alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: dimPoints domainMin: 0.0 length: 1.0*(dimPoints-1)];
 	}
 	
 	[self.dimensionDimensionIDMapTable setObject: [NSNumber numberWithInt: dimID] forKey: dimension];
@@ -428,7 +429,7 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 11;
 }
 
 // This is called after all the dimensions have been created.
-- (GLVariable *) createVariableFromProperties: (NSDictionary *) variableProperties
+- (GLFunction *) createVariableFromProperties: (NSDictionary *) variableProperties
 {
 	
 	// Create an array of the dimension
@@ -575,8 +576,7 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 	[properties setObject: [NSNumber numberWithInt: dimensionID] forKey: GLNetCDFSchemaDimensionIDKey];
 	[properties setObject: [NSNumber numberWithBool: YES] forKey: GLNetCDFSchemaIsCoordinateVariableKey];
 	[properties setObject: [NSNumber numberWithBool: dimension.isMutable] forKey: GLNetCDFSchemaMutableKey];
-	[properties setObject: [NSNumber numberWithBool: dimension.isPeriodic] forKey: GLNetCDFSchemaIsPeridiocKey];
-	[properties setObject: [NSNumber numberWithBool: dimension.isEvenlySampled] forKey: GLNetCDFSchemaIsEvenlySampledKey];
+    [properties setObject: @(dimension.domainLength) forKey: GLNetCDFSchemaDomainLengthKey];
 	if (dimension.isEvenlySampled) {
 		[properties setObject: [NSNumber numberWithDouble: dimension.sampleInterval] forKey: GLNetCDFSchemaSampleIntervalKey];
 		[properties setObject: [NSNumber numberWithDouble: dimension.domainMin] forKey: GLNetCDFSchemaDomainMinimumKey];
@@ -604,7 +604,7 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 	}
 }
 
-- (GLNetCDFVariable *) addVariable:(GLVariable *)variable
+- (GLNetCDFVariable *) addVariable:(GLFunction *)variable
 {
 	if (!variable.name) {
 		NSLog(@"GLNetCDFFile.m: attempting to add a variable without a name!");

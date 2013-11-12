@@ -6,7 +6,7 @@
 //  Copyright (c) 2011 __MyCompanyName__. All rights reserved.
 //
 
-#import <GLNumericalModelingKit/GLVariable.h>
+#import <GLNumericalModelingKit/GLFunction.h>
 
 // This variable is backed by a NetCDF file. The variable depends on a GLNetCDFFetchDataOperation which
 // will pull the data from the NetCDF file, if necessary. It may be the case only a subdomain
@@ -15,11 +15,11 @@
 // as a proxy for the data.
 
 @class GLLowLevelNetCDF;
-@interface GLNetCDFVariable : GLVariable <NSCopying>
+@interface GLNetCDFVariable : GLFunction <NSCopying>
 
 // Initializes a NetCDF backed variable with the same properties as the existingVariable.
 // The uniqueIDs match. You will still need to set the file, variableID and -setupDependency.
-+ (id) variableWithVariable: (GLVariable *) existingVariable;
++ (id) variableWithVariable: (GLFunction *) existingVariable;
 
 // He we override the readonly attribute to allow the uniqueID to be set based on an existing variable.
 @property(readwrite, assign, nonatomic) NSUInteger uniqueID;
@@ -55,12 +55,12 @@
 // The dimensions at indices other than mutableDimensionIndex must have the same number of points.
 // The dimensions at mutableDimensionIndex do not need to match. If the first operand's dimension is evenly spaced
 // then it will be extended, otherwise the values from the second operand's dimension will be added.
-- (void) concatenateWithVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex;
+- (void) concatenateWithVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex;
 
 // The receiver must be n-dimensional and the other variable must be (n-1)-dimensional.
 // The (n-1) dimensions of the two variables must have the same number of points.
 // If the mutableDimension is evenly spaced, then it will be extended to length pointIndex+1, if necessary.
 // If the mutableDimension is not evenly spaced, then it must already have the correct value.
-- (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
+- (void) concatenateWithLowerDimensionalVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
 
 @end

@@ -172,7 +172,7 @@
 	self.alreadyInitialized = YES;
 	
 	NSMutableSet *bottomOperations = [[NSMutableSet alloc] init];
-	for (GLVariable *bottomVariable in self.bottomVariables) {
+	for (GLFunction *bottomVariable in self.bottomVariables) {
 		if (bottomVariable.lastOperation) [bottomOperations addObject: bottomVariable.lastOperation];
 	}
 	for (GLVariableOperation *operation in bottomOperations) {
@@ -213,7 +213,7 @@
 	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
 	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
 	
-	for (GLVariable *aVariable in operation.operand) {
+	for (GLFunction *aVariable in operation.operand) {
 		if ( [topVariables containsObject: aVariable] ) {
 			[topVariableOperands addObject: aVariable];
 		} else if ( aVariable.pendingOperations.count == 0 ) {
@@ -274,7 +274,7 @@
 	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
 	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
 	
-	for (GLVariable *aVariable in operation.operand) {
+	for (GLFunction *aVariable in operation.operand) {
 		if ( [topVariables containsObject: aVariable] ) {
 			[topVariableOperands addObject: aVariable];
 		} else if ( aVariable.pendingOperations.count == 0 ) {
@@ -400,7 +400,7 @@
 - (BOOL) assignMemoryBuffers
 {
 	BOOL success = YES;
-	for (GLVariable *variable in self.bottomVariables) {
+	for (GLFunction *variable in self.bottomVariables) {
 		success &= [self assignUnoptimizedMemoryBufferToVariable: variable forTopVariables: self.topVariables bottomVariables:self.bottomVariables];
 	}
 	return success;
@@ -434,7 +434,7 @@
 @synthesize hasDataBuffer=_hasDataBuffer;
 @synthesize totalMemoryBuffersAllocated;
 
-- (BOOL) assignUnoptimizedMemoryBufferToVariable: (GLVariable *) variable forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables
+- (BOOL) assignUnoptimizedMemoryBufferToVariable: (GLFunction *) variable forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables
 {
 	if ( [self.hasDataBuffer containsObject: variable] )
 	{	// Already assigned a buffer to this variable, and therefore its parents as well.
@@ -478,12 +478,12 @@
         }
 
 		BOOL success = YES;
-		for (GLVariable *aVariable in operation.operand) {
+		for (GLFunction *aVariable in operation.operand) {
 			success &= [self assignUnoptimizedMemoryBufferToVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
 		}
 		
 		// If one of the result variables of this operation does not get used, it will not appear in this graph. However, it still needs a data buffer as the operation needs to write somewhere.
-		for (GLVariable *aVariable in operation.result) {
+		for (GLFunction *aVariable in operation.result) {
 			if ( ![self.hasDataBuffer containsObject: aVariable] )
 			{
 				self.totalMemoryBuffersAllocated = self.totalMemoryBuffersAllocated + 1;
@@ -517,11 +517,11 @@
 	// Now we move the internal map to two arrays that are in 1-1 correspondence.
 	self.internalVariablesAndBuffers = [NSMutableArray array];
 	self.internalDataBuffers = [NSMutableArray array];
-	for ( GLVariable *aVariable in self.internalVariableBufferMap ) {
+	for ( GLFunction *aVariable in self.internalVariableBufferMap ) {
 		[self.internalVariablesAndBuffers addObject: aVariable];
 		[self.internalDataBuffers addObject: [self.internalVariableBufferMap objectForKey: aVariable]];
 	}
-    for ( GLVariable *aVariable in self.internalBufferBufferMap ) {
+    for ( GLFunction *aVariable in self.internalBufferBufferMap ) {
 		[self.internalVariablesAndBuffers addObject: aVariable];
 		[self.internalDataBuffers addObject: [self.internalBufferBufferMap objectForKey: aVariable]];
 	}
@@ -529,7 +529,7 @@
     // Also move this internal map to two arrays that are in 1-1 correspondence.
     self.precomputedVariables = [NSMutableArray array];
 	self.precomputedVariablesData = [NSMutableArray array];
-    for ( GLVariable *aVariable in self.precomputedVariableDataMap ) {
+    for ( GLFunction *aVariable in self.precomputedVariableDataMap ) {
 		[self.precomputedVariables addObject: aVariable];
 		[self.precomputedVariablesData addObject: [self.precomputedVariableDataMap objectForKey: aVariable]];
 	}
@@ -543,7 +543,7 @@
 	// All bottom variables are responsible for exiting a group that can be monitored to determine when we're done executing.
 	self.bottomVariableGroup = dispatch_group_create();
 	NSMutableSet *bottomOperations = [[NSMutableSet alloc] init];
-	for (GLVariable *bottomVariable in self.bottomVariables) {
+	for (GLFunction *bottomVariable in self.bottomVariables) {
 		if (bottomVariable.lastOperation) [bottomOperations addObject: bottomVariable.lastOperation];
 	}
 	for (GLVariableOperation *operation in bottomOperations) {
@@ -599,7 +599,7 @@
 - (NSMutableArray *) allGroups
 {
 	NSMutableArray *allGroups = [NSMutableArray array];
-	for ( GLVariable *variable in self.operationGroupArrayMap ) {
+	for ( GLFunction *variable in self.operationGroupArrayMap ) {
 		[allGroups addObjectsFromArray: [self.operationGroupArrayMap objectForKey: variable]];
 	}
 		
@@ -677,7 +677,7 @@
 	NSMutableArray *precomputedVariableOperands = [[NSMutableArray alloc] init];
 	NSMutableArray *otherVariableOperandOperations = [[NSMutableArray alloc] init];
 	
-	for (GLVariable *aVariable in operation.operand) {
+	for (GLFunction *aVariable in operation.operand) {
 		if ( [topVariables containsObject: aVariable] ) {
 			[topVariableOperands addObject: aVariable];
 		} else if ( aVariable.pendingOperations.count == 0 ) {
@@ -741,7 +741,7 @@
 			NSMutableArray *resultIndices = [[NSMutableArray alloc] init];
 			NSMutableArray *operandIndices = [[NSMutableArray alloc] init];
 			NSMutableArray *bufferIndices = [[NSMutableArray alloc] init];
-			for (GLVariable *aVariable in operation.result) {
+			for (GLFunction *aVariable in operation.result) {
 				NSUInteger anIndex = [self.allVariablesAndBuffers indexOfObject: aVariable];
 				if (anIndex == NSNotFound) {
 					[NSException raise: @"Invalid index." format: @"The operation is malformed."];
@@ -749,7 +749,7 @@
 					[resultIndices addObject: @(anIndex)];
 				}
 			}
-			for (GLVariable *aVariable in operation.operand) {
+			for (GLFunction *aVariable in operation.operand) {
 				NSUInteger anIndex = [self.allVariablesAndBuffers indexOfObject: aVariable];
 				if (anIndex == NSNotFound) {
 					[NSException raise: @"Invalid index." format: @"The operation is malformed."];

@@ -79,8 +79,8 @@
 		
 		if (op2.rank == 1)
 		{	// scalar-function or function-function
-			GLVariable *func2 = (GLVariable *) op2;
-			result = [GLVariable variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+			GLFunction *func2 = (GLFunction *) op2;
+			result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 			result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
 			result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
 			
@@ -105,7 +105,7 @@
 			}
 			else if (op1.rank == 1)
 			{	// function-function
-				GLVariable *func1 = (GLVariable *) op1;
+				GLFunction *func1 = (GLFunction *) op1;
 				if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
 					[NSException raise: @"DimensionsNotEqualException" format: @"Cannot add two functions of different dimensions"];
 				}
@@ -317,8 +317,8 @@
 		
 		if (op2.rank == 1)
 		{	// scalar-function or function-function
-			GLVariable *func2 = (GLVariable *) op2;
-			result = [GLVariable variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+			GLFunction *func2 = (GLFunction *) op2;
+			result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 			result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
 			result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
 			
@@ -367,7 +367,7 @@
 			}
 			else if (op1.rank == 1)
 			{	// function-function
-				GLVariable *func1 = (GLVariable *) op1;
+				GLFunction *func1 = (GLFunction *) op1;
 				if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
 					[NSException raise: @"DimensionsNotEqualException" format: @"Cannot subtract two functions of different dimensions"];
 				}
@@ -615,12 +615,12 @@
 	/********************************************************************/
 	if (firstOperand.rank == 1 && secondOperand.rank == 1)
 	{
-		GLVariable *fOperand = (GLVariable *) firstOperand;
-		GLVariable *sOperand = (GLVariable *) firstOperand;
+		GLFunction *fOperand = (GLFunction *) firstOperand;
+		GLFunction *sOperand = (GLFunction *) firstOperand;
 		if (fOperand.dimensions.count && sOperand.dimensions.count && (fOperand.dimensions.count < sOperand.dimensions.count || sOperand.dimensions.count < fOperand.dimensions.count))
 		{
-			GLVariable *lowerDimVariable;
-			GLVariable *higherDimVariable;
+			GLFunction *lowerDimVariable;
+			GLFunction *higherDimVariable;
 			BOOL flipOperands = NO;
 			if (fOperand.dimensions.count < sOperand.dimensions.count) {
 				lowerDimVariable = fOperand;
@@ -647,7 +647,7 @@
 			
 			// Now we know enough to build the result.
 			BOOL isPurelyReal = (fOperand.isPurelyReal && sOperand.isPurelyReal) || (fOperand.isPurelyImaginary && sOperand.isPurelyImaginary);
-			GLVariable *result = [[higherDimVariable class] variableOfType: isPurelyReal ? kGLRealDataFormat : kGLSplitComplexDataFormat withDimensions: higherDimVariable.dimensions forEquation: higherDimVariable.equation];
+			GLFunction *result = [[higherDimVariable class] variableOfType: isPurelyReal ? kGLRealDataFormat : kGLSplitComplexDataFormat withDimensions: higherDimVariable.dimensions forEquation: higherDimVariable.equation];
 			result.isPurelyReal = isPurelyReal;
 			result.isPurelyImaginary= (fOperand.isPurelyReal && sOperand.isPurelyImaginary) || (fOperand.isPurelyImaginary && sOperand.isPurelyReal);
 			
@@ -788,8 +788,8 @@
 		
 		if (op2.rank == 1)
 		{	// scalar-function or function-function
-			GLVariable *func2 = (GLVariable *) op2;
-			result = [GLVariable variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+			GLFunction *func2 = (GLFunction *) op2;
+			result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 			result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
 			result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 			
@@ -815,7 +815,7 @@
 			}
 			else if (op1.rank == 1)
 			{	// function-function
-				GLVariable *func1 = (GLVariable *) op1;
+				GLFunction *func1 = (GLFunction *) op1;
 				if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
 					[NSException raise: @"DimensionsNotEqualException" format: @"Cannot multiply two functions of different dimensions"];
 				}
@@ -900,7 +900,7 @@
 				}
 			}
 			else if (op1.rank == 1) {
-				GLVariable *func1 = (GLVariable *) op1;
+				GLFunction *func1 = (GLFunction *) op1;
 				if (!didSwap) {
 					[NSException raise: @"TensorMultiplicationMismatch" format: @"Cannot left-multiply a function with a linear transformation"];
 				}
@@ -914,7 +914,7 @@
 					}
 				}
 				
-				result = [GLVariable variableOfType:format withDimensions: B.toDimensions forEquation: op2.equation];
+				result = [GLFunction variableOfType:format withDimensions: B.toDimensions forEquation: op2.equation];
 				result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
 				result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 				
@@ -1221,8 +1221,8 @@
 	}
 	else if (op1.rank == 0 && op2.rank == 1)
 	{	// C^i = a / B^i
-		GLVariable *func2 = (GLVariable *) op2;
-		result = [GLVariable variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+		GLFunction *func2 = (GLFunction *) op2;
+		result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 		result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
 		result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 		
@@ -1247,10 +1247,10 @@
 	}
 	else if (op1.rank == 1 && op2.rank == 1)
 	{	// C^i = A^i / B^i
-		GLVariable *func1 = (GLVariable *) op1;
-		GLVariable *func2 = (GLVariable *) op2;
+		GLFunction *func1 = (GLFunction *) op1;
+		GLFunction *func2 = (GLFunction *) op2;
         
-        result = [GLVariable variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+        result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 		result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
 		result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 		
@@ -1366,8 +1366,8 @@
 	else if (op1.rank == 1)
 	{
         if (op2.rank == 1) {
-            GLVariable *func1 = (GLVariable *) fOperand;
-            GLVariable *func2 = (GLVariable *) sOperand;
+            GLFunction *func1 = (GLFunction *) fOperand;
+            GLFunction *func2 = (GLFunction *) sOperand;
             if ( ![func1.dimensions isEqualToArray: func2.dimensions] ) {
                 [NSException raise: @"DimensionsNotEqualException" format: @"Cannot compare two functions of different dimensions"];
             }
@@ -1433,7 +1433,7 @@
 
 @implementation GLDotProductOperation
 
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand {
+- (id) initWithFirstOperand: (GLFunction *) fOperand secondOperand: (GLFunction *) sOperand {
 	
 	if ( ![fOperand.dimensions isEqualToArray: sOperand.dimensions] ) {
 		[NSException raise: @"DimensionsNotEqualException" format: @"Cannot dot two functions of different dimensions"];
@@ -1442,8 +1442,8 @@
 	GLDataFormat format = fOperand.isComplex || sOperand.isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
 	GLScalar *result = [[GLScalar alloc] initWithType: format forEquation: fOperand.equation];
 	
-	GLVariable *op1 = (GLVariable *) fOperand;
-	GLVariable *op2 = (GLVariable *) sOperand;
+	GLFunction *op1 = (GLFunction *) fOperand;
+	GLFunction *op2 = (GLFunction *) sOperand;
 	variableOperation operation;
 	NSString *graphvisDescription;
 	NSUInteger nDataPoints = op1.nDataPoints;
@@ -1501,7 +1501,7 @@
 
 @implementation GLSetVariableValueOperation
 
-- (id) initWithVectorOperand: (GLVariable *) variable scalarVariableOperand: (GLVariable *) aScalarVariable indexString: (NSString *) indexString
+- (id) initWithVectorOperand: (GLFunction *) variable scalarVariableOperand: (GLFunction *) aScalarVariable indexString: (NSString *) indexString
 {
     NSArray *ranges = [GLDimension rangesFromIndexString: indexString usingDimensions: variable.dimensions];
 	
@@ -1509,7 +1509,7 @@
 	if (complexResult) [NSException raise: @"MethodNotImplemented" format: @"Complex numbers not implemented here."];
 	
 	GLDataFormat format = complexResult ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLVariable *result= [GLVariable variableOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
+	GLFunction *result= [GLFunction variableOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
 	
 	if (( self = [super initWithResult: @[result] operand: @[variable, aScalarVariable]]))
 	{

@@ -14,7 +14,7 @@
 // variable is populated with random numbers between the two values.
 @interface GLRandomNumberOperation : GLVariableOperation
 
-- (id) initWithResult: (GLVariable *) result firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand;
+- (id) initWithResult: (GLFunction *) result firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand;
 
 @property GLFloat firstScalarOperand;
 @property GLFloat secondScalarOperand;

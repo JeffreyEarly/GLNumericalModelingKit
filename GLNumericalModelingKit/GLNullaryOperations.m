@@ -14,7 +14,7 @@
 // variable = clip(operand, min, max)
 @implementation GLRandomNumberOperation
 
-- (id) initWithResult: (GLVariable *) resultVariable firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand
+- (id) initWithResult: (GLFunction *) resultVariable firstScalarOperand: (GLFloat) fsOperand secondScalarOperand: (GLFloat) ssOperand
 {
 	if (( self = [super initWithResult: @[resultVariable] operand: @[]] ))
 	{

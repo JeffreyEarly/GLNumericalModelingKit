@@ -12,7 +12,7 @@
 // The identity matrix format assumes an identity transformation, and therefore has no storage requirements.
 // The dense matrix format assume all rows and columns must be specified for that dimension.
 // The diagonal matrix format assume only the diagonal must be specified.
-enum {
+typedef NS_ENUM(NSUInteger, GLMatrixFormat) {
 	kGLIdentityMatrixFormat = 0,
 	kGLDenseMatrixFormat = 1,
     kGLDiagonalMatrixFormat = 2,
@@ -20,13 +20,11 @@ enum {
 	kGLSuperdiagonalMatrixFormat = 4,
 	kGLTridiagonalMatrixFormat = 5
 };
-typedef NSUInteger GLMatrixFormat;
 
-enum {
+typedef NS_ENUM(NSUInteger, GLMatrixOrder) {
 	kGLRowMatrixOrder = 0,
 	kGLColumnMatrixOrder = 1
 };
-typedef NSUInteger GLMatrixOrder;
 
 typedef struct {
     GLMatrixFormat format;
@@ -44,10 +42,10 @@ typedef struct {
     NSUInteger diagonalStride;  // distance to the next diagonal
 } GLDataStride;
 
-@class GLLinearTransform, GLVariable;
+@class GLLinearTransform, GLFunction;
 @interface GLMatrixDescription : NSObject
 
-- (GLMatrixDescription *) initWithVariable: (GLVariable *) variable;
+- (GLMatrixDescription *) initWithVariable: (GLFunction *) variable;
 - (GLMatrixDescription *) initWithLinearTransform: (GLLinearTransform *) aLinearTransform;
 
 @property NSUInteger nDimensions;

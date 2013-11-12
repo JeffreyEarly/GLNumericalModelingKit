@@ -12,7 +12,7 @@
 #import "GLOperationVisualizer.h"
 
 @interface GLOperationVisualizer ()
-- (BOOL) grabAllVariablesAndOperationsFromVariable: (GLVariable *) variable forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
+- (BOOL) grabAllVariablesAndOperationsFromVariable: (GLFunction *) variable forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables;
 @end
 
 @implementation GLOperationVisualizer
@@ -31,12 +31,12 @@
         self.operationOperationInputEdges = [[NSMutableArray alloc] init];
         
         BOOL success = YES;
-        for (GLVariable *bottomVariable in bottomVariables) {
+        for (GLFunction *bottomVariable in bottomVariables) {
             success &=[self grabAllVariablesAndOperationsFromVariable: bottomVariable forTopVariables: topVariables bottomVariables: bottomVariables];
         }
         
         NSMutableSet *bottomOperations = [[NSMutableSet alloc] init];
-        for (GLVariable *bottomVariable in bottomVariables) {
+        for (GLFunction *bottomVariable in bottomVariables) {
             if (bottomVariable.lastOperation){
                 [bottomOperations addObject: bottomVariable.lastOperation];
                 [self.otherVariableOperationEdges addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) bottomVariable.lastOperation, (NSInteger) bottomVariable]];
@@ -72,7 +72,7 @@
 {
     NSMutableString *graphDescription = [NSMutableString stringWithFormat: @"\ndigraph G {\n"];
     [graphDescription appendString: @"node [shape=ellipse,color=Red,fontname=Helvetica];\n\n"];
-    for (GLVariable *variable in self.otherVariables) {
+    for (GLFunction *variable in self.otherVariables) {
         [graphDescription appendFormat: @"\t%ld [label=\"%@\"];\n", (NSInteger) variable, variable.graphvisDescription];
     }
 //    for (GLVariable *variable in self.internalVariables) {
@@ -108,7 +108,7 @@
 
 
 
-- (BOOL) grabAllVariablesAndOperationsFromVariable: (GLVariable *) variable forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables
+- (BOOL) grabAllVariablesAndOperationsFromVariable: (GLFunction *) variable forTopVariables: (NSArray *) topVariables bottomVariables: (NSArray *) bottomVariables
 {
 	if ( [self.internalVariables containsObject: variable] || [self.otherVariables containsObject: variable] )
 	{	// Already assigned a buffer to this variable, and therefore its parents as well.
@@ -137,7 +137,7 @@
 		GLVariableOperation *operation = variable.lastOperation;
 		
 		BOOL success = YES;
-		for (GLVariable *aVariable in operation.operand) {
+		for (GLFunction *aVariable in operation.operand) {
 			success &= [self grabAllVariablesAndOperationsFromVariable: aVariable forTopVariables: topVariables bottomVariables: bottomVariables];
 		}
 		return success;
@@ -179,7 +179,7 @@
     NSMutableArray *opOpDescriptions = [[NSMutableArray alloc] init];
 
 	[operands addObjectsFromArray: operation.operand];
-	for (GLVariable *operandVar in operation.operand) {
+	for (GLFunction *operandVar in operation.operand) {
 		[varOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) operandVar, (NSInteger) operation]];
 		[opOpDescriptions addObject: [NSString stringWithFormat: @"\t%ld -> %ld:in1:n [color=black, style=dotted];\n", (NSInteger) operandVar.lastOperation, (NSInteger) operation]];
 	}
@@ -190,7 +190,7 @@
     NSMutableArray *otherVariableOperands = [[NSMutableArray alloc] init];
 	
 	for (NSUInteger i=0; i<operands.count; i++) {
-        GLVariable *aVariable = operands[i];
+        GLFunction *aVariable = operands[i];
 		if ( [topVariables containsObject: aVariable] ) {
 			[topVariableOperands addObject: aVariable];
             [self.otherVariableOperationEdges addObject: varOpDescriptions[i]];

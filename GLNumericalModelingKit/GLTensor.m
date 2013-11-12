@@ -42,7 +42,7 @@ GLSplitComplex splitComplexFromData( NSData *data )
         GLScalar *scalar = (GLScalar *) variable;
         return [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation];
     } else if (variable.rank == 1) {
-        GLVariable *function = (GLVariable *) variable;
+        GLFunction *function = (GLFunction *) variable;
         return [[function class] variableOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation];
     }  else if (variable.rank == 2) {
         GLLinearTransform *matrix = (GLLinearTransform *) variable;
@@ -224,11 +224,11 @@ GLSplitComplex splitComplexFromData( NSData *data )
 	} else {
 		if ([[self class] isSubclassOfClass: [GLScalar class]] || [[otherVariable class] isSubclassOfClass: [GLScalar class]]) {
 			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
+		} else if ([[self class] isSubclassOfClass: [GLFunction class]] && [[otherVariable class] isSubclassOfClass: [GLFunction class]]) {
 			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
+		} else if ([[self class] isSubclassOfClass: [GLFunction class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
 			[NSException raise: @"InvalidOperation" format: @"You cannot left-multipy a function by a linear transformation"];
-		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
+		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLFunction class]]) {
 			return [(GLLinearTransform *) self transform: otherVariable];
 		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
 			return [(GLLinearTransform *) self matrixMultiply: (GLLinearTransform *)otherVariable];
@@ -250,11 +250,11 @@ GLSplitComplex splitComplexFromData( NSData *data )
 	} else {
 		if ([[self class] isSubclassOfClass: [GLScalar class]] || [[otherVariable class] isSubclassOfClass: [GLScalar class]]) {
 			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
-			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: [(GLVariable*)self spatialDomain] secondOperand: [(GLVariable*)otherVariable spatialDomain]];
-		} else if ([[self class] isSubclassOfClass: [GLVariable class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
+		} else if ([[self class] isSubclassOfClass: [GLFunction class]] && [[otherVariable class] isSubclassOfClass: [GLFunction class]]) {
+			operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: [(GLFunction*)self spatialDomain] secondOperand: [(GLFunction*)otherVariable spatialDomain]];
+		} else if ([[self class] isSubclassOfClass: [GLFunction class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
 			[NSException raise: @"InvalidOperation" format: @"You cannot left-multipy a function by a linear transformation"];
-		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLVariable class]]) {
+		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLFunction class]]) {
 			return [(GLLinearTransform *) self transform: otherVariable];
 		} else if ([[self class] isSubclassOfClass: [GLLinearTransform class]] && [[otherVariable class] isSubclassOfClass: [GLLinearTransform class]]) {
 			return [(GLLinearTransform *) self matrixMultiply: (GLLinearTransform *)otherVariable];

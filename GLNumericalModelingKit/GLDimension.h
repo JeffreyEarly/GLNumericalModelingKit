@@ -25,11 +25,12 @@
 // and multiple NetCDF files.
 
 typedef NS_ENUM(NSUInteger, GLGridType) {
-	kGLEndpointGrid = 0,		// A good grid for finite differencing
-	kGLInteriorGrid = 1,		// A good grid for transforming to a sine or cosine basis
-	kGLPeriodicGrid = 2,		// A good grid for transforming to an exponential basis.
-	kGLChebyshevEndpointGrid = 3, // aka, 'extrema' or 'Lobatto' grid
-	kGLChebyshevInteriorGrid = 4 // aka, 'roots' or 'Gauss' grid
+	kGLEndpointGrid = 0,            // A good grid for finite differencing
+	kGLInteriorGrid = 1,            // A good grid for transforming to a sine or cosine basis
+	kGLPeriodicGrid = 2,            // A good grid for transforming to an exponential basis.
+	kGLChebyshevEndpointGrid = 3,   // aka, 'extrema' or 'Lobatto' grid
+	kGLChebyshevInteriorGrid = 4,   // aka, 'roots' or 'Gauss' grid
+    kGLUnevenGrid = 10              // Some other non-standard grid.
 };
 
 typedef NS_ENUM(NSUInteger, GLBasisFunction) {
@@ -73,9 +74,6 @@ typedef NS_ENUM(NSUInteger, GLBasisFunction) {
 // don't just reinitialize a new one if you lost track
 
 // Methods for creating *evenly spaced* dimensions.
-- (GLDimension *) initPeriodicDimension: (BOOL) isPeriodic nPoints: (NSUInteger) numPoints domainMin: (GLFloat) theMin sampleInterval: (GLFloat) interval;
-- (GLDimension *) initPeriodicDimension: (BOOL) isPeriodic nPoints: (NSUInteger) numPoints domainMin: (GLFloat) theMin length: (GLFloat) theLength;
-
 - (GLDimension *) initDimensionWithGrid: (GLGridType) gridType nPoints: (NSUInteger) numPoints domainMin: (GLFloat) theMin length: (GLFloat) theLength;
 
 // Create the corresponding transformed dimension in a different basis and optionally restrict the dimension to positive points (useful for common symmetries).

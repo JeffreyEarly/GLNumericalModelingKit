@@ -42,7 +42,7 @@
 	return [[GLVariableClass alloc] initVariableOfType: dataFormat withDimensions: theDimensions forEquation: equation];
 }
 
-+ (id) variableWithVariable: (GLVariable *) existing
++ (id) variableWithVariable: (GLFunction *) existing
 {
 	GLNetCDFVariable *variable = [self variableOfType: existing.isComplex withDimensions: existing.dimensions forEquation: existing.equation];
 	variable.name = existing.name;
@@ -104,7 +104,7 @@
 #pragma mark GLVariable Overrides
 #pragma mark
 
-- (GLVariable *) variableFromIndexRange: (NSArray *) ranges
+- (GLFunction *) variableFromIndexRange: (NSArray *) ranges
 {
 	GLNetCDFFetchDataOperation *operation = [[GLNetCDFFetchDataOperation alloc] initWithNetCDFVariable: self indexRange: ranges flatten: YES];
 	return operation.result[0];
@@ -198,14 +198,14 @@
 	return YES;
 }
 
-- (void) concatenateWithVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex
+- (void) concatenateWithVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex
 {
 	GLVariableOperation *operation = [[GLNetCDFConcatenationOperation alloc] initWithFirstOperand: self secondOperand: otherVariable alongDimensionAtIndex: mutableDimensionIndex];
 	[self addOperation: operation];
 	[self.equation solveForVariable: self waitUntilFinished: YES];
 }
 
-- (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
+- (void) concatenateWithLowerDimensionalVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
 {
 	GLVariableOperation *operation = [[GLNetCDFConcatenationOperation alloc] initWithFirstOperand: self lowerDimensionalSecondOperand: otherVariable alongDimensionAtIndex:mutableDimensionIndex index:pointIndex];
 	[self addOperation: operation];

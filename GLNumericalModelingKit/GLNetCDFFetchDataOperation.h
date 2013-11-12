@@ -17,7 +17,7 @@
 
 // This operation does not depend on the variable passed it. It will not keep a strong reference.
 - (id) initWithNetCDFVariable: (GLNetCDFVariable *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag;
-- (id) initWithResult: (GLVariable *) aResult netCDFVariable: (GLNetCDFVariable *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag;
+- (id) initWithResult: (GLFunction *) aResult netCDFVariable: (GLNetCDFVariable *) variable indexRange: (NSArray *) ranges flatten: (BOOL) aFlag;
 
 @property(readwrite, strong, nonatomic) NSArray *theRanges;
 @property(readwrite, assign, nonatomic) BOOL shouldFlatten;
