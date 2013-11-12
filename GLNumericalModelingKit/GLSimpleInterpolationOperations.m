@@ -150,6 +150,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
                         NSInteger a = lowerIndices[i];
                         NSInteger b = a+1;                        
                         
+						// These calls are the biggest performance hit.
                         lowerIndices[i] = (((a < 0) ? ((a % n) + n) : a) % n);
                         upperIndices[i] = (((b < 0) ? ((b % n) + n) : b) % n);                      
 					}
