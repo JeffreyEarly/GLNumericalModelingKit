@@ -24,9 +24,19 @@ GLSplitComplex splitComplexFromData( NSData *data );
 @class GLVariableOperation, GLEquation;
 @interface GLVariable : NSObject
 
+/** Creates a new variable (GLScalar, GLFunction, GLLinearTransform) with the same format and dimensions.
+ @discussion This does not respect the underlying symmetries of the variable (eg, Hermitian).
+ @param anotherVariable Another variable.
+ @returns A new variable of the same type, and in the same format as another variable, but no data or dependencies.
+ */
 + (GLVariable *) variableWithPrototype: (GLVariable *) anotherVariable;
 
 // Not to be called directly. Only to be used by the subclasses.
+/** Initializer only to be called by the subclasses.
+ @param dataFormat Storage format.
+ @param theEquation  The GLEquation object being used.
+ @returns A newly initialized variable.
+ */
 - (id) initWithType: (GLDataFormat) dataFormat withEquation: (GLEquation *) theEquation;
 
 /************************************************/
@@ -37,21 +47,22 @@ GLSplitComplex splitComplexFromData( NSData *data );
 #pragma mark Properties
 #pragma mark
 
-// Naming a tensor or giving it units is useful when writing output to files, and may even be mandatory, depending on the format.
+/// Naming a variable useful when writing output to files, and may even be mandatory, depending on the format.
 @property(readwrite, copy, nonatomic) NSString *name;
+
+/// Generic, but common, property type that may be written to the output file.
 @property(readwrite, copy, nonatomic) NSString *units;
 
-// Any metadata that should follow around the variable. Units property is automicatically added to this.
+/// Any metadata that should follow around the variable. Units property is automicatically added to this.
 @property(readonly, strong, nonatomic) NSMutableDictionary *metadata;
 
-// An attempt to make a fairly unique variable id. Copies of this variable have the same id.
+/// An attempt to make a fairly unique variable id. Copies of this variable have the same id.
 @property(readonly, assign, nonatomic) NSUInteger uniqueID;
 
-// Rank of the tensor. 0-scalar, 1-vector, 2-linear transformation
+/// Rank of the tensor. 0-scalar, 1-function, 2-linear transformation.
 @property(readonly, assign, nonatomic) NSUInteger rank;
 
-// Determines whether the data is holding a real or complex number.
-// Variables in the frequency domain are always assumed to be complex.
+/// Determines whether the data is holding a real or complex number.
 @property(readonly, assign, nonatomic) BOOL isComplex;
 
 @property(readwrite, assign, nonatomic) BOOL isRealPartZero;
@@ -74,7 +85,7 @@ GLSplitComplex splitComplexFromData( NSData *data );
 /// The total number of components saved to the data. Note that some formats may not save zeros, for example, while others may save extra points than required.
 @property(readonly, assign, nonatomic) NSUInteger nDataPoints;
 
-/// For a real number, the number of data points is equal to the number of elements. For a split complex number, there are twice as many elements as points.
+/// For a real number, the number of data points is equal to the number of elements. For a complex number, there are twice as many elements as points.
 @property(readonly, assign, nonatomic) NSUInteger nDataElements;
 
 /// Access to the raw computed data. If this variable is dependent on others, you should call -solve first, otherwise an empty (non-zeroed!) chunk of data will be returned.

@@ -186,16 +186,16 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 #pragma mark
 
 
-// row-major or column-major
+/// Indicates whether this particular instance is in row-major or column-major order
 @property(readwrite) GLMatrixOrder matrixOrder;
 
-// The end-all-be-all description of how this matrix is stored in memory.
+/// The end-all-be-all description of how this matrix is stored in memory.
 @property(readwrite, strong) GLMatrixDescription *matrixDescription;
 
-// A subset of the above, this simply indicates the type of matrix in each dimension.
+/// A subset of the above, this simply indicates the type of matrix in each dimension.
 @property(readwrite, strong) NSArray *matrixFormats;
 
-// A block that can be used to create the matrix.
+/// A block that can be used to create the matrix. May be nil the matrix is derived from other matrices.
 @property(copy) transformMatrix matrixBlock;
 
 

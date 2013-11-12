@@ -177,7 +177,7 @@
 				[array addObject: [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation]];
 			} else if (variable.rank == 1) {
 				GLFunction *function = (GLFunction *) variable;
-				[array addObject: [[function class] variableOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation]];
+				[array addObject: [[function class] functionOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation]];
 			}  else if (variable.rank == 2) {
 				GLLinearTransform *matrix = (GLLinearTransform *) variable;
 				[array addObject: [GLLinearTransform transformOfType: matrix.dataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil]];
@@ -366,7 +366,7 @@ static NSMapTable *classPostOperationTable = nil;
         NSArray *resultPrototypes = [GLOptimizedVariableOperation resultPrototypeForSubclassWithName: NSStringFromClass(self.class)];
 		NSMutableArray *array = [NSMutableArray array];
 		for (GLFunction *variable in resultPrototypes) {
-			[array addObject: [[variable class] variableOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
+			[array addObject: [[variable class] functionOfType: variable.dataFormat withDimensions: variable.dimensions forEquation: variable.equation]];
 		}
 		self.result = array;
         

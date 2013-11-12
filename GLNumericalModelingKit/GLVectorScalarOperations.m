@@ -130,7 +130,7 @@
         result = [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation];
     } else if (vOperand.rank == 1) {
         GLFunction *function = (GLFunction *) vOperand;
-        result = [[function class] variableOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation];
+        result = [[function class] functionOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation];
     }  else if (vOperand.rank == 2) {
         GLLinearTransform *aTransform = (GLLinearTransform *) vOperand;
         GLMatrixDescription *matrix = aTransform.matrixDescription;
@@ -505,7 +505,7 @@
 	for (GLDimension *dim in vOperand.dimensions) {
 		[newDims addObject: [dim scaledBy: dimScale translatedBy: delta withUnits: dimUnits]];
 	}
-	GLFunction *result = [[vOperand class] variableOfType: vOperand.dataFormat withDimensions: newDims forEquation: vOperand.equation];
+	GLFunction *result = [[vOperand class] functionOfType: vOperand.dataFormat withDimensions: newDims forEquation: vOperand.equation];
 	result.units = varUnits;
 	if (( self = [super initWithResult: @[result] operand: @[vOperand]] ))
 	{

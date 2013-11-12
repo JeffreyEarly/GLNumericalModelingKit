@@ -58,7 +58,7 @@
 
 - (id) initWithOperand: (GLFunction *) variable shouldUseComplexArithmetic: (BOOL) useComplexArithmetic
 {
-	GLFunction *resultVar = [[variable class] variableOfRealTypeWithDimensions: variable.dimensions forEquation: variable.equation];
+	GLFunction *resultVar = [[variable class] functionOfRealTypeWithDimensions: variable.dimensions forEquation: variable.equation];
 	
 	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ] ))
 	{
@@ -119,7 +119,7 @@
 {
 	// If the operand is purely real, we don't need a complex number
 	GLDataFormat format = variable.isPurelyReal ? kGLRealDataFormat : kGLSplitComplexDataFormat;
-	GLFunction *resultVar = [[variable class] variableOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
+	GLFunction *resultVar = [[variable class] functionOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
 	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ] ))
 	{
 		GLFunction *resultVariable = self.result[0];
@@ -326,7 +326,7 @@
 	
 	// TODO - for the moment I'm assuming that anything NOT in the frequency domain is real.
 	GLDataFormat format = !variable.isFrequencyDomain ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLFunction *resultVariable = [[variable class] variableOfType: format withDimensions: transformedDimensions forEquation: variable.equation];
+	GLFunction *resultVariable = [[variable class] functionOfType: format withDimensions: transformedDimensions forEquation: variable.equation];
 	
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
@@ -372,7 +372,7 @@
 
 - (GLSwapComplexOperation *) initWithFunction: (GLFunction *) variable
 {
-	GLFunction *resultVariable = [[variable class] variableOfComplexTypeWithDimensions: variable.dimensions forEquation: variable.equation];
+	GLFunction *resultVariable = [[variable class] functionOfComplexTypeWithDimensions: variable.dimensions forEquation: variable.equation];
 	resultVariable.isPurelyImaginary = variable.isPurelyReal;
 	resultVariable.isPurelyReal = variable.isPurelyImaginary;
 	

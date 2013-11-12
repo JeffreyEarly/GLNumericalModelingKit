@@ -647,7 +647,7 @@
 			
 			// Now we know enough to build the result.
 			BOOL isPurelyReal = (fOperand.isPurelyReal && sOperand.isPurelyReal) || (fOperand.isPurelyImaginary && sOperand.isPurelyImaginary);
-			GLFunction *result = [[higherDimVariable class] variableOfType: isPurelyReal ? kGLRealDataFormat : kGLSplitComplexDataFormat withDimensions: higherDimVariable.dimensions forEquation: higherDimVariable.equation];
+			GLFunction *result = [[higherDimVariable class] functionOfType: isPurelyReal ? kGLRealDataFormat : kGLSplitComplexDataFormat withDimensions: higherDimVariable.dimensions forEquation: higherDimVariable.equation];
 			result.isPurelyReal = isPurelyReal;
 			result.isPurelyImaginary= (fOperand.isPurelyReal && sOperand.isPurelyImaginary) || (fOperand.isPurelyImaginary && sOperand.isPurelyReal);
 			

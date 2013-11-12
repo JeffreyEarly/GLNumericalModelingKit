@@ -43,7 +43,7 @@ GLSplitComplex splitComplexFromData( NSData *data )
         return [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation];
     } else if (variable.rank == 1) {
         GLFunction *function = (GLFunction *) variable;
-        return [[function class] variableOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation];
+        return [[function class] functionOfType: function.dataFormat withDimensions: function.dimensions forEquation: function.equation];
     }  else if (variable.rank == 2) {
         GLLinearTransform *matrix = (GLLinearTransform *) variable;
         return [GLLinearTransform transformOfType: matrix.dataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil];
