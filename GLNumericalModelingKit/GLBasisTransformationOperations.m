@@ -88,7 +88,6 @@ static BOOL _shouldAntiAlias = NO;
 + (GLFunction *) antialiasingFilterFromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation
 {
 	GLFloat minNyquist;
-	GLFloat minSampleInterval;
 	
 	GLFunction *bigK;
 	for (GLDimension *dim in dimensions) {
@@ -100,12 +99,10 @@ static BOOL _shouldAntiAlias = NO;
 		if (!bigK) {
 			bigK = [k multiply: k];
 			minNyquist = nyquist;
-			minSampleInterval = dim.sampleInterval;
 		} else {
 			bigK = [bigK plus: [k multiply: k]];
 			if (nyquist < minNyquist) {
 				minNyquist = nyquist;
-				minSampleInterval = dim.sampleInterval;
 			}
 		}
 	}

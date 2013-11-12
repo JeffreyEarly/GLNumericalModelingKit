@@ -234,6 +234,8 @@
 		} else {
 			[NSException raise: @"UnableToFindImplementation" format: @"Cannot find the implementation for this operation."];
 		}
+	} else {
+		return nil;
 	}
     
 	if (( self = [super initWithResult: @[result] operand: @[op1, op2] buffers: @[] operation: operation] )) {
@@ -585,6 +587,8 @@
 		else {
 			[NSException raise: @"UnableToFindImplementation" format: @"Cannot find the implementation for this operation."];
 		}
+	} else {
+		return nil;
 	}
     
 	if (( self = [super initWithResult: @[result] operand: @[op1, op2] buffers: @[] operation: operation] )) {
@@ -621,14 +625,12 @@
 		{
 			GLFunction *lowerDimVariable;
 			GLFunction *higherDimVariable;
-			BOOL flipOperands = NO;
 			if (fOperand.dimensions.count < sOperand.dimensions.count) {
 				lowerDimVariable = fOperand;
 				higherDimVariable = sOperand;
 			} else {
 				lowerDimVariable = sOperand;
 				higherDimVariable = fOperand;
-				flipOperands = YES;
 			}
 			
 			// In this scenario the first-operand has fewer dimensions than the second operand, but those dimensions are in the same order.
@@ -1151,6 +1153,8 @@
 		else {
 			[NSException raise: @"UnableToFindImplementation" format: @"Cannot find the implementation for this operation."];
 		}
+	} else {
+		return nil;
 	}
     
 	result.name = [NSString stringWithFormat: @"%@_%@", secondOperand.name, firstOperand.name];
@@ -1413,7 +1417,9 @@
             GLFloat *C = (GLFloat *) [resultArray[0] bytes];
             vGL_vthr( B, 1, A, C, 1, nDataElements);
         };
-    }
+    } else {
+		return nil;
+	}
 	
 	if (( self = [super initWithResult: @[result] operand: @[op1, op2] buffers: @[] operation: operation] )) {
 		self.graphvisDescription = graphvisDescription;

@@ -947,7 +947,7 @@ BOOL isOne( NSNumber *a )
 				[resultBuffer addObjectsFromArray: previousYData];
 			}
 			
-			GLFloat error;
+			GLFloat error=0.0;
 			GLFloat *step = (GLFloat *) timeStepData.mutableBytes;
 			GLFloat *lastStep = (GLFloat *) lastTimeStepData.mutableBytes;
 			

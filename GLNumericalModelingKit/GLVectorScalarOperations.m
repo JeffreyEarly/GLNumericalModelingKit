@@ -141,7 +141,9 @@
         }
         
         result = [GLLinearTransform transformOfType: aTransform.dataFormat withFromDimensions: aTransform.toDimensions toDimensions:aTransform.fromDimensions inFormat:aTransform.matrixFormats forEquation:aTransform.equation matrix: nil];
-    }
+    } else {
+		return nil;
+	}
 	
 	if (( self = [super initWithResult: @[result] operand: @[vOperand]] ))
 	{
