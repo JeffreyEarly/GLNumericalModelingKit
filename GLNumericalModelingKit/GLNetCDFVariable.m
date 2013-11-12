@@ -30,7 +30,7 @@
 #pragma mark Class Methods
 #pragma mark
 
-+ (id) variableOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (id) functionOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 {
 	BOOL isMutable = NO;
 	for (GLDimension *dimension in theDimensions) {
@@ -44,7 +44,7 @@
 
 + (id) variableWithVariable: (GLFunction *) existing
 {
-	GLNetCDFVariable *variable = [self variableOfType: existing.isComplex withDimensions: existing.dimensions forEquation: existing.equation];
+	GLNetCDFVariable *variable = [self functionOfType: existing.isComplex withDimensions: existing.dimensions forEquation: existing.equation];
 	variable.name = existing.name;
 	variable.units = existing.units;
 	[variable.metadata addEntriesFromDictionary: existing.metadata];

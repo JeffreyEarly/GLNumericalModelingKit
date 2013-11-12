@@ -247,7 +247,7 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 12;
 			
 			BOOL isComplex = [variableAttributes[GLNetCDFSchemaIsComplexKey] boolValue];
 			GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-			GLNetCDFVariable *netcdfVariable = [GLNetCDFVariable variableOfType: format withDimensions: dimensions forEquation: self.equation];
+			GLNetCDFVariable *netcdfVariable = [GLNetCDFVariable functionOfType: format withDimensions: dimensions forEquation: self.equation];
 			netcdfVariable.file = self.file;
 			netcdfVariable.name = variableProperties[GLVariableNameKey];
 			netcdfVariable.units = variableAttributes[GLNetCDFSchemaUnitsKey];
@@ -444,7 +444,7 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 12;
 		}
 	}
 	
-	GLNetCDFVariable *netcdfVariable = [GLNetCDFVariable variableOfType: kGLRealDataFormat withDimensions: dimensions forEquation: self.equation];
+	GLNetCDFVariable *netcdfVariable = [GLNetCDFVariable functionOfType: kGLRealDataFormat withDimensions: dimensions forEquation: self.equation];
 	netcdfVariable.file = self.file;
 	netcdfVariable.name = [variableProperties objectForKey: GLVariableNameKey];
 	[netcdfVariable.metadata addEntriesFromDictionary: [variableProperties objectForKey: GLVariableAttributesKey]];

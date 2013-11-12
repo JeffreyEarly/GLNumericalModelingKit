@@ -12,6 +12,7 @@
 @interface GLScalar : GLVariable
 
 + (GLScalar *) scalarWithValue: (GLFloatComplex) aValue forEquation: (GLEquation *) anEquation;
++ (GLScalar *) scalarWithType: (GLDataFormat) format forEquation: (GLEquation *) anEquation;
 
 - (GLScalar *) initWithType: (GLDataFormat) format forEquation: (GLEquation *) anEquation;
 - (GLScalar *) initWithValue: (GLFloatComplex) aValue forEquation: (GLEquation *) anEquation;

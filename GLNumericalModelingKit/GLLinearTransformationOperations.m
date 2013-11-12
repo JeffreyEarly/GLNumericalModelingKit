@@ -27,7 +27,7 @@
 {
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
 	
     if (linearTransform.name && function.name) {
         result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
@@ -171,7 +171,7 @@
     
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
 	
     if (linearTransform.name && function.name) {
         result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
@@ -284,7 +284,7 @@
 
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
 	
     if (linearTransform.name && function.name) {
         result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
@@ -386,7 +386,7 @@
 	
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
     
 	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
         
@@ -511,7 +511,7 @@
     
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLFunction *result = [GLFunction variableOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
+	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
     
 	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
         

@@ -49,10 +49,10 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 
 - (id) initWithPositionVector:(GLFunction *) position dimension: (GLDimension *) dimension endPointPointBehavior: (GLInterpolationEndpointBehavior) behavior
 {
-	GLFunction *lowerIndicesVar = [GLFunction variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
-	GLFunction *upperIndicesVar = [GLFunction variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
-	GLFunction *fractionVar = [GLFunction variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
-	GLFunction *oneMinusFractionVar = [GLFunction variableOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
+	GLFunction *lowerIndicesVar = [GLFunction functionOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
+	GLFunction *upperIndicesVar = [GLFunction functionOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
+	GLFunction *fractionVar = [GLFunction functionOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
+	GLFunction *oneMinusFractionVar = [GLFunction functionOfRealTypeWithDimensions:position.dimensions forEquation:position.equation];
 	
 	if ((self=[super initWithResult: @[lowerIndicesVar, upperIndicesVar, fractionVar, oneMinusFractionVar] operand: @[position]]))
 	{
@@ -252,7 +252,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 // The first operand is the function we're approximating, the second function is the (fractional) indices that we're approximating it at.
 - (id) initWithFunction:(GLFunction *)fOperand lowerIndices: (GLFunction *) lIndices upperIndices: (GLFunction *) uIndices fraction: (GLFunction *) frac
 {
-	GLFunction *resultVariable = [GLFunction variableOfRealTypeWithDimensions: frac.dimensions forEquation: frac.equation];
+	GLFunction *resultVariable = [GLFunction functionOfRealTypeWithDimensions: frac.dimensions forEquation: frac.equation];
 	if (( self = [super initWithResult: @[resultVariable] operand: @[fOperand, lIndices, uIndices, frac]] )) {
 		
         NSUInteger numInterpPoints = frac.nDataPoints;
@@ -287,7 +287,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
     NSMutableArray *resultArray = [[NSMutableArray alloc] init];
     NSMutableArray *inputArray = [[NSMutableArray alloc] init];
 	for (NSUInteger i=0; i<leftVars.count; i++) {
-        GLFunction *resultVariable = [GLFunction variableOfRealTypeWithDimensions: [leftVars[i] dimensions] forEquation: [leftVars[i] equation]];
+        GLFunction *resultVariable = [GLFunction functionOfRealTypeWithDimensions: [leftVars[i] dimensions] forEquation: [leftVars[i] equation]];
         [resultArray addObject: resultVariable];
         inputArray[2*i] = leftVars[i];
         inputArray[2*i+1] = rightVars[i];
@@ -347,7 +347,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 			[NSException raise: @"IllegalDimensions" format: @"All variables being interpolated must have the same dimensions."];
 		} else {
 			// The resulting variables will have the same length as the requested interpolation points.
-			GLFunction *resultVariable = [GLFunction variableOfRealTypeWithDimensions:[[sOperand lastObject] dimensions] forEquation:[[sOperand lastObject] equation]];
+			GLFunction *resultVariable = [GLFunction functionOfRealTypeWithDimensions:[[sOperand lastObject] dimensions] forEquation:[[sOperand lastObject] equation]];
 			[resultArray addObject: resultVariable];
 		}
 	}

@@ -24,7 +24,7 @@
 	NSMutableArray *newDimensions = [NSMutableArray arrayWithObject: dim];
 	[newDimensions addObjectsFromArray: variable.dimensions];
 	
-	GLFunction *resultVariable = [GLFunction variableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
+	GLFunction *resultVariable = [GLFunction functionOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
 	resultVariable.name = variable.name;
 	resultVariable.units = variable.units;
 	
@@ -110,7 +110,7 @@
 	}
 	if (invalidRange) return nil;
 	
-	GLFunction *resultVariable = [GLFunction variableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
+	GLFunction *resultVariable = [GLFunction functionOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
 	
 	if (( self = [super initWithResult:@[resultVariable] operand:@[variable]] ))
 	{
@@ -352,7 +352,7 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 		[NSException raise: @"MethodNotYetImplemented" format: @"Cannot perform a binary operation on two variables that are not either both complex or both real."]; return nil;
 	}
 	
-	GLFunction *resultVariable = [GLFunction variableOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
+	GLFunction *resultVariable = [GLFunction functionOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
 	if ((self = [super initWithResult: @[resultVariable] operand: @[fOperand, sOperand]])) {
 		[NSException raise: @"NotYetImplemented" format: @"Oh crap! You just called a function (GLExistingDimensionConcatenationOperation) that isn't yet implemented!"];
     }
@@ -440,7 +440,7 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
 	NSMutableArray *resultDimensions = [NSMutableArray arrayWithObject: theDimension];
 	[resultDimensions addObjectsFromArray: fOperand.dimensions];
 	
-	GLFunction *resultVariable = [GLFunction variableOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
+	GLFunction *resultVariable = [GLFunction functionOfType: fOperand.dataFormat withDimensions: resultDimensions forEquation:fOperand.equation];
 	
 	if (( self = [super initWithResult: @[resultVariable] operand: @[fOperand,sOperand]] )) {
 		
@@ -566,7 +566,7 @@ void CopySubmatrix( NSArray *dimensions, NSArray *ranges, NSUInteger matrixIndex
         [highResDimensions addObject: dim];
     }
     
-	GLFunction *resultVariable = [GLFunction variableOfType: lowResTransformedVariable.dataFormat withDimensions: highResDimensions forEquation: variable.equation];
+	GLFunction *resultVariable = [GLFunction functionOfType: lowResTransformedVariable.dataFormat withDimensions: highResDimensions forEquation: variable.equation];
 	
 	if (( self = [super initWithResult:@[resultVariable] operand:@[lowResTransformedVariable]] ))
 	{		

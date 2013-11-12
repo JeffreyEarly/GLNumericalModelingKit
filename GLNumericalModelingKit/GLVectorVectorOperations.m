@@ -80,7 +80,7 @@
 		if (op2.rank == 1)
 		{	// scalar-function or function-function
 			GLFunction *func2 = (GLFunction *) op2;
-			result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+			result = [GLFunction functionOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 			result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
 			result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
 			
@@ -318,7 +318,7 @@
 		if (op2.rank == 1)
 		{	// scalar-function or function-function
 			GLFunction *func2 = (GLFunction *) op2;
-			result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+			result = [GLFunction functionOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 			result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
 			result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
 			
@@ -789,7 +789,7 @@
 		if (op2.rank == 1)
 		{	// scalar-function or function-function
 			GLFunction *func2 = (GLFunction *) op2;
-			result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+			result = [GLFunction functionOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 			result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
 			result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 			
@@ -914,7 +914,7 @@
 					}
 				}
 				
-				result = [GLFunction variableOfType:format withDimensions: B.toDimensions forEquation: op2.equation];
+				result = [GLFunction functionOfType:format withDimensions: B.toDimensions forEquation: op2.equation];
 				result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
 				result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 				
@@ -1222,7 +1222,7 @@
 	else if (op1.rank == 0 && op2.rank == 1)
 	{	// C^i = a / B^i
 		GLFunction *func2 = (GLFunction *) op2;
-		result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+		result = [GLFunction functionOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 		result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
 		result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 		
@@ -1250,7 +1250,7 @@
 		GLFunction *func1 = (GLFunction *) op1;
 		GLFunction *func2 = (GLFunction *) op2;
         
-        result = [GLFunction variableOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
+        result = [GLFunction functionOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
 		result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
 		result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 		
@@ -1509,7 +1509,7 @@
 	if (complexResult) [NSException raise: @"MethodNotImplemented" format: @"Complex numbers not implemented here."];
 	
 	GLDataFormat format = complexResult ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLFunction *result= [GLFunction variableOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
+	GLFunction *result= [GLFunction functionOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
 	
 	if (( self = [super initWithResult: @[result] operand: @[variable, aScalarVariable]]))
 	{

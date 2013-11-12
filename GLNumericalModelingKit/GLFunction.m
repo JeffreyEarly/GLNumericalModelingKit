@@ -82,9 +82,9 @@ static BOOL prefersSpatialMultiplication = YES;
 }
 
 // Returns a variable built from the given dimension
-+ (id) variableOfRealTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
++ (id) functionOfRealTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
-	GLFunction *aVariable = [self variableOfRealTypeWithDimensions: theDimensions forEquation: equation];
+	GLFunction *aVariable = [self functionOfRealTypeWithDimensions: theDimensions forEquation: equation];
 	aVariable.name = aDimension.name;
 	aVariable.units = aDimension.units;
 	GLFloat *f = aVariable.pointerValue;
@@ -108,9 +108,9 @@ static BOOL prefersSpatialMultiplication = YES;
 	return aVariable;
 }
 
-+ (id) variableOfComplexTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
++ (id) functionOfComplexTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
-	GLFunction *aVariable = [self variableOfComplexTypeWithDimensions: theDimensions forEquation: equation];
+	GLFunction *aVariable = [self functionOfComplexTypeWithDimensions: theDimensions forEquation: equation];
 	aVariable.name = aDimension.name;
 	aVariable.units = aDimension.units;
 	GLSplitComplex f= aVariable.splitComplex;
@@ -169,12 +169,12 @@ static BOOL prefersSpatialMultiplication = YES;
 + (id) variableOfType: (GLDataFormat) format fromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
     if (format == kGLRealDataFormat) {
-        return [self variableOfRealTypeFromDimension: aDimension withDimensions: theDimensions forEquation: equation];
+        return [self functionOfRealTypeFromDimension: aDimension withDimensions: theDimensions forEquation: equation];
     } else if (format == kGLSplitComplexDataFormat) {
-        return [self variableOfComplexTypeFromDimension: aDimension withDimensions: theDimensions forEquation: equation];
+        return [self functionOfComplexTypeFromDimension: aDimension withDimensions: theDimensions forEquation: equation];
     }
     
-	GLFunction *aVariable = [self variableOfType: format withDimensions: theDimensions forEquation: equation];
+	GLFunction *aVariable = [self functionOfType: format withDimensions: theDimensions forEquation: equation];
 	aVariable.name = aDimension.name;
 	aVariable.units = aDimension.units;
 	GLFloat *f = aVariable.pointerValue;
@@ -203,24 +203,24 @@ static BOOL prefersSpatialMultiplication = YES;
 	return aVariable;
 }
 
-+ (id) variableWithRandomValuesBetween: (GLFloat) min and: (GLFloat) max withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
++ (id) functionWithRandomValuesBetween: (GLFloat) min and: (GLFloat) max withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
-	GLFunction *var = [self variableOfRealTypeWithDimensions: theDimensions forEquation: equation];
+	GLFunction *var = [self functionOfRealTypeWithDimensions: theDimensions forEquation: equation];
 	GLRandomNumberOperation *rand = [[GLRandomNumberOperation alloc] initWithResult: var firstScalarOperand: min secondScalarOperand: max];
 	return rand.result;
 }
 
-+ (id) variableOfRealTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
++ (id) functionOfRealTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
-	return [self variableOfType: kGLRealDataFormat withDimensions: theDimensions forEquation: equation];
+	return [self functionOfType: kGLRealDataFormat withDimensions: theDimensions forEquation: equation];
 }
 
-+ (id) variableOfComplexTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
++ (id) functionOfComplexTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
-	return [self variableOfType: kGLSplitComplexDataFormat withDimensions: theDimensions forEquation: equation];
+	return [self functionOfType: kGLSplitComplexDataFormat withDimensions: theDimensions forEquation: equation];
 }
 
-+ (id) variableOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (id) functionOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 {	
 	BOOL isMutable = NO;
 	for (GLDimension *dimension in theDimensions) {
@@ -233,7 +233,7 @@ static BOOL prefersSpatialMultiplication = YES;
 }
 
 // Copies the data from the other variable (now!) not a delayed operation.
-+ (id) variableFromVariable: (GLFunction *) otherVariable
++ (id) functionFromFunction: (GLFunction *) otherVariable
 {
 //    [otherVariable solve];
 //    

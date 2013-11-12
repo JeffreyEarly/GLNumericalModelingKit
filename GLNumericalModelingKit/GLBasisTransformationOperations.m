@@ -95,7 +95,7 @@ static BOOL _shouldAntiAlias = NO;
 		if (dim.basisFunction == kGLDeltaBasis) {
 			continue;
 		}
-		GLFunction *k = [GLFunction variableOfRealTypeFromDimension: dim withDimensions: dimensions forEquation: equation];
+		GLFunction *k = [GLFunction functionOfRealTypeFromDimension: dim withDimensions: dimensions forEquation: equation];
 		GLFloat nyquist = dim.domainMin + dim.domainLength;
 		if (!bigK) {
 			bigK = [k multiply: k];
@@ -119,7 +119,7 @@ static BOOL _shouldAntiAlias = NO;
 	
 	
 	// expf( -alpha * powf( (k-max)/(k-cutoff), p) );
-	GLFunction *filter = [GLFunction variableOfRealTypeWithDimensions: dimensions forEquation: equation];
+	GLFunction *filter = [GLFunction functionOfRealTypeWithDimensions: dimensions forEquation: equation];
 	
 	[bigK solve];
 	
@@ -553,7 +553,7 @@ static BOOL _shouldAntiAlias = NO;
     }
     
     // Okay, we're good to go!
-    GLFunction *resultVariable = [GLFunction variableOfRealTypeWithDimensions: finalDimensions forEquation: variable.equation];
+    GLFunction *resultVariable = [GLFunction functionOfRealTypeWithDimensions: finalDimensions forEquation: variable.equation];
     resultVariable.name = variable.name;
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
@@ -786,9 +786,9 @@ static BOOL _shouldAntiAlias = NO;
     // Okay, we're good to go!
     GLFunction *resultVariable;
     if (forwardRank) {
-        resultVariable = [GLFunction variableOfComplexTypeWithDimensions: finalDimensions forEquation: variable.equation];
+        resultVariable = [GLFunction functionOfComplexTypeWithDimensions: finalDimensions forEquation: variable.equation];
     } else {
-        resultVariable = [GLFunction variableOfRealTypeWithDimensions: finalDimensions forEquation: variable.equation];
+        resultVariable = [GLFunction functionOfRealTypeWithDimensions: finalDimensions forEquation: variable.equation];
     }
     
     resultVariable.name = variable.name;
@@ -996,7 +996,7 @@ static BOOL _shouldAntiAlias = NO;
     }
     
     // Okay, we're good to go!
-    GLFunction *resultVariable = [GLFunction variableOfComplexTypeWithDimensions: finalDimensions forEquation: variable.equation];
+    GLFunction *resultVariable = [GLFunction functionOfComplexTypeWithDimensions: finalDimensions forEquation: variable.equation];
     resultVariable.name = variable.name;
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{

@@ -54,18 +54,18 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 #pragma mark
 
 // Returns a variable built from the given dimension, either a GLVariable or a GLMutableVariable.
-+ (id) variableOfRealTypeFromDimension: (GLDimension *) aDim withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
-+ (id) variableOfComplexTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (id) functionOfRealTypeFromDimension: (GLDimension *) aDim withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (id) functionOfComplexTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 
-+ (id) variableWithRandomValuesBetween: (GLFloat) min and: (GLFloat) max withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (id) functionWithRandomValuesBetween: (GLFloat) min and: (GLFloat) max withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 
 // Returns an empty variable (no value) from the given dimensions.
-+ (id) variableOfRealTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
-+ (id) variableOfComplexTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
-+ (id) variableOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (id) functionOfRealTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (id) functionOfComplexTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (id) functionOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 
 // Copies the data from the other variable (now!) not a delayed operation.
-+ (id) variableFromVariable: (GLFunction *) otherVariable;
++ (id) functionFromFunction: (GLFunction *) otherVariable;
 
 
 /************************************************/

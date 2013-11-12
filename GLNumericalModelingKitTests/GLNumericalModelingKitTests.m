@@ -113,7 +113,7 @@
 {
 	GLEquation *equation = [[GLEquation alloc] init];
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:0.0 length:4.0];
-	GLFunction *var = [GLFunction variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	GLFunction *var = [GLFunction functionOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
 	GLFunction *result = [var times: @(2.0)];
 	[result solve];
@@ -132,7 +132,7 @@
 {
 	GLEquation *equation = [[GLEquation alloc] init];
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:0.0 length:4.0];
-	GLFunction *var = [GLFunction variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	GLFunction *var = [GLFunction functionOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
 	GLFunction *result = [var plus: @(1.0)];
 	[result solve];
@@ -152,7 +152,7 @@
 	// Case I: real vector (real variable type). Testing 1.0/(1, 2, 3, 4)
 	GLEquation *equation = [[GLEquation alloc] init];
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
-	GLFunction *var = [GLFunction variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	GLFunction *var = [GLFunction functionOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
 	GLFunction *result = [var scalarDivide: 1.0];
 	[result solve];
@@ -172,7 +172,7 @@
 	// Case II: real vector (complex variable type). Testing 1.0/(1, 2, 3, 4)
 	GLEquation *equation = [[GLEquation alloc] init];
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
-	GLFunction *var = [GLFunction variableOfComplexTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	GLFunction *var = [GLFunction functionOfComplexTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
 	GLFunction *result = [var scalarDivide: 1.0];
 	[result solve];
@@ -193,7 +193,7 @@
 	// Case III: imaginary vector (complex variable type). Testing 1.0/(I*(1, 2, 3, 4))
 	GLEquation *equation = [[GLEquation alloc] init];
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
-	GLFunction *var = [GLFunction variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	GLFunction *var = [GLFunction functionOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
 	GLFunction *result = [[var swapComplex] scalarDivide: 1.0];
 	[result solve];
@@ -214,7 +214,7 @@
 	// Case III: imaginary vector (complex variable type). Testing 1.0/(1+I*1, 2+I*2, 3+I*3, 4+I*4)
 	GLEquation *equation = [[GLEquation alloc] init];
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
-	GLFunction *var = [GLFunction variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	GLFunction *var = [GLFunction functionOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
 	GLFunction *result = [[var plus: [var swapComplex]] scalarDivide: 1.0];
 	[result solve];
@@ -235,7 +235,7 @@
 	// Case I: real vector (real variable type). Testing (1, 2, 3, 4)^2.0
 	GLEquation *equation = [[GLEquation alloc] init];
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:1.0 length:4.0];
-	GLFunction *var = [GLFunction variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	GLFunction *var = [GLFunction functionOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	
 	GLFunction *result = [var pow: 2.0];
 	[result solve];
@@ -264,14 +264,14 @@
 	
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 8 domainMin: 0.0 length: 1.0];
 	
-	GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x times: @(2*2*M_PI)] sin] times: @(3.0)] plus: @(1.0)];
     GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLExponentialBasis forEquation:equation];
 	GLFunction *f_tilde = [matrix transform: f];
 	[f_tilde solve];
 	GLSplitComplex output = f_tilde.splitComplex;
 	
-	GLFunction *k = [GLFunction variableOfRealTypeFromDimension:f_tilde.dimensions[0] withDimensions:f_tilde.dimensions forEquation:equation];
+	GLFunction *k = [GLFunction functionOfRealTypeFromDimension:f_tilde.dimensions[0] withDimensions:f_tilde.dimensions forEquation:equation];
 	[k solve];
 	
 	// We have only positive frequencies, and therefore this portion of the sine function should be negative.
@@ -304,7 +304,7 @@
 	
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLInteriorGrid nPoints: 8 domainMin: 0.0 length: 1.0];
 	
-	GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
     GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLCosineHalfShiftBasis forEquation:equation];
 	GLFunction *f_tilde = [matrix transform: f];
@@ -377,13 +377,13 @@
 	
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 8 domainMin: 0.0 length: 1.0];
 	
-	GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0] scalarAdd: 1.0];
 	GLFunction *f_tilde = [f transformToBasis:@[@(kGLExponentialBasis)]];
 	[f_tilde solve];
 	GLSplitComplex output = f_tilde.splitComplex;
 	
-	GLFunction *k = [GLFunction variableOfRealTypeFromDimension:f_tilde.dimensions[0] withDimensions:f_tilde.dimensions forEquation:equation];
+	GLFunction *k = [GLFunction functionOfRealTypeFromDimension:f_tilde.dimensions[0] withDimensions:f_tilde.dimensions forEquation:equation];
 	[k solve];
 	
 	// We have only positive frequencies, and therefore this portion of the sine function should be negative.
@@ -415,7 +415,7 @@
 	
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 8 domainMin: 0.0 length: 1.0];
 	
-	GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
 	GLFunction *f_tilde = [f transformToBasis:@[@(kGLCosineBasis)]];
 	[f_tilde solve];
@@ -451,7 +451,7 @@
 	GLFloat sampleInterval = 1./(8.+1);
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 8 domainMin: sampleInterval length: 1.0-2*sampleInterval];
 	
-	GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0];
 	GLFunction *f_tilde = [f transformToBasis:@[@(kGLSineBasis)]];
 	[f_tilde solve];
@@ -485,7 +485,7 @@
 	
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLInteriorGrid nPoints: 8 domainMin: 0.0 length: 1.0];
 	
-	GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
 	GLFunction *f_tilde = [f transformToBasis:@[@(kGLCosineHalfShiftBasis)]];
 	[f_tilde solve];
@@ -519,7 +519,7 @@
 	
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLInteriorGrid nPoints: 8 domainMin: 0.0 length: 1.0];
 	
-	GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0];
 	GLFunction *f_tilde = [f transformToBasis:@[@(kGLSineHalfShiftBasis)]];
 	[f_tilde solve];
@@ -553,7 +553,7 @@
 	
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLChebyshevEndpointGrid nPoints: 8 domainMin: -1.0 length: 2.0];
 	
-	GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[x times: x] times: @(2.0)] plus: @(-1.0)];
 	GLFunction *f_tilde = [f transformToBasis:@[@(kGLChebyshevBasis)]];
 	[f_tilde solve];
@@ -705,7 +705,7 @@
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 8 domainMin: 0.0 length: 1.0];
     xDim.name = @"x";
 	
-	GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x times: @(2*2*M_PI)] sin] times: @(3.0)] plus: @(1.0)];
     
     GLFunction *fdiff = [[f x] spatialDomain];
@@ -736,7 +736,7 @@
 {
     GLEquation *equation = [[GLEquation alloc] init];
 	GLDimension *dim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:4 domainMin:0.0 length:4.0];
-	GLFunction *var = [GLFunction variableOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+	GLFunction *var = [GLFunction functionOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
 	GLFunction *result = [[var times: @(2.0)] plus: @(1.0)];
     
     Class newOperationClass = [GLVariableOperation variableOperationSubclassWithOperand: @[var] result: @[result]];
@@ -763,7 +763,7 @@
     GLEquation *equation = [[GLEquation alloc] init];
     GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 64 domainMin: 0 length: 20];
     xDim.name = @"x";
-    GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation:equation];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation:equation];
     GLFloat x0 = 11;
     GLFunction *gaussian = [[[[x plus: @(-x0)] times: [x plus: @(-x0)]] negate] exponentiate];
     
@@ -797,7 +797,7 @@
     GLEquation *equation = [[GLEquation alloc] init];
     GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 64 domainMin: 0 length: 20];
     xDim.name = @"x";
-    GLFunction *x = [GLFunction variableOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation:equation];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation:equation];
     GLFloat x0 = 11;
     GLFunction *gaussian = [[[[x plus: @(-x0)] times: [x plus: @(-x0)]] negate] exponentiate];
     

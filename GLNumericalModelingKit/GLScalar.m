@@ -26,6 +26,11 @@
 	return [[GLScalar alloc] initWithValue: aValue forEquation: anEquation];
 }
 
++ (GLScalar *) scalarWithType: (GLDataFormat) format forEquation: (GLEquation *) anEquation;
+{
+	return [[GLScalar alloc] initWithType: format forEquation: anEquation];
+}
+
 - (GLScalar *) initWithType: (GLDataFormat) format forEquation: (GLEquation *) anEquation
 {
 	if ((self = [super initWithType: format withEquation:anEquation])) {

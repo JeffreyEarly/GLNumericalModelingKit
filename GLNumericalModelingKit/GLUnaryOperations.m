@@ -451,7 +451,7 @@
 
 - (GLMaxOperation *) initWithFunction: (GLFunction *) variable
 {
-	GLFunction *resultVariable = [GLFunction variableOfRealTypeWithDimensions: [NSArray array] forEquation: variable.equation];
+	GLFunction *resultVariable = [GLFunction functionOfRealTypeWithDimensions: [NSArray array] forEquation: variable.equation];
 	
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{		
@@ -480,7 +480,7 @@
 	NSMutableArray *newDimensions = [variable.dimensions mutableCopy];
 	[newDimensions removeObjectAtIndex: index];
 	
-	GLFunction *resultVariable = [GLFunction variableOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
+	GLFunction *resultVariable = [GLFunction functionOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
 	
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
