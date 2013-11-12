@@ -18,7 +18,7 @@
 @interface GLVectorScalarOperation : GLVariableOperation
 
 // Init with only the operand to automatically create the target variable.
-- (id) initWithVectorOperand: (GLTensor *) vOperand scalarOperand: (GLFloat) sOperand;
+- (id) initWithVectorOperand: (GLVariable *) vOperand scalarOperand: (GLFloat) sOperand;
 
 @property(readwrite, assign, nonatomic) GLFloat scalarOperand;
 

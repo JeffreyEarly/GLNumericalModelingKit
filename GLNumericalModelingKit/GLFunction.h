@@ -7,7 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import <GLNumericalModelingKit/GLTensor.h>
+#import <GLNumericalModelingKit/GLVariable.h>
 #import <GLNumericalModelingKit/GLDimension.h>
 #import <GLNumericalModelingKit/GLScalar.h>
 
@@ -22,7 +22,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 };
 
 @class GLEquation, GLVariableOperation, GLDifferentialOperator;
-@interface GLFunction : GLTensor
+@interface GLFunction : GLVariable
 
 // Variables do not get computed immediately and should only be computed when absolutely needed or a choke point has been reached.
 // This minimizes the amount of memory and computation required. If we computed a variable's value immediately (like [psi x]),

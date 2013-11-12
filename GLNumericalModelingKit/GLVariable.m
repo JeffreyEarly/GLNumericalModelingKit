@@ -6,7 +6,7 @@
 //  Copyright (c) 2013 Jeffrey J. Early. All rights reserved.
 //
 
-#import "GLTensor.h"
+#import "GLVariable.h"
 
 #import "GLMemoryPool.h"
 #import "GLNetCDFFile.h"
@@ -16,7 +16,7 @@
 #import "GLVectorScalarOperations.h"
 #include <mach/mach_time.h>
 
-@interface GLTensor ()
+@interface GLVariable ()
 @property(readwrite, strong, nonatomic) NSMutableDictionary *metadata;
 @property(readwrite, assign, nonatomic) NSUInteger uniqueID;
 @property(readwrite, strong, nonatomic) NSMutableData *data;
@@ -34,9 +34,9 @@ GLSplitComplex splitComplexFromData( NSData *data )
 	return fbar;
 }
 
-@implementation GLTensor
+@implementation GLVariable
 
-+ (GLTensor *) variableWithPrototype: (GLTensor *) variable
++ (GLVariable *) variableWithPrototype: (GLVariable *) variable
 {
     if (variable.rank == 0) {
         GLScalar *scalar = (GLScalar *) variable;
@@ -177,7 +177,7 @@ GLSplitComplex splitComplexFromData( NSData *data )
 
 - (BOOL) isEqual: (id) otherObject
 {
-	return ([[self class] isSubclassOfClass: [otherObject class]] && self.uniqueID == [(GLTensor *)otherObject uniqueID]);
+	return ([[self class] isSubclassOfClass: [otherObject class]] && self.uniqueID == [(GLVariable *)otherObject uniqueID]);
 }
 
 - (NSUInteger)hash {
@@ -192,7 +192,7 @@ GLSplitComplex splitComplexFromData( NSData *data )
 #pragma mark Operations
 #pragma mark
 
-- (GLTensor *) plus: (id) otherVariable
+- (GLVariable *) plus: (id) otherVariable
 {
 	GLVariableOperation *operation;
 	if ([[otherVariable class] isSubclassOfClass: [NSNumber class]]) {
@@ -204,7 +204,7 @@ GLSplitComplex splitComplexFromData( NSData *data )
 	return operation.result[0];
 }
 
-- (GLTensor *) minus: (id) otherVariable
+- (GLVariable *) minus: (id) otherVariable
 {
 	GLVariableOperation *operation;
 	if ([[otherVariable class] isSubclassOfClass: [NSNumber class]]) {
@@ -216,7 +216,7 @@ GLSplitComplex splitComplexFromData( NSData *data )
 	return operation.result[0];
 }
 
-- (GLTensor *) multiply: (id) otherVariable
+- (GLVariable *) multiply: (id) otherVariable
 {
 	GLVariableOperation *operation;
 	if ([[otherVariable class] isSubclassOfClass: [NSNumber class]]) {
@@ -242,7 +242,7 @@ GLSplitComplex splitComplexFromData( NSData *data )
 	return nil;
 }
 
-- (GLTensor *) times: (id) otherVariable
+- (GLVariable *) times: (id) otherVariable
 {
 	GLVariableOperation *operation;
 	if ([[otherVariable class] isSubclassOfClass: [NSNumber class]]) {

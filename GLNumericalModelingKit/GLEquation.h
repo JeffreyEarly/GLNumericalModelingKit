@@ -11,7 +11,7 @@
 #import <GLNumericalModelingKit/Precision.h>
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 
-@class GLDimension, GLFunction, GLTensor;
+@class GLDimension, GLFunction, GLVariable;
 @interface GLEquation : NSObject
 
 // An equation can be thought of as the "controller" of the variables, in the MVC paradigm.
@@ -48,9 +48,9 @@
 // Perform the computation. You don't need (or want) to do this after every operation, but instead
 // call this when you reach a choke point. A choke point would be a place where you actually finally
 // need the data from the variable, or a place where you *know* you won't benefit from parallization.
-- (void) solveForVariable: (GLTensor *) aVariable;
+- (void) solveForVariable: (GLVariable *) aVariable;
 
-- (void) solveForVariable: (GLTensor *) aVariable waitUntilFinished: (BOOL) shouldWait;
+- (void) solveForVariable: (GLVariable *) aVariable waitUntilFinished: (BOOL) shouldWait;
 
 - (void) solveForOperation: (GLVariableOperation *) anOperation waitUntilFinished: (BOOL) shouldWait;
 

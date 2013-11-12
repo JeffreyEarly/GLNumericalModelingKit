@@ -109,14 +109,14 @@
         
         // 3. create the operand variable prototypes.
         self.operandVariablePrototypes = [NSMutableArray array];
-        for (GLTensor *variable in self.topVariables) {
-            [self.operandVariablePrototypes addObject: [GLTensor variableWithPrototype: variable]];
+        for (GLVariable *variable in self.topVariables) {
+            [self.operandVariablePrototypes addObject: [GLVariable variableWithPrototype: variable]];
         }
         
         // 4. create the result variable prototypes.
         self.resultVariablePrototypes = [NSMutableArray array];
-        for (GLTensor *variable in self.bottomVariables) {
-            [self.resultVariablePrototypes addObject: [GLTensor variableWithPrototype: variable]];
+        for (GLVariable *variable in self.bottomVariables) {
+            [self.resultVariablePrototypes addObject: [GLVariable variableWithPrototype: variable]];
         }
         
 	}

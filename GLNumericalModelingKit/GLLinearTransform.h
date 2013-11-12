@@ -33,7 +33,7 @@ typedef NSUInteger GLLinearTransformType;
 // The first argument indicates the row/destination indices, the second argument indicates the column/starting indices.
 typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 
-@interface GLLinearTransform : GLTensor
+@interface GLLinearTransform : GLVariable
 
 /************************************************/
 /*		Initialization							*/

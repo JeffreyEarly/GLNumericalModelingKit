@@ -15,14 +15,14 @@
 #import "GLOperationOptimizer.h"
 
 @interface GLElementErrorOperation : GLVariableOperation
-- (id) initWithFirstOperand: (GLTensor *) yerrVar secondOperand: (GLTensor *) yVar relativeError: (GLScalar *) relErr absoluteError: (GLScalar *) absErr;
+- (id) initWithFirstOperand: (GLVariable *) yerrVar secondOperand: (GLVariable *) yVar relativeError: (GLScalar *) relErr absoluteError: (GLScalar *) absErr;
 @end
 
 @implementation GLElementErrorOperation
 
 // *element-wise*
 // |y_err|/max( relTolerance*|y|, absoluteTolerance ) <= 1
-- (id) initWithFirstOperand: (GLTensor *) yerrVar secondOperand: (GLTensor *) yVar relativeError: (GLScalar *) relErr absoluteError: (GLScalar *) absErr
+- (id) initWithFirstOperand: (GLVariable *) yerrVar secondOperand: (GLVariable *) yVar relativeError: (GLScalar *) relErr absoluteError: (GLScalar *) absErr
 {
     GLScalar *errorOut = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: yerrVar.equation];
     GLBuffer *aBuffer = [[GLBuffer alloc] initWithLength: yerrVar.dataBytes];
@@ -212,8 +212,8 @@ BOOL isOne( NSNumber *a )
 		
 		self.previousY = [NSMutableArray array];
 		self.previousYData = [NSMutableArray array];
-		for (GLTensor *variable in operand ) {
-			[self.previousY addObject: [GLTensor variableWithPrototype: variable]];
+		for (GLVariable *variable in operand ) {
+			[self.previousY addObject: [GLVariable variableWithPrototype: variable]];
 			[self.previousYData addObject: [[self.previousY lastObject] data]];
 		}
 	}
@@ -325,8 +325,8 @@ BOOL isOne( NSNumber *a )
 	NSMutableArray *yout = [[NSMutableArray alloc] initWithCapacity: self.result.count];
 	NSMutableArray *resultBuffer = [[NSMutableArray alloc] initWithCapacity: self.result.count];
 	NSMutableArray *operandBuffer = [[NSMutableArray alloc] initWithCapacity: self.operand.count];
-	for (GLTensor *variable in self.result) {
-		GLTensor *newVar = [GLTensor variableWithPrototype: variable];
+	for (GLVariable *variable in self.result) {
+		GLVariable *newVar = [GLVariable variableWithPrototype: variable];
 		[yout addObject: newVar];
 		[resultBuffer addObject: newVar.data];
 	}
@@ -352,8 +352,8 @@ BOOL isOne( NSNumber *a )
         // the input. This could be bad if happened to take too large of a step.
         NSMutableArray *youtOut = [[NSMutableArray alloc] initWithCapacity: self.result.count];
         NSMutableArray *resultBufferOut= [[NSMutableArray alloc] initWithCapacity: self.result.count];
-        for (GLTensor *variable in self.result) {
-            GLTensor *newVar = [GLTensor variableWithPrototype: variable];
+        for (GLVariable *variable in self.result) {
+            GLVariable *newVar = [GLVariable variableWithPrototype: variable];
             [youtOut addObject: newVar];
             [resultBufferOut addObject: newVar.data];
         }
@@ -670,7 +670,7 @@ BOOL isOne( NSNumber *a )
 		for (GLFunction *variable in operand ) {
 			[self.relativeToleranceVariables addObject: [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [operand[0] equation]]];
 			[self.absoluteToleranceVariables addObject: [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [operand[0] equation]]];
-			[self.errorVariables addObject: [GLTensor variableWithPrototype: variable]];
+			[self.errorVariables addObject: [GLVariable variableWithPrototype: variable]];
 			[self.relativeToleranceData addObject: [[self.relativeToleranceVariables lastObject] data]];
 			[self.absoluteToleranceData addObject: [[self.absoluteToleranceVariables lastObject] data]];
 			[self.errorData addObject: [[self.errorVariables lastObject] data]];
@@ -793,7 +793,7 @@ BOOL isOne( NSNumber *a )
 	if (isFSAL) {
 		[topVariables addObjectsFromArray: f[0]];
 	}
-    for (GLTensor *var in f[0]) {
+    for (GLVariable *var in f[0]) {
         var.name = @"f[0]";
     }
 	
@@ -807,13 +807,13 @@ BOOL isOne( NSNumber *a )
 	if (shouldRetainPreviousY) {
 		[bottomVariables addObjectsFromArray: yold];
 	}
-    for (GLTensor *var in yout) {
+    for (GLVariable *var in yout) {
         var.name = @"y_out";
     }
-    for (GLTensor *var in error) {
+    for (GLVariable *var in error) {
         var.name = @"error_out";
     }
-    for (GLTensor *var in f[numStages-1]) {
+    for (GLVariable *var in f[numStages-1]) {
         var.name = @"f[n]";
     }
     
@@ -829,8 +829,8 @@ BOOL isOne( NSNumber *a )
 	GLOperationVisualizer *vizualizer = [[GLOperationVisualizer alloc] initWithTopVariables: topVariables bottomVariables: bottomVariables];
     
     NSMutableArray *resultPrototypes = [NSMutableArray array];
-    for (GLTensor *var in yout) {
-        [resultPrototypes addObject: [GLTensor variableWithPrototype: var]];
+    for (GLVariable *var in yout) {
+        [resultPrototypes addObject: [GLVariable variableWithPrototype: var]];
     }
     
 	if ((self=[self initWithResult: resultPrototypes operand: y])) {
@@ -852,11 +852,11 @@ BOOL isOne( NSNumber *a )
 			self.lastStageVariables = [NSMutableArray array];
 			self.lastStageData = [NSMutableArray array];
 			for (GLFunction *variable in f[0]) {
-				[self.firstStageVariables addObject: [GLTensor variableWithPrototype: variable]];
+				[self.firstStageVariables addObject: [GLVariable variableWithPrototype: variable]];
 				[self.firstStageData addObject: [[self.firstStageVariables lastObject] data]];
 			}
 			for (GLFunction *variable in f[numStages-1]) {
-				[self.lastStageVariables addObject: [GLTensor variableWithPrototype: variable]];
+				[self.lastStageVariables addObject: [GLVariable variableWithPrototype: variable]];
 				[self.lastStageData addObject: [[self.lastStageVariables lastObject] data]];
 			}
 			
@@ -1006,8 +1006,8 @@ BOOL isOne( NSNumber *a )
 		NSMutableArray *yout = [[NSMutableArray alloc] initWithCapacity: self.result.count];
 		NSMutableArray *resultBuffer = [[NSMutableArray alloc] initWithCapacity: self.result.count];
 		NSMutableArray *operandBuffer = [[NSMutableArray alloc] initWithCapacity: self.operand.count];
-		for (GLTensor *variable in self.result) {
-			GLTensor *newVar = [GLTensor variableWithPrototype: variable];
+		for (GLVariable *variable in self.result) {
+			GLVariable *newVar = [GLVariable variableWithPrototype: variable];
 			[yout addObject: newVar];
 			[resultBuffer addObject: newVar.data];
 		}

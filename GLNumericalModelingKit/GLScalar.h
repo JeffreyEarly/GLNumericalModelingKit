@@ -7,9 +7,9 @@
 //
 
 
-#import <GLNumericalModelingKit/GLTensor.h>
+#import <GLNumericalModelingKit/GLVariable.h>
 
-@interface GLScalar : GLTensor
+@interface GLScalar : GLVariable
 
 + (GLScalar *) scalarWithValue: (GLFloatComplex) aValue forEquation: (GLEquation *) anEquation;
 

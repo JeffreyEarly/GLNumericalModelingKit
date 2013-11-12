@@ -18,7 +18,7 @@
  @returns The result C.
  */
 @interface GLAdditionOperation : GLVariableOperation
-- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
+- (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B;
 @end
 
 
@@ -31,7 +31,7 @@
  @returns The result C.
  */
 @interface GLSubtractionOperation : GLVariableOperation
-- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
+- (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B;
 @end
 
 
@@ -44,7 +44,7 @@
  @returns The result C.
  */
 @interface GLMultiplicationOperation : GLVariableOperation
-- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
+- (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B;
 @end
 
 /************************************************/
@@ -57,10 +57,10 @@
  */
 @interface GLDivisionOperation : GLVariableOperation
 
-- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
+- (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B;
 
 // You can optionally set useComplexDivision to NO, and it will simply do an element-wise divide, ignoring complex math.
-- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B shouldUseComplexArithmetic: (BOOL) useComplexArithmetic;
+- (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B shouldUseComplexArithmetic: (BOOL) useComplexArithmetic;
 @property BOOL useComplexArithmetic;
 
 @end
@@ -74,7 +74,7 @@
  @returns The result C, a tensor of the same rank in the same format.
  */
 @interface GLAbsoluteLargestOperation : GLVariableOperation
-- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B;
+- (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B;
 @end
 
 

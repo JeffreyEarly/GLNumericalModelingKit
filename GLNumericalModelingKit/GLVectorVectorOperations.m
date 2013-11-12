@@ -17,14 +17,14 @@
 
 @implementation GLAdditionOperation
 
-- (id) initWithFirstOperand: (GLTensor *) fOperand secondOperand: (GLTensor *) sOperand;
+- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
 {
     // We order the operands so that scalars are always in the first position.
     // We can do this in this case because order doesn't matter for addition.
     GLDataFormat format = (fOperand.isPurelyReal && sOperand.isPurelyReal) ? kGLRealDataFormat : kGLSplitComplexDataFormat;
-    GLTensor *op1 = (sOperand.rank < fOperand.rank) ? sOperand : fOperand;
-    GLTensor *op2 = (sOperand.rank < fOperand.rank) ? fOperand : sOperand;
-    GLTensor *result;
+    GLVariable *op1 = (sOperand.rank < fOperand.rank) ? sOperand : fOperand;
+    GLVariable *op2 = (sOperand.rank < fOperand.rank) ? fOperand : sOperand;
+    GLVariable *result;
 	variableOperation operation;
 	NSString *graphvisDescription;
 	
@@ -254,15 +254,15 @@
 
 @implementation GLSubtractionOperation
 
-- (id) initWithFirstOperand: (GLTensor *) fOperand secondOperand: (GLTensor *) sOperand;
+- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
 {
     // We order the operands so that scalars are always in the first position.
     // We can do this in this case because order doesn't matter for addition.
     GLDataFormat format = (fOperand.isPurelyReal && sOperand.isPurelyReal) ? kGLRealDataFormat : kGLSplitComplexDataFormat;
-    GLTensor *op1 = (sOperand.rank < fOperand.rank) ? sOperand : fOperand;
-    GLTensor *op2 = (sOperand.rank < fOperand.rank) ? fOperand : sOperand;
+    GLVariable *op1 = (sOperand.rank < fOperand.rank) ? sOperand : fOperand;
+    GLVariable *op2 = (sOperand.rank < fOperand.rank) ? fOperand : sOperand;
 	BOOL didSwap = sOperand.rank < fOperand.rank;
-    GLTensor *result;
+    GLVariable *result;
 	variableOperation operation;
 	NSString *graphvisDescription;
 	
@@ -608,7 +608,7 @@
 
 @synthesize canOperateInPlace;
 
-- (id) initWithFirstOperand: (GLTensor *) firstOperand secondOperand: (GLTensor *) secondOperand;
+- (id) initWithFirstOperand: (GLVariable *) firstOperand secondOperand: (GLVariable *) secondOperand;
 {
 	/********************************************************************/
 	/*		vector - lower dimensional vector multiplication			*/
@@ -732,10 +732,10 @@
 	// We order the operands so that scalars are always in the first position.
     // We can do this in this case because order doesn't matter for addition.
     GLDataFormat format = (firstOperand.isPurelyReal && secondOperand.isPurelyReal) ? kGLRealDataFormat : kGLSplitComplexDataFormat;
-    GLTensor *op1 = (secondOperand.rank < firstOperand.rank) ? secondOperand : firstOperand;
-    GLTensor *op2 = (secondOperand.rank < firstOperand.rank) ? firstOperand : secondOperand;
+    GLVariable *op1 = (secondOperand.rank < firstOperand.rank) ? secondOperand : firstOperand;
+    GLVariable *op2 = (secondOperand.rank < firstOperand.rank) ? firstOperand : secondOperand;
 	BOOL didSwap = secondOperand.rank < firstOperand.rank;
-    GLTensor *result;
+    GLVariable *result;
 	variableOperation operation;
 	NSString *graphvisDescription;
 	
@@ -843,7 +843,7 @@
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex real function, complex function)"];
 						implementationCase = 10;
 					} else if (op1.isPurelyImaginary && op2.isPurelyReal) {
-						GLTensor *tmp = op1;
+						GLVariable *tmp = op1;
 						op1 = op2;
 						op2 = tmp;
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex imaginary function, complex real function)"];
@@ -855,13 +855,13 @@
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex imaginary function, complex function)"];
 						implementationCase = 12;
 					} else if (op2.isPurelyReal) {
-						GLTensor *tmp = op1;
+						GLVariable *tmp = op1;
 						op1 = op2;
 						op2 = tmp;
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex real function, complex function)"];
 						implementationCase = 10;
 					} else if (op2.isPurelyImaginary) {
-						GLTensor *tmp = op1;
+						GLVariable *tmp = op1;
 						op1 = op2;
 						op2 = tmp;
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex imaginary function, complex function)"];
@@ -941,7 +941,7 @@
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex real matrix, complex function)"];
 						implementationCase = 10;
 					} else if (op1.isPurelyImaginary && op2.isPurelyReal) {
-						GLTensor *tmp = op1;
+						GLVariable *tmp = op1;
 						op1 = op2;
 						op2 = tmp;
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex imaginary matrix, complex real function)"];
@@ -953,13 +953,13 @@
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex imaginary matrix, complex function)"];
 						implementationCase = 12;
 					} else if (op2.isPurelyReal) {
-						GLTensor *tmp = op1;
+						GLVariable *tmp = op1;
 						op1 = op2;
 						op2 = tmp;
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex real matrix, complex function)"];
 						implementationCase = 10;
 					} else if (op2.isPurelyImaginary) {
-						GLTensor *tmp = op1;
+						GLVariable *tmp = op1;
 						op1 = op2;
 						op2 = tmp;
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex imaginary matrix, complex function)"];
@@ -1013,7 +1013,7 @@
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex real matrix, complex matrix)"];
 						implementationCase = 10;
 					} else if (op1.isPurelyImaginary && op2.isPurelyReal) {
-						GLTensor *tmp = op1;
+						GLVariable *tmp = op1;
 						op1 = op2;
 						op2 = tmp;
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex imaginary matrix, complex real matrix)"];
@@ -1025,13 +1025,13 @@
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex imaginary matrix, complex matrix)"];
 						implementationCase = 12;
 					} else if (op2.isPurelyReal) {
-						GLTensor *tmp = op1;
+						GLVariable *tmp = op1;
 						op1 = op2;
 						op2 = tmp;
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex real matrix, complex matrix)"];
 						implementationCase = 10;
 					} else if (op2.isPurelyImaginary) {
-						GLTensor *tmp = op1;
+						GLVariable *tmp = op1;
 						op1 = op2;
 						op2 = tmp;
 						graphvisDescription = [NSString stringWithFormat: @"multiply (complex imaginary matrix, complex matrix)"];
@@ -1168,14 +1168,14 @@
 // variable = leftVariable / rightVariable
 @implementation GLDivisionOperation
 
-- (id) initWithFirstOperand: (GLTensor *) A secondOperand: (GLTensor *) B {
+- (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B {
 	return [self initWithFirstOperand: A secondOperand: B shouldUseComplexArithmetic: YES];
 }
 
-- (id) initWithFirstOperand: (GLTensor *) op1 secondOperand: (GLTensor *) op2 shouldUseComplexArithmetic: (BOOL) useComplexArithmetic
+- (id) initWithFirstOperand: (GLVariable *) op1 secondOperand: (GLVariable *) op2 shouldUseComplexArithmetic: (BOOL) useComplexArithmetic
 {
 	GLDataFormat format = (op1.isPurelyReal && op2.isPurelyReal) ? kGLRealDataFormat : kGLSplitComplexDataFormat;
-	GLTensor *result;
+	GLVariable *result;
 	variableOperation operation;
 	NSString *graphvisDescription;
 	
@@ -1336,7 +1336,7 @@
 
 @implementation GLAbsoluteLargestOperation
 
-- (id) initWithFirstOperand: (GLTensor *) fOperand secondOperand: (GLTensor *) sOperand;
+- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
 {
 	if (fOperand.isComplex != sOperand.isComplex) {
 		[NSException raise: @"FormatMismatch" format: @"Both tensors must be in the same format."];
@@ -1344,9 +1344,9 @@
 	
     // We order the operands so that scalars are always in the first position.
     // We can do this in this case because order doesn't matter for addition.
-    GLTensor *op1 = (sOperand.rank < fOperand.rank) ? sOperand : fOperand;
-    GLTensor *op2 = (sOperand.rank < fOperand.rank) ? fOperand : sOperand;
-    GLTensor *result;
+    GLVariable *op1 = (sOperand.rank < fOperand.rank) ? sOperand : fOperand;
+    GLVariable *op2 = (sOperand.rank < fOperand.rank) ? fOperand : sOperand;
+    GLVariable *result;
 	NSUInteger nDataElements = op1.nDataElements;
 	NSString *graphvisDescription;
 	NSUInteger implementationCase = 0;
@@ -1359,7 +1359,7 @@
             graphvisDescription = @"element-wise max (scalar)";
         } else {
             implementationCase = 2;
-            result = [GLTensor variableWithPrototype: op2];
+            result = [GLVariable variableWithPrototype: op2];
             graphvisDescription = @"element-wise max (scalar, vector)";
         }
 	}
@@ -1372,7 +1372,7 @@
                 [NSException raise: @"DimensionsNotEqualException" format: @"Cannot compare two functions of different dimensions"];
             }
             implementationCase = 1;
-            result = [GLTensor variableWithPrototype: op2];
+            result = [GLVariable variableWithPrototype: op2];
             graphvisDescription = @"element-wise max (function)";
         } else {
             [NSException raise: @"FormatMismatch" format: @"You can't compare a function with a linear transform."];
@@ -1392,7 +1392,7 @@
 			[NSException raise: @"UnsupportedMatrixFormatException" format: @"Cannot compare two matrices in different formats using this operation."];
 		}
 		implementationCase = 1;
-		result = [GLTensor variableWithPrototype: op2];
+		result = [GLVariable variableWithPrototype: op2];
 		graphvisDescription = @"element-wise max (matrix)";
 	}
 	result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;

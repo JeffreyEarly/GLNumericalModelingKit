@@ -11,7 +11,7 @@
 #import <GLNumericalModelingKit/GLEquation.h>
 
 #import <GLNumericalModelingKit/GLDimension.h>
-#import <GLNumericalModelingKit/GLTensor.h>
+#import <GLNumericalModelingKit/GLVariable.h>
 #import <GLNumericalModelingKit/GLScalar.h>
 #import <GLNumericalModelingKit/GLFunction.h>
 #import <GLNumericalModelingKit/GLLinearTransform.h>

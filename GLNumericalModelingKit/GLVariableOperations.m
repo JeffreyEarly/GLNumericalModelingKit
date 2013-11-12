@@ -171,7 +171,7 @@
 	if (( self = [super init] ))
 	{
 		NSMutableArray *array = [[NSMutableArray alloc] initWithCapacity: operand.count];
-		for (GLTensor *variable in operand) {
+		for (GLVariable *variable in operand) {
 			if (variable.rank == 0) {
 				GLScalar *scalar = (GLScalar *) variable;
 				[array addObject: [[GLScalar alloc] initWithType: scalar.dataFormat forEquation:scalar.equation]];
