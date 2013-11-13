@@ -251,6 +251,78 @@
 }
 
 /************************************************/
+/*		Interpolation Tests                     */
+/************************************************/
+
+#pragma mark -
+#pragma mark Interpolation Tests
+#pragma mark
+
+- (void) test1DEndpointInterpolation
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:5 domainMin:0.0 length:4.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+    GLFunction *xpos = [x plus: @(-1.75)];
+    GLFunction *interpolatedFunction = [x interpolateAtPoints: @[xpos]];
+    
+    // 0.0, 1.0, 2.0, 3.0, 4.0
+    GLFloat expected[5] = {0.0, 0.0, 0.25, 1.25, 2.25};
+    [interpolatedFunction solve];
+    GLFloat *output = interpolatedFunction.pointerValue;
+    for (int i=0; i<5; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+    
+    xpos = [x plus: @(1.75)];
+    interpolatedFunction = [x interpolateAtPoints: @[xpos]];
+    
+    // 0.0, 1.0, 2.0, 3.0, 4.0
+    GLFloat expected2[5] = {1.75, 2.75, 3.75, 4.0, 4.0};
+    [interpolatedFunction solve];
+    output = interpolatedFunction.pointerValue;
+    for (int i=0; i<5; i++) {
+		if ( !fequal(output[i], expected2[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected2[i], output[i]);
+		}
+	}
+}
+
+- (void) test1DPeriodicInterpolation
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:5 domainMin:0.0 length:5.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+    GLFunction *xpos = [x plus: @(-1.75)];
+    GLFunction *interpolatedFunction = [x interpolateAtPoints: @[xpos]];
+    
+    // 0.0, 1.0, 2.0, 3.0, 4.0
+    GLFloat expected[5] = {3.25, 3.00, 0.25, 1.25, 2.25};
+    [interpolatedFunction solve];
+    GLFloat *output = interpolatedFunction.pointerValue;
+    for (int i=0; i<5; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+    
+    xpos = [x plus: @(1.75)];
+    interpolatedFunction = [x interpolateAtPoints: @[xpos]];
+    
+    // 0.0, 1.0, 2.0, 3.0, 4.0
+    GLFloat expected2[5] = {1.75, 2.75, 3.75, 1.0, 0.75};
+    [interpolatedFunction solve];
+    output = interpolatedFunction.pointerValue;
+    for (int i=0; i<5; i++) {
+		if ( !fequal(output[i], expected2[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected2[i], output[i]);
+		}
+	}
+}
+
+/************************************************/
 /*		Transform Tests							*/
 /************************************************/
 
