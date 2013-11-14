@@ -18,7 +18,7 @@
 	
 	NSUInteger nDims = startingPoints.count;
 	NSUInteger nVertices = nDims+1;
-	GLFloat ftol = 1e-2;
+	GLFloat ftol = 1e-3;
 	
 	// resultArray contains nDim GLScalar variables with the minimum point, followed by a single GLScalar variable with the value at that point.
 	NSMutableArray *resultPrototypes = [NSMutableArray array];
@@ -131,17 +131,6 @@
 			return *resultY;
 		};
 		
-		GLFloat *y0 = y[0];
-		GLFloat *y1 = y[1];
-		GLFloat *y2 = y[2];
-		
-		GLFloat *p0_x = vertices[0];
-		GLFloat *p0_y = vertices[1];
-		GLFloat *p1_x = vertices[2];
-		GLFloat *p1_y = vertices[3];
-		GLFloat *p2_x = vertices[4];
-		GLFloat *p2_y = vertices[5];
-		
 		compute_psum();
 		NSUInteger nFunctionEvaluations = 0;
 		while (1)
@@ -173,6 +162,7 @@
 					resultVertex[iDim][0] = vertices[ilo*nDims + iDim][0];
 				}
 				*resultY = y[ilo][0];
+				NSLog(@"Total function evaluations: %lu", nFunctionEvaluations);
 				
 				free(vertices); free(y); free(psum); free(resultVertex);
 				break;

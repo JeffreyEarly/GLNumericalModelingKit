@@ -334,7 +334,8 @@
 {
 	GLEquation *equation = [[GLEquation alloc] init];
 	GLScalar *start = [GLScalar scalarWithValue: 1.0 forEquation: equation];
-	GLScalar *direction = [GLScalar scalarWithValue: 0.351 forEquation: equation];
+	// Starting the direction with 1.0 or 0.5 causes the algorithm to fail to converge!.
+	GLScalar *direction = [GLScalar scalarWithValue: 0.3513 forEquation: equation];
 	GLMinimizationOperation *minimizer = [[GLMinimizationOperation alloc] initAtPoint: @[start] withDeltas: @[direction] forFunction: ^(NSArray *xArray) {
 		GLScalar *x = xArray[0];
 		return [[x plus: @(-5)] times: [x plus: @(-5)]];
