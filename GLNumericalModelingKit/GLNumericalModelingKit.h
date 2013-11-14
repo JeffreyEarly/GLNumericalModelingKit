@@ -20,6 +20,7 @@
 #import <GLNumericalModelingKit/GLMatrixDescription.h>
 
 #import <GLNumericalModelingKit/GLVariableOperations.h>
+#import <GLNumericalModelingKit/GLMinimizationOperation.h>
 #import <GLNumericalModelingKit/GLRungeKuttaOperation.h>
 #import <GLNumericalModelingKit/GLSimpleInterpolationOperations.h>
 #import <GLNumericalModelingKit/GLBasisTransformationOperations.h>

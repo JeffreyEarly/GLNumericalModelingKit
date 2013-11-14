@@ -51,8 +51,12 @@
 	GLDataFormat format = cimag(aValue) == 0.0 ? kGLRealDataFormat : kGLSplitComplexDataFormat;
 	
 	if ((self = [self initWithType: format forEquation: anEquation])) {
-		self.splitComplex.realp[0] = creal(aValue);
-		self.splitComplex.imagp[0] = cimag(aValue);
+		if (format == kGLSplitComplexDataFormat) {
+			self.splitComplex.realp[0] = creal(aValue);
+			self.splitComplex.imagp[0] = cimag(aValue);
+		} else {
+			self.pointerValue[0] = creal(aValue);
+		}
 	}
 	
 	return self;

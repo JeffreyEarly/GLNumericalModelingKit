@@ -323,6 +323,67 @@
 }
 
 /************************************************/
+/*		Minimization Tests						*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Minimization Tests
+#pragma mark
+
+- (void) test1DMinimization
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLScalar *start = [GLScalar scalarWithValue: 1.0 forEquation: equation];
+	GLScalar *direction = [GLScalar scalarWithValue: 0.351 forEquation: equation];
+	GLMinimizationOperation *minimizer = [[GLMinimizationOperation alloc] initAtPoint: @[start] withDeltas: @[direction] forFunction: ^(NSArray *xArray) {
+		GLScalar *x = xArray[0];
+		return [[x plus: @(-5)] times: [x plus: @(-5)]];
+	}];
+	
+	GLScalar *minPoint = minimizer.result[0];
+	GLScalar *minValue = minimizer.result[1];
+		
+	if ( !fequal(minPoint.pointerValue[0], 5.0) ) {
+		XCTFail(@"Expected %f, found %f.", 5.0, minPoint.pointerValue[0]);
+	}
+	
+	if ( !fequal(minValue.pointerValue[0], 0.0) ) {
+		XCTFail(@"Expected %f, found %f.", 0.0, minValue.pointerValue[0]);
+	}
+}
+
+- (void) test2DMinimization
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	NSMutableArray *start = [NSMutableArray array];
+	start[0] = [GLScalar scalarWithValue: 3.0 forEquation: equation];
+	start[1] = [GLScalar scalarWithValue: 10.0 forEquation: equation];
+	
+	NSMutableArray *direction = [NSMutableArray array];
+	direction[0] = [GLScalar scalarWithValue: 0.351 forEquation: equation];
+	direction[1] = [GLScalar scalarWithValue: 0.426 forEquation: equation];
+	
+	GLMinimizationOperation *minimizer = [[GLMinimizationOperation alloc] initAtPoint: start withDeltas: direction forFunction: ^(NSArray *xArray) {
+		GLScalar *x = xArray[0];
+		GLScalar *y = xArray[1];
+		return [[[x plus: @(-1)] times: [x plus: @(-1)]] plus: [[y plus: @(-2)] times: [y plus: @(-2)]]];
+	}];
+	
+	GLScalar *minXPoint = minimizer.result[0];
+	GLScalar *minYPoint = minimizer.result[1];
+	GLScalar *minValue = minimizer.result[2];
+	
+	if ( !fequal(minXPoint.pointerValue[0], 1.0) || !fequal(minYPoint.pointerValue[0], 2.0) ) {
+		XCTFail(@"Expected (%f, %f), found (%f, %f).", 1.0, 2.0, minXPoint.pointerValue[0], minYPoint.pointerValue[0]);
+	}
+	
+	if ( !fequal(minValue.pointerValue[0], 0.0) ) {
+		XCTFail(@"Expected %f, found %f.", 0.0, minValue.pointerValue[0]);
+	}
+}
+
+/************************************************/
 /*		Transform Tests							*/
 /************************************************/
 
