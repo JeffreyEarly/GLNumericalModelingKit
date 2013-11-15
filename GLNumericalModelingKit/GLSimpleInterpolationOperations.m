@@ -73,6 +73,8 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 			GLFloat xDimInvInterval = 1.0/dimension.sampleInterval;
 			GLFloat xDimOffset = - dimension.domainMin / dimension.sampleInterval;
 			
+            
+            // vDSP_vtabi is the ideal function for this.
 			if (behavior == kGLTruncationBehavior)
 			{
 				self.operation = ^(NSArray *result, NSArray *operands, NSArray *bufferArray) {
