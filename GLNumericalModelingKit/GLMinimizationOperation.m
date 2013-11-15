@@ -18,7 +18,7 @@
 	
 	NSUInteger nDims = startingPoints.count;
 	NSUInteger nVertices = nDims+1;
-	GLFloat ftol = 1e-2;
+	GLFloat ftol = 1e-3;
 	
 	// resultArray contains nDim GLScalar variables with the minimum point, followed by a single GLScalar variable with the value at that point.
 	NSMutableArray *resultPrototypes = [NSMutableArray array];
@@ -174,6 +174,7 @@
 				}
 				*resultY = y[ilo][0];
 				
+                NSLog(@"Total function evaluations: %lu", nFunctionEvaluations);
 				free(vertices); free(y); free(psum); free(resultVertex);
 				break;
 			}
