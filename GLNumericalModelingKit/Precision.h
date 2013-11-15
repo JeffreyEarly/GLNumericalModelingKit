@@ -50,7 +50,8 @@ typedef	FFTSetupD	GLFFTSetup;
 #define vGL_vvcos		vvcos
 #define vGL_vvsincos	vvsincos
 #define vGL_vvatan      vvatan
-#define vGL_vvexp		vvexp
+#define vGL_vvexp		vvexp               // Exponential
+#define vGL_vvlog       vvlog               // Natural logarithm
 #define vGL_vvlog10		vvlog10
 #define vGL_vvpow		vvpow
 #define vGL_vvsqrt		vvsqrt
@@ -116,7 +117,8 @@ typedef	FFTSetup	GLFFTSetup;
 #define vGL_vvcos		vvcosf
 #define vGL_vvsincos	vvsincosf
 #define vGL_vvatan      vvatanf
-#define vGL_vvexp		vvexpf
+#define vGL_vvexp		vvexpf              // Exponential
+#define vGL_vvlog       vvlogf              // Natural logarithm
 #define vGL_vvlog10		vvlog10f
 #define vGL_vvpow		vvpowf
 #define vGL_vvsqrt		vvsqrtf

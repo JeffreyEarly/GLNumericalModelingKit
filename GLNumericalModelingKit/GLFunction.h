@@ -133,26 +133,29 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 // C = max( abs(A), abs(B) ) element-wise
 - (id) absMax: (GLFunction *) otherVariable;
 
-// C = -A
-- (id) negate;
+/// C = -A
+- (GLFunction *) negate;
 
-// C = abs(A)
-- (id) abs;
+/// C = abs(A)
+- (GLFunction *) abs;
 
-// C = exp(A)
-- (id) exponentiate;
+/// C = exp(A)
+- (GLFunction *) exponentiate;
 
-// C = sin(A)
-- (id) sin;
+/// C = log(A)
+- (GLFunction *) log;
 
-// C = cos(A)
-- (id) cos;
+/// C = sin(A)
+- (GLFunction *) sin;
 
-// C = atan(A)
-- (id) atan;
+/// C = cos(A)
+- (GLFunction *) cos;
 
-// C = sqrt(A)
-- (id) sqrt;
+/// C = atan(A)
+- (GLFunction *) atan;
+
+/// C = sqrt(A)
+- (GLFunction *) sqrt;
 
 // C = A + k
 - (id) scalarAdd: (GLFloat) aScalar;

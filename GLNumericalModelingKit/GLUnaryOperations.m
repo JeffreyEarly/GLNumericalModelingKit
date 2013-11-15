@@ -12,6 +12,7 @@
 #import "GLFourierTransformPool.h"
 #import "GLFourierTransform.h"
 #import "GLMemoryPool.h"
+#import "GLLinearTransform.h"
 
 /************************************************/
 /*		GLNegationOperation                     */
@@ -19,7 +20,7 @@
 
 @implementation GLNegationOperation
 
-- (GLNegationOperation *) initWithFunction: (GLFunction *) variable;
+- (GLNegationOperation *) initWithVariable: (GLVariable *) variable
 {
 	if (( self = [super initWithOperand: @[variable] ]))
 	{
@@ -52,23 +53,31 @@
 
 @implementation GLAbsoluteValueOperation
 
-- (GLAbsoluteValueOperation *) initWithFunction: (GLFunction *) variable {
-	return [self initWithOperand: variable shouldUseComplexArithmetic: YES];
-}
 
-- (id) initWithOperand: (GLFunction *) variable shouldUseComplexArithmetic: (BOOL) useComplexArithmetic
+- (GLAbsoluteValueOperation *) initWithVariable: (GLVariable *) variable
 {
-	GLFunction *resultVar = [[variable class] functionOfRealTypeWithDimensions: variable.dimensions forEquation: variable.equation];
+	GLVariable *resultVar;
 	
+    // We have to override the initializer in this case because the result *will* be real.
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        resultVar=[[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        resultVar=[[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        GLLinearTransform *matrix = (GLLinearTransform *) variable;
+        resultVar=[GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil];
+    }
+    
 	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ] ))
 	{
 		GLFunction *resultVariable = self.result[0];
 		GLFunction *operandVariable = self.operand[0];
 		
 		resultVariable.isPurelyReal = YES;
-        self.useComplexArithmetic = useComplexArithmetic;
 		
-		if (operandVariable.isComplex && useComplexArithmetic == YES) {
+		if (operandVariable.isComplex) {
 			NSUInteger numPoints = resultVariable.nDataPoints;
 			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				NSMutableData *result = resultArray[0];
@@ -94,19 +103,6 @@
 	return YES;
 }
 
-- (BOOL) isEqualToOperation: (id) otherOperation {
-    if ( ![super isEqualToOperation: otherOperation] )  {
-        return NO;
-    }
-    
-    GLAbsoluteValueOperation * op = otherOperation;
-    if (self.useComplexArithmetic != op.useComplexArithmetic) {
-        return NO;
-    }
-    
-    return YES;
-}
-
 @end
 
 /************************************************/
@@ -115,11 +111,22 @@
 
 @implementation GLExponentialOperation
 
-- (GLExponentialOperation *) initWithFunction: (GLFunction *) variable
+- (GLExponentialOperation *) initWithVariable: (GLVariable *) variable
 {
 	// If the operand is purely real, we don't need a complex number
 	GLDataFormat format = variable.isPurelyReal ? kGLRealDataFormat : kGLSplitComplexDataFormat;
-	GLFunction *resultVar = [[variable class] functionOfType: format withDimensions: variable.dimensions forEquation: variable.equation];
+	GLVariable *resultVar;
+    
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        resultVar=[[GLScalar alloc] initWithType: format forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        resultVar=[[function class] functionOfType: format withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        [NSException raise: @"NotYetImplemented" format: @"Exponentiation is not yet implemented for linear transformations. This should be trivial for diagonal matrices"];
+    }
+    
 	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ] ))
 	{
 		GLFunction *resultVariable = self.result[0];
@@ -128,9 +135,7 @@
 		const int numElements = (int) resultVariable.nDataElements;
 		const int numPoints = (int) resultVariable.nDataPoints;
 		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
-		
-		NSMutableData *buffer = [[GLMemoryPool sharedMemoryPool] dataWithLength: numPoints*sizeof(GLFloat)];
-		
+				
 		if (operandVariable.isComplex) {
 			if (operandVariable.isPurelyReal) {
 				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
@@ -151,13 +156,15 @@
 				self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 					GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
 					GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
+                    GLFloat *buffer = (GLFloat *) [bufferArray[0] mutableBytes];
 					
 					vGL_vvsincos( toSplit.imagp, toSplit.realp, fromSplit.imagp, &numPoints);
-					vGL_vvexp( buffer.mutableBytes, fromSplit.realp, &numPoints );
+					vGL_vvexp( buffer, fromSplit.realp, &numPoints );
 					
-					vGL_vmul( toSplit.realp, 1, buffer.mutableBytes, 1, toSplit.realp, 1, numPoints);
-					vGL_vmul( toSplit.imagp, 1, buffer.mutableBytes, 1, toSplit.imagp, 1, numPoints);
+					vGL_vmul( toSplit.realp, 1, buffer, 1, toSplit.realp, 1, numPoints);
+					vGL_vmul( toSplit.imagp, 1, buffer, 1, toSplit.imagp, 1, numPoints);
 				};
+                self.buffer = @[ [[GLBuffer alloc] initWithLength: numPoints*sizeof(GLFloat)] ];
                 self.graphvisDescription = @"exp (complex)";
 			}
 		} else {
@@ -180,14 +187,79 @@
 @end
 
 /************************************************/
+/*		GLLogarithmOperation					*/
+/************************************************/
+
+@implementation GLLogarithmOperation
+
+- (GLLogarithmOperation *) initWithVariable: (GLVariable *) variable
+{
+    if (!variable.isPurelyReal) {
+        [NSException raise: @"NotYetImplemented" format: @"You can only take the sine of real numbers."];
+    }
+    
+	GLVariable *resultVar;
+    
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        resultVar=[[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        resultVar=[[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        [NSException raise: @"BadMath" format: @"I don't know how to take the sine of a linear transformation."];
+    }
+    
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ]))
+	{
+		GLFunction *resultVariable = self.result[0];
+		GLFunction *operandVariable = self.operand[0];
+		
+		const int numElements = (int) resultVariable.nDataElements;
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
+		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
+			vGL_vvlog( result.mutableBytes, operand.bytes, &numElements );
+		};
+        self.graphvisDescription = @"sine";
+	}
+	
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end
+
+/************************************************/
 /*		GLSineOperation							*/
 /************************************************/
 
 @implementation GLSineOperation
 
-- (GLSineOperation *) initWithFunction: (GLFunction *) variable
+- (GLSineOperation *) initWithVariable: (GLVariable *) variable
 {
-	if (( self = [super initWithOperand: @[variable] ]))
+    if (!variable.isPurelyReal) {
+        [NSException raise: @"NotYetImplemented" format: @"You can only take the sine of real numbers."];
+    }
+
+	GLVariable *resultVar;
+    
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        resultVar=[[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        resultVar=[[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        [NSException raise: @"BadMath" format: @"I don't know how to take the sine of a linear transformation."];
+    }
+    
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ]))
 	{
 		GLFunction *resultVariable = self.result[0];
 		GLFunction *operandVariable = self.operand[0];
@@ -219,9 +291,25 @@
 
 @implementation GLCosineOperation
 
-- (GLCosineOperation *) initWithFunction: (GLFunction *) variable;
+- (GLCosineOperation *) initWithVariable: (GLVariable *) variable
 {
-	if (( self = [super initWithOperand: @[variable] ]))
+    if (!variable.isPurelyReal) {
+        [NSException raise: @"NotYetImplemented" format: @"You can only take the cosine of real numbers."];
+    }
+    
+	GLVariable *resultVar;
+    
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        resultVar=[[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        resultVar=[[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        [NSException raise: @"BadMath" format: @"I don't know how to take the cosine of a linear transformation."];
+    }
+    
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ]))
 	{
 		GLFunction *resultVariable = self.result[0];
 		GLFunction *operandVariable = self.operand[0];
@@ -252,9 +340,25 @@
 
 @implementation GLInverseTangentOperation
 
-- (GLInverseTangentOperation *) initWithFunction: (GLFunction *) variable
+- (GLInverseTangentOperation *) initWithVariable: (GLVariable *) variable
 {
-	if (( self = [super initWithOperand: @[variable] ]))
+    if (!variable.isPurelyReal) {
+        [NSException raise: @"NotYetImplemented" format: @"You can only take the inverse tangent of real numbers."];
+    }
+    
+	GLVariable *resultVar;
+    
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        resultVar=[[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        resultVar=[[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        [NSException raise: @"BadMath" format: @"I don't know how to take the inverse tangent of a linear transformation."];
+    }
+    
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ]))
 	{
 		GLFunction *resultVariable = self.result[0];
 		GLFunction *operandVariable = self.operand[0];
@@ -284,9 +388,25 @@
 /************************************************/
 // variable = sqrt( variable )
 @implementation GLSquareRootOperation
-- (GLSquareRootOperation *) initWithFunction: (GLFunction *) variable
+- (GLSquareRootOperation *) initWithVariable: (GLVariable *) variable
 {
-	if (( self = [super initWithOperand: @[variable] ]))
+    if (!variable.isPurelyReal) {
+        [NSException raise: @"NotYetImplemented" format: @"You can only take the square root of real numbers, for now."];
+    }
+    
+	GLVariable *resultVar;
+    
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        resultVar=[[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        resultVar=[[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        [NSException raise: @"BadMath" format: @"I don't know how to take the square root of a linear transformation."];
+    }
+    
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ]))
 	{
 		GLFunction *resultVariable = self.result[0];
 		GLFunction *operandVariable = self.operand[0];

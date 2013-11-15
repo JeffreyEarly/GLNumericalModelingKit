@@ -15,23 +15,17 @@
 // Returns the negative of the variable.
 
 @interface GLNegationOperation : GLVariableOperation
-- (GLNegationOperation *) initWithFunction: (GLFunction *) variable;
+- (GLNegationOperation *) initWithVariable: (GLVariable *) variable;
 @end
 
 /************************************************/
 /*		GLAbsoluteValueOperation               */
 /************************************************/
 
-// Simply returns the negative of the variable.
+// Returns the negative of the variable, which will always be real.
 
 @interface GLAbsoluteValueOperation : GLVariableOperation
-
-- (GLAbsoluteValueOperation *) initWithFunction: (GLFunction *) variable;
-// You can optionally set useComplexDivision to NO, and it will simply do an element-wise divide, ignoring complex math.
-- (id) initWithOperand: (GLFunction *) operand shouldUseComplexArithmetic: (BOOL) useComplexArithmetic;
-
-@property BOOL useComplexArithmetic;
-
+- (GLAbsoluteValueOperation *) initWithVariable: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -39,7 +33,15 @@
 /************************************************/
 // variable = exponential( variable )
 @interface GLExponentialOperation : GLVariableOperation
-- (GLExponentialOperation *) initWithFunction: (GLFunction *) variable;
+- (GLExponentialOperation *) initWithVariable: (GLVariable *) variable;
+@end
+
+/************************************************/
+/*		GLLogarithmOperation					*/
+/************************************************/
+// variable = log( variable )
+@interface GLLogarithmOperation : GLVariableOperation
+- (GLLogarithmOperation *) initWithVariable: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -47,7 +49,7 @@
 /************************************************/
 // variable = sin( variable )
 @interface GLSineOperation : GLVariableOperation
-- (GLSineOperation *) initWithFunction: (GLFunction *) variable;
+- (GLSineOperation *) initWithVariable: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -55,7 +57,7 @@
 /************************************************/
 // variable = cos( variable )
 @interface GLCosineOperation : GLVariableOperation
-- (GLCosineOperation *) initWithFunction: (GLFunction *) variable;
+- (GLCosineOperation *) initWithVariable: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -63,7 +65,7 @@
 /************************************************/
 // variable = atan( variable )
 @interface GLInverseTangentOperation : GLVariableOperation
-- (GLInverseTangentOperation *) initWithFunction: (GLFunction *) variable;
+- (GLInverseTangentOperation *) initWithVariable: (GLVariable *) variable;
 @end
 
 /************************************************/
@@ -71,7 +73,7 @@
 /************************************************/
 // variable = sqrt( variable )
 @interface GLSquareRootOperation : GLVariableOperation
-- (GLSquareRootOperation *) initWithFunction: (GLFunction *) variable;
+- (GLSquareRootOperation *) initWithVariable: (GLVariable *) variable;
 @end
 
 /************************************************/

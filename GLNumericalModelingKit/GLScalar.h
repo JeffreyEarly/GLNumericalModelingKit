@@ -20,4 +20,29 @@
 
 - (id) dividedBy: (id) otherVariable;
 
+
+/// C = -A
+- (GLScalar *) negate;
+
+/// C = abs(A)
+- (GLScalar *) abs;
+
+/// C = exp(A)
+- (GLScalar *) exponentiate;
+
+/// C = log(A)
+- (GLScalar *) log;
+
+/// C = sin(A)
+- (GLScalar *) sin;
+
+/// C = cos(A)
+- (GLScalar *) cos;
+
+/// C = atan(A)
+- (GLScalar *) atan;
+
+/// C = sqrt(A)
+- (GLScalar *) sqrt;
+
 @end

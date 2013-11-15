@@ -8,6 +8,7 @@
 
 #import "GLScalar.h"
 #import "GLVectorVectorOperations.h"
+#import "GLUnaryOperations.h"
 
 @interface GLScalar ()
 @property(readwrite, assign, nonatomic) NSUInteger nDataPoints;
@@ -83,6 +84,62 @@
 	[extra appendString: @"scalar"];
     
     return extra;
+}
+
+- (GLScalar *) exponentiate
+{
+	GLExponentialOperation *operation = [[GLExponentialOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) log
+{
+	GLLogarithmOperation *operation = [[GLLogarithmOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) sin
+{
+	GLSineOperation *operation = [[GLSineOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) cos
+{
+	GLCosineOperation *operation = [[GLCosineOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) atan
+{
+	GLInverseTangentOperation *operation = [[GLInverseTangentOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) sqrt
+{
+	GLSquareRootOperation *operation = [[GLSquareRootOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) negate
+{
+	GLNegationOperation *operation = [[GLNegationOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) abs
+{
+	GLAbsoluteValueOperation *operation = [[GLAbsoluteValueOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
 }
 
 @end
