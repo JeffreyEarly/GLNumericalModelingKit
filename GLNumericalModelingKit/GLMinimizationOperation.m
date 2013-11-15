@@ -48,8 +48,7 @@
 	variableOperation operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 		
 		// This comes from Numerical Recipes, Third Edition, page 505-507.
-		
-		// Fix this!!!
+        
 		NSMutableArray *functionOperationBuffers = [NSMutableArray array];
 		for (NSUInteger i=(nDims+1)*nVertices; i<bufferArray.count; i++) {
 			[functionOperationBuffers addObject: bufferArray[i]];
@@ -131,17 +130,37 @@
 			return *resultY;
 		};
 		
-		GLFloat *y0 = y[0];
-		GLFloat *y1 = y[1];
-		GLFloat *y2 = y[2];
+//		GLFloat *y0 = y[0];
+//		GLFloat *y1 = y[1];
+//		GLFloat *y2 = y[2];
+//		
+//		GLFloat *p0_x = vertices[0];
+//		GLFloat *p0_y = vertices[1];
+//		GLFloat *p1_x = vertices[2];
+//		GLFloat *p1_y = vertices[3];
+//		GLFloat *p2_x = vertices[4];
+//		GLFloat *p2_y = vertices[5];
+        
+//        GLFloat *y0 = y[0];
+//		GLFloat *y1 = y[1];
+//		GLFloat *y2 = y[2];
+//        GLFloat *y3 = y[3];
+//		
+//		GLFloat *p0_x = vertices[0];
+//		GLFloat *p0_y = vertices[1];
+//        GLFloat *p0_z = vertices[2];
+//		GLFloat *p1_x = vertices[3];
+//		GLFloat *p1_y = vertices[4];
+//        GLFloat *p1_z = vertices[5];
+//		GLFloat *p2_x = vertices[6];
+//		GLFloat *p2_y = vertices[7];
+//        GLFloat *p2_z = vertices[8];
+//        GLFloat *p3_x = vertices[9];
+//		GLFloat *p3_y = vertices[10];
+//        GLFloat *p3_z = vertices[11];
 		
-		GLFloat *p0_x = vertices[0];
-		GLFloat *p0_y = vertices[1];
-		GLFloat *p1_x = vertices[2];
-		GLFloat *p1_y = vertices[3];
-		GLFloat *p2_x = vertices[4];
-		GLFloat *p2_y = vertices[5];
-		
+        GLFloat previousMin = y[0][0];
+        
 		compute_psum();
 		NSUInteger nFunctionEvaluations = 0;
 		while (1)
@@ -174,9 +193,28 @@
 				}
 				*resultY = y[ilo][0];
 				
-                NSLog(@"Total function evaluations: %lu", nFunctionEvaluations);
-				free(vertices); free(y); free(psum); free(resultVertex);
-				break;
+                GLFloat restarttol = 2.0*fabs( *resultY - previousMin )/(fabs(*resultY) + fabs(previousMin)+1.0e-10);
+                if (restarttol > ftol) {
+                    previousMin = *resultY;
+                    for (NSUInteger iVertex=0; iVertex < nVertices; iVertex++) {
+                        for (NSUInteger iDim=0; iDim < nDims; iDim++) {
+                            vertices[iVertex*nDims + iDim][0] = resultVertex[iDim][0];
+                        }
+                        if (iVertex != 0) {
+                            GLFloat *delta = (GLFloat *) [operandArray[nDims + iVertex-1] bytes];
+                            vertices[iVertex*nDims + (iVertex-1)][0] += *delta;
+                        }
+                        functionOperation(@[yBuffers[iVertex]], vertexBuffers[iVertex], functionOperationBuffers);
+                    }
+                    compute_psum();
+                    NSLog(@"Automatic restart at %lu function evaluations.", nFunctionEvaluations);
+                    continue;
+                }
+                else {
+                    NSLog(@"Total function evaluations: %lu", nFunctionEvaluations);
+                    free(vertices); free(y); free(psum); free(resultVertex);
+                    break;
+                }
 			}
 			
 			if (nFunctionEvaluations > 5000) {
