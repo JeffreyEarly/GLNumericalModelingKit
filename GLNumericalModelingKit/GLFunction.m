@@ -460,49 +460,56 @@ static BOOL prefersSpatialMultiplication = YES;
 
 - (GLFunction *) exponentiate
 {	
-	GLExponentialOperation *operation = [[GLExponentialOperation alloc] initWithFunction: self];
+	GLExponentialOperation *operation = [[GLExponentialOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLFunction *) log
+{
+	GLLogarithmOperation *operation = [[GLLogarithmOperation alloc] initWithVariable: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
 - (GLFunction *) sin
 {	
-	GLSineOperation *operation = [[GLSineOperation alloc] initWithFunction: self];
+	GLSineOperation *operation = [[GLSineOperation alloc] initWithVariable: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
 - (GLFunction *) cos
 {	
-	GLCosineOperation *operation = [[GLCosineOperation alloc] initWithFunction: self];
+	GLCosineOperation *operation = [[GLCosineOperation alloc] initWithVariable: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
 - (GLFunction *) atan
 {
-	GLInverseTangentOperation *operation = [[GLInverseTangentOperation alloc] initWithFunction: self];
+	GLInverseTangentOperation *operation = [[GLInverseTangentOperation alloc] initWithVariable: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
 - (GLFunction *) sqrt
 {	
-	GLSquareRootOperation *operation = [[GLSquareRootOperation alloc] initWithFunction: self];
+	GLSquareRootOperation *operation = [[GLSquareRootOperation alloc] initWithVariable: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
 - (GLFunction *) negate
 {
-	GLNegationOperation *operation = [[GLNegationOperation alloc] initWithFunction: self];
+	GLNegationOperation *operation = [[GLNegationOperation alloc] initWithVariable: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
 
 - (GLFunction *) abs
 {
-	GLAbsoluteValueOperation *operation = [[GLAbsoluteValueOperation alloc] initWithFunction: self];
+	GLAbsoluteValueOperation *operation = [[GLAbsoluteValueOperation alloc] initWithVariable: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }

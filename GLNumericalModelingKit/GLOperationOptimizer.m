@@ -58,7 +58,7 @@
 		return;
 	}
 	
-	NSLog(@"Total memory buffers allocated: %lu", self.totalMemoryBuffersAllocated);
+	//NSLog(@"Total memory buffers allocated: %lu", self.totalMemoryBuffersAllocated);
 	
 	if ( self.bottomVariables.count && self.topVariables.count )
 	{
@@ -288,7 +288,7 @@
 	
     BOOL success = YES;
 	if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
-		NSLog(@"This operation depends only on precomputed variables. It will be computed now.");
+		//NSLog(@"This operation depends only on precomputed variables. It will be computed now.");
         GLEquation *equation = [topVariables.lastObject equation];
         [equation solveForOperation: operation waitUntilFinished: YES];
         success = NO;
