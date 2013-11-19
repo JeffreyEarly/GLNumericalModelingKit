@@ -125,7 +125,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 #pragma mark Operations
 #pragma mark
 
-- (id) dividedBy: (GLFunction *) otherVariable;
+- (GLFunction *) dividedBy: (GLFunction *) otherVariable;
 
 // C = A * B
 - (id) dot: (GLFunction *) otherVariable;
@@ -158,13 +158,13 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 - (GLFunction *) sqrt;
 
 // C = A + k
-- (id) scalarAdd: (GLFloat) aScalar;
+- (GLFunction *) scalarAdd: (GLFloat) aScalar;
 
 // C = k*A
-- (id) scalarMultiply: (GLFloat) aScalar;
+- (GLFunction *) scalarMultiply: (GLFloat) aScalar;
 
 // C = k/A
-- (id) scalarDivide: (GLFloat) aScalar;
+- (GLFunction *) scalarDivide: (GLFloat) aScalar;
 
 // C = max( A, k )
 - (id) scalarMax: (GLFloat) aScalar;

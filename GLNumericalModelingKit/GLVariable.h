@@ -148,14 +148,14 @@ GLSplitComplex splitComplexFromData( NSData *data );
  @param otherVariableOrScalar An input scalar, vector or matrix.
  @returns A subclass of GLVariable.
  */
-- (id) multiply: (id) otherVariableOrScalar;
+- (instancetype) multiply: (id) otherVariableOrScalar;
 
 /** Multiplies two variables together: result = receiving variable * otherVariableOrScalar, after transforming back into the spatial domain.
  @discussion This is the same as multiply, but transforms variables into the spatial domain (if necessary) before multiplying.
   @param otherVariableOrScalar An input scalar, vector or matrix.
  @returns A subclass of GLVariable.
  */
-- (id) times: (id) otherVariableOrScalar;
+- (instancetype) times: (id) otherVariableOrScalar;
 
 /************************************************/
 /*		Reading & Writing						*/

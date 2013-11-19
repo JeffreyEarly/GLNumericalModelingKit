@@ -192,7 +192,7 @@
 					resultVertex[iDim][0] = vertices[ilo*nDims + iDim][0];
 				}
 				*resultY = y[ilo][0];
-				NSLog(@"Total function evaluations: %lu", nFunctionEvaluations);
+				//NSLog(@"Total function evaluations: %lu", nFunctionEvaluations);
 				
                 GLFloat restarttol = 2.0*fabs( *resultY - previousMin )/(fabs(*resultY) + fabs(previousMin)+1.0e-10);
                 if (restarttol > ftol) {
@@ -208,11 +208,11 @@
                         functionOperation(@[yBuffers[iVertex]], vertexBuffers[iVertex], functionOperationBuffers);
                     }
                     compute_psum();
-                    NSLog(@"Automatic restart at %lu function evaluations.", nFunctionEvaluations);
+                    //NSLog(@"Automatic restart at %lu function evaluations.", nFunctionEvaluations);
                     continue;
                 }
                 else {
-                    NSLog(@"Total function evaluations: %lu", nFunctionEvaluations);
+                    //NSLog(@"Total function evaluations: %lu", nFunctionEvaluations);
                     free(vertices); free(y); free(psum); free(resultVertex);
                     break;
                 }
