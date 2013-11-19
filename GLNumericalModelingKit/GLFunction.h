@@ -116,6 +116,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 
 // Returns the max value, NOW.
 - (GLFloat) maxNow;
+- (GLFloat) minNow;
 
 /************************************************/
 /*		Operations								*/
@@ -153,6 +154,9 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 
 /// C = atan(A)
 - (GLFunction *) atan;
+
+/// C = atan2(A, B)
+- (GLFunction *) atan2: (GLFunction *) x;
 
 /// C = sqrt(A)
 - (GLFunction *) sqrt;

@@ -49,7 +49,8 @@ typedef	FFTSetupD	GLFFTSetup;
 #define vGL_vvsin		vvsin
 #define vGL_vvcos		vvcos
 #define vGL_vvsincos	vvsincos
-#define vGL_vvatan      vvatan
+#define vGL_vvatan      vvatan				// Inverse tanget
+#define vGL_vvatan2     vvatan2				// Inverse tanget
 #define vGL_vvexp		vvexp               // Exponential
 #define vGL_vvlog       vvlog               // Natural logarithm
 #define vGL_vvlog10		vvlog10
@@ -116,7 +117,8 @@ typedef	FFTSetup	GLFFTSetup;
 #define vGL_vvsin		vvsinf
 #define vGL_vvcos		vvcosf
 #define vGL_vvsincos	vvsincosf
-#define vGL_vvatan      vvatanf
+#define vGL_vvatan      vvatanf				// Inverse tanget
+#define vGL_vvatan2     vvatan2f			// Inverse tanget
 #define vGL_vvexp		vvexpf              // Exponential
 #define vGL_vvlog       vvlogf              // Natural logarithm
 #define vGL_vvlog10		vvlog10f

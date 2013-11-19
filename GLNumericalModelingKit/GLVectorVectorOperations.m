@@ -1434,6 +1434,43 @@
 @end
 
 /************************************************/
+/*		GLInverseTangent2Operation				*/
+/************************************************/
+
+@implementation GLInverseTangent2Operation
+
+- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
+{
+	if (fOperand.isComplex || sOperand.isComplex || fOperand.rank != fOperand.rank || fOperand.rank == 2) {
+		[NSException raise: @"FormatMismatch" format: @"Both tensors must be in the same format."];
+	}
+	
+    GLVariable *result = [GLVariable variableWithPrototype: fOperand];
+	NSUInteger nDataElements = fOperand.nDataElements;
+	
+    variableOperation operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+		GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+		GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+		GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+		
+		const int n = (int) nDataElements;
+		
+		vGL_vvatan2( C, A, B, &n);
+	};
+	
+	if (( self = [super initWithResult: @[result] operand: @[fOperand, sOperand] buffers: @[] operation: operation] )) {
+		self.graphvisDescription = @"atan2";
+    }
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end
+
+/************************************************/
 /*		GLDotProductOperation					*/
 /************************************************/
 

@@ -77,6 +77,18 @@
 - (id) initWithFirstOperand: (GLVariable *) A secondOperand: (GLVariable *) B;
 @end
 
+/************************************************/
+/*		GLInverseTangent2Operation				*/
+/************************************************/
+
+/** C = atan2( A, B). This computes the inverse tangent of y=A, B=x.
+ @param A An input function or scalar.
+ @param B An input function or scalar.
+ @returns The result C, a tensor of the same rank in the same format.
+ */
+@interface GLInverseTangent2Operation : GLVariableOperation
+- (id) initWithFirstOperand: (GLFunction *) A secondOperand: (GLFunction *) B;
+@end
 
 /************************************************/
 /*		GLDotProductOperation					*/

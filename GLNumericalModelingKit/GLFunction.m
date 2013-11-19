@@ -207,7 +207,7 @@ static BOOL prefersSpatialMultiplication = YES;
 {
 	GLFunction *var = [self functionOfRealTypeWithDimensions: theDimensions forEquation: equation];
 	GLRandomNumberOperation *rand = [[GLRandomNumberOperation alloc] initWithResult: var firstScalarOperand: min secondScalarOperand: max];
-	return rand.result;
+	return rand.result[0];
 }
 
 + (id) functionOfRealTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
@@ -422,9 +422,18 @@ static BOOL prefersSpatialMultiplication = YES;
 
 - (GLFloat) maxNow
 {
+	[self solve];
 	GLFloat max = 0.0;
 	vGL_maxv( (float *) self.data.bytes, 1, &max, self.nDataElements);
 	return max;
+}
+
+- (GLFloat) minNow
+{
+	[self solve];
+	GLFloat min = 0.0;
+	vGL_minv( (float *) self.data.bytes, 1, &min, self.nDataElements);
+	return min;
 }
 
 
@@ -489,6 +498,13 @@ static BOOL prefersSpatialMultiplication = YES;
 - (GLFunction *) atan
 {
 	GLInverseTangentOperation *operation = [[GLInverseTangentOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLFunction *) atan2: (GLFunction *) x
+{
+	GLInverseTangent2Operation *operation = [[GLInverseTangent2Operation alloc] initWithFirstOperand: self secondOperand: x];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
