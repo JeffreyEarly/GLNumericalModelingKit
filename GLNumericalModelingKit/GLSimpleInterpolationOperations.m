@@ -156,6 +156,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
                         lowerIndices[i] = (((a < 0) ? ((a % n) + n) : a) % n);
                         upperIndices[i] = (((b < 0) ? ((b % n) + n) : b) % n);                      
 					}
+//                    NSLog(@"position: %f", *positions);
 				};
 			}
 		}
@@ -317,6 +318,14 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
                 
                 // (1-frac)*firstInterp + frac*secondInterp
                 vGL_vmma( left.mutableBytes, 1, firstInterpData.mutableBytes, 1, right.mutableBytes, 1, secondInterpData.mutableBytes, 1, resultData.mutableBytes, 1, numInterpPoints);
+                
+//                GLFloat *a =(GLFloat *) left.mutableBytes;
+//                GLFloat *b =(GLFloat *) firstInterpData.mutableBytes;
+//                GLFloat *c =(GLFloat *) right.mutableBytes;
+//                GLFloat *d =(GLFloat *) secondInterpData.mutableBytes;
+//                GLFloat *e =(GLFloat *) resultData.mutableBytes;
+//                
+//                NSLog(@"%f, %f, %f, %f, %f", *a, *b, *c, *d, *e);
             });
         };
     }
