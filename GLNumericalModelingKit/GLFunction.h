@@ -251,6 +251,17 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 - (GLFunction *) variableByConcatenatingWithVariable: (GLFunction *) otherVariable alongDimension: (GLDimension *) aDim;
 
 /************************************************/
+/*		Reading & Writing						*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Reading & Writing
+#pragma mark
+
+// These methods create a new file and write out the variable.
+- (BOOL) writeToNetCDFFile: (NSURL *) anURL;
+
+/************************************************/
 /*		Differential Operations	- Primitive		*/
 /************************************************/
 

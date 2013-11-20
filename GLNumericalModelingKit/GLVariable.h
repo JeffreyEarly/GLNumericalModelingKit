@@ -165,9 +165,6 @@ GLSplitComplex splitComplexFromData( NSData *data );
 #pragma mark Reading & Writing
 #pragma mark
 
-// These methods create a new file and write out the variable.
-- (BOOL) writeToNetCDFFile: (NSURL *) anURL;
-
 // Description of the tensor appropriate for output in an object graph.
 @property(readonly) NSString *graphvisDescription;
 

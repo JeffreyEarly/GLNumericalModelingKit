@@ -818,7 +818,7 @@ BOOL isOne( NSNumber *a )
     }
     
     // We may have identified the same variable as being at both the top and bottom of the tree.
-#warning This is a bit of a hack, and I think we can do better than this.
+    // This is a bit of a hack, and I think we can do better than this.
     for (NSUInteger i=0; i<bottomVariables.count; i++) {
         if ( [topVariables containsObject: bottomVariables[i]]) {
             bottomVariables[i] = [bottomVariables[i] duplicate];

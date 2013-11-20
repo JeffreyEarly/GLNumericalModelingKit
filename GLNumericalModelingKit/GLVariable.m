@@ -275,19 +275,6 @@ GLSplitComplex splitComplexFromData( NSData *data )
 #pragma mark Reading & Writing
 #pragma mark
 
-// These methods create a new file and write out the variable.
-- (BOOL) writeToNetCDFFile: (NSURL *) anURL
-{
-	GLNetCDFFile *netcdf = [[GLNetCDFFile alloc] initWithURL: anURL forEquation: self.equation overwriteExisting:YES];
-	
-	[self solve];
-	[netcdf addVariable: self];
-	[netcdf waitUntilAllOperationsAreFinished];
-	[netcdf close];
-	
-	return YES;
-}
-
 - (void) dumpToConsole
 {
 	return NSLog(@"%@", [NSString stringWithFormat: @"Uninitialized rank %lu tensor", self.rank]);

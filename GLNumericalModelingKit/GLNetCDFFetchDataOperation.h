@@ -27,10 +27,4 @@
 @property int variableID;
 @property int imagpVariableID;
 
-// To be called after the result and operands are set.
-- (void) setupDependencies;
-
-// To be called after the operation is complete.
-- (void) tearDownDependencies;
-
 @end

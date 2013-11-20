@@ -50,9 +50,7 @@
 		self.isComplex = variable.isComplex;
 		self.variableID = variable.variableID;
 		self.imagpVariableID = variable.imagpVariableID;
-		self.theRanges = ranges;
-		
-		[self setupDependencies];
+		self.theRanges = ranges;		
 	}
 	
     return self;
@@ -87,7 +85,11 @@
 		}
 	}
 	
-	[self tearDownDependencies];
+    for (GLFunction *variable in self.result) {
+		[variable removeOperation: self];
+	}
+	self.result = nil;
+	self.operand = nil;
 }
 
 

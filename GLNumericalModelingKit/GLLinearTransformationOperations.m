@@ -180,8 +180,6 @@
 	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
         GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
         
-#warning non of this deals with complex numbers yet.
-		
         dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
         
         NSUInteger inNDiagonalPoints = matrixDescription.strides[triIndex].nDiagonalPoints;
@@ -393,8 +391,6 @@
 		
         GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
         
-#warning non of this deals with complex numbers yet.
-		
 #warning this needs the same outer loop as the transform below.
         
         // This buffer is 3 times as large as it needs to be, but it makes bookkeeping easier.
@@ -516,9 +512,7 @@
 	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
         
         GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
-        
-#warning non of this deals with complex numbers yet.
-		
+        		
         dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
 		
 		// How many 'inner loop' steps we need to take depends on how many other nontrivial dimensions there are.
