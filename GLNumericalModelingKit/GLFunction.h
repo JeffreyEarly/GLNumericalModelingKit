@@ -203,7 +203,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 - (id) spatialDomain;
 
 // Returns a variable with the real and imaginary part swapped.
-- (id) swapComplex;
+- (GLFunction *) swapComplex;
 
 - (id) duplicate;
 

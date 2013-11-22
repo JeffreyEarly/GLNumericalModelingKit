@@ -322,6 +322,50 @@
 	}
 }
 
+- (void) test2DPeriodicInterpolation
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:5 domainMin:0.0 length:5.0];
+	GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:5 domainMin:0.0 length:5.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim,yDim] forEquation: equation];
+	GLFunction *y = [GLFunction functionOfRealTypeFromDimension: yDim withDimensions: @[xDim,yDim] forEquation: equation];
+	
+	// There are really 8 cases to check in a doubly periodic domain.
+	GLDimension *interpDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:8 domainMin:0.0 length:7.0];
+	GLFunction *xInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
+	GLFunction *yInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
+	
+	// How many extra times we want to wrap. Shouldn't make a difference.
+	GLFloat n = 2.0;
+	
+	GLFloat DeltaMinus = -1.25 - n*5.0; // Should correspond to 3.75
+	GLFloat DeltaPlus = 5.25 + n*5.0;	// Should correspond to 0.25
+	GLFloat Middle = 2.5 + n*5.0;
+	
+	xInterp.pointerValue[0] = DeltaMinus; yInterp.pointerValue[0] = Middle;
+	xInterp.pointerValue[1] = DeltaMinus; yInterp.pointerValue[1] = DeltaPlus;
+	xInterp.pointerValue[2] = Middle; yInterp.pointerValue[2] = DeltaPlus;
+	xInterp.pointerValue[3] = DeltaPlus; yInterp.pointerValue[3] = DeltaPlus;
+	xInterp.pointerValue[4] = DeltaPlus; yInterp.pointerValue[4] = Middle;
+	xInterp.pointerValue[5] = DeltaPlus; yInterp.pointerValue[5] = DeltaMinus;
+	xInterp.pointerValue[6] = Middle; yInterp.pointerValue[6] = DeltaMinus;
+	xInterp.pointerValue[7] = DeltaMinus; yInterp.pointerValue[7] = DeltaMinus;
+	
+	GLFloat expectedX[8] = {3.75, 3.75, 2.5, 0.25, 0.25, 0.25, 2.5, 3.75};
+	GLFloat expectedY[8] = {2.5, 0.25, 0.25, 0.25, 2.5, 3.75, 3.75, 3.75};
+	
+    GLFunction *interpolatedX = [x interpolateAtPoints: @[xInterp, yInterp]];
+	GLFunction *interpolatedY = [y interpolateAtPoints: @[xInterp, yInterp]];
+    
+    GLFloat *xout = interpolatedX.pointerValue;
+	GLFloat *yout = interpolatedY.pointerValue;
+    for (int i=0; i<8; i++) {
+		if ( !fequal(xout[i], expectedX[i]) || !fequal(yout[i], expectedY[i]) ) {
+			XCTFail(@"Case %d failed. Expected (%f, %f), found (%f, %f).", i, expectedX[i], expectedY[i], xout[i], yout[i]);
+		}
+	}
+}
+
 /************************************************/
 /*		Minimization Tests						*/
 /************************************************/
