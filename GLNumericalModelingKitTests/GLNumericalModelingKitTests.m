@@ -336,11 +336,25 @@
 	GLFunction *yInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
 	
 	// How many extra times we want to wrap. Shouldn't make a difference.
-	GLFloat n = 2.0;
+	GLFloat n = 0.0;
 	
-	GLFloat DeltaMinus = -1.25 - n*5.0; // Should correspond to 3.75
-	GLFloat DeltaPlus = 5.25 + n*5.0;	// Should correspond to 0.25
+	// Scenario 1
+//	GLFloat DeltaMinus = -1.25 - n*5.0; // Should correspond to 3.75
+//	GLFloat DeltaPlus = 5.25 + n*5.0;	// Should correspond to 0.25
+//	GLFloat Middle = 2.5 + n*5.0;
+//	
+//	GLFloat DeltaMinusResult = 3.75;
+//	GLFloat DeltaPlusResult = 0.25;
+//	GLFloat MiddleResult = 2.5;
+	
+	// Scenario 2
+	GLFloat DeltaMinus = -.25 - n*5.0; // Should correspond to 3.75
+	GLFloat DeltaPlus = 4.25 + n*5.0;	// Should correspond to 0.25
 	GLFloat Middle = 2.5 + n*5.0;
+	
+	GLFloat DeltaMinusResult = 1.0;
+	GLFloat DeltaPlusResult = 3.0;
+	GLFloat MiddleResult = 2.5;
 	
 	xInterp.pointerValue[0] = DeltaMinus; yInterp.pointerValue[0] = Middle;
 	xInterp.pointerValue[1] = DeltaMinus; yInterp.pointerValue[1] = DeltaPlus;
@@ -351,8 +365,8 @@
 	xInterp.pointerValue[6] = Middle; yInterp.pointerValue[6] = DeltaMinus;
 	xInterp.pointerValue[7] = DeltaMinus; yInterp.pointerValue[7] = DeltaMinus;
 	
-	GLFloat expectedX[8] = {3.75, 3.75, 2.5, 0.25, 0.25, 0.25, 2.5, 3.75};
-	GLFloat expectedY[8] = {2.5, 0.25, 0.25, 0.25, 2.5, 3.75, 3.75, 3.75};
+	GLFloat expectedX[8] = {DeltaMinusResult, DeltaMinusResult, MiddleResult, DeltaPlusResult, DeltaPlusResult, DeltaPlusResult, MiddleResult, DeltaMinusResult};
+	GLFloat expectedY[8] = {MiddleResult, DeltaPlusResult, DeltaPlusResult, DeltaPlusResult, MiddleResult, DeltaMinusResult, DeltaMinusResult, DeltaMinusResult};
 	
     GLFunction *interpolatedX = [x interpolateAtPoints: @[xInterp, yInterp]];
 	GLFunction *interpolatedY = [y interpolateAtPoints: @[xInterp, yInterp]];
