@@ -154,9 +154,11 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
                         
 						// These calls are the biggest performance hit.
                         lowerIndices[i] = (((a < 0) ? ((a % n) + n) : a) % n);
-                        upperIndices[i] = (((b < 0) ? ((b % n) + n) : b) % n);                      
+                        upperIndices[i] = (((b < 0) ? ((b % n) + n) : b) % n);
+						
+//						NSLog(@"position: %f, indices (%f.0 %f.0)", positions[i], lowerIndices[i], upperIndices[i]);
 					}
-//                    NSLog(@"position: %f", *positions);
+                    
 				};
 			}
 		}
@@ -324,7 +326,8 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 //                GLFloat *c =(GLFloat *) right.mutableBytes;
 //                GLFloat *d =(GLFloat *) secondInterpData.mutableBytes;
 //                GLFloat *e =(GLFloat *) resultData.mutableBytes;
-//                
+//				NSLog(@"%d: %f", i, *e);
+//
 //                NSLog(@"%f, %f, %f, %f, %f", *a, *b, *c, *d, *e);
             });
         };
