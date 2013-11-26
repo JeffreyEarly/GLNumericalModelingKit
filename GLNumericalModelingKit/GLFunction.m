@@ -210,6 +210,13 @@ static BOOL prefersSpatialMultiplication = YES;
 	return rand.result[0];
 }
 
++ (id) functionWithNormallyDistributedValueWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
+{
+	GLFunction *var = [self functionOfRealTypeWithDimensions: theDimensions forEquation: equation];
+	GLNormalDistributionOperation *rand = [[GLNormalDistributionOperation alloc] initWithResult: var];
+	return rand.result[0];
+}
+
 + (id) functionOfRealTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
 	return [self functionOfType: kGLRealDataFormat withDimensions: theDimensions forEquation: equation];

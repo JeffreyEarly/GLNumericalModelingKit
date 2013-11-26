@@ -58,6 +58,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 + (id) functionOfComplexTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 
 + (id) functionWithRandomValuesBetween: (GLFloat) min and: (GLFloat) max withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (id) functionWithNormallyDistributedValueWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 
 // Returns an empty variable (no value) from the given dimensions.
 + (id) functionOfRealTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;

@@ -20,3 +20,16 @@
 @property GLFloat secondScalarOperand;
 
 @end
+
+/************************************************/
+/*		GLNormalDistributionOperation			*/
+/************************************************/
+
+/** C = randn. This randomly generates numbers with a standard normal distribution
+ @discussion If the function is in half complex format, this operation will make it hermitian, including a doubling of the four purely real components.
+ @discussion mean + expectation*randn will scale this correctly.
+ @returns A GLNormalDistributionOperation object.
+ */
+@interface GLNormalDistributionOperation : GLVariableOperation
+- (id) initWithResult: (GLFunction *) result;
+@end
