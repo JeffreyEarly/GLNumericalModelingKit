@@ -133,31 +133,62 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
                 // Say position = -1.25.
                 // We want lower index to have nx-2, and upper index to have nx-1
                 // We want one minus frac to have 0.25 and frac to have 0.75.
+				GLBuffer *aBuffer = [[GLBuffer alloc] initWithLength: numInterpPoints*sizeof(GLFloat)];
+				self.buffer = @[aBuffer];
 				self.operation = ^(NSArray *result, NSArray *operands, NSArray *bufferArray) {
                     GLFloat *positions = (GLFloat *) [operands[0] bytes];
                     
                     GLFloat *lowerIndices = (GLFloat *) [result[0] mutableBytes];
                     GLFloat *upperIndices = (GLFloat *) [result[1] mutableBytes];
                     GLFloat *fraction = (GLFloat *) [result[2] mutableBytes];
-                    GLFloat *oneMinusFraction = (GLFloat *) [result[3] mutableBytes];
+                    
 					
                     // fraction contains the fractional, lower index.
 					vGL_vsmsa( positions, 1, (GLFloat *) &xDimInvInterval, (GLFloat *) &xDimOffset, fraction, 1, numInterpPoints);
 					
-					for (NSUInteger i=0; i<numInterpPoints; i++) {
-                        lowerIndices[i] = floor(fraction[i]);
-                        fraction[i] = fraction[i] - lowerIndices[i];
-                        oneMinusFraction[i] = 1.0 - fraction[i];
-                        
-                        NSInteger a = lowerIndices[i];
-                        NSInteger b = a+1;                        
-                        
-						// These calls are the biggest performance hit.
-                        lowerIndices[i] = (((a < 0) ? ((a % n) + n) : a) % n);
-                        upperIndices[i] = (((b < 0) ? ((b % n) + n) : b) % n);
-						
-//						NSLog(@"position: %f, indices (%f.0 %f.0)", positions[i], lowerIndices[i], upperIndices[i]);
-					}
+					// Everything that follows is just an optimized version of what's commented out below.
+					vGL_vvfloor( lowerIndices, fraction, (const int *)&numInterpPoints);
+					vGL_vsub( lowerIndices, 1, fraction, 1, fraction, 1, numInterpPoints ); // Note that vsub does: C = B - A
+					
+					GLFloat one = -1.;
+					
+					// In the algorithm below, we just recompute this anyway.
+//					GLFloat *oneMinusFraction = (GLFloat *) [result[3] mutableBytes];
+//					vGL_vsadd(fraction, 1, &one, oneMinusFraction, 1, numInterpPoints);
+//					vGL_vneg(oneMinusFraction, 1, oneMinusFraction, 1, numInterpPoints);
+					
+					one = 1.;
+					vGL_vsadd(lowerIndices, 1, &one, upperIndices, 1, numInterpPoints);
+					
+					GLFloat *buffer = (GLFloat *) [bufferArray[0] mutableBytes];
+					GLFloat nScalar = (GLFloat) n;
+					GLFloat minusN = - (GLFloat)n;
+					GLFloat nFrac = 1.0/nScalar;
+					
+					// Now we compute mod( index, n ) =  index - n*floor(index/n)
+					vGL_vsmul( lowerIndices, 1, &nFrac, buffer, 1, numInterpPoints);
+					vGL_vvfloor( buffer, buffer, (const int *)&numInterpPoints);
+					vGL_vsmul( buffer, 1, &minusN, buffer, 1, numInterpPoints);
+					vGL_vadd( lowerIndices, 1, buffer, 1, lowerIndices, 1, numInterpPoints);
+					
+					// And again for the upper indices
+					vGL_vsmul( upperIndices, 1, &nFrac, buffer, 1, numInterpPoints);
+					vGL_vvfloor( buffer, buffer, (const int *)&numInterpPoints);
+					vGL_vsmul( buffer, 1, &minusN, buffer, 1, numInterpPoints);
+					vGL_vadd( upperIndices, 1, buffer, 1, upperIndices, 1, numInterpPoints);
+					
+//					for (NSUInteger i=0; i<numInterpPoints; i++) {
+//                        lowerIndices[i] = floor(fraction[i]);
+//                        fraction[i] = fraction[i] - lowerIndices[i];
+//                        oneMinusFraction[i] = 1.0 - fraction[i];
+//                        
+//                        NSInteger a = lowerIndices[i];
+//                        NSInteger b = a+1;                        
+//                        
+//						// These calls are the biggest performance hit.
+//                        lowerIndices[i] = (((a < 0) ? ((a % n) + n) : a) % n);
+//                        upperIndices[i] = (((b < 0) ? ((b % n) + n) : b) % n);
+//					}
                     
 				};
 			}
@@ -262,6 +293,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 	if (( self = [super initWithResult: @[resultVariable] operand: @[fOperand, lIndices, uIndices, frac]] )) {
 		
         NSUInteger numInterpPoints = frac.nDataPoints;
+		self.buffer = @[[[GLBuffer alloc] initWithLength: numInterpPoints*sizeof(GLFloat)], [[GLBuffer alloc] initWithLength: numInterpPoints*sizeof(GLFloat)]];
 		self.operation = ^(NSArray *result, NSArray *operands, NSArray *bufferArray) {
             GLFloat *f = (GLFloat *) [operands[0] bytes];
             GLFloat *lowerIndices = (GLFloat *) [operands[1] bytes];
@@ -269,11 +301,22 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
             GLFloat *fraction = (GLFloat *) [operands[3] bytes];
             
             GLFloat *g = (GLFloat *) [result[0] mutableBytes];
+			
+			GLFloat *oneMinusFraction = (GLFloat *) [bufferArray[0] mutableBytes];
+			GLFloat one = -1.;
+			vGL_vsadd(fraction, 1, &one, oneMinusFraction, 1, numInterpPoints);
+			vGL_vneg(oneMinusFraction, 1, oneMinusFraction, 1, numInterpPoints);
+			
+			GLFloat *lowerValues = (GLFloat *) [bufferArray[1] mutableBytes];
+			vGL_vindex(f, lowerIndices, 1, lowerValues, 1, numInterpPoints);
+			vGL_vindex(f, upperIndices, 1, g, 1, numInterpPoints);
+			
+			vGL_vmma( oneMinusFraction, 1, lowerValues, 1, fraction, 1, g, 1, g, 1, numInterpPoints);
 
-			for (NSUInteger i=0; i<numInterpPoints; i++)
-			{
-				g[i] = (1.0 - fraction[i])*f[(NSUInteger)lowerIndices[i]] + fraction[i]*f[(NSUInteger)upperIndices[i]];
-			}
+//			for (NSUInteger i=0; i<numInterpPoints; i++)
+//			{
+//				g[i] = (1.0 - fraction[i])*f[(NSUInteger)lowerIndices[i]] + fraction[i]*f[(NSUInteger)upperIndices[i]];
+//			}
 			
 		};
 	}

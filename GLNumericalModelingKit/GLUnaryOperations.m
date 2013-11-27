@@ -68,7 +68,9 @@
     }  else if (variable.rank == 2) {
         GLLinearTransform *matrix = (GLLinearTransform *) variable;
         resultVar=[GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil];
-    }
+    } else {
+		return nil;
+	}
     
 	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ] ))
 	{

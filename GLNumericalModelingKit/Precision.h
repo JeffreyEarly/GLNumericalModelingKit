@@ -57,6 +57,8 @@ typedef	FFTSetupD	GLFFTSetup;
 #define vGL_vvpow		vvpow
 #define vGL_vvsqrt		vvsqrt
 
+#define vGL_vvfloor		vvfloor				// Floor
+
 #define vGL_dotpr		vDSP_dotprD
 #define vGL_zdotpr		vDSP_zdotprD
 
@@ -65,7 +67,7 @@ typedef	FFTSetupD	GLFFTSetup;
 #define vGL_vrvrs		vDSP_vrvrsD
 
 #define vGL_zvzsml		vDSP_zvzsmlD		// Complex vector multiply by complex scalar
-#define	vGL_vsmul		vDSP_vsmulD
+#define	vGL_vsmul		vDSP_vsmulD			// Vector scalar multipy
 #define	vGL_vadd		vDSP_vaddD
 #define	vGL_vsmsa		vDSP_vsmsaD
 #define	vGL_vsq			vDSP_vsqD
@@ -83,11 +85,11 @@ typedef	FFTSetupD	GLFFTSetup;
 #define	vGL_vsma		vDSP_vsmaD
 #define	vGL_vfrac		vDSP_vfracD
 #define	vGL_vsub		vDSP_vsubD
-#define	vGL_vindex		vDSP_vindexD
+#define	vGL_vindex		vDSP_vindexD		// Extract values at indices
 #define	vGL_vramp		vDSP_vrampD
 #define	vGL_vsbsm		vDSP_vsbsmD
 #define	vGL_vmmsb		vDSP_vmmsbD
-#define	vGL_vmma		vDSP_vmmaD
+#define	vGL_vmma		vDSP_vmmaD			// Vector multiply, multiply, add  ( A*B + C*D)
 
 #define vGL_mmov	vDSP_mmovD
 #define	vGL_fft2d_zip			vDSP_fft2d_zipD
@@ -124,6 +126,8 @@ typedef	FFTSetup	GLFFTSetup;
 #define vGL_vvlog10		vvlog10f
 #define vGL_vvpow		vvpowf
 #define vGL_vvsqrt		vvsqrtf
+
+#define vGL_vvfloor		vvfloorf			// Floor
 
 #define vGL_dotpr		vDSP_dotpr
 #define vGL_zdotpr		vDSP_zdotpr
