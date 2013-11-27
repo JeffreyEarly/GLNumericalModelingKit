@@ -147,15 +147,28 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 					vGL_vsmsa( positions, 1, (GLFloat *) &xDimInvInterval, (GLFloat *) &xDimOffset, fraction, 1, numInterpPoints);
 					
 					// Everything that follows is just an optimized version of what's commented out below.
+//					for (NSUInteger i=0; i<numInterpPoints; i++) {
+//                        lowerIndices[i] = floor(fraction[i]);
+//                        fraction[i] = fraction[i] - lowerIndices[i];
+//                        oneMinusFraction[i] = 1.0 - fraction[i];
+//
+//                        NSInteger a = lowerIndices[i];
+//                        NSInteger b = a+1;
+//
+//						// These calls are the biggest performance hit.
+//                        lowerIndices[i] = (((a < 0) ? ((a % n) + n) : a) % n);
+//                        upperIndices[i] = (((b < 0) ? ((b % n) + n) : b) % n);
+//					}
+					
 					vGL_vvfloor( lowerIndices, fraction, (const int *)&numInterpPoints);
 					vGL_vsub( lowerIndices, 1, fraction, 1, fraction, 1, numInterpPoints ); // Note that vsub does: C = B - A
 					
 					GLFloat one = -1.;
 					
 					// In the algorithm below, we just recompute this anyway.
-//					GLFloat *oneMinusFraction = (GLFloat *) [result[3] mutableBytes];
-//					vGL_vsadd(fraction, 1, &one, oneMinusFraction, 1, numInterpPoints);
-//					vGL_vneg(oneMinusFraction, 1, oneMinusFraction, 1, numInterpPoints);
+					GLFloat *oneMinusFraction = (GLFloat *) [result[3] mutableBytes];
+					vGL_vsadd(fraction, 1, &one, oneMinusFraction, 1, numInterpPoints);
+					vGL_vneg(oneMinusFraction, 1, oneMinusFraction, 1, numInterpPoints);
 					
 					one = 1.;
 					vGL_vsadd(lowerIndices, 1, &one, upperIndices, 1, numInterpPoints);
@@ -176,20 +189,6 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 					vGL_vvfloor( buffer, buffer, (const int *)&numInterpPoints);
 					vGL_vsmul( buffer, 1, &minusN, buffer, 1, numInterpPoints);
 					vGL_vadd( upperIndices, 1, buffer, 1, upperIndices, 1, numInterpPoints);
-					
-//					for (NSUInteger i=0; i<numInterpPoints; i++) {
-//                        lowerIndices[i] = floor(fraction[i]);
-//                        fraction[i] = fraction[i] - lowerIndices[i];
-//                        oneMinusFraction[i] = 1.0 - fraction[i];
-//                        
-//                        NSInteger a = lowerIndices[i];
-//                        NSInteger b = a+1;                        
-//                        
-//						// These calls are the biggest performance hit.
-//                        lowerIndices[i] = (((a < 0) ? ((a % n) + n) : a) % n);
-//                        upperIndices[i] = (((b < 0) ? ((b % n) + n) : b) % n);
-//					}
-                    
 				};
 			}
 		}
