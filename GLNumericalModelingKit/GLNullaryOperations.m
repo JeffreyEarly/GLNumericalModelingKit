@@ -107,6 +107,8 @@
 			}
 			
 			// A should now be fully populated with the sin and cos of the first half of B
+			GLFloat twoPi = 2*M_PI;
+			vGL_vsmul( B, 1, &twoPi, B, 1, halfTheElements);
 			vGL_vvsincos( A, A2, B, &halfTheElements);
 			
 			// B2 will contain sqrt(-2*log(B2))
@@ -143,14 +145,14 @@
 				// For the four self-conjugate components, that means that there can be no imaginary component
 				C.imagp[0] = 0;
 				C.imagp[(lDimNPoints-1)] = 0;
-				C.imagp[kDimNPoints/2+0] = 0;
-				C.imagp[kDimNPoints/2+(lDimNPoints-1)] = 0;
+				C.imagp[(kDimNPoints/2)*lDimNPoints+0] = 0;
+				C.imagp[(kDimNPoints/2)*lDimNPoints+(lDimNPoints-1)] = 0;
 				
 				// But that their real components should be doubled, to make all else equal.
 				C.realp[0] = 2*C.realp[0];
 				C.realp[(lDimNPoints-1)] = 2*C.realp[(lDimNPoints-1)];
-				C.realp[kDimNPoints/2+0] = 2*C.realp[kDimNPoints/2+0];
-				C.realp[kDimNPoints/2+(lDimNPoints-1)] = 2*C.realp[kDimNPoints/2+(lDimNPoints-1)];
+				C.realp[(kDimNPoints/2)*lDimNPoints+0] = 2*C.realp[(kDimNPoints/2)*lDimNPoints+0];
+				C.realp[(kDimNPoints/2)*lDimNPoints+(lDimNPoints-1)] = 2*C.realp[(kDimNPoints/2)*lDimNPoints+(lDimNPoints-1)];
             };
             self.graphvisDescription = [NSString stringWithFormat: @"hermitian randn"];
         }

@@ -212,7 +212,12 @@ static BOOL prefersSpatialMultiplication = YES;
 
 + (id) functionWithNormallyDistributedValueWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation
 {
-	GLFunction *var = [self functionOfRealTypeWithDimensions: theDimensions forEquation: equation];
+	BOOL shouldMakeComplex = NO;
+	for (GLDimension *aDim in theDimensions) {
+		shouldMakeComplex |= aDim.basisFunction == kGLExponentialBasis;
+	}
+	GLFunction *var = [self functionOfType: shouldMakeComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat  withDimensions: theDimensions forEquation: equation];
+	
 	GLNormalDistributionOperation *rand = [[GLNormalDistributionOperation alloc] initWithResult: var];
 	return rand.result[0];
 }

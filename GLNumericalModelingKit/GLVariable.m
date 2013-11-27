@@ -145,6 +145,7 @@ GLSplitComplex splitComplexFromData( NSData *data )
 
 - (GLSplitComplex) splitComplex
 {
+	[self solve];
 	GLSplitComplex fbar;
 	if (self.isComplex) {
 		fbar.realp = self.data.mutableBytes;
