@@ -910,7 +910,7 @@
 	GLFloat *expected = fdiff_expected.pointerValue;
     
 	for (int i=0; i<4; i++) {
-		if ( !fequal(output[i], expected[i]) ) {
+		if ( !fequalprec(output[i], expected[i], 1e-5) ) {
 			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
 		}
 	}
