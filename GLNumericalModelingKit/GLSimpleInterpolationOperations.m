@@ -165,7 +165,6 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 					
 					GLFloat one = -1.;
 					
-					// In the algorithm below, we just recompute this anyway.
 					GLFloat *oneMinusFraction = (GLFloat *) [result[3] mutableBytes];
 					vGL_vsadd(fraction, 1, &one, oneMinusFraction, 1, numInterpPoints);
 					vGL_vneg(oneMinusFraction, 1, oneMinusFraction, 1, numInterpPoints);
