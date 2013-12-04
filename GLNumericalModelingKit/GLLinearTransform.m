@@ -993,4 +993,11 @@
 	return operation.result[0];
 }
 
+- (NSArray *) eigensystem
+{
+	GLVariableOperation *operation = [[GLMatrixEigensystemOperation alloc] initWithLinearTransformation: self];
+	operation = [self replaceWithExistingOperation: operation];
+	return operation.result;
+}
+
 @end

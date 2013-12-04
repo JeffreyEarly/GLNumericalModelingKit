@@ -92,6 +92,8 @@ typedef	FFTSetupD	GLFFTSetup;
 #define	vGL_vmma		vDSP_vmmaD			// Vector multiply, multiply, add  ( A*B + C*D)
 
 #define vGL_mmov	vDSP_mmovD
+#define vGL_mtrans		vDSP_mtransD		// Matrix transpose
+
 #define	vGL_fft2d_zip			vDSP_fft2d_zipD
 #define	vGL_fft2d_zop			vDSP_fft2d_zopD
 #define	vGL_create_fftsetup		vDSP_create_fftsetupD
@@ -163,6 +165,8 @@ typedef	FFTSetup	GLFFTSetup;
 #define	vGL_vmma		vDSP_vmma
 
 #define vGL_mmov	vDSP_mmov
+#define vGL_mtrans		vDSP_mtrans			// Matrix transpose
+
 #define	vGL_fft2d_zip			vDSP_fft2d_zip
 #define	vGL_fft2d_zop			vDSP_fft2d_zop
 #define	vGL_create_fftsetup		vDSP_create_fftsetup

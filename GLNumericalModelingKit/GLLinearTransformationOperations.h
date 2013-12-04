@@ -101,4 +101,17 @@
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform;
 @end
 
+/************************************************/
+/*		GLMatrixEigensystemOperation             */
+/************************************************/
+/** Finds the eigenvectors and eigenvalues of the matrix A.
+ @discussion The eigenvalues are returned as the linear transformation S which takes vectors from the eigenbasis to the original basis.
+ @discussion The matrix A must be an endomorphism, meaning that its fromBasis must be the same as its toBasis.
+ @param linearTransform The linear transform representing matrix A.
+ @returns An NSArray containing the function v of the eigenvalues and the linear transformation S.
+ */
+@interface GLMatrixEigensystemOperation : GLVariableOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform;
+@end
+
 

@@ -222,4 +222,6 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 - (GLLinearTransform *) inverse;
 
 - (GLLinearTransform *) matrixMultiply: (GLLinearTransform *) otherVariable;
+
+- (NSArray *) eigensystem;
 @end

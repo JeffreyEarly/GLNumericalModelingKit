@@ -882,6 +882,63 @@
 	}
 }
 
+- (void) testRealMatrixEigendecomposition
+{
+	GLDimension *xDim = [GLDimension dimensionXWithNPoints:5 length: 5.0];
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
+	
+	GLFloat a[5*5] =
+		{	-1.01,   0.86,  -4.60,   3.31,  -4.81,
+			3.98,   0.53,  -7.04,   5.29,   3.55,
+			3.30,   8.26,  -3.89,   8.20,  -1.51,
+			4.43,   4.96,  -7.66,  -7.33,   6.18,
+			7.31,  -6.43,  -6.16,   2.47,   5.58};
+	memcpy(A.pointerValue, a, A.nDataElements*sizeof(GLFloat));
+	
+	NSArray *system = [A eigensystem];
+	GLFunction *eigenvalues = system[0];
+	GLLinearTransform *S = system[1];
+	
+	GLFloat expected_eigval_realp[5] = { 2.858132878034353,
+		2.858132878034353,
+		-0.686674513305952,
+		-0.686674513305952,
+		-10.462916729456815};
+	
+	GLFloat expected_eigval_imagp[5] = {  10.762749830715675,
+		-10.762749830715675,
+		4.704261340628109,
+		-4.704261340628109,
+		0};
+	
+	GLFloat expected_eigvec_realp[5*5] = { 0.108064791301352,   0.108064791301352,   0.732233989783721,   0.732233989783721,   0.460646436627129,
+		0.406312881322675,   0.406312881322675,  -0.026463011089023,  -0.026463011089023,   0.337703828285972,
+		0.102357685061564,   0.102357685061564,   0.191648728080536,   0.191648728080536,   0.308743941854130,
+		0.398631098084136,   0.398631098084136,  -0.079011062984309,  -0.079011062984309,  -0.743845837531074,
+		0.539535056047412,   0.539535056047412,  -0.291604754325538,  -0.291604754325538,   0.158529281647889};
+	
+	GLFloat expected_eigvec_imagp[5*5] = { 0.168648343501007,  -0.168648343501007,                   0,                   0,                   0,
+		-0.259009768920532,   0.259009768920532,  -0.016946754378572,   0.016946754378572,                   0,
+		-0.508802314178709,   0.508802314178709,  -0.292565995475612,   0.292565995475612,                   0,
+		-0.091333452369541,   0.091333452369541,  -0.078075936426824,   0.078075936426824,                   0,
+		0,                   0,  -0.493102293052802,   0.493102293052802,                   0};
+	
+	GLSplitComplex eigval = eigenvalues.splitComplex;
+	for (int i=0; i<5; i++) {
+		if ( !fequalprec(eigval.realp[i], expected_eigval_realp[i],1e-5) || !fequalprec(eigval.imagp[i], expected_eigval_imagp[i],1e-5) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_eigval_realp[i], expected_eigval_imagp[i], eigval.realp[i], eigval.imagp[i]);
+		}
+	}
+	
+	GLSplitComplex eigvec = S.splitComplex;
+	for (NSUInteger i=0; i<5*5; i++) {
+		if ( !fequalprec(eigvec.realp[i], expected_eigvec_realp[i],1e-5) || !fequalprec(eigvec.imagp[i], expected_eigvec_imagp[i],1e-5) ) {
+			XCTFail(@"(%lu,%lu), Expected %f + I%f, found %f + I%f.",i/5, i%5, expected_eigvec_realp[i], expected_eigvec_imagp[i], eigvec.realp[i], eigvec.imagp[i]);
+		}
+	}
+}
+
 /************************************************/
 /*		Differential							*/
 /************************************************/
