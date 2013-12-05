@@ -149,6 +149,37 @@
 	}
 }
 
+- (void) testDataTranspose
+{
+	GLDimension *xDim = [GLDimension dimensionXWithNPoints:5 length: 5.0];
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
+	
+	GLFloat a[5*5] =
+	{	-1.01,   0.86,  -4.60,   3.31,  -4.81,
+		3.98,   0.53,  -7.04,   5.29,   3.55,
+		3.30,   8.26,  -3.89,   8.20,  -1.51,
+		4.43,   4.96,  -7.66,  -7.33,   6.18,
+		7.31,  -6.43,  -6.16,   2.47,   5.58};
+	memcpy(A.pointerValue, a, A.nDataElements*sizeof(GLFloat));
+	
+	GLFloat b[5*5] = {
+		-1.01f,  3.98f,  3.30f,  4.43f,  7.31f,
+		0.86f,  0.53f,  8.26f,  4.96f, -6.43f,
+		-4.60f, -7.04f, -3.89f, -7.66f, -6.16f,
+		3.31f,  5.29f,  8.20f, -7.33f,  2.47f,
+		-4.81f,  3.55f, -1.51f,  6.18f,  5.58f
+	};
+	
+	GLLinearTransform *B = [A columnMajorOrdered];
+	
+	for (int i=0; i<5*5; i++) {
+		if ( !fequalprec(B.pointerValue[i], b[i],1e-6) ) {
+			XCTFail(@"Expected %f, found %f.", b[i], B.pointerValue[i]);
+		}
+	}
+}
+
 /************************************************/
 /*		Algebriac Vector-Scalar Tests			*/
 /************************************************/

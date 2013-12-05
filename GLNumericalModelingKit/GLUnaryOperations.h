@@ -133,3 +133,11 @@
 @interface GLSplitToInterleavedComplexOperation : GLVariableOperation
 - (GLSplitToInterleavedComplexOperation *) initWithVariable: (GLVariable *) variable;
 @end
+
+/************************************************/
+/*		GLDataTransposeOperation				*/
+/************************************************/
+
+@interface GLDataTransposeOperation : GLVariableOperation
+- (GLDataTransposeOperation *) initWithLinearTransform: (GLLinearTransform *) transform;
+@end

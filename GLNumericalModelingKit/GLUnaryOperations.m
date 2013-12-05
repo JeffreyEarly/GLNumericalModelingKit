@@ -781,7 +781,117 @@
             GLSplitComplex B = splitComplexFromData(operandArray[0]);
             vGL_ztoc( &B, 1, (DSPComplex *)A, 2, numPoints );
         };
-        self.graphvisDescription = @"interleaved->split";
+        self.graphvisDescription = @"split->interleaved";
+	}
+	
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end
+
+/************************************************/
+/*		GLDataTransposeOperation				*/
+/************************************************/
+
+@implementation GLDataTransposeOperation
+
+- (GLDataTransposeOperation *) initWithLinearTransform: (GLLinearTransform *) transform
+{
+	NSUInteger denseIndex = NSNotFound;
+	NSUInteger lastNonTrivialNonDenseIndex = NSNotFound;
+	NSUInteger lastTrivialIndex = NSNotFound;
+	NSUInteger totalTrivialPoints = 1;
+	NSUInteger numDenseIndices = 0;
+    for ( NSUInteger index=0; index < transform.matrixFormats.count; index++) {
+        GLMatrixFormat format = [transform.matrixFormats[index] unsignedIntegerValue];
+        if (format == kGLDenseMatrixFormat) {
+            denseIndex = index;
+			numDenseIndices++;
+        } else if (format == kGLIdentityMatrixFormat) {
+            lastTrivialIndex = index;
+			totalTrivialPoints *= [transform.fromDimensions[index] nPoints];
+        }
+        if (format != kGLIdentityMatrixFormat && format != kGLDenseMatrixFormat ) {
+			lastNonTrivialNonDenseIndex = index;
+		}
+    }
+
+	if (numDenseIndices != 1) {
+		[NSException raise: @"BadInputFormat" format: @"The GLDataTransposeOperation can only take exactly one dense dimension."];
+	}
+	
+	GLLinearTransform *result = [GLLinearTransform transformOfType: transform.dataFormat withFromDimensions: transform.fromDimensions toDimensions: transform.toDimensions inFormat: transform.matrixFormats forEquation:transform.equation matrix:nil];
+    result.matrixOrder = transform.matrixOrder == kGLRowMatrixOrder ? kGLColumnMatrixOrder : kGLRowMatrixOrder;
+	result.matrixDescription = [[GLMatrixDescription alloc] initWithLinearTransform: result];
+	
+	// How many 'inner loop' steps we need to take depends on how many other nontrivial dimensions there are.
+	NSUInteger loopStride = lastNonTrivialNonDenseIndex == NSNotFound ? 0 : transform.matrixDescription.strides[lastNonTrivialNonDenseIndex].stride;
+	NSUInteger totalLoops = transform.nDataPoints / transform.matrixDescription.strides[denseIndex].nPoints;
+	NSUInteger nColumns = transform.matrixDescription.strides[denseIndex].nColumns;
+	NSUInteger nRows = transform.matrixDescription.strides[denseIndex].nRows;
+	NSUInteger denseStride = transform.matrixDescription.strides[denseIndex].stride;
+	dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+	
+	variableOperation op;
+	NSString *graphvisDescription;
+	if (result.dataFormat == kGLRealDataFormat) {
+		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			dispatch_apply(totalLoops, globalQueue, ^(size_t iteration) {
+				NSInteger startPosition = iteration*loopStride;
+				GLFloat *A = [operandArray[0] mutableBytes];
+				GLFloat *M = &(A[startPosition]);
+				
+				GLFloat *B = [resultArray[0] mutableBytes];
+				GLFloat *N = &(B[startPosition]);
+				
+				vGL_mtrans( M, denseStride, N, denseStride, nColumns, nRows);
+			});
+        };
+		graphvisDescription = @"data transpose (real)";
+	} else if (result.dataFormat == kGLInterleavedComplexDataFormat) {
+		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			dispatch_apply(totalLoops, globalQueue, ^(size_t iteration) {
+				NSInteger startPosition = iteration*loopStride;
+				GLFloat *A = [operandArray[0] mutableBytes];
+				GLFloat *M = &(A[startPosition]);
+				GLFloat *iM = &(A[startPosition+1]);
+				
+				GLFloat *B = [resultArray[0] mutableBytes];
+				GLFloat *N = &(B[startPosition]);
+				GLFloat *iN = &(B[startPosition+1]);
+				
+				vGL_mtrans( M, denseStride, N, denseStride, nColumns, nRows);
+				vGL_mtrans( iM, denseStride, iN, denseStride, nColumns, nRows);
+			});
+        };
+		graphvisDescription = @"data transpose (interleaved complex)";
+	} else if (result.dataFormat == kGLSplitComplexDataFormat) {
+		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			dispatch_apply(totalLoops, globalQueue, ^(size_t iteration) {
+				NSInteger startPosition = iteration*loopStride;
+				GLSplitComplex A = splitComplexFromData(operandArray[0]);
+				GLFloat *M = &(A.realp[startPosition]);
+				GLFloat *iM = &(A.imagp[startPosition]);
+				
+				GLSplitComplex B = splitComplexFromData(resultArray[0]);
+				GLFloat *N = &(B.realp[startPosition]);
+				GLFloat *iN = &(B.imagp[startPosition+1]);
+				
+				vGL_mtrans( M, denseStride, N, denseStride, nColumns, nRows);
+				vGL_mtrans( iM, denseStride, iN, denseStride, nColumns, nRows);
+			});
+        };
+		graphvisDescription = @"data transpose (split complex)";
+	}
+	
+	if (( self = [super initWithResult: @[result] operand: @[transform] ] ))
+	{
+		self.operation = op;
+        self.graphvisDescription = graphvisDescription;
 	}
 	
     return self;

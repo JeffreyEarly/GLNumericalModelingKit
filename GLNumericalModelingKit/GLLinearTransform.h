@@ -198,6 +198,11 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 /// A block that can be used to create the matrix. May be nil the matrix is derived from other matrices.
 @property(copy) transformMatrix matrixBlock;
 
+/// Returns the same matrix, but with row-major ordering. Returns self if the ordering is already row-major.
+- (GLLinearTransform *) rowMajorOrdered;
+
+/// Returns the same matrix, but with column-major ordering. Returns self if the ordering is already column-major.
+- (GLLinearTransform *) columnMajorOrdered;
 
 /************************************************/
 /*		Operations								*/

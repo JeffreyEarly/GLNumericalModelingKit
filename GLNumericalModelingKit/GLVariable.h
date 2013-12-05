@@ -9,16 +9,6 @@
 #import <GLNumericalModelingKit/Precision.h>
 #import <GLNumericalModelingKit/GLMatrixDescription.h>
 
-// This specifies how the data is organized in the memory buffer.
-// kGLRealDataFormat means that there is no memory allocated for the imaginary part.
-// kGLSplitComplexDataFormat means that the imaginary nPoints follow the real nPoints in the buffer.
-// kGLInterleavedComplexFormat means that the imaginary part of a point immediately follows the real part.
-typedef NS_ENUM(NSUInteger, GLDataFormat) {
-	kGLRealDataFormat = 0,
-    kGLSplitComplexDataFormat = 1,
-    kGLInterleavedComplexDataFormat = 2
-};
-
 GLSplitComplex splitComplexFromData( NSData *data );
 
 @class GLVariableOperation, GLEquation;

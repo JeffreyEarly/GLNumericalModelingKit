@@ -26,6 +26,16 @@ typedef NS_ENUM(NSUInteger, GLMatrixOrder) {
 	kGLColumnMatrixOrder = 1
 };
 
+// This specifies how the data is organized in the memory buffer.
+// kGLRealDataFormat means that there is no memory allocated for the imaginary part.
+// kGLSplitComplexDataFormat means that the imaginary nPoints follow the real nPoints in the buffer.
+// kGLInterleavedComplexFormat means that the imaginary part of a point immediately follows the real part. Strides are set to 2.
+typedef NS_ENUM(NSUInteger, GLDataFormat) {
+	kGLRealDataFormat = 0,
+    kGLSplitComplexDataFormat = 1,
+    kGLInterleavedComplexDataFormat = 2
+};
+
 typedef struct {
     GLMatrixFormat format;
     
@@ -45,7 +55,14 @@ typedef struct {
 @class GLLinearTransform, GLFunction;
 @interface GLMatrixDescription : NSObject
 
-- (GLMatrixDescription *) initWithVariable: (GLFunction *) variable;
+/** Creates a new matrix description based on the dimensions and formatting of the function.
+ @discussion Functions are treated as "dense" column vectors.
+ @param aFunction A function object.
+ @returns A new GLMatrixDescription object.
+ */
+- (GLMatrixDescription *) initWithVariable: (GLFunction *) aFunction;
+
+
 - (GLMatrixDescription *) initWithLinearTransform: (GLLinearTransform *) aLinearTransform;
 
 @property NSUInteger nDimensions;

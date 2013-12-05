@@ -33,20 +33,15 @@
             self.strides[iDim].nColumns = 1;
 			
             if (iDim == variable.dimensions.count-1) {
-                self.strides[iDim].stride = 1;
+                self.strides[iDim].stride = variable.dataFormat == kGLInterleavedComplexDataFormat ? 2 : 1;
             } else {
                 self.strides[iDim].stride = self.strides[iDim+1].nPoints * self.strides[iDim+1].stride;
             }
   			
 			// Finally, we need to determine how to get to the next row or column within this matrix.
-            // Thsi shouldn't matter for column vectors. 
-			if ( 1 ) {
-                self.strides[iDim].rowStride = self.strides[iDim].stride * self.strides[iDim].nColumns;
-                self.strides[iDim].columnStride = self.strides[iDim].stride;
-			} else if (kGLRowMatrixOrder == kGLColumnMatrixOrder) {
-                self.strides[iDim].rowStride = self.strides[iDim].stride;
-                self.strides[iDim].columnStride = self.strides[iDim].stride * self.strides[iDim].nRows;
-			}
+            // Thsi shouldn't matter for column vectors.
+			self.strides[iDim].rowStride = self.strides[iDim].stride * self.strides[iDim].nColumns;
+			self.strides[iDim].columnStride = self.strides[iDim].stride;
 		}
     }
     return self;
@@ -107,7 +102,7 @@
 					}
 				}
 				if ( !foundNontrivialDimension) {
-					self.strides[iDim].stride = 1;
+					self.strides[iDim].stride = linearTransform.dataFormat == kGLInterleavedComplexDataFormat ? 2 : 1;;
 				}
 			}
 			

@@ -11,6 +11,7 @@
 #import "GLDimension.h"
 #import "GLVectorVectorOperations.h"
 #import "GLVectorScalarOperations.h"
+#import "GLUnaryOperations.h"
 
 #import "GLLinearTransformationOperations.h"
 
@@ -155,6 +156,26 @@
 	return [NSString stringWithFormat: @"%@ <0x%lx> (%@: %lu points) %@\n%@", NSStringFromClass([self class]), (NSUInteger) self, self.name, self.nDataPoints, extra, [self matrixDescriptionString]];
 }
 
+- (GLLinearTransform *) rowMajorOrdered {
+	if (self.matrixOrder == kGLRowMatrixOrder) {
+		return self;
+	} else {
+		GLVariableOperation *operation = [[GLDataTransposeOperation alloc] initWithLinearTransform: self];
+        operation = [self replaceWithExistingOperation: operation];
+        return operation.result[0];
+	}
+}
+
+- (GLLinearTransform *) columnMajorOrdered {
+	if (self.matrixOrder == kGLColumnMatrixOrder) {
+		return self;
+	} else {
+		GLVariableOperation *operation = [[GLDataTransposeOperation alloc] initWithLinearTransform: self];
+        operation = [self replaceWithExistingOperation: operation];
+        return operation.result[0];
+	}
+}
+
 /************************************************/
 /*		Initialization							*/
 /************************************************/
@@ -184,6 +205,7 @@
 		self.matrixBlock = matrix;
 		self.toDimensions = [NSArray arrayWithArray: toDims];
 		self.fromDimensions = [NSArray arrayWithArray: fromDims];
+		self.matrixOrder = kGLRowMatrixOrder;
 		
 		// We loop through the dimensions and allocate enough memory for the variable
 		// defined on each dimension.

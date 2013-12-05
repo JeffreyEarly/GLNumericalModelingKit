@@ -717,38 +717,41 @@
     }
 	
 	GLDataFormat format = A.isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	NSUInteger N = [A.fromDimensions[0] nPoints];
 	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: A.toDimensions toDimensions:A.fromDimensions inFormat:A.matrixFormats forEquation:A.equation matrix: nil];
-    
-	if (( self = [super initWithResult: @[result] operand: @[A]] )) {
-        NSUInteger N = [A.fromDimensions[0] nPoints];
-        self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-			GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-			GLFloat *C = (GLFloat *) [resultArray[0] bytes];
-            
-            // clapack takes matrices in column-major format.
-            // However, the transpose of the inverse is the inverse of the transpose---so we don't need to worry here.
-            
-            NSMutableData *ipiv = [[GLMemoryPool sharedMemoryPool] dataWithLength: N*sizeof(__CLPK_integer)];
-            __CLPK_integer n = (__CLPK_integer) N;
-            __CLPK_integer info;
-            memcpy( C, A, n*n*sizeof(GLFloat));
-            sgetrf_(&n, &n, C, &n, ipiv.mutableBytes, (__CLPK_integer *)&info);
-            
-            if (info != 0) {
-                printf("sgetrf failed with error code %d\n", (int)info);
-            }
-            
-            __CLPK_integer lwork = n*n;
-            NSMutableData *work = [[GLMemoryPool sharedMemoryPool] dataWithLength: lwork*sizeof(GLFloat)];
-            sgetri_(&n, C, &n, ipiv.mutableBytes, work.mutableBytes, &lwork, (__CLPK_integer *)&info);
-            
-            if (info != 0) {
-                printf("sgetri failed with error code %d\n", (int)info);
-            }
-            
-            [[GLMemoryPool sharedMemoryPool] returnData: ipiv];
-            [[GLMemoryPool sharedMemoryPool] returnData: work];
-        };
+    GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: N*sizeof(__CLPK_integer)];
+	GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: N*N*sizeof(GLFloat)];
+	NSArray *buffers = @[buffer1, buffer2];
+	
+	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+		GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+		GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+		NSMutableData *ipiv = bufferArray[0];
+		NSMutableData *work = bufferArray[1];
+		
+		// clapack takes matrices in column-major format.
+		// However, the transpose of the inverse is the inverse of the transpose---so we don't need to worry here.
+		
+		__CLPK_integer n = (__CLPK_integer) N;
+		__CLPK_integer info;
+		memcpy( C, A, n*n*sizeof(GLFloat));
+		sgetrf_(&n, &n, C, &n, ipiv.mutableBytes, (__CLPK_integer *)&info);
+		
+		if (info != 0) {
+			printf("sgetrf failed with error code %d\n", (int)info);
+		}
+		
+		__CLPK_integer lwork = n*n;
+		sgetri_(&n, C, &n, ipiv.mutableBytes, work.mutableBytes, &lwork, (__CLPK_integer *)&info);
+		
+		if (info != 0) {
+			printf("sgetri failed with error code %d\n", (int)info);
+		}
+	};
+	
+	if (( self = [super initWithResult: @[result] operand: @[A] buffers: buffers operation: op] )) {
+        
+        
     }
     return self;
 }
