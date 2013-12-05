@@ -107,12 +107,17 @@ GLSplitComplex splitComplexFromData( NSData *data );
 // This will return a (GLSplitComplex *) pointing to the data the variable is complex,
 // or it will return a (GLFloat *) pointing to the data otherwise. Request the right one!
 @property(readonly, assign, nonatomic) GLFloat *pointerValue;
+@property(readonly, assign, nonatomic) GLFloatComplex *floatComplex;
 @property(readonly, assign, nonatomic) GLSplitComplex splitComplex;
 
 - (void) solve;
 
 // Set the value to zero everywhere.
 - (void) zero;
+
+// Methods to change data formats
+- (instancetype) interleavedFormat;
+- (instancetype) splitFormat;
 
 /************************************************/
 /*		Operations								*/

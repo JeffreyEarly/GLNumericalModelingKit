@@ -102,6 +102,54 @@
 }
 
 /************************************************/
+/*		Format Tests							*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Format Tests
+#pragma mark
+
+// Start with split format, check it, go to interleaved, check it, then go back to split format.
+- (void) testSplitAndInterleavedFormatConversion
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *dim = [GLDimension dimensionXWithNPoints: 4 length: 4];
+    GLFunction *var = [GLFunction functionOfRealTypeFromDimension: dim withDimensions: @[dim] forEquation:equation];
+    GLFunction *result = [[var plus: @(1)] plus: [var swapComplex]];
+    // result should contain (1 +I0, 2+I1, 3+I2, 4+I3)
+    
+    GLFloat expected_realp[4] = {1.0, 2.0, 3.0, 4.0};
+	GLFloat expected_imagp[4] = {0.0, 1.0, 2.0, 3.0};
+    
+    GLSplitComplex output = result.splitComplex;
+    for (int i=0; i<4; i++) {
+		if ( !fequal(output.realp[i], expected_realp[i]) || !fequal(output.imagp[i], expected_imagp[i]) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_realp[i], expected_imagp[i], output.realp[i], output.imagp[i]);
+		}
+	}
+    
+    result = [result interleavedFormat];
+    
+    GLFloatComplex *output2 = result.floatComplex;
+    GLFloatComplex expected[4] = {1.0+I*0, 2.0+I*1.0, 3.0+I*2.0, 4.0+I*3.0};
+    
+    for (int i=0; i<4; i++) {
+		if ( !fequal(creal(output2[i]), creal(expected[i])) || !fequal(cimag(output2[i]), cimag(expected[i])) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", creal(expected[i]), cimag(expected[i]), creal(output2[i]), cimag(output2[i]));
+		}
+	}
+
+    result = [result splitFormat];
+    
+    output = result.splitComplex;
+    for (int i=0; i<4; i++) {
+		if ( !fequal(output.realp[i], expected_realp[i]) || !fequal(output.imagp[i], expected_imagp[i]) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_realp[i], expected_imagp[i], output.realp[i], output.imagp[i]);
+		}
+	}
+}
+
+/************************************************/
 /*		Algebriac Vector-Scalar Tests			*/
 /************************************************/
 

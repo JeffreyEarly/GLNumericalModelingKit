@@ -705,3 +705,90 @@
 
 @end
 
+/************************************************/
+/*		GLInterleavedToSplitComplexOperation    */
+/************************************************/
+
+@implementation GLInterleavedToSplitComplexOperation
+
+- (GLInterleavedToSplitComplexOperation *) initWithVariable: (GLVariable *) variable
+{
+    if (variable.dataFormat != kGLInterleavedComplexDataFormat) {
+        [NSException raise: @"BadFormat" format: @"This operation can only take variables in interleaved complex format"];
+    }
+    
+	GLVariable *result;
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        result = [[GLScalar alloc] initWithType: kGLSplitComplexDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        result = [[function class] functionOfType: kGLSplitComplexDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        GLLinearTransform *matrix = (GLLinearTransform *) variable;
+        result = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil];
+    }
+    
+	if (( self = [super initWithResult: @[result] operand: @[variable] ] ))
+	{
+        NSUInteger numPoints = variable.nDataPoints;
+        self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+            GLFloatComplex *A = [operandArray[0] mutableBytes];
+            GLSplitComplex B = splitComplexFromData(resultArray[0]);
+            vGL_ctoz( (DSPComplex *)A, 2, &B, 1, numPoints );
+        };
+        self.graphvisDescription = @"interleaved->split";
+	}
+	
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end
+
+/************************************************/
+/*		GLSplitToInterleavedComplexOperation    */
+/************************************************/
+
+@implementation GLSplitToInterleavedComplexOperation
+
+- (GLSplitToInterleavedComplexOperation *) initWithVariable: (GLVariable *) variable
+{
+    if (variable.dataFormat != kGLSplitComplexDataFormat) {
+        [NSException raise: @"BadFormat" format: @"This operation can only take variables in interleaved complex format"];
+    }
+    
+	GLVariable *result;
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        result = [[GLScalar alloc] initWithType: kGLInterleavedComplexDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        result = [[function class] functionOfType: kGLInterleavedComplexDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        GLLinearTransform *matrix = (GLLinearTransform *) variable;
+        result = [GLLinearTransform transformOfType: kGLInterleavedComplexDataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil];
+    }
+    
+	if (( self = [super initWithResult: @[result] operand: @[variable] ] ))
+	{
+        NSUInteger numPoints = variable.nDataPoints;
+        self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+            GLFloatComplex *A = [resultArray[0] mutableBytes];
+            GLSplitComplex B = splitComplexFromData(operandArray[0]);
+            vGL_ztoc( &B, 1, (DSPComplex *)A, 2, numPoints );
+        };
+        self.graphvisDescription = @"interleaved->split";
+	}
+	
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end

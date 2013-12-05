@@ -116,5 +116,20 @@
 
 - (GLAverageOperation *) initWithFunction: (GLFunction *) variable dimensionIndex: (NSUInteger) index;
 @property NSUInteger dimIndex;
+@end
 
+/************************************************/
+/*		GLInterleavedToSplitComplexOperation    */
+/************************************************/
+
+@interface GLInterleavedToSplitComplexOperation : GLVariableOperation
+- (GLInterleavedToSplitComplexOperation *) initWithVariable: (GLVariable *) variable;
+@end
+
+/************************************************/
+/*		GLSplitToInterleavedComplexOperation    */
+/************************************************/
+
+@interface GLSplitToInterleavedComplexOperation : GLVariableOperation
+- (GLSplitToInterleavedComplexOperation *) initWithVariable: (GLVariable *) variable;
 @end

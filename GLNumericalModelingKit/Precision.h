@@ -100,6 +100,9 @@ typedef	FFTSetupD	GLFFTSetup;
 #define	vGL_destroy_fftsetup	vDSP_destroy_fftsetupD
 #define vGL_zvmags	vDSP_zvmagsD
 
+#define	vGL_ctoz        vDSP_ctozD          // Interleaved Complex->Split Complex
+#define	vGL_ztoc        vDSP_ztocD          // Split Complex->Interleaved Complex
+
 #else
 
 typedef float complex GLFloatComplex;
@@ -173,6 +176,8 @@ typedef	FFTSetup	GLFFTSetup;
 #define	vGL_destroy_fftsetup	vDSP_destroy_fftsetup
 #define vGL_zvmags	vDSP_zvmags
 
+#define	vGL_ctoz        vDSP_ctoz          // Interleaved Complex->Split Complex
+#define	vGL_ztoc        vDSP_ztoc          // Split Complex->Interleaved Complex
 
 #endif
 

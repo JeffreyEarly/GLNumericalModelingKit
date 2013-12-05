@@ -14,6 +14,7 @@
 #import "GLLinearTransform.h"
 #import "GLVectorVectorOperations.h"
 #import "GLVectorScalarOperations.h"
+#import "GLUnaryOperations.h"
 #include <mach/mach_time.h>
 
 @interface GLVariable ()
@@ -143,6 +144,13 @@ GLSplitComplex splitComplexFromData( NSData *data )
     return f;
 }
 
+- (GLFloatComplex *) floatComplex
+{
+	[self solve];
+    GLFloatComplex *f = self.data.mutableBytes;
+    return f;
+}
+
 - (GLSplitComplex) splitComplex
 {
 	[self solve];
@@ -166,6 +174,38 @@ GLSplitComplex splitComplexFromData( NSData *data )
 - (void) zero
 {
 	vGL_vclr( self.pointerValue, 1, self.nDataElements);
+}
+
+- (instancetype) interleavedFormat
+{
+    if (!self.isComplex) {
+        [NSException raise: @"NotYetImplemented" format: @"Not yet able to force interleaved format from real format"];
+        return nil;
+    }
+    
+    if (self.dataFormat == kGLInterleavedComplexDataFormat) {
+        return self;
+    } else {
+        GLVariableOperation *operation = [[GLSplitToInterleavedComplexOperation alloc] initWithVariable: self];
+        operation = [self replaceWithExistingOperation: operation];
+        return operation.result[0];
+    }
+}
+
+- (instancetype) splitFormat
+{
+    if (!self.isComplex) {
+        [NSException raise: @"NotYetImplemented" format: @"Not yet able to force split format from real format"];
+        return nil;
+    }
+    
+    if (self.dataFormat == kGLSplitComplexDataFormat) {
+        return self;
+    } else {
+        GLVariableOperation *operation = [[GLInterleavedToSplitComplexOperation alloc] initWithVariable: self];
+        operation = [self replaceWithExistingOperation: operation];
+        return operation.result[0];
+    }
 }
 
 /************************************************/
