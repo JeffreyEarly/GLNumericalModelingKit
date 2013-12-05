@@ -912,17 +912,19 @@
 		-4.704261340628109,
 		0};
 	
-	GLFloat expected_eigvec_realp[5*5] = { 0.108064791301352,   0.108064791301352,   0.732233989783721,   0.732233989783721,   0.460646436627129,
+	GLFloat expected_eigvec_realp[5*5] =
+    {   0.108064791301352,   0.108064791301352,   0.732233989783721,   0.732233989783721,   0.460646436627129,
 		0.406312881322675,   0.406312881322675,  -0.026463011089023,  -0.026463011089023,   0.337703828285972,
 		0.102357685061564,   0.102357685061564,   0.191648728080536,   0.191648728080536,   0.308743941854130,
 		0.398631098084136,   0.398631098084136,  -0.079011062984309,  -0.079011062984309,  -0.743845837531074,
 		0.539535056047412,   0.539535056047412,  -0.291604754325538,  -0.291604754325538,   0.158529281647889};
 	
-	GLFloat expected_eigvec_imagp[5*5] = { 0.168648343501007,  -0.168648343501007,                   0,                   0,                   0,
-		-0.259009768920532,   0.259009768920532,  -0.016946754378572,   0.016946754378572,                   0,
-		-0.508802314178709,   0.508802314178709,  -0.292565995475612,   0.292565995475612,                   0,
-		-0.091333452369541,   0.091333452369541,  -0.078075936426824,   0.078075936426824,                   0,
-		0,                   0,  -0.493102293052802,   0.493102293052802,                   0};
+	GLFloat expected_eigvec_imagp[5*5] =
+    {    0.168648343501007,  -0.168648343501007,   0,                   0,                 0,
+		-0.259009768920532,   0.259009768920532,  -0.016946754378572,   0.016946754378572, 0,
+		-0.508802314178709,   0.508802314178709,  -0.292565995475612,   0.292565995475612, 0,
+		-0.091333452369541,   0.091333452369541,  -0.078075936426824,   0.078075936426824, 0,
+		 0,                   0,                  -0.493102293052802,   0.493102293052802, 0};
 	
 	GLSplitComplex eigval = eigenvalues.splitComplex;
 	for (int i=0; i<5; i++) {
@@ -931,11 +933,23 @@
 		}
 	}
 	
+    GLFloat reltol = 1e-6;
 	GLSplitComplex eigvec = S.splitComplex;
-	for (NSUInteger i=0; i<5*5; i++) {
-		if ( !fequalprec(eigvec.realp[i], expected_eigvec_realp[i],1e-5) || !fequalprec(eigvec.imagp[i], expected_eigvec_imagp[i],1e-5) ) {
-			XCTFail(@"(%lu,%lu), Expected %f + I%f, found %f + I%f.",i/5, i%5, expected_eigvec_realp[i], expected_eigvec_imagp[i], eigvec.realp[i], eigvec.imagp[i]);
-		}
+	for (NSUInteger i=0; i<5; i++) {
+        BOOL didFlipSign = NO;
+        for (NSUInteger j=0; j<5; j++) {
+            BOOL isValid = fequalprec(eigvec.realp[j*5+i], expected_eigvec_realp[j*5+i],reltol) && fequalprec(eigvec.imagp[j*5+i], expected_eigvec_imagp[j*5+i],reltol);
+            BOOL isValidFlipped = fequalprec(eigvec.realp[j*5+i], -expected_eigvec_realp[j*5+i],reltol) && fequalprec(eigvec.imagp[j*5+i], -expected_eigvec_imagp[j*5+i],reltol);
+            if (j==0) {
+                if (!isValid && isValidFlipped) {
+                    didFlipSign = YES;
+                }
+            }
+            
+            if ( !((isValid && !didFlipSign) || (isValidFlipped && didFlipSign)) ) {
+                XCTFail(@"(%lu,%lu), Expected %f + I%f, found %f + I%f.",i/5, i%5, expected_eigvec_realp[j*5+i], expected_eigvec_imagp[j*5+i], eigvec.realp[j*5+i], eigvec.imagp[j*5+i]);
+            }
+        }
 	}
 }
 
