@@ -876,3 +876,131 @@
 }
 
 @end
+
+/************************************************/
+/*		GLGeneralizedMatrixEigensystemOperation */
+/************************************************/
+
+#pragma mark -
+#pragma mark GLGeneralizedMatrixEigensystemOperation
+#pragma mark
+
+@implementation GLGeneralizedMatrixEigensystemOperation
+
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B
+{
+    if (A.matrixDescription.nDimensions != 1 || B.matrixDescription.nDimensions != 1) {
+        [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
+    }
+    
+    if (A.fromDimensions.count != A.toDimensions.count || B.fromDimensions.count != B.toDimensions.count ) {
+        [NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
+    }
+	
+	for (NSUInteger i=0; i<A.fromDimensions.count; i++) {
+		if ( ![A.fromDimensions[i] isEqualToDimension: A.toDimensions[i]] ) {
+			[NSException raise: @"MatrixWrongFormat" format: @"By assumption, a linear transformation must be an endomorphism to compute the eigensystem."];
+		}
+	}
+	
+	// We need to construct a *new* eigenbasis.
+	// I'm not quite sure the right definitions to use.
+	NSMutableArray *eigenbasis = [NSMutableArray array];
+	for (GLDimension *dim in A.fromDimensions) {
+		GLDimension *newDim = [[GLDimension alloc] initDimensionWithGrid: dim.gridType nPoints: dim.nPoints domainMin:dim.domainMin length: dim.domainLength];
+		if (dim.name && ![dim.name isEqualToString: @""]) {
+			newDim.name = [NSString stringWithFormat: @"%@_eigen", dim.name];
+		} else {
+			newDim.name = @"eigen";
+		}
+		[eigenbasis addObject: newDim];
+	}
+	
+	// Should check whether or not the matrix is symmetric.
+	GLVariable *eigenvalues = [GLFunction functionOfComplexTypeWithDimensions: eigenbasis forEquation: A.equation];
+	GLLinearTransform *eigentransform = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: eigenbasis toDimensions:A.toDimensions inFormat:A.matrixFormats forEquation:A.equation matrix: nil];
+    NSArray *results = @[eigenvalues, eigentransform];
+    
+    // http://www.nag.com/lapack-ex/node122.html
+    
+	NSUInteger N = [A.fromDimensions[0] nPoints];
+	// first two buffers will be used to store the transpose (which will be overwritten)
+	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: A.nDataElements*sizeof(GLFloat)];
+    GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: B.nDataElements*sizeof(GLFloat)];
+    // third buffer will store the 'beta' part of the eigenvalues.
+    GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: N*sizeof(GLFloat)];
+	// fourth buffer will store the annoyingly formatted output
+	GLBuffer *buffer4 = [[GLBuffer alloc] initWithLength: A.nDataElements*sizeof(GLFloat)];
+	// fifth buffer is the lapack work buffer
+	GLBuffer *buffer5 = [[GLBuffer alloc] initWithLength: 8*N*sizeof(GLFloat)];
+	NSArray *buffers = @[buffer1, buffer2, buffer3, buffer4, buffer5];
+	
+	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+		GLFloat *A_row = (GLFloat *) [operandArray[0] bytes];
+        GLFloat *B_row = (GLFloat *) [operandArray[1] bytes];
+		
+		GLFloat *A_col = (GLFloat *) [bufferArray[0] bytes];
+        GLFloat *B_col = (GLFloat *) [bufferArray[1] bytes];
+        
+        GLFloat *beta = (GLFloat *) [bufferArray[2] bytes];
+		GLFloat *output = (GLFloat *) [bufferArray[3] bytes];
+		NSMutableData *work = bufferArray[4];
+		
+		GLSplitComplex v = splitComplexFromData(resultArray[0]);
+		GLSplitComplex C = splitComplexFromData(resultArray[1]);
+		
+		// clapack takes matrices in column-major format.
+		vGL_mtrans(A_row, 1, A_col, 1, N, N);
+        vGL_mtrans(B_row, 1, B_col, 1, N, N);
+		
+		char JOBVL ='N';
+		char JOBVR ='V';
+		__CLPK_integer n = (__CLPK_integer) N;
+		__CLPK_integer lwork = 8*n;
+		__CLPK_integer info;
+		
+        sggev_(&JOBVL, &JOBVR, &n, A_col, &n, B_col, &n, v.realp, v.imagp, beta, NULL, &n, output, &n, work.mutableBytes, &lwork, &info);
+		
+		if (info != 0) {
+			printf("sggev failed with error code %d\n", (int)info);
+		}
+		
+		// Now we have to get the eigenvectors in the proper format.
+		// If the j-th eigenvalue is real, then v(j) = VR(:,j), the j-th column of VR.
+		// If the j-th and (j+1)-st eigenvalues form a complex conjugate pair,
+		// then v(j) = VR(:,j) + i*VR(:,j+1) and v(j+1) = VR(:,j) - i*VR(:,j+1).
+		// And, don't forget, we need to fix the transpose.
+		
+		vGL_vclr( C.imagp, 1,  N*N);
+		
+		NSUInteger j=0;
+		for( NSUInteger i = 0; i < N; i++ ) { // i indicates which eigenvector we're copying
+			if ( v.imagp[i] == (GLFloat)0.0 ) {
+				for( NSUInteger k = 0; k < N; k++ ) { // k walks down the column
+					C.realp[k*N+i] = output[j*N+k];
+				}
+				j++;
+			} else {
+				for( NSUInteger k = 0; k < N; k++ ) {
+					C.realp[k*N+i] = output[j*N+k];
+					C.imagp[k*N+i] = output[(j+1)*N+k];
+					
+					C.realp[k*N+(i+1)] = output[j*N+k];
+					C.imagp[k*N+(i+1)] = -output[(j+1)*N+k];
+				}
+				j+=2;
+				i++;
+			}
+		}
+        
+        vGL_vdiv(beta, 1, v.realp, 1, v.realp, 1, N);
+        vGL_vdiv(beta, 1, v.imagp, 1, v.imagp, 1, N);
+	};
+	
+	if (( self = [super initWithResult: results operand: @[A, B] buffers: buffers operation: op] )) {
+        
+    }
+    return self;
+}
+
+@end
