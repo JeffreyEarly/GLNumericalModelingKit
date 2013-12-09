@@ -965,12 +965,13 @@ BOOL isOne( NSNumber *a )
 				}
 				
 				if (error <= 1.0) {
+//                    NSLog(@"Succeeded with error: %f. Step size was %f", error, *step);
 					break;
 				} else {
 //                    GLFloat aaa = *step;
 					GLFloat htemp = safety* (*step) * pow(error, -1./order);
 					(*step) = 0.1 * (*step) >= htemp ? 0.1 * (*step) : htemp;
-//                    NSLog(@"damn, overshot. was %f, trying %f", aaa, *step);
+//                    NSLog(@"Overshot with error: %f. Step size was %f, trying %f", error, aaa, *step);
 //                    overshoots++;
 //                    NSLog(@"Overshots: %lu", overshoots);
 				}
