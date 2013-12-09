@@ -902,3 +902,64 @@
 }
 
 @end
+
+/************************************************/
+/*		GLDenseMatrixOperation					*/
+/************************************************/
+
+@implementation GLDenseMatrixOperation
+
+- (GLDenseMatrixOperation *) initWithLinearTransform: (GLLinearTransform *) transform
+{
+	if (transform.matrixFormats.count != 1) {
+		[NSException raise: @"BadInputFormat" format: @"The GLDenseMatrixOperation can only take exactly one dimension at this time."];
+	}
+	
+	GLLinearTransform *result = [GLLinearTransform transformOfType: transform.dataFormat withFromDimensions: transform.fromDimensions toDimensions: transform.toDimensions inFormat: @[@(kGLDenseMatrixFormat)] forEquation:transform.equation matrix:nil];
+	
+	NSUInteger nDiagonalPoints = transform.matrixDescription.strides[0].nDiagonalPoints;
+	NSUInteger nDiagonals = transform.matrixDescription.strides[0].nDiagonals;
+	NSUInteger diagonalStride = transform.matrixDescription.strides[0].diagonalStride;
+	
+	NSUInteger nRows = result.matrixDescription.strides[0].nRows;
+	NSUInteger nColumns = result.matrixDescription.strides[0].nColumns;
+	NSUInteger rowStride = result.matrixDescription.strides[0].rowStride;
+	NSUInteger colStride = result.matrixDescription.strides[0].columnStride;
+	
+	variableOperation op;
+	NSString *graphvisDescription;
+	if (result.dataFormat == kGLRealDataFormat) {
+		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			GLFloat *A = [operandArray[0] mutableBytes];
+			GLFloat *B = [resultArray[0] mutableBytes];
+			
+			vGL_vclr(B,1,nRows*nColumns);
+			
+			NSUInteger bandwidth = (nDiagonals-1)/2;
+			for (NSUInteger iDiagonal=0; iDiagonal<nDiagonals; iDiagonal++) {
+				NSInteger iStart = (NSInteger)bandwidth - (NSInteger) iDiagonal > 0 ? (NSInteger)bandwidth - (NSInteger) iDiagonal : 0;
+				NSInteger iEnd = (NSInteger)iDiagonal - (NSInteger) bandwidth > 0 ? (NSInteger)iDiagonal - (NSInteger) bandwidth : 0;
+				for (NSUInteger i=iStart; i<nDiagonalPoints-iEnd; i++) {
+						NSUInteger row = i; // The i-th point in the diagonal always corresponds to the i-th row.
+						NSUInteger col = i + (iDiagonal-bandwidth);
+						B[row*rowStride+col*colStride] = A[iDiagonal*diagonalStride+i];
+				}
+			}
+        };
+		graphvisDescription = @"matrix densification (real)";
+	}
+	
+	if (( self = [super initWithResult: @[result] operand: @[transform] ] ))
+	{
+		self.operation = op;
+        self.graphvisDescription = graphvisDescription;
+	}
+	
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end

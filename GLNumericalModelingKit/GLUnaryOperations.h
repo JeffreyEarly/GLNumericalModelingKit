@@ -141,3 +141,12 @@
 @interface GLDataTransposeOperation : GLVariableOperation
 - (GLDataTransposeOperation *) initWithLinearTransform: (GLLinearTransform *) transform;
 @end
+
+/************************************************/
+/*		GLDenseMatrixOperation					*/
+/************************************************/
+
+// Takes the existing format, and converts to a dense matrix.
+@interface GLDenseMatrixOperation : GLVariableOperation
+- (GLDenseMatrixOperation *) initWithLinearTransform: (GLLinearTransform *) transform;
+@end

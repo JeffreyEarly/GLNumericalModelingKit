@@ -225,6 +225,8 @@ typedef NS_ENUM(NSUInteger, GLBoundaryCondition) {
 /// Returns the same matrix, but with column-major ordering. Returns self if the ordering is already column-major.
 - (GLLinearTransform *) columnMajorOrdered;
 
+- (GLLinearTransform *) densified;
+
 /************************************************/
 /*		Operations								*/
 /************************************************/

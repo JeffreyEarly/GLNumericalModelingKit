@@ -145,6 +145,16 @@
 	}
 }
 
+- (GLLinearTransform *) densified {
+	if (self.matrixFormats.count == 1 && ([self.matrixFormats[0] unsignedIntegerValue] == kGLTridiagonalMatrixFormat || [self.matrixFormats[0] unsignedIntegerValue] == kGLDiagonalMatrixFormat)) {
+		GLVariableOperation *operation = [[GLDenseMatrixOperation alloc] initWithLinearTransform: self];
+        operation = [self replaceWithExistingOperation: operation];
+        return operation.result[0];
+	} else {
+		return self;
+	}
+}
+
 /************************************************/
 /*		Initialization							*/
 /************************************************/

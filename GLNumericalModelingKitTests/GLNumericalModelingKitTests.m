@@ -1076,6 +1076,8 @@
 	GLLinearTransform *diffX = [GLLinearTransform finiteDifferenceOperatorWithDerivatives: 2 leftBC: kGLNeumannBoundaryCondition rightBC:kGLNeumannBoundaryCondition bandwidth:1 fromDimension:xDim forEquation:equation];
 	[diffX dumpToConsole];
 	
+	[[diffX densified] dumpToConsole];
+	
 //	GLFloat *a = diffX.pointerValue;
 //	for (NSUInteger i=0; i<N; i++) {
 //		for (NSUInteger iDiagonal=0; iDiagonal<3; iDiagonal++) {
