@@ -1066,6 +1066,25 @@
 	}
 }
 
+- (void) testFiniteDifferencing
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	NSUInteger N=8;
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: N domainMin: 0.0 length: N-1];
+    xDim.name = @"x";
+	
+	GLLinearTransform *diffX = [GLLinearTransform finiteDifferenceOperatorWithDerivatives: 2 leftBC: kGLNeumannBoundaryCondition rightBC:kGLNeumannBoundaryCondition bandwidth:1 fromDimension:xDim forEquation:equation];
+	[diffX dumpToConsole];
+	
+//	GLFloat *a = diffX.pointerValue;
+//	for (NSUInteger i=0; i<N; i++) {
+//		for (NSUInteger iDiagonal=0; iDiagonal<3; iDiagonal++) {
+//			printf("%6.2f\t", a[iDiagonal*N+i]);
+//		}
+//		printf("\n");
+//	}
+}
+
 /************************************************/
 /*		Optimizer                               */
 /************************************************/

@@ -33,6 +33,12 @@ typedef NSUInteger GLLinearTransformType;
 // The first argument indicates the row/destination indices, the second argument indicates the column/starting indices.
 typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 
+typedef NS_ENUM(NSUInteger, GLBoundaryCondition) {
+	kGLPeriodicBoundaryCondition = -1,
+    kGLDirichletBoundaryCondition = 0,
+	kGLNeumannBoundaryCondition = 1
+};
+
 @interface GLLinearTransform : GLVariable
 
 /************************************************/
@@ -105,13 +111,28 @@ typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
  */
 + (GLLinearTransform *) discreteTransformFromDimension: (GLDimension *) aDimension toBasis: (GLBasisFunction) aBasis forEquation: (GLEquation *) equation;
 
+/** Create a finite differecing differential operator of arbitrary order that can act on 1-dimensional functions in the given dimension.
+ @discussion This does not create fully generalized differentiation matrices, but creates matrices with a specific number of off-diagonal points.
+ @discussion The bandwidth must be at least ceil(numDerivs/2).
+ @discussion End points (boundary conditions) will be of accuracy=bandwidth.
+ @discussion The bandwidth must be at least numDerivs of the boundary condition (e.g., Neumann boundary conditions require a bandwidth of 1).
+ @param numDerivs Number of derivatives.
+ @param leftBC The left boundary condition.
+ @param rightBC The right boundary condition.
+ @param bandwidth The number of off-diagonals, e.g., a bandwidth of 1 will create a tridiagonal matrix.
+ @param aDimension The dimension (and therefore basis) which should be used to take the derivative.
+ @param equation The GLEquation object being used.
+ @returns A GLLinearTransform with fromDimensions and toDimensions that match aDimension.
+ */
++ (GLLinearTransform *) finiteDifferenceOperatorWithDerivatives: (NSUInteger) numDerivs leftBC: (GLBoundaryCondition) leftBC rightBC: (GLBoundaryCondition) rightBC bandwidth: (NSUInteger) bandwidth fromDimension: (GLDimension *) x forEquation: (GLEquation *) equation;
+
 /** Create a differential operator of arbitrary order that can act on 1-dimensional functions in the given dimension.
  @param numDerivs Order of differentiation.
  @param aDimension The dimension (and therefore basis) which should be used to take the derivative.
  @param equation The GLEquation object being used.
  @returns A GLLinearTransform with fromDimensions that match aDimension, and toDimensions which may be different.
  */
-+ (GLLinearTransform *) differentialOperatorOfOrder: (NSUInteger) numDerivs fromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
++ (GLLinearTransform *) differentialOperatorWithDerivatives: (NSUInteger) numDerivs fromDimension: (GLDimension *) aDimension forEquation: (GLEquation *) equation;
 
 /** Create a differential operator of arbitrary order that can act on multi-dimensional functions in the given dimensions.
  @param numDerivs An array of NSNumbers indicating the order of differentiation for each dimension.
