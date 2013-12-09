@@ -44,79 +44,48 @@
 @synthesize nDataElements = _nDataElements;
 @synthesize dataBytes = _dataBytes;
 
+- (void) dumpToConsole
+{
+	NSLog(@"%@", [self matrixDescriptionString]);
+}
+
 - (NSString *) matrixDescriptionString
 {
-	NSUInteger n = [[self.fromDimensions lastObject] nPoints]; //self.matrixDescription.strides[0].rowStride;
-	n = n==0?1:n;
 	NSMutableString *descrip = [NSMutableString string];
 	
-	GLFloat max, min;
-	vGL_maxv( self.data.mutableBytes, 1, &max, self.nDataElements);
-	vGL_minv( self.data.mutableBytes, 1, &min, self.nDataElements);
-	
-	if ( fabs(min) > max) {
-		max = fabs(min);
-	}
-	
-	GLFloat divisor = pow(10, floor(log10(max)));
-	if ( divisor == 0.0) divisor = 1;
-	
-	if (0 && self.dataFormat == kGLSplitComplexDataFormat)
-	{
-		GLSplitComplex splitComplex = self.splitComplex;
-		[descrip appendFormat: @"%f * ", divisor];
-        //		for (NSUInteger i=0; i<self.nDataPoints; i++)
-        //		{
-        //			if ( i % n == 0 ) {
-        //				[descrip appendFormat: @"\n"];
-        //			}
-        //			[descrip appendFormat: @"%1.1f ", sqrt(fabs(splitComplex.realp[i] * splitComplex.realp[i] - splitComplex.imagp[i] * splitComplex.imagp[i]))/divisor];
-        //		}
-		
-		for (NSUInteger i=0; i<self.nDataPoints; i++)
-		{
-			if ( i % n == 0 ) {
+	if (self.fromDimensions.count == 1) {
+		if (self.matrixDescription.strides[0].format == kGLIdentityMatrixFormat) {
+			[descrip appendFormat: @"Identity matrix A=I\n"];
+		} else if (self.matrixDescription.strides[0].format == kGLDenseMatrixFormat) {
+			[descrip appendFormat: @"Dense matrix A=\n"];
+			
+			GLFloat *a = self.pointerValue;
+			for (NSUInteger i=0; i<self.matrixDescription.strides[0].nRows; i++) {
+				for (NSUInteger j=0; j<self.matrixDescription.strides[0].nColumns; j++) {
+					[descrip appendFormat: @"%6.2f\t", a[i*self.matrixDescription.strides[0].rowStride+j]];
+				}
 				[descrip appendFormat: @"\n"];
 			}
-			[descrip appendFormat: @"%+1.1f ", splitComplex.realp[i]/divisor];
-		}
-		
-		[descrip appendFormat: @" imagp \n"];
-		for (NSUInteger i=0; i<self.nDataPoints; i++)
-		{
-			if ( i % n == 0 ) {
+			
+		} else {
+			
+			if (self.matrixDescription.strides[0].format == kGLDiagonalMatrixFormat) {
+				[descrip appendFormat: @"Diagonal matrix A=\n"];
+			} else if (self.matrixDescription.strides[0].format == kGLTridiagonalMatrixFormat) {
+				[descrip appendFormat: @"Tridiagonal matrix A=\n"];
+			} else if (self.matrixDescription.strides[0].format == kGLSubdiagonalMatrixFormat) {
+				[descrip appendFormat: @"Subdiagonal matrix A=\n"];
+			} else if (self.matrixDescription.strides[0].format == kGLSuperdiagonalMatrixFormat) {
+				[descrip appendFormat: @"Superdiagonal matrix A=\n"];
+			}
+			
+			GLFloat *a = self.pointerValue;
+			for (NSUInteger i=0; i<self.matrixDescription.strides[0].nDiagonalPoints; i++) {
+				for (NSUInteger iDiagonal=0; iDiagonal<self.matrixDescription.strides[0].nDiagonals; iDiagonal++) {
+					[descrip appendFormat: @"%6.2f\t", a[iDiagonal*self.matrixDescription.strides[0].diagonalStride+i]];
+				}
 				[descrip appendFormat: @"\n"];
 			}
-			[descrip appendFormat: @"%+1.1f ", splitComplex.imagp[i]/divisor];
-		}
-	}
-    if ( self.fromDimensions.count == 3)
-    {
-        NSUInteger m = [self.fromDimensions[2] nPoints] * [self.fromDimensions[1] nPoints];
-        GLFloat *f = self.pointerValue;
-		[descrip appendFormat: @"%g * ", divisor];
-		for (NSUInteger i=0; i<self.nDataElements; i++)
-		{
-			if ( i % m == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-            if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-            
-			[descrip appendFormat: @"%+1.1f ", f[i]/divisor];
-		}
-    }
-	else
-	{
-		GLFloat *f = self.pointerValue;
-		[descrip appendFormat: @"%g * ", divisor];
-		for (NSUInteger i=0; i<self.nDataElements; i++)
-		{
-			if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-			[descrip appendFormat: @"%+1.1f ", f[i]/divisor];
 		}
 	}
 	
@@ -173,6 +142,16 @@
 		GLVariableOperation *operation = [[GLDataTransposeOperation alloc] initWithLinearTransform: self];
         operation = [self replaceWithExistingOperation: operation];
         return operation.result[0];
+	}
+}
+
+- (GLLinearTransform *) densified {
+	if (self.matrixFormats.count == 1 && ([self.matrixFormats[0] unsignedIntegerValue] == kGLTridiagonalMatrixFormat || [self.matrixFormats[0] unsignedIntegerValue] == kGLDiagonalMatrixFormat)) {
+		GLVariableOperation *operation = [[GLDenseMatrixOperation alloc] initWithLinearTransform: self];
+        operation = [self replaceWithExistingOperation: operation];
+        return operation.result[0];
+	} else {
+		return self;
 	}
 }
 
@@ -563,7 +542,7 @@
     return nil;
 }
 
-+ (GLLinearTransform *) differentialOperatorOfOrder: (NSUInteger) numDerivs fromDimension: (GLDimension *) k forEquation: (GLEquation *) equation
++ (GLLinearTransform *) differentialOperatorWithDerivatives: (NSUInteger) numDerivs fromDimension: (GLDimension *) k forEquation: (GLEquation *) equation
 {
     GLLinearTransform *diff;
     if (numDerivs == 0)
@@ -638,7 +617,7 @@
     NSMutableArray *matrixBlocks = [NSMutableArray array];
     BOOL isComplex = NO;
     for (NSUInteger i=0; i<dimensions.count; i++) {
-        GLLinearTransform *diffOp = [self differentialOperatorOfOrder: [numDerivs[i] unsignedIntegerValue] fromDimension: dimensions[i] forEquation:equation];
+        GLLinearTransform *diffOp = [self differentialOperatorWithDerivatives: [numDerivs[i] unsignedIntegerValue] fromDimension: dimensions[i] forEquation:equation];
         linearTransformations[i] = diffOp;
         toDimensions[i] = diffOp.toDimensions[0];
         isComplex |= diffOp.isComplex;
@@ -1021,5 +1000,130 @@
 	operation = [self replaceWithExistingOperation: operation];
 	return operation.result;
 }
+
+/************************************************/
+/*		Finite Differencing						*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Finite Differencing
+#pragma mark
+
+// http://www.scholarpedia.org/article/Finite_difference_method
+
+// z contains the position where the approximation is to be accurate
+// x is an array of length n of grid point positions
+// m the highest derivative we need to find the weights for
+// c an array of length (m+1)*n containing the weights of the derivative (row) at a grid position (column)
+// n is the length of the grid point position array
+// x and c must be pre-allocated.
+void weights( GLFloat z, GLFloat *x, NSUInteger m, GLFloat *c, NSUInteger n )
+{
+	vGL_vclr(c,1,(m+1)*n);
+    GLFloat c1=1;
+    GLFloat c4=x[0]-z;
+    c[0*n+0] = 1;
+    for (NSUInteger i=1; i<n; i++)
+    {
+        NSUInteger mn = i<m?i:m;
+        GLFloat c2=1;
+        GLFloat c5=c4;
+        c4=x[i]-z;
+        
+        for (NSUInteger j=0; j<i; j++)
+        {
+            GLFloat c3=x[i]-x[j];
+            c2=c2*c3;
+            if (j==i-1) {
+                for (NSUInteger k=mn; k>=1; k--) {
+                    c[k*n+i] = c1*( ((GLFloat)k)*c[(k-1)*n+i-1] - c5*c[k*n+i-1] )/c2;
+                }
+                c[0*n+i] = -c1*c5*c[0*n+i-1]/c2;
+            }
+            
+            for (NSUInteger k=mn; k>=1; k--) {
+                c[k*n+j] = ( c4*c[k*n+j] - ((GLFloat)k)*c[(k-1)*n+j] )/c3;
+            }
+            c[0*n+j] = c4*c[0*n+j]/c3;
+        }
+        c1=c2;
+    }
+}
+
+// This does not create fully generalized differentiation matrices, but creates matrices with a specific number of off-diagonal points.
+// The interior points use central differencing, and will be of accuracy=2*bandwidth.
+// The bandwidth must be at least floor(numDerivs/2) + 1
+// End points (boundary conditions) will be of accuracy=bandwidth
+// The bandwidth must be at least numDerivs of the boundary condition (e.g., Neuman boundary conditions require a bandwidth of 1).
++ (GLLinearTransform *) finiteDifferenceOperatorWithDerivatives: (NSUInteger) numDerivs leftBC: (GLBoundaryCondition) leftBC rightBC: (GLBoundaryCondition) rightBC bandwidth: (NSUInteger) bandwidth fromDimension: (GLDimension *) x forEquation: (GLEquation *) equation
+{
+	if (leftBC == kGLPeriodicBoundaryCondition || rightBC == kGLPeriodicBoundaryCondition) {
+		[NSException raise:@"NotYetImplemented" format:@"Periodic boundary conditions are not yet implemented."];
+	}
+	
+	if (bandwidth < ceil(((GLFloat)numDerivs)/2.)) {
+		[NSException raise:@"InvalidBandwidth" format:@"The bandwidth must be at least floor(numDerivs/2) + 1."];
+	}
+	
+	if (bandwidth < leftBC) {
+		[NSException raise:@"InvalidBandwidth" format:@"The bandwidth must be at least the number of derivatives of the left boundary condition."];
+	}
+	
+	if (bandwidth < rightBC) {
+		[NSException raise:@"InvalidBandwidth" format:@"The bandwidth must be at least the number of derivatives of the right boundary condition."];
+	}
+	
+	if (x.basisFunction != kGLDeltaBasis) {
+		[NSException raise:@"InvalidBasis" format:@"Finite differencing requires a delta-basis."];
+	}
+	
+	int n = 2*((int)bandwidth)+1;
+	NSMutableData *buffer = [NSMutableData dataWithLength: n*(numDerivs+1)*sizeof(GLFloat)];
+	
+	// We can use central differencing as soon as the row >= bandwidth.
+	// If the dimension is evenly sampled, we can use the same central difference weights throughout the interior.
+	// For the moment we're implementing the *simplest* algorithm, not the most efficient.
+	transformMatrix matrix = ^( NSUInteger *row, NSUInteger *col ) {
+		GLFloat *xVal = (GLFloat *) x.data.bytes;
+		GLFloat *c = buffer.mutableBytes;
+		
+		if (row[0] == 0) { // leftBC
+			weights( xVal[row[0]], &(xVal[row[0]]), leftBC, c, bandwidth+1);
+			return (GLFloatComplex) c[leftBC*(bandwidth+1)+col[0]];
+		} else if (row[0] == x.nPoints-1) { // rightBC
+			weights( xVal[row[0]], &(xVal[row[0]-bandwidth]), rightBC, c, bandwidth+1);
+			return (GLFloatComplex) c[rightBC*(bandwidth+1) + (bandwidth+1)+(col[0]-x.nPoints)];
+		} else if ( abs((int)col[0]-(int)row[0]) <= bandwidth) {
+			NSUInteger a = row[0]<bandwidth?row[0]:bandwidth; // make sure we don't go below 0
+			weights( xVal[row[0]], &(xVal[row[0]-a]), numDerivs, c, n);
+			return (GLFloatComplex) c[numDerivs*n + a+(col[0]-row[0])];
+		} else {
+			return (GLFloatComplex) 0.0;
+		}
+	};
+	
+	GLMatrixFormat matrixFormat = bandwidth == 1 ? kGLTridiagonalMatrixFormat : kGLDenseMatrixFormat;
+	GLLinearTransform *diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[x] inFormat: @[@(matrixFormat)] forEquation: equation matrix: matrix];
+	
+	return diff;
+}
+
+//if ( row[0] == col[0] ) {
+//	
+//	printf("z=%6.2f\n\n", xVal[row[0]]);
+//	
+//	GLFloat *d = &(xVal[row[0]-a]);
+//	for (NSUInteger i=0; i<n; i++) {
+//		printf("%6.2f\t", d[i]);
+//	}
+//	printf("\n\n");
+//	
+//	for (NSUInteger i=0; i<numDerivs+1; i++) {
+//		for (NSUInteger j=0; j<n; j++) {
+//			printf("%6.2f\t", c[i*n+j]);
+//		}
+//		printf("\n");
+//	}
+//}
 
 @end
