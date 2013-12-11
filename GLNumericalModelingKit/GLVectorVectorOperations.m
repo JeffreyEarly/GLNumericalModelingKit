@@ -911,7 +911,7 @@
 				}
 				GLMatrixDescription *matrix = B.matrixDescription;
 				for (NSUInteger i=0; i<matrix.nDimensions; i++) {
-					if (matrix.strides[i].format != kGLDiagonalMatrixFormat) {
+					if (matrix.strides[i].matrixFormat != kGLDiagonalMatrixFormat) {
 						[NSException raise: @"BadFormat" format: @"This operation type can only transform with matrices in a diagonal format."];
 					}
 				}
@@ -983,7 +983,7 @@
 				}
 				GLMatrixDescription *matrix = A.matrixDescription;
 				for (NSUInteger i=0; i<matrix.nDimensions; i++) {
-					if (matrix.strides[i].format != kGLDiagonalMatrixFormat) {
+					if (matrix.strides[i].matrixFormat != kGLDiagonalMatrixFormat) {
 						[NSException raise: @"BadFormat" format: @"This operation type can only transform with matrices in a diagonal format."];
 					}
 				}

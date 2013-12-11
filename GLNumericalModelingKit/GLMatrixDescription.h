@@ -36,8 +36,11 @@ typedef NS_ENUM(NSUInteger, GLDataFormat) {
     kGLInterleavedComplexDataFormat = 2
 };
 
+// Note all strides (distances) are measure in sizeof(GLFloat).
+// The complex stride will be 0 for real numbers, 1 for complex interleaved numbers and nPoints (total point in all dims) for split formats.
 typedef struct {
-    GLMatrixFormat format;
+    GLMatrixFormat matrixFormat;
+	GLDataFormat dataFormat;
     
 	NSUInteger nPoints;         // total number of points
 	NSUInteger nRows;           // total number of rows
@@ -45,7 +48,8 @@ typedef struct {
     NSUInteger nDiagonals;      // total number of diagonal (mutually exclusive with rows and columns).
     NSUInteger nDiagonalPoints; // total number of points along the diagonal (mutually exclusive with rows and columns).
     
-	NSUInteger stride;          // distance to the next element
+	NSUInteger stride;          // distance to the next real element
+	NSUInteger complexStride;	// distance to the imaginary part of the element
     
 	NSUInteger rowStride;       // distance to the next row (may be the same as stride)
 	NSUInteger columnStride;    // distance to the next column  (may be the same as stride)
@@ -57,19 +61,37 @@ typedef struct {
 
 /** Creates a new matrix description based on the dimensions and formatting of the function.
  @discussion Functions are treated as "dense" column vectors.
+ @discussion Row-major and column-major ordering are meaningless for a function.
  @param aFunction A function object.
  @returns A new GLMatrixDescription object.
  */
 - (GLMatrixDescription *) initWithVariable: (GLFunction *) aFunction;
 
-
+/** Creates a new matrix description based on the dimensions and formatting of the linear transformation.
+ @param aLinearTransform A linear transformation object.
+ @returns A new GLMatrixDescription object.
+ */
 - (GLMatrixDescription *) initWithLinearTransform: (GLLinearTransform *) aLinearTransform;
 
+/// Total number of dimensions that are represented. In the case of linear transformation, this is the total number of toDimensions (or fromDimensions).
 @property NSUInteger nDimensions;
 
+/// Total number of points *stored*.
+@property NSUInteger nPoints;
+
+/// Total number of elements (double the number of points for complex formats)
+@property NSUInteger nElements;
+
+/// The stride/distance to the imaginary part of the point.
+@property NSUInteger complexStride;
+
+/// The format being used to store the data
+@property GLDataFormat dataFormat;
+
+/// An array of size nDimensions
 @property GLDataStride *strides;
 
-// Returns yes if the matrices are in the same format.
+/// Returns yes if the matrices are in the same format.
 - (BOOL) isEqualToMatrixDescription: (GLMatrixDescription *) otherMatrixDescription;
 
 @end

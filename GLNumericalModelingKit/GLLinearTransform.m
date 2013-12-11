@@ -54,9 +54,9 @@
 	NSMutableString *descrip = [NSMutableString string];
 	
 	if (self.fromDimensions.count == 1) {
-		if (self.matrixDescription.strides[0].format == kGLIdentityMatrixFormat) {
+		if (self.matrixDescription.strides[0].matrixFormat == kGLIdentityMatrixFormat) {
 			[descrip appendFormat: @"Identity matrix A=I\n"];
-		} else if (self.matrixDescription.strides[0].format == kGLDenseMatrixFormat) {
+		} else if (self.matrixDescription.strides[0].matrixFormat == kGLDenseMatrixFormat) {
 			[descrip appendFormat: @"Dense matrix A=\n"];
 			
 			GLFloat *a = self.pointerValue;
@@ -69,13 +69,13 @@
 			
 		} else {
 			
-			if (self.matrixDescription.strides[0].format == kGLDiagonalMatrixFormat) {
+			if (self.matrixDescription.strides[0].matrixFormat == kGLDiagonalMatrixFormat) {
 				[descrip appendFormat: @"Diagonal matrix A=\n"];
-			} else if (self.matrixDescription.strides[0].format == kGLTridiagonalMatrixFormat) {
+			} else if (self.matrixDescription.strides[0].matrixFormat == kGLTridiagonalMatrixFormat) {
 				[descrip appendFormat: @"Tridiagonal matrix A=\n"];
-			} else if (self.matrixDescription.strides[0].format == kGLSubdiagonalMatrixFormat) {
+			} else if (self.matrixDescription.strides[0].matrixFormat == kGLSubdiagonalMatrixFormat) {
 				[descrip appendFormat: @"Subdiagonal matrix A=\n"];
-			} else if (self.matrixDescription.strides[0].format == kGLSuperdiagonalMatrixFormat) {
+			} else if (self.matrixDescription.strides[0].matrixFormat == kGLSuperdiagonalMatrixFormat) {
 				[descrip appendFormat: @"Superdiagonal matrix A=\n"];
 			}
 			
@@ -189,7 +189,6 @@
 		// We loop through the dimensions and allocate enough memory for the variable
 		// defined on each dimension.
 		_nDataPoints = 0;
-		_nDataElements = 0;
 		
 		for (NSUInteger iDim=0; iDim < fromDims.count; iDim++)
 		{
@@ -199,27 +198,20 @@
 			
 			if (_nDataPoints == 0 && matrixFormat != kGLIdentityMatrixFormat) {
 				_nDataPoints = 1;
-				_nDataElements = 1;
 			}
 			
 			if ( matrixFormat == kGLIdentityMatrixFormat) {
 				_nDataPoints *= 1;
-				_nDataElements *= 1;
 			} else if ( matrixFormat == kGLDenseMatrixFormat) {
 				_nDataPoints *= fromDim.nPoints * toDim.nPoints;
-				_nDataElements *= fromDim.nPoints * toDim.nPoints;
 			} else if ( matrixFormat == kGLDiagonalMatrixFormat) {
 				_nDataPoints *= toDim.nPoints;
-				_nDataElements *= toDim.nPoints;
 			} else if ( matrixFormat == kGLSubdiagonalMatrixFormat) {
 				_nDataPoints *= toDim.nPoints;
-				_nDataElements *= toDim.nPoints;
 			} else if ( matrixFormat == kGLSuperdiagonalMatrixFormat) {
 				_nDataPoints *= toDim.nPoints;
-				_nDataElements *= toDim.nPoints;
 			} else if ( matrixFormat == kGLTridiagonalMatrixFormat) {
 				_nDataPoints *= 3*toDim.nPoints;
-				_nDataElements *= 3*toDim.nPoints;
 			}
 			
 			if (fromDim.basisFunction == kGLDeltaBasis) {
@@ -238,154 +230,227 @@
 		}
         
         if (dataFormat == kGLSplitComplexDataFormat || dataFormat == kGLInterleavedComplexDataFormat) {
-            _nDataElements *= 2;
-        }
+            _nDataElements = 2*_nDataPoints;
+        } else {
+			_nDataElements = _nDataPoints;
+		}
 		
 		_dataBytes = _nDataElements*sizeof(GLFloat);
         
         self.matrixDescription = [[GLMatrixDescription alloc] initWithLinearTransform: self];
         
         if (self.matrixBlock) {
-            [self populateDataFromMatrixBlock];
-        }
+			[self populateData: self.data withFormat: self.matrixDescription usingMatrixBlock: self.matrixBlock];
+		}
 	}
 	
 	return self;
 }
 
-
-- (void) populateDataFromMatrixBlock
+- (transformMatrix) matrixBlockFromData: (NSData *) data withStride: (GLDataStride) stride
 {
-    if (self.matrixBlock) {
-        transformMatrix theMatrixBlock = self.matrixBlock;
+	transformMatrix matrixBlock;
+	
+	GLDataFormat dataFormat = stride.dataFormat;
+	GLMatrixFormat matrixFormat = stride.matrixFormat;
+	NSUInteger nDataPoints = 1;
+	if ( matrixFormat == kGLIdentityMatrixFormat) {
+		nDataPoints = 1;
+	} else if ( matrixFormat == kGLDenseMatrixFormat) {
+		nDataPoints = stride.nRows * stride.nColumns;
+	} else {
+		nDataPoints = stride.nDiagonalPoints * stride.nDiagonals;
+	}
+	
+	// This block retrieves the matrix value from the correct spot in memory (memIndex), given a particular memory location.
+	// The assignment is only dependent on the format and the total number of points.
+	GLFloatComplex (^retrieveData)(GLFloat *, NSUInteger) = ^(GLFloat *f, NSUInteger memIndex ) {
+		if (dataFormat == kGLRealDataFormat) {
+			return (GLFloatComplex) f[memIndex];
+		} else if (dataFormat == kGLInterleavedComplexDataFormat) {
+			return f[2*memIndex] + I*f[2*memIndex+1];
+		} else if (dataFormat == kGLSplitComplexDataFormat) {
+			return f[memIndex] + I*f[memIndex+nDataPoints];
+		} else {
+			return (GLFloatComplex) 0.0;
+		}
+	};
+	
+	if (stride.matrixFormat == kGLIdentityMatrixFormat) {
+		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
+			return (GLFloatComplex) (row[0] == col[0] ? 1.0 : 0.0);
+		};
+	} else if (stride.matrixFormat == kGLDenseMatrixFormat) {
+		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
+			return retrieveData( (GLFloat *) data.bytes,  row[0]*stride.rowStride + col[0]*stride.columnStride);
+		};
+	} else if (stride.matrixFormat == kGLDiagonalMatrixFormat) {
+		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
+			if (row[0] == col[0]) {
+				return retrieveData( (GLFloat *) data.bytes,  row[0]*stride.stride);
+			} else {
+				return (GLFloatComplex)0.0;
+			}
+		};
+	} else if (stride.matrixFormat == kGLSubdiagonalMatrixFormat) {
+		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
+			if (row[0] == col[0]+1) {
+				return retrieveData( (GLFloat *) data.bytes,  row[0]*stride.stride);
+			} else {
+				return (GLFloatComplex)0.0;
+			}
+		};
+	} else if (stride.matrixFormat == kGLSuperdiagonalMatrixFormat) {
+		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
+			if (row[0]+1 == col[0]) {
+				return retrieveData( (GLFloat *) data.bytes,  row[0]*stride.stride);
+			} else {
+				return (GLFloatComplex)0.0;
+			}
+		};
+	} else if (stride.matrixFormat == kGLTridiagonalMatrixFormat) {
+		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
+			NSInteger iDiagonal = col[0] - row[0] + 1;
+			if (iDiagonal >= 0 && iDiagonal < 3) {
+				return retrieveData( (GLFloat *) data.bytes, iDiagonal*stride.diagonalStride + row[0]*stride.stride);
+			} else {
+				return (GLFloatComplex)0.0;
+			}
+		};
+	}
+	
+	return matrixBlock;
+}
+
+
+- (void) populateData: (NSMutableData *) data withFormat: (GLMatrixDescription *) matrixDescription usingMatrixBlock: (transformMatrix) theMatrixBlock
+{
+	// This block places the matrix value in the correct spot in memory (memIndex), given a particular choice of row and column indices (rows, col).
+	// The assignment is only dependent on the format.
+	void (^assignData)(NSUInteger *, NSUInteger *, GLFloat *, NSUInteger) = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger memIndex ) {
+		GLFloatComplex value = theMatrixBlock(row, col);
+		
+		if (matrixDescription.dataFormat == kGLRealDataFormat) {
+			f[memIndex] = creal(value);
+		} else if (matrixDescription.dataFormat == kGLInterleavedComplexDataFormat) {
+			f[2*memIndex] = creal(value);
+			f[2*memIndex+matrixDescription.complexStride] = cimag(value);
+		} else if (matrixDescription.dataFormat == kGLSplitComplexDataFormat) {
+			f[memIndex] = creal(value);
+			f[memIndex+matrixDescription.complexStride] = cimag(value);
+		}
+	};
+	
+	void (^assignZeroData)(GLFloat *, NSUInteger) = ^(GLFloat *f, NSUInteger memIndex ) {
+		if (matrixDescription.dataFormat == kGLRealDataFormat) {
+			f[memIndex] = 0.0;
+		} else if (matrixDescription.dataFormat == kGLInterleavedComplexDataFormat) {
+			f[2*memIndex] = 0.0;
+			f[2*memIndex+matrixDescription.complexStride] = 0.0;
+		} else if (matrixDescription.dataFormat == kGLSplitComplexDataFormat) {
+			f[memIndex] = 0.0;
+			f[memIndex+matrixDescription.complexStride] = 0.0;
+		}
+	};
+	
+	for (NSInteger iDim = matrixDescription.nDimensions-1; iDim >= 0; iDim--)
+	{
+		GLDataStride stride = matrixDescription.strides[iDim];
+		
+		// This block encapsulates a loop over the appropriate rows and columns of one dimension pair, given the known data format.
+		void (^loop)( NSUInteger *, NSUInteger *, GLFloat *, NSUInteger );
         
-        // This block places the matrix value in the correct spot in memory (memIndex), given a particular choice of row and column indices (rows, col).
-        // The assignment is only dependent on the format.
-        void (^assignData)(NSUInteger *, NSUInteger *, GLFloat *, NSUInteger) = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger memIndex ) {
-                GLFloatComplex value = theMatrixBlock(row, col);
-                
-                if (self.dataFormat == kGLRealDataFormat) {
-                    f[memIndex] = creal(value);
-                } else if (self.dataFormat == kGLInterleavedComplexDataFormat) {
-                    f[2*memIndex] = creal(value);
-                    f[2*memIndex+1] = cimag(value);
-                } else if (self.dataFormat == kGLSplitComplexDataFormat) {
-                    f[memIndex] = creal(value);
-                    f[memIndex+self.nDataPoints] = cimag(value);
-                }
-        };
-        
-        void (^assignZeroData)(GLFloat *, NSUInteger) = ^(GLFloat *f, NSUInteger memIndex ) {
-            if (self.dataFormat == kGLRealDataFormat) {
-                f[memIndex] = 0.0;
-            } else if (self.dataFormat == kGLInterleavedComplexDataFormat) {
-                f[2*memIndex] = 0.0;
-                f[2*memIndex+1] = 0.0;
-            } else if (self.dataFormat == kGLSplitComplexDataFormat) {
-                f[memIndex] = 0.0;
-                f[memIndex+self.nDataPoints] = 0.0;
-            }
-        };
-        
-        for (NSInteger iDim = self.matrixDescription.nDimensions-1; iDim >= 0; iDim--)
-        {
-            GLDataStride stride = self.matrixDescription.strides[iDim];
-            
-            // This block encapsulates a loop over the appropriate rows and columns of one dimension pair, given the known data format.
-            void (^loop)( NSUInteger *, NSUInteger *, GLFloat *, NSUInteger );
-        
-            if (stride.format == kGLIdentityMatrixFormat) {
-                // We store nothing in this case---so there is no loop.
-                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
-                    assignData( row, col, f, index);
-                };
-            } else if (stride.format == kGLDenseMatrixFormat) {
-                // Here we loop over ALL possible rows an columns---this matrix is dense.
-                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
-                    for (NSUInteger i=0; i<stride.nRows; i++) {
-                        for (NSUInteger j=0; j<stride.nColumns; j++) {
-                            row[iDim] = i;
-                            col[iDim] = j;
-                            
-                            NSUInteger memIndex = index + i*stride.rowStride + j*stride.columnStride;
-                            assignData( row, col, f, memIndex);
-                        }
-                    }
-                };
-            } else if (stride.format == kGLDiagonalMatrixFormat) {
-                // Loop over the diagonal only.
-                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
-                    for (NSUInteger i=0; i<stride.nDiagonalPoints; i++) {
-                        row[iDim] = i;
-                        col[iDim] = i;
-                        
-                        NSUInteger memIndex = index + i*stride.stride;
-                        assignData( row, col, f, memIndex);
-                    }
-                };
-            } else if (stride.format == kGLSubdiagonalMatrixFormat) {
-                // Loop over the sub-diagonal. Assign zero to the first element (which never actually gets used)
-                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
-                    assignZeroData(f, index + 0*stride.stride);
-                    for (NSUInteger i=1; i<stride.nDiagonalPoints; i++) {
-                        row[iDim] = i;
-                        col[iDim] = i-1;
-                        
-                        NSUInteger memIndex = index + i*stride.stride;
-                        assignData( row, col, f, memIndex);
-                    }
-                };
-            } else if (stride.format == kGLSuperdiagonalMatrixFormat) {
-                // Loop over the super-diagonal. Assign zero to the last element (which never actually gets used)
-                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
-                    assignZeroData(f, index + (stride.nDiagonalPoints-1)*stride.stride);
-                    for (NSUInteger i=0; i<stride.nDiagonalPoints-1; i++) {
-                        row[iDim] = i;
-                        col[iDim] = i+1;
-                        
-                        NSUInteger memIndex = index + i*stride.stride;
-                        assignData( row, col, f, memIndex);
-                    }
-                };
-            } else if (stride.format == kGLTridiagonalMatrixFormat) {
-                // Loop over the super-diagonal. Assign zero to the last element (which never actually gets used)
-                loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
-                    assignZeroData(f, index + 0*stride.stride);
-                    assignZeroData(f, index + (stride.nDiagonalPoints-1)*stride.stride + 2*stride.diagonalStride);
-                    for (NSUInteger i=1; i<stride.nDiagonalPoints; i++) {
-                        row[iDim] = i;
-                        col[iDim] = i-1;
-                        
-                        NSUInteger memIndex = index + i*stride.stride;
-                        assignData( row, col, f, memIndex);
-                    }
-                    for (NSUInteger i=0; i<stride.nDiagonalPoints; i++) {
-                        row[iDim] = i;
-                        col[iDim] = i;
-                        
-                        NSUInteger memIndex = index + i*stride.stride + 1*stride.diagonalStride;
-                        assignData( row, col, f, memIndex);
-                    }
-                    for (NSUInteger i=0; i<stride.nDiagonalPoints-1; i++) {
-                        row[iDim] = i;
-                        col[iDim] = i+1;
-                        
-                        NSUInteger memIndex = index + i*stride.stride + 2*stride.diagonalStride;
-                        assignData( row, col, f, memIndex);
-                    }
-                };
-            }
-            
-            assignData = loop;
-        }
-        
-        // And finally, we can now excute the block.
-        NSUInteger *rows = malloc(self.matrixDescription.nDimensions * sizeof(NSUInteger));
-        NSUInteger *cols = malloc(self.matrixDescription.nDimensions * sizeof(NSUInteger));
-        assignData( rows, cols, self.pointerValue, 0);
-        free(rows);
-        free(cols);
-    }
+		if (stride.matrixFormat == kGLIdentityMatrixFormat) {
+			// We store nothing in this case---so there is no loop.
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				assignData( row, col, f, index);
+			};
+		} else if (stride.matrixFormat == kGLDenseMatrixFormat) {
+			// Here we loop over ALL possible rows an columns---this matrix is dense.
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				for (NSUInteger i=0; i<stride.nRows; i++) {
+					for (NSUInteger j=0; j<stride.nColumns; j++) {
+						row[iDim] = i;
+						col[iDim] = j;
+						
+						NSUInteger memIndex = index + i*stride.rowStride + j*stride.columnStride;
+						assignData( row, col, f, memIndex);
+					}
+				}
+			};
+		} else if (stride.matrixFormat == kGLDiagonalMatrixFormat) {
+			// Loop over the diagonal only.
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				for (NSUInteger i=0; i<stride.nDiagonalPoints; i++) {
+					row[iDim] = i;
+					col[iDim] = i;
+					
+					NSUInteger memIndex = index + i*stride.stride;
+					assignData( row, col, f, memIndex);
+				}
+			};
+		} else if (stride.matrixFormat == kGLSubdiagonalMatrixFormat) {
+			// Loop over the sub-diagonal. Assign zero to the first element (which never actually gets used)
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				assignZeroData(f, index + 0*stride.stride);
+				for (NSUInteger i=1; i<stride.nDiagonalPoints; i++) {
+					row[iDim] = i;
+					col[iDim] = i-1;
+					
+					NSUInteger memIndex = index + i*stride.stride;
+					assignData( row, col, f, memIndex);
+				}
+			};
+		} else if (stride.matrixFormat == kGLSuperdiagonalMatrixFormat) {
+			// Loop over the super-diagonal. Assign zero to the last element (which never actually gets used)
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				assignZeroData(f, index + (stride.nDiagonalPoints-1)*stride.stride);
+				for (NSUInteger i=0; i<stride.nDiagonalPoints-1; i++) {
+					row[iDim] = i;
+					col[iDim] = i+1;
+					
+					NSUInteger memIndex = index + i*stride.stride;
+					assignData( row, col, f, memIndex);
+				}
+			};
+		} else if (stride.matrixFormat == kGLTridiagonalMatrixFormat) {
+			// Loop over the super-diagonal. Assign zero to the last element (which never actually gets used)
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				assignZeroData(f, index + 0*stride.stride);
+				assignZeroData(f, index + (stride.nDiagonalPoints-1)*stride.stride + 2*stride.diagonalStride);
+				for (NSUInteger i=1; i<stride.nDiagonalPoints; i++) {
+					row[iDim] = i;
+					col[iDim] = i-1;
+					
+					NSUInteger memIndex = index + i*stride.stride;
+					assignData( row, col, f, memIndex);
+				}
+				for (NSUInteger i=0; i<stride.nDiagonalPoints; i++) {
+					row[iDim] = i;
+					col[iDim] = i;
+					
+					NSUInteger memIndex = index + i*stride.stride + 1*stride.diagonalStride;
+					assignData( row, col, f, memIndex);
+				}
+				for (NSUInteger i=0; i<stride.nDiagonalPoints-1; i++) {
+					row[iDim] = i;
+					col[iDim] = i+1;
+					
+					NSUInteger memIndex = index + i*stride.stride + 2*stride.diagonalStride;
+					assignData( row, col, f, memIndex);
+				}
+			};
+		}
+		
+		assignData = loop;
+	}
+	
+	// And finally, we can now excute the block.
+	NSUInteger *rows = malloc(matrixDescription.nDimensions * sizeof(NSUInteger));
+	NSUInteger *cols = malloc(matrixDescription.nDimensions * sizeof(NSUInteger));
+	assignData( rows, cols, data.mutableBytes, 0);
+	free(rows);
+	free(cols);
 }
 
 /************************************************/
@@ -729,7 +794,7 @@
 {
     if (self.matrixDescription.nDimensions == 1)
     {
-        if (self.matrixDescription.strides[0].format == kGLDenseMatrixFormat) {
+        if (self.matrixDescription.strides[0].matrixFormat == kGLDenseMatrixFormat) {
             
             GLFloat *f = self.pointerValue;
             GLFloat *a = diagonalVariable.pointerValue;
