@@ -48,11 +48,11 @@
 		NSInteger totalShift = 0;
 		GLMatrixDescription *matrix = linearTransform.matrixDescription;
 		for (NSUInteger i=0; i<matrix.nDimensions; i++) {
-			if (matrix.strides[i].format == kGLSuperdiagonalMatrixFormat) {
+			if (matrix.strides[i].matrixFormat == kGLSuperdiagonalMatrixFormat) {
 				totalShift -= matrix.strides[i].stride;
-			} else if (matrix.strides[i].format == kGLSubdiagonalMatrixFormat) {
+			} else if (matrix.strides[i].matrixFormat == kGLSubdiagonalMatrixFormat) {
 				totalShift += matrix.strides[i].stride;
-			}  else if (matrix.strides[i].format == kGLDiagonalMatrixFormat) {
+			}  else if (matrix.strides[i].matrixFormat == kGLDiagonalMatrixFormat) {
 				totalShift += 0;
 			} else {
 				[NSException raise: @"BadFormat" format: @"This operation type can only transform with matrices in a diagonal format."];
@@ -1001,6 +1001,65 @@
         
     }
     return self;
+}
+@end
+
+/************************************************/
+/*		GLTensorProductOperation				*/
+/************************************************/
+#pragma mark -
+#pragma mark GLTensorProductOperation
+#pragma mark
+
+@implementation GLTensorProductOperation
+
+- (id) initWithLinearTransformations: (NSArray *) linearTransformations
+{
+	NSMutableArray *fromDimensions = [NSMutableArray array];
+    NSMutableArray *toDimensions = [NSMutableArray array];
+    NSMutableArray *matrixFormat = [NSMutableArray array];
+    NSMutableArray *matrixBlocks = [NSMutableArray array];
+    BOOL isComplex = NO;
+	GLEquation *equation = [linearTransformations[0] equation];
+    for (GLLinearTransform *transform in linearTransformations) {
+        [fromDimensions addObject: transform.fromDimensions[0]];
+		[toDimensions addObject: transform.toDimensions[0]];
+        isComplex |= transform.isComplex;
+        [matrixFormat addObject: transform.matrixFormats[0]];
+		if (transform.matrixBlock) {
+			[matrixBlocks addObject: transform.matrixBlock];
+		}
+    }
+    GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+    
+	if (matrixBlocks.count == linearTransformations.count)
+	{	// In this scenario, the linear transforms don't depend on any operations (they already have matrixBlocks), so we can immediately compute the tensor product.
+		GLLinearTransform *tensorProduct = [GLLinearTransform transformOfType:format withFromDimensions: fromDimensions toDimensions: toDimensions inFormat:matrixFormat forEquation:equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+			transformMatrix theMatrixBlock = matrixBlocks[0];
+			GLFloatComplex value = theMatrixBlock(&(row[0]), &(col[0]));
+			for (NSUInteger i=1;i<matrixBlocks.count;i++) {
+				theMatrixBlock = matrixBlocks[i];
+				value *= theMatrixBlock(&(row[i]), &(col[i]));
+			}
+			return value;
+		}];
+		
+		if (( self = [super initWithResult: @[tensorProduct] operand:@[]] )) {
+			
+		}
+		return self;
+	} else {
+		GLLinearTransform *tensorProduct = [GLLinearTransform transformOfType:format withFromDimensions: fromDimensions toDimensions: toDimensions inFormat:matrixFormat forEquation:equation matrix: NULL];
+		
+		variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+		
+		};
+		
+		if (( self = [super initWithResult: @[tensorProduct] operand: linearTransformations buffers: @[] operation: op] )) {
+			
+		}
+		return self;
+	}
 }
 
 @end

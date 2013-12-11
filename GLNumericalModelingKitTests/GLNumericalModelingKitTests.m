@@ -1167,6 +1167,8 @@
     GLFloat cfl = 0.25;
     GLFloat timeStep = cfl * xDim.sampleInterval;
     
+	[gaussian dumpToConsole];
+	
     GLRungeKuttaOperation *integrator = [GLAdaptiveRungeKuttaOperation rungeKutta23AdvanceY: @[[gaussian frequencyDomain]] stepSize: timeStep fFromTY: ^(GLScalar *t, NSArray *ynew) {
         return @[[ynew[0] diff:@"x"]];
     }];
@@ -1178,11 +1180,11 @@
 	// Do NOT extract the 'currentTime' from the integrator. It will have returned an interpolated value!
     GLFloat x10 = x0-timeStep*20;
     GLFunction *gaussian10 = [[[[x plus: @(-x10)] times: [x plus: @(-x10)]] negate] exponentiate];
-    
+    [gaussian10 dumpToConsole];
+	
     GLFloat *output = gaussian.pointerValue;
     GLFloat *expected = gaussian10.pointerValue;
     
-    // We expected 4th order Runge-Kutta to give use relative accuracies of 10^(-4)
     for (int i=0; i<xDim.nPoints; i++) {
 		if ( !fequalprec(output[i], expected[i], 1e-3) ) {
 			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
