@@ -176,7 +176,7 @@ static BOOL _shouldAntiAlias = NO;
             GLBasisFunction destinationBasis = [toBasis[idx] unsignedIntegerValue];
             
             if (aDim.basisFunction == kGLDeltaBasis) {
-                if (destinationBasis == kGLChebyshevBasis || destinationBasis == kGLCosineBasis || destinationBasis == kGLCosineHalfShiftBasis || destinationBasis == kGLSineBasis || destinationBasis == kGLSineHalfShiftBasis) {
+                if (destinationBasis == kGLChebyshevBasis || destinationBasis == kGLDiscreteCosineTransformIBasis || destinationBasis == kGLCosineBasis || destinationBasis == kGLDiscreteSineTransformIBasis || destinationBasis == kGLSineBasis) {
                     transformationRank++;
                     transformationBasis[idx] = @(destinationBasis);
                 }
@@ -316,7 +316,7 @@ static BOOL _shouldAntiAlias = NO;
             NSUInteger idx = [variable.dimensions indexOfObject: aDim];
             GLBasisFunction destinationBasis = [toBasis[idx] unsignedIntegerValue];
             
-            if (aDim.basisFunction == kGLChebyshevBasis || aDim.basisFunction == kGLCosineBasis || aDim.basisFunction == kGLCosineHalfShiftBasis || aDim.basisFunction == kGLSineBasis || aDim.basisFunction == kGLSineHalfShiftBasis){
+            if (aDim.basisFunction == kGLChebyshevBasis || aDim.basisFunction == kGLDiscreteCosineTransformIBasis || aDim.basisFunction == kGLCosineBasis || aDim.basisFunction == kGLDiscreteSineTransformIBasis || aDim.basisFunction == kGLSineBasis){
                 if (destinationBasis == kGLDeltaBasis) {
                     transformationRank++;
                     transformationBasis[idx] = @(destinationBasis);
@@ -407,13 +407,13 @@ static BOOL _shouldAntiAlias = NO;
             [basisDescription appendString: @"delta"];
         } else if (basis.unsignedIntegerValue == kGLExponentialBasis) {
             [basisDescription appendString: @"exponential"];
+        } else if (basis.unsignedIntegerValue == kGLDiscreteCosineTransformIBasis) {
+            [basisDescription appendString: @"cosine"];
+        } else if (basis.unsignedIntegerValue == kGLDiscreteSineTransformIBasis) {
+            [basisDescription appendString: @"sine"];
         } else if (basis.unsignedIntegerValue == kGLCosineBasis) {
             [basisDescription appendString: @"cosine"];
         } else if (basis.unsignedIntegerValue == kGLSineBasis) {
-            [basisDescription appendString: @"sine"];
-        } else if (basis.unsignedIntegerValue == kGLCosineHalfShiftBasis) {
-            [basisDescription appendString: @"cosine"];
-        } else if (basis.unsignedIntegerValue == kGLSineHalfShiftBasis) {
             [basisDescription appendString: @"sine"];
         } else if (basis.unsignedIntegerValue == kGLChebyshevBasis) {
             [basisDescription appendString: @"chebyshev"];
@@ -427,13 +427,13 @@ static BOOL _shouldAntiAlias = NO;
             [basisDescription appendString: @"delta"];
         } else if (basis.unsignedIntegerValue == kGLExponentialBasis) {
             [basisDescription appendString: @"exponential"];
+        } else if (basis.unsignedIntegerValue == kGLDiscreteCosineTransformIBasis) {
+            [basisDescription appendString: @"cosine"];
+        } else if (basis.unsignedIntegerValue == kGLDiscreteSineTransformIBasis) {
+            [basisDescription appendString: @"sine"];
         } else if (basis.unsignedIntegerValue == kGLCosineBasis) {
             [basisDescription appendString: @"cosine"];
         } else if (basis.unsignedIntegerValue == kGLSineBasis) {
-            [basisDescription appendString: @"sine"];
-        } else if (basis.unsignedIntegerValue == kGLCosineHalfShiftBasis) {
-            [basisDescription appendString: @"cosine"];
-        } else if (basis.unsignedIntegerValue == kGLSineHalfShiftBasis) {
             [basisDescription appendString: @"sine"];
         } else if (basis.unsignedIntegerValue == kGLChebyshevBasis) {
             [basisDescription appendString: @"chebyshev"];
@@ -454,13 +454,13 @@ static BOOL _shouldAntiAlias = NO;
             [basisDescription appendString: @"delta"];
         } else if (basis.unsignedIntegerValue == kGLExponentialBasis) {
             [basisDescription appendString: @"exponential"];
+        } else if (basis.unsignedIntegerValue == kGLDiscreteCosineTransformIBasis) {
+            [basisDescription appendString: @"cosine"];
+        } else if (basis.unsignedIntegerValue == kGLDiscreteSineTransformIBasis) {
+            [basisDescription appendString: @"sine"];
         } else if (basis.unsignedIntegerValue == kGLCosineBasis) {
             [basisDescription appendString: @"cosine"];
         } else if (basis.unsignedIntegerValue == kGLSineBasis) {
-            [basisDescription appendString: @"sine"];
-        } else if (basis.unsignedIntegerValue == kGLCosineHalfShiftBasis) {
-            [basisDescription appendString: @"cosine"];
-        } else if (basis.unsignedIntegerValue == kGLSineHalfShiftBasis) {
             [basisDescription appendString: @"sine"];
         } else if (basis.unsignedIntegerValue == kGLChebyshevBasis) {
             [basisDescription appendString: @"chebyshev"];
@@ -474,13 +474,13 @@ static BOOL _shouldAntiAlias = NO;
             [basisDescription appendString: @"delta"];
         } else if (basis.unsignedIntegerValue == kGLExponentialBasis) {
             [basisDescription appendString: @"exponential"];
+        } else if (basis.unsignedIntegerValue == kGLDiscreteCosineTransformIBasis) {
+            [basisDescription appendString: @"cosine"];
+        } else if (basis.unsignedIntegerValue == kGLDiscreteSineTransformIBasis) {
+            [basisDescription appendString: @"sine"];
         } else if (basis.unsignedIntegerValue == kGLCosineBasis) {
             [basisDescription appendString: @"cosine"];
         } else if (basis.unsignedIntegerValue == kGLSineBasis) {
-            [basisDescription appendString: @"sine"];
-        } else if (basis.unsignedIntegerValue == kGLCosineHalfShiftBasis) {
-            [basisDescription appendString: @"cosine"];
-        } else if (basis.unsignedIntegerValue == kGLSineHalfShiftBasis) {
             [basisDescription appendString: @"sine"];
         } else if (basis.unsignedIntegerValue == kGLChebyshevBasis) {
             [basisDescription appendString: @"chebyshev"];
@@ -536,11 +536,11 @@ static BOOL _shouldAntiAlias = NO;
         if (aDim.basisFunction == destinationBasis)
         {   // This dimension isn't getting transformed
             [finalDimensions addObject: aDim];
-        } else if (aDim.basisFunction == kGLDeltaBasis && (destinationBasis == kGLChebyshevBasis || destinationBasis == kGLCosineBasis || destinationBasis == kGLCosineHalfShiftBasis || destinationBasis == kGLSineBasis || destinationBasis == kGLSineHalfShiftBasis)) {
+        } else if (aDim.basisFunction == kGLDeltaBasis && (destinationBasis == kGLChebyshevBasis || destinationBasis == kGLDiscreteCosineTransformIBasis || destinationBasis == kGLCosineBasis || destinationBasis == kGLDiscreteSineTransformIBasis || destinationBasis == kGLSineBasis)) {
             finalRank++;
             finalBasis[idx] = @(destinationBasis);
             [finalDimensions addObject: [[GLDimension alloc] initAsDimension: aDim transformedToBasis: destinationBasis strictlyPositive: YES]];
-        } else if (destinationBasis == kGLDeltaBasis && (aDim.basisFunction == kGLChebyshevBasis || aDim.basisFunction == kGLCosineBasis || aDim.basisFunction == kGLCosineHalfShiftBasis || aDim.basisFunction == kGLSineBasis || aDim.basisFunction == kGLSineHalfShiftBasis)) {
+        } else if (destinationBasis == kGLDeltaBasis && (aDim.basisFunction == kGLChebyshevBasis || aDim.basisFunction == kGLDiscreteCosineTransformIBasis || aDim.basisFunction == kGLCosineBasis || aDim.basisFunction == kGLDiscreteSineTransformIBasis || aDim.basisFunction == kGLSineBasis)) {
             finalRank++;
             finalBasis[idx] = @(destinationBasis);
             [finalDimensions addObject: [[GLDimension alloc] initAsDimension: aDim transformedToBasis: destinationBasis strictlyPositive: YES]];
@@ -617,16 +617,16 @@ static BOOL _shouldAntiAlias = NO;
                 if (fromBasis == kGLDeltaBasis && toBasis == kGLExponentialBasis) {
                     (transformKind)[iDims] = FFTW_R2HC;
                     scaleFactor *= 1.0 / ( (GLFloat) alldims[i].n );
-                } else if (fromBasis == kGLDeltaBasis && toBasis == kGLCosineBasis) {
+                } else if (fromBasis == kGLDeltaBasis && toBasis == kGLDiscreteCosineTransformIBasis) {
                     (transformKind)[iDims] = FFTW_REDFT00;
                     scaleFactor *= 0.5 / ( (GLFloat) alldims[i].n - 1 );
-                } else if (fromBasis == kGLDeltaBasis && toBasis == kGLCosineHalfShiftBasis) {
+                } else if (fromBasis == kGLDeltaBasis && toBasis == kGLCosineBasis) {
                     (transformKind)[iDims] = FFTW_REDFT10;
                     scaleFactor *= 0.5 / ( (GLFloat) alldims[i].n );
-                } else if (fromBasis == kGLDeltaBasis && toBasis == kGLSineBasis) {
+                } else if (fromBasis == kGLDeltaBasis && toBasis == kGLDiscreteSineTransformIBasis) {
                     (transformKind)[iDims] = FFTW_RODFT00;
                     scaleFactor *= 0.5 / ( (GLFloat) alldims[i].n + 1 );
-                } else if (fromBasis == kGLDeltaBasis && toBasis == kGLSineHalfShiftBasis) {
+                } else if (fromBasis == kGLDeltaBasis && toBasis == kGLSineBasis) {
                     (transformKind)[iDims] = FFTW_RODFT10;
                     scaleFactor *= 0.5 / ( (GLFloat) alldims[i].n );
                 } else if (fromBasis == kGLDeltaBasis && toBasis == kGLChebyshevBasis) {
@@ -634,13 +634,13 @@ static BOOL _shouldAntiAlias = NO;
                     scaleFactor *= 0.5 / ( (GLFloat) alldims[i].n - 1 );
                 }  else if (fromBasis == kGLExponentialBasis && toBasis == kGLDeltaBasis) {
                     (transformKind)[iDims] = FFTW_HC2R;
-                } else if (fromBasis == kGLCosineBasis && toBasis == kGLDeltaBasis) {
+                } else if (fromBasis == kGLDiscreteCosineTransformIBasis && toBasis == kGLDeltaBasis) {
                     (transformKind)[iDims] = FFTW_REDFT00;
-                } else if (fromBasis == kGLCosineHalfShiftBasis && toBasis == kGLDeltaBasis) {
+                } else if (fromBasis == kGLCosineBasis && toBasis == kGLDeltaBasis) {
                     (transformKind)[iDims] = FFTW_REDFT01;
-                } else if (fromBasis == kGLSineBasis && toBasis == kGLDeltaBasis) {
+                } else if (fromBasis == kGLDiscreteSineTransformIBasis && toBasis == kGLDeltaBasis) {
                     (transformKind)[iDims] = FFTW_RODFT00;
-                } else if (fromBasis == kGLSineHalfShiftBasis && toBasis == kGLDeltaBasis) {
+                } else if (fromBasis == kGLSineBasis && toBasis == kGLDeltaBasis) {
                     (transformKind)[iDims] = FFTW_RODFT01;
                 } else if (fromBasis == kGLChebyshevBasis && toBasis == kGLDeltaBasis) {
                     (transformKind)[iDims] = FFTW_REDFT00;

@@ -217,10 +217,10 @@
 			if (fromDim.basisFunction == kGLDeltaBasis) {
                 self.realSymmetry[iDim] = @(kGLNoSymmetry);
                 self.imaginarySymmetry[iDim] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
-            } else if (fromDim.basisFunction == kGLCosineBasis || fromDim.basisFunction == kGLCosineHalfShiftBasis) {
+            } else if (fromDim.basisFunction == kGLDiscreteCosineTransformIBasis || fromDim.basisFunction == kGLCosineBasis) {
                 self.realSymmetry[iDim] = @(kGLEvenSymmetry);
                 self.imaginarySymmetry[iDim] = @(kGLZeroSymmetry);
-            } else if (fromDim.basisFunction == kGLSineBasis || fromDim.basisFunction == kGLSineHalfShiftBasis) {
+            } else if (fromDim.basisFunction == kGLDiscreteSineTransformIBasis || fromDim.basisFunction == kGLSineBasis) {
                 self.realSymmetry[iDim] = @(kGLOddSymmetry);
                 self.imaginarySymmetry[iDim] = @(kGLZeroSymmetry);
             } else if (fromDim.basisFunction == kGLExponentialBasis ) {
@@ -529,7 +529,7 @@
             
             return dft;
         }
-        else if (aBasis == kGLCosineHalfShiftBasis)
+        else if (aBasis == kGLCosineBasis)
         {   // This is the DCT---discrete cosine transform
             GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
             GLLinearTransform *dct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
@@ -543,7 +543,7 @@
             
             return dct;
         }
-        else if (aBasis == kGLSineHalfShiftBasis)
+        else if (aBasis == kGLSineBasis)
         {   // This is the DST---discrete sine transform
             GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
             GLLinearTransform *dst = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
@@ -574,7 +574,7 @@
             
             return idft;
         }
-        else if (k.basisFunction == kGLCosineHalfShiftBasis)
+        else if (k.basisFunction == kGLCosineBasis)
         {   // This is the IDCT---inverse discrete cosine transform
             GLLinearTransform *idct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
@@ -587,7 +587,7 @@
             
             return idct;
         }
-        else if (k.basisFunction == kGLSineHalfShiftBasis)
+        else if (k.basisFunction == kGLSineBasis)
         {   // This is the IDST---inverse discrete sine transform
             GLLinearTransform *idst = [self transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
@@ -627,10 +627,10 @@
         diff.isRealPartZero = numDerivs % 2 == 1;
         diff.isImaginaryPartZero = numDerivs % 2 == 0;
 	}
-    else if (k.basisFunction == kGLCosineHalfShiftBasis)
+    else if (k.basisFunction == kGLCosineBasis)
     {
         if (numDerivs % 2 == 1) {
-            GLDimension *transformedDimension = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLSineHalfShiftBasis strictlyPositive: YES];
+            GLDimension *transformedDimension = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLSineBasis strictlyPositive: YES];
             GLFloat sign = (numDerivs-1)/2 % 2 ? 1. : -1.;
             diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[transformedDimension] inFormat: @[@(kGLSuperdiagonalMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
@@ -644,10 +644,10 @@
             }];
         }
 	}
-    else if (k.basisFunction == kGLSineHalfShiftBasis)
+    else if (k.basisFunction == kGLSineBasis)
     {
         if (numDerivs % 2 == 1) {
-            GLDimension *transformedDimension = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLCosineHalfShiftBasis strictlyPositive: YES];
+            GLDimension *transformedDimension = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLCosineBasis strictlyPositive: YES];
             GLFloat sign = (numDerivs-1)/2 % 2 ? -1. : 1.;
             diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[transformedDimension] inFormat: @[@(kGLSubdiagonalMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
                 GLFloat *kVal = (GLFloat *) k.data.bytes;

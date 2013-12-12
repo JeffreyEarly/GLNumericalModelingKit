@@ -577,7 +577,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
-    GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLCosineHalfShiftBasis forEquation:equation];
+    GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLCosineBasis forEquation:equation];
 	GLFunction *f_tilde = [matrix transform: f];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
@@ -688,7 +688,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
-	GLFunction *f_tilde = [f transformToBasis:@[@(kGLCosineBasis)]];
+	GLFunction *f_tilde = [f transformToBasis:@[@(kGLDiscreteCosineTransformIBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	
@@ -724,7 +724,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0];
-	GLFunction *f_tilde = [f transformToBasis:@[@(kGLSineBasis)]];
+	GLFunction *f_tilde = [f transformToBasis:@[@(kGLDiscreteSineTransformIBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	
@@ -758,7 +758,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
-	GLFunction *f_tilde = [f transformToBasis:@[@(kGLCosineHalfShiftBasis)]];
+	GLFunction *f_tilde = [f transformToBasis:@[@(kGLCosineBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	
@@ -792,7 +792,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0];
-	GLFunction *f_tilde = [f transformToBasis:@[@(kGLSineHalfShiftBasis)]];
+	GLFunction *f_tilde = [f transformToBasis:@[@(kGLSineBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	

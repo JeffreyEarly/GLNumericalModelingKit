@@ -175,7 +175,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
 				f[i] = sampleInterval * ( (GLFloat) i + 0.5) + _domainMin;
 			}
-			_differentiationBasis = kGLCosineHalfShiftBasis;
+			_differentiationBasis = kGLCosineBasis;
 		}
 		else if (gridType == kGLPeriodicGrid)
 		{
@@ -299,7 +299,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	}
 	
 	// If we're switching between the DCT-I and DST-I basis, we need a *different* spatial dimension
-	if ( existingDimension.basisFunction == kGLCosineBasis && basis == kGLSineBasis ) {
+	if ( existingDimension.basisFunction == kGLDiscreteCosineTransformIBasis && basis == kGLDiscreteSineTransformIBasis ) {
         [NSException raise: @"DeprecationException" format:@"This functionality might be deprecated."];
 //		GLFloat aMin = spatialDimension.domainMin;
 //		GLFloat aSampleInterval = spatialDimension.domainLength / ( (GLFloat) spatialDimension.nPoints+1);
@@ -309,7 +309,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 //		spatialDimension = [[GLDimension alloc] initPeriodicDimension: NO nPoints: spatialDimension.nPoints domainMin: aMin + aSampleInterval sampleInterval: aSampleInterval];
 //		spatialDimension.name = aName;
 //		spatialDimension.units = aUnits;
-	} else if ( existingDimension.basisFunction == kGLSineBasis && basis == kGLCosineBasis ) {
+	} else if ( existingDimension.basisFunction == kGLDiscreteSineTransformIBasis && basis == kGLDiscreteCosineTransformIBasis ) {
         [NSException raise: @"DeprecationException" format:@"This functionality might be deprecated."];
 //		NSString *aName = spatialDimension.name;
 //		NSString *aUnits = spatialDimension.units;
@@ -376,7 +376,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 				sampleInterval = _domainLength / ( (double) (self.nPoints));
 			}
 		}
-		else if (self.basisFunction == kGLCosineBasis )
+		else if (self.basisFunction == kGLDiscreteCosineTransformIBasis )
 		{
             // 0..fc -- negative frequencies ignored, as they're found with the even symmetric part of the function
             if (spatialDimension.isPeriodic) {
@@ -387,7 +387,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
             _nPoints = spatialDimension.nPoints;
             sampleInterval = _domainLength / ( (double) (self.nPoints-1));
 		}
-        else if (self.basisFunction == kGLCosineHalfShiftBasis)
+        else if (self.basisFunction == kGLCosineBasis)
         {
             // 0..fc -- negative frequencies ignored, as they're found with the 
             // Same as the cosine transform above, but the actual domain length should have been treated as one point longer, as if it were periodic.
@@ -405,7 +405,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
             _nPoints = spatialDimension.nPoints;
             sampleInterval = _domainLength / ( (double) (self.nPoints-1));
         }
-		else if (self.basisFunction == kGLSineBasis)
+		else if (self.basisFunction == kGLDiscreteSineTransformIBasis)
 		{
             // 0..fc -- negative frequencies ignored, as they're found with the 
             if (spatialDimension.isPeriodic) {
@@ -418,7 +418,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 			_domainMin = sampleInterval;
 			
 		}
-        else if (self.basisFunction == kGLSineHalfShiftBasis)
+        else if (self.basisFunction == kGLSineBasis)
         {
             // 0..fc -- negative frequencies ignored, as they're found with the 
             // Same as the cosine transform above, but the actual domain length should have been treated as one point longer, as if it were periodic.
@@ -874,16 +874,16 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	} else if (self.basisFunction == kGLExponentialBasis) {
 		basis = @"exponential";
 	}
-	else if (self.basisFunction == kGLCosineBasis) {
+	else if (self.basisFunction == kGLDiscreteCosineTransformIBasis) {
 		basis = @"cosine";
 	}
-	else if (self.basisFunction == kGLSineBasis) {
+	else if (self.basisFunction == kGLDiscreteSineTransformIBasis) {
 		basis = @"sine";
 	}
-	else if (self.basisFunction == kGLCosineHalfShiftBasis) {
+	else if (self.basisFunction == kGLCosineBasis) {
 		basis = @"cosine half-shift";
 	}
-	else if (self.basisFunction == kGLSineHalfShiftBasis) {
+	else if (self.basisFunction == kGLSineBasis) {
 		basis = @"sine half-shift";
 	}
 	return [NSString stringWithFormat: @"%@ <0x%lx> (%@: %lu points, %@ basis)", NSStringFromClass([self class]), (NSUInteger)self, self.name, self.nPoints, basis];
@@ -897,16 +897,16 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	} else if (self.basisFunction == kGLExponentialBasis) {
 		basis = @"exponential";
 	}
-	else if (self.basisFunction == kGLCosineBasis) {
+	else if (self.basisFunction == kGLDiscreteCosineTransformIBasis) {
 		basis = @"cosine";
 	}
-	else if (self.basisFunction == kGLSineBasis) {
+	else if (self.basisFunction == kGLDiscreteSineTransformIBasis) {
 		basis = @"sine";
 	}
-	else if (self.basisFunction == kGLCosineHalfShiftBasis) {
+	else if (self.basisFunction == kGLCosineBasis) {
 		basis = @"cosine half-shift";
 	}
-	else if (self.basisFunction == kGLSineHalfShiftBasis) {
+	else if (self.basisFunction == kGLSineBasis) {
 		basis = @"sine half-shift";
 	}
 	return [NSString stringWithFormat: @"%@: %lu points, %@ basis", self.name, self.nPoints, basis];
