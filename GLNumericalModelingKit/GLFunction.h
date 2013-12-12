@@ -24,27 +24,6 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 @class GLEquation, GLVariableOperation, GLDifferentialOperator;
 @interface GLFunction : GLVariable
 
-// Variables do not get computed immediately and should only be computed when absolutely needed or a choke point has been reached.
-// This minimizes the amount of memory and computation required. If we computed a variable's value immediately (like [psi x]),
-// then we would have to create a strong reference to that variable so that we don't end up recomputing it. As it stands, we create
-// weak references to variables.
-//
-// May need to remove dependencies after computation if it's true that they are strongly referenced.
-//
-// However, we do *strongly* reference the transformed variable. Does this create a bad situation? Maybe we need operations to only
-// weakly reference the instance variable dependencies. Hmm, make sure we set those values to nil.
-
-/************************************************/
-/*		Behavior								*/
-/************************************************/
-
-#pragma mark -
-#pragma mark Behavior
-#pragma mark
-
-+ (void) setPrefersSpatialMultiplication: (BOOL) aFlag;
-+ (BOOL) prefersSpatialMultiplication;
-
 /************************************************/
 /*		Initialization							*/
 /************************************************/

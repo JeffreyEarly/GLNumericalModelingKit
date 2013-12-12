@@ -12,6 +12,7 @@
 #import "GLVectorVectorOperations.h"
 #import "GLVectorScalarOperations.h"
 #import "GLUnaryOperations.h"
+#import "GLMemoryPool.h"
 
 #import "GLLinearTransformationOperations.h"
 
@@ -172,7 +173,12 @@
     return nil;
 }
 
-- (id) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
+- (GLLinearTransform *) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
+{
+	return [self initTransformOfType: dataFormat withFromDimensions: fromDims toDimensions: toDims inFormat: matrixFormats withOrdering: kGLRowMatrixOrder forEquation: theEquation matrix: matrix];
+}
+
+- (GLLinearTransform *) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats withOrdering: (GLMatrixOrder) ordering forEquation: (GLEquation *) theEquation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
 {
 	if (!theEquation || fromDims.count != toDims.count || fromDims.count != matrixFormats.count) {
 		NSLog(@"Attempted to initialize GLLinearTransform without an equation or consistent set of dimensions!!!");
@@ -184,7 +190,7 @@
 		self.matrixBlock = matrix;
 		self.toDimensions = [NSArray arrayWithArray: toDims];
 		self.fromDimensions = [NSArray arrayWithArray: fromDims];
-		self.matrixOrder = kGLRowMatrixOrder;
+		self.matrixOrder = ordering;
 		
 		// We loop through the dimensions and allocate enough memory for the variable
 		// defined on each dimension.
@@ -240,90 +246,90 @@
         self.matrixDescription = [[GLMatrixDescription alloc] initWithLinearTransform: self];
         
         if (self.matrixBlock) {
-			[self populateData: self.data withFormat: self.matrixDescription usingMatrixBlock: self.matrixBlock];
+			self.data = [GLLinearTransform dataWithFormat: self.matrixDescription fromMatrixBlock: self.matrixBlock];
 		}
 	}
 	
 	return self;
 }
 
-- (transformMatrix) matrixBlockFromData: (NSData *) data withStride: (GLDataStride) stride
++ (transformMatrix) matrixBlockWithFormat: (GLMatrixDescription *) matrixDescription fromData: (NSMutableData *) data;
 {
-	transformMatrix matrixBlock;
-	
-	GLDataFormat dataFormat = stride.dataFormat;
-	GLMatrixFormat matrixFormat = stride.matrixFormat;
-	NSUInteger nDataPoints = 1;
-	if ( matrixFormat == kGLIdentityMatrixFormat) {
-		nDataPoints = 1;
-	} else if ( matrixFormat == kGLDenseMatrixFormat) {
-		nDataPoints = stride.nRows * stride.nColumns;
-	} else {
-		nDataPoints = stride.nDiagonalPoints * stride.nDiagonals;
-	}
-	
 	// This block retrieves the matrix value from the correct spot in memory (memIndex), given a particular memory location.
 	// The assignment is only dependent on the format and the total number of points.
-	GLFloatComplex (^retrieveData)(GLFloat *, NSUInteger) = ^(GLFloat *f, NSUInteger memIndex ) {
-		if (dataFormat == kGLRealDataFormat) {
+	GLFloatComplex (^retrieveData)(NSUInteger *, NSUInteger *, GLFloat *, NSUInteger) = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger memIndex ) {
+		if (matrixDescription.dataFormat == kGLRealDataFormat) {
 			return (GLFloatComplex) f[memIndex];
-		} else if (dataFormat == kGLInterleavedComplexDataFormat) {
-			return f[2*memIndex] + I*f[2*memIndex+1];
-		} else if (dataFormat == kGLSplitComplexDataFormat) {
-			return f[memIndex] + I*f[memIndex+nDataPoints];
+		} else if (matrixDescription.dataFormat == kGLInterleavedComplexDataFormat) {
+			return f[2*memIndex] + I*f[2*memIndex+matrixDescription.complexStride];
+		} else if (matrixDescription.dataFormat == kGLSplitComplexDataFormat) {
+			return f[memIndex] + I*f[memIndex+matrixDescription.complexStride];
 		} else {
 			return (GLFloatComplex) 0.0;
 		}
 	};
 	
-	if (stride.matrixFormat == kGLIdentityMatrixFormat) {
-		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
-			return (GLFloatComplex) (row[0] == col[0] ? 1.0 : 0.0);
-		};
-	} else if (stride.matrixFormat == kGLDenseMatrixFormat) {
-		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
-			return retrieveData( (GLFloat *) data.bytes,  row[0]*stride.rowStride + col[0]*stride.columnStride);
-		};
-	} else if (stride.matrixFormat == kGLDiagonalMatrixFormat) {
-		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
-			if (row[0] == col[0]) {
-				return retrieveData( (GLFloat *) data.bytes,  row[0]*stride.stride);
-			} else {
-				return (GLFloatComplex)0.0;
-			}
-		};
-	} else if (stride.matrixFormat == kGLSubdiagonalMatrixFormat) {
-		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
-			if (row[0] == col[0]+1) {
-				return retrieveData( (GLFloat *) data.bytes,  row[0]*stride.stride);
-			} else {
-				return (GLFloatComplex)0.0;
-			}
-		};
-	} else if (stride.matrixFormat == kGLSuperdiagonalMatrixFormat) {
-		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
-			if (row[0]+1 == col[0]) {
-				return retrieveData( (GLFloat *) data.bytes,  row[0]*stride.stride);
-			} else {
-				return (GLFloatComplex)0.0;
-			}
-		};
-	} else if (stride.matrixFormat == kGLTridiagonalMatrixFormat) {
-		matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
-			NSInteger iDiagonal = col[0] - row[0] + 1;
-			if (iDiagonal >= 0 && iDiagonal < 3) {
-				return retrieveData( (GLFloat *) data.bytes, iDiagonal*stride.diagonalStride + row[0]*stride.stride);
-			} else {
-				return (GLFloatComplex)0.0;
-			}
-		};
+	for (NSInteger iDim = matrixDescription.nDimensions-1; iDim >= 0; iDim--)
+	{
+		GLDataStride stride = matrixDescription.strides[iDim];
+		
+		// This block encapsulates a loop over the appropriate rows and columns of one dimension pair, given the known data format.
+		GLFloatComplex (^loop)(NSUInteger *, NSUInteger *, GLFloat *, NSUInteger);
+			
+		if (stride.matrixFormat == kGLIdentityMatrixFormat) {
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				return (GLFloatComplex) (row[iDim] == col[iDim] ? retrieveData(row, col, f, index) : 0.0);
+			};
+		} else if (stride.matrixFormat == kGLDenseMatrixFormat) {
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				return retrieveData(row, col, f, index + row[iDim]*stride.rowStride + col[iDim]*stride.columnStride);
+			};
+		} else if (stride.matrixFormat == kGLDiagonalMatrixFormat) {
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				if (row[iDim] == col[iDim]) {
+					return retrieveData(row, col, f, index + row[iDim]*stride.stride);
+				} else {
+					return (GLFloatComplex)0.0;
+				}
+			};
+		} else if (stride.matrixFormat == kGLSubdiagonalMatrixFormat) {
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				if (row[iDim] == col[iDim]+1) {
+					return retrieveData(row, col, f, index + row[iDim]*stride.stride);
+				} else {
+					return (GLFloatComplex)0.0;
+				}
+			};
+		} else if (stride.matrixFormat == kGLSuperdiagonalMatrixFormat) {
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				if (row[iDim]+1 == col[iDim]) {
+					return retrieveData(row, col, f, index + row[iDim]*stride.stride);
+				} else {
+					return (GLFloatComplex)0.0;
+				}
+			};
+		} else if (stride.matrixFormat == kGLTridiagonalMatrixFormat) {
+			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+				NSInteger iDiagonal = col[iDim] - row[iDim] + 1;
+				if (iDiagonal >= 0 && iDiagonal < 3) {
+					return retrieveData(row, col, f, index + iDiagonal*stride.diagonalStride + row[iDim]*stride.stride);
+				} else {
+					return (GLFloatComplex)0.0;
+				}
+			};
+		}
+		
+		retrieveData = loop;
 	}
 	
+	transformMatrix matrixBlock = ^(NSUInteger *row, NSUInteger *col) {
+		return retrieveData(row, col, (GLFloat *)data.bytes, 0);
+	};
 	return matrixBlock;
 }
 
 
-- (void) populateData: (NSMutableData *) data withFormat: (GLMatrixDescription *) matrixDescription usingMatrixBlock: (transformMatrix) theMatrixBlock
++ (NSMutableData *) dataWithFormat: (GLMatrixDescription *) matrixDescription fromMatrixBlock: (transformMatrix) theMatrixBlock
 {
 	// This block places the matrix value in the correct spot in memory (memIndex), given a particular choice of row and column indices (rows, col).
 	// The assignment is only dependent on the format.
@@ -446,11 +452,14 @@
 	}
 	
 	// And finally, we can now excute the block.
+	NSMutableData *data = [[GLMemoryPool sharedMemoryPool] dataWithLength: matrixDescription.nBytes];
 	NSUInteger *rows = malloc(matrixDescription.nDimensions * sizeof(NSUInteger));
 	NSUInteger *cols = malloc(matrixDescription.nDimensions * sizeof(NSUInteger));
 	assignData( rows, cols, data.mutableBytes, 0);
 	free(rows);
 	free(cols);
+	
+	return data;
 }
 
 /************************************************/

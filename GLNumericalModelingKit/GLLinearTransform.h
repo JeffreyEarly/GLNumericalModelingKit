@@ -42,6 +42,29 @@ typedef NS_ENUM(NSUInteger, GLBoundaryCondition) {
 @interface GLLinearTransform : GLVariable
 
 /************************************************/
+/*		Utility									*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Utility
+#pragma mark
+
+/** Write the given matrix to memory given its storage description.
+ @param matrixDescription Matrix description object to be associated with the data.
+ @param theMatrixBlock The format independent matrix block.
+ @returns Data object containing the matrix in the requested storage format.
+ */
++ (NSMutableData *) dataWithFormat: (GLMatrixDescription *) matrixDescription fromMatrixBlock: (transformMatrix) theMatrixBlock;
+
+/** Create a format independent matrix from some raw data and its storage description.
+ @discussion This matrix block will strongly reference both the matrix description and the data object. In certain cases it may be appropriate to copy those objects before calling this method.
+ @param matrixDescription Matrix description object associated with the data.
+ @param data Data object containing the matrix in the given storage format.
+ @returns A new created transformMatrix block.
+*/
++ (transformMatrix) matrixBlockWithFormat: (GLMatrixDescription *) matrixDescription fromData: (NSMutableData *) data;
+
+/************************************************/
 /*		Initialization							*/
 /************************************************/
 
@@ -79,6 +102,18 @@ typedef NS_ENUM(NSUInteger, GLBoundaryCondition) {
  @returns A new created GLLinearTransform instance.
 */
 - (GLLinearTransform *) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
+
+/** Create a new, full specified, GLLinearTransform.
+ @param dataFormat Specify whether or not the transformation is real or complex.
+ @param fromDims An array of dimensions specifying the basis to transform from.
+ @param toDims An array of dimensions specifying the basis to transform to.
+ @param matrixFormats An array of GLMatrixFormat types specifying the necessary storage requires that should be allocated for a particular dimension pair.
+ @param ordering Whether the dense matrix indices should be column and row-major ordered.
+ @param equation The GLEquation object being used.
+ @param matrix A transformMatrix block capable of populating the complete matrix.
+ @returns A new created GLLinearTransform instance.
+ */
+- (GLLinearTransform *) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats withOrdering: (GLMatrixOrder) ordering forEquation: (GLEquation *) theEquation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
 
 /************************************************/
 /*		Pre-defined transformations             */
@@ -206,18 +241,26 @@ typedef NS_ENUM(NSUInteger, GLBoundaryCondition) {
 #pragma mark Data
 #pragma mark
 
+/// The end-all-be-all description of how this matrix is stored in memory.
+@property(readwrite, strong) GLMatrixDescription *matrixDescription;
 
 /// Indicates whether this particular instance is in row-major or column-major order
 @property(readwrite) GLMatrixOrder matrixOrder;
-
-/// The end-all-be-all description of how this matrix is stored in memory.
-@property(readwrite, strong) GLMatrixDescription *matrixDescription;
 
 /// A subset of the above, this simply indicates the type of matrix in each dimension.
 @property(readwrite, strong) NSArray *matrixFormats;
 
 /// A block that can be used to create the matrix. May be nil the matrix is derived from other matrices.
 @property(copy) transformMatrix matrixBlock;
+
+/** Copy the linear transformation with the data formatted according to new parameters.
+ @discussion This is not implemented for speed (and therefore shouldn't be used in a loop where speed is needed), but it should be able to convert to any format.
+ @param dataFormat Specify whether or not the transformation is real or complex.
+ @param matrixFormats An array of GLMatrixFormat types specifying the necessary storage requires that should be allocated for a particular dimension pair.
+ @param ordering Whether the dense matrix indices should be column and row-major ordered.
+ @returns A new created GLLinearTransform instance.
+ */
+- (GLLinearTransform *) copyWithDataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering;
 
 /// Returns the same matrix, but with row-major ordering. Returns self if the ordering is already row-major.
 - (GLLinearTransform *) rowMajorOrdered;

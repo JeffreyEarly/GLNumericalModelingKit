@@ -20,7 +20,6 @@
 @interface GLVariable ()
 @property(readwrite, strong, nonatomic) NSMutableDictionary *metadata;
 @property(readwrite, assign, nonatomic) NSUInteger uniqueID;
-@property(readwrite, strong, nonatomic) NSMutableData *data;
 @property(readwrite, strong, nonatomic) NSMutableArray *pendingOperations;
 @property(readwrite, strong) NSMutableArray *existingOperations;
 @property(readwrite, assign, nonatomic) GLDataFormat dataFormat;
@@ -124,13 +123,12 @@ GLSplitComplex splitComplexFromData( NSData *data )
     return _data;
 }
 
-- (void) setData: (NSData *) newData
+- (void) setData: (NSMutableData *) newData
 {
-	if (!_data) {
-		_data =[[GLMemoryPool sharedMemoryPool] dataWithLength: self.dataBytes];
+	if (newData.length < self.dataBytes) {
+		[NSException raise:@"InsufficientBufferSize" format:@"You are setting a buffer that is too small"];
 	}
-	
-	memcpy( _data.mutableBytes, newData.bytes, newData.length);
+	_data=newData;
 }
 
 - (BOOL) hasData {

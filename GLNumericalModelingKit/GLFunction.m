@@ -43,8 +43,6 @@
 @property(readwrite, assign, nonatomic) NSUInteger dataBytes;
 @end
 
-static BOOL prefersSpatialMultiplication = YES;
-
 @implementation GLFunction
 
 /************************************************/
@@ -54,16 +52,6 @@ static BOOL prefersSpatialMultiplication = YES;
 #pragma mark -
 #pragma mark Class Methods
 #pragma mark
-
-+ (void) setPrefersSpatialMultiplication: (BOOL) aFlag
-{
-	prefersSpatialMultiplication = aFlag;
-}
-
-+ (BOOL) prefersSpatialMultiplication
-{
-	return prefersSpatialMultiplication;
-}
 
 // To convert from an element to an index: vec[(i*ny+j)*nz+k] = matrix[i][j][k]
 + (NSArray *) indicesFromElement: (NSUInteger) theIndex forDimensions: (NSArray *) theDimensions
@@ -329,7 +317,7 @@ static BOOL prefersSpatialMultiplication = YES;
 		
 		_dataBytes = _nDataElements*sizeof(GLFloat);
         
-        self.matrixDescription = [[GLMatrixDescription alloc] initWithVariable: self];
+        self.matrixDescription = [[GLMatrixDescription alloc] initWithFunction: self];
 	}	
 	
 	return self;
