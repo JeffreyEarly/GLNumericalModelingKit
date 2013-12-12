@@ -1044,10 +1044,12 @@
 			return value;
 		}];
 		
-		if (( self = [super initWithResult: @[tensorProduct] operand:@[]] )) {
-			
+		// No operation, no dependencies, nothing. This is as hollow of an operation as it gets.
+		if (( self = [super init] )) {
+			self.result = @[tensorProduct];
 		}
 		return self;
+		
 	} else {
 		GLLinearTransform *tensorProduct = [GLLinearTransform transformOfType:format withFromDimensions: fromDimensions toDimensions: toDimensions inFormat:matrixFormat forEquation:equation matrix: NULL];
 		
