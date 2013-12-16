@@ -331,6 +331,17 @@
 
 + (NSMutableData *) dataWithFormat: (GLMatrixDescription *) matrixDescription fromMatrixBlock: (transformMatrix) theMatrixBlock
 {
+	NSMutableData *data = [[GLMemoryPool sharedMemoryPool] dataWithLength: matrixDescription.nBytes];
+	[self writeToData: data withFormat: matrixDescription fromMatrixBlock: theMatrixBlock];
+	return data;
+}
+
++ (void) writeToData: (NSMutableData *) data withFormat: (GLMatrixDescription *) matrixDescription fromMatrixBlock: (transformMatrix) theMatrixBlock
+{
+	if (data.length < matrixDescription.nBytes) {
+		[NSException raise:@"InsufficientMemory" format:@"Data object has insufficient memory allocated for writing."];
+	}
+	
 	// This block places the matrix value in the correct spot in memory (memIndex), given a particular choice of row and column indices (rows, col).
 	// The assignment is only dependent on the format.
 	void (^assignData)(NSUInteger *, NSUInteger *, GLFloat *, NSUInteger) = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger memIndex ) {
@@ -452,15 +463,17 @@
 	}
 	
 	// And finally, we can now excute the block.
-	NSMutableData *data = [[GLMemoryPool sharedMemoryPool] dataWithLength: matrixDescription.nBytes];
 	NSUInteger *rows = malloc(matrixDescription.nDimensions * sizeof(NSUInteger));
 	NSUInteger *cols = malloc(matrixDescription.nDimensions * sizeof(NSUInteger));
 	assignData( rows, cols, data.mutableBytes, 0);
 	free(rows);
 	free(cols);
-	
-	return data;
 }
+
+//- (GLLinearTransform *) copyWithDataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering
+//{
+//	
+//}
 
 /************************************************/
 /*		Pre-defined transformations             */
@@ -686,32 +699,18 @@
 + (GLLinearTransform *) differentialOperatorWithDerivatives: (NSArray *) numDerivs fromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation
 {
     NSMutableArray *linearTransformations = [NSMutableArray array];
-    NSMutableArray *toDimensions = [NSMutableArray array];
-    NSMutableArray *matrixFormat = [NSMutableArray array];
-    NSMutableArray *matrixBlocks = [NSMutableArray array];
-    BOOL isComplex = NO;
+
     for (NSUInteger i=0; i<dimensions.count; i++) {
         GLLinearTransform *diffOp = [self differentialOperatorWithDerivatives: [numDerivs[i] unsignedIntegerValue] fromDimension: dimensions[i] forEquation:equation];
         linearTransformations[i] = diffOp;
-        toDimensions[i] = diffOp.toDimensions[0];
-        isComplex |= diffOp.isComplex;
-        matrixFormat[i] = diffOp.matrixFormats[0];
-        matrixBlocks[i] = diffOp.matrixBlock;
     }
-    GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-    
-    // We are just taking the outer product (tensor product) of the different transformations.
-    GLLinearTransform *diffOp = [GLLinearTransform transformOfType:format withFromDimensions: dimensions toDimensions: toDimensions inFormat:matrixFormat forEquation:equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
-        transformMatrix theMatrixBlock = matrixBlocks[0];
-        GLFloatComplex value = theMatrixBlock(&(row[0]), &(col[0]));
-        for (NSUInteger i=1;i<matrixBlocks.count;i++) {
-            theMatrixBlock = matrixBlocks[i];
-            value *= theMatrixBlock(&(row[i]), &(col[i]));
-        }
-        return value;
-    }];
-    
-    return diffOp;
+	
+    return [self tensorProduct: linearTransformations];
+}
+
++ (GLLinearTransform *) tensorProduct: (NSArray *) linearTransformations {
+	GLTensorProductOperation *operation = [[GLTensorProductOperation alloc] initWithLinearTransformations: linearTransformations];
+	return operation.result[0];
 }
 
 + (GLLinearTransform *) harmonicOperatorOfOrder: (NSUInteger) order fromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation;

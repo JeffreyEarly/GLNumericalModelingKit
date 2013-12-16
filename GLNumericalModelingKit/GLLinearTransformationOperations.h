@@ -131,7 +131,7 @@
 /************************************************/
 /*		GLTensorProductOperation				*/
 /************************************************/
-/** Takes the tensor product (outer product) of an array one-dimensional linear transformations.
+/** Takes the tensor product (outer product) of an array linear transformations.
  @param linearTransformations An array of linear transformations.
  @returns A linear transformation with fromDimensions and toDimensions of all the linear transformations in the array.
  */

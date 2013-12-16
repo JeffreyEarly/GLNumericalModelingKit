@@ -1019,49 +1019,59 @@
     NSMutableArray *toDimensions = [NSMutableArray array];
     NSMutableArray *matrixFormat = [NSMutableArray array];
     NSMutableArray *matrixBlocks = [NSMutableArray array];
+	NSMutableArray *matrixDescriptions = [NSMutableArray array];
+	NSMutableArray *numDimensions = [NSMutableArray array];
     BOOL isComplex = NO;
-	GLEquation *equation = [linearTransformations[0] equation];
     for (GLLinearTransform *transform in linearTransformations) {
-        [fromDimensions addObject: transform.fromDimensions[0]];
-		[toDimensions addObject: transform.toDimensions[0]];
+        [fromDimensions addObjectsFromArray: transform.fromDimensions];
+		[toDimensions addObjectsFromArray: transform.toDimensions];
+		[numDimensions addObject: @(fromDimensions.count)];
         isComplex |= transform.isComplex;
-        [matrixFormat addObject: transform.matrixFormats[0]];
+        [matrixFormat addObjectsFromArray: transform.matrixFormats];
+		[matrixDescriptions addObject: transform.matrixDescription];
 		if (transform.matrixBlock) {
 			[matrixBlocks addObject: transform.matrixBlock];
+		} else {
+			[matrixBlocks addObject: [NSNull null]];
 		}
+		
     }
     GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
     
-	if (matrixBlocks.count == linearTransformations.count)
-	{	// In this scenario, the linear transforms don't depend on any operations (they already have matrixBlocks), so we can immediately compute the tensor product.
-		GLLinearTransform *tensorProduct = [GLLinearTransform transformOfType:format withFromDimensions: fromDimensions toDimensions: toDimensions inFormat:matrixFormat forEquation:equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
-			transformMatrix theMatrixBlock = matrixBlocks[0];
-			GLFloatComplex value = theMatrixBlock(&(row[0]), &(col[0]));
-			for (NSUInteger i=1;i<matrixBlocks.count;i++) {
-				theMatrixBlock = matrixBlocks[i];
-				value *= theMatrixBlock(&(row[i]), &(col[i]));
+	GLLinearTransform *tensorProductTransform = [GLLinearTransform transformOfType:format withFromDimensions: fromDimensions toDimensions: toDimensions inFormat:matrixFormat forEquation:[linearTransformations[0] equation] matrix: NULL];
+	GLMatrixDescription *tensorProductMatrixDescription = tensorProductTransform.matrixDescription;
+	
+	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+		// create a matrix block for any transformation that doesn't have one.
+		for (NSUInteger i=0;i<matrixBlocks.count;i++) {
+			if (matrixBlocks[i] == [NSNull null]) {
+				matrixBlocks[i] = [GLLinearTransform matrixBlockWithFormat: matrixDescriptions[i] fromData: operandArray[i]];
+			}
+		}
+		
+		// create the tensor product matrix block.
+		transformMatrix tensorProduct = ^( NSUInteger *row, NSUInteger *col ) {
+			NSUInteger iMatrix = 0;
+			NSUInteger iDimension = 0;
+			transformMatrix theMatrixBlock = matrixBlocks[iMatrix];
+			GLFloatComplex value = theMatrixBlock(&(row[iDimension]), &(col[iDimension]));
+			iDimension += [numDimensions[iMatrix] unsignedIntegerValue];
+			for (iMatrix=1;iMatrix<matrixBlocks.count;iMatrix++) {
+				theMatrixBlock = matrixBlocks[iMatrix];
+				value *= theMatrixBlock(&(row[iDimension]), &(col[iDimension]));
+				iDimension += [numDimensions[iMatrix] unsignedIntegerValue];
 			}
 			return value;
-		}];
-		
-		// No operation, no dependencies, nothing. This is as hollow of an operation as it gets.
-		if (( self = [super init] )) {
-			self.result = @[tensorProduct];
-		}
-		return self;
-		
-	} else {
-		GLLinearTransform *tensorProduct = [GLLinearTransform transformOfType:format withFromDimensions: fromDimensions toDimensions: toDimensions inFormat:matrixFormat forEquation:equation matrix: NULL];
-		
-		variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-		
 		};
 		
-		if (( self = [super initWithResult: @[tensorProduct] operand: linearTransformations buffers: @[] operation: op] )) {
-			
-		}
-		return self;
+		[GLLinearTransform writeToData: resultArray[0] withFormat: tensorProductMatrixDescription fromMatrixBlock: tensorProduct];
+	};
+		
+	if (( self = [super initWithResult: @[tensorProductTransform] operand: linearTransformations buffers: @[] operation: op] )) {
+		
 	}
+	
+	return self;
 }
 
 @end

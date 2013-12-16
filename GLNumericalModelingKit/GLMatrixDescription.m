@@ -179,10 +179,10 @@
 {
 	if (self.nDimensions != otherMatrixDescription.nDimensions) return NO;
 	if (self.nPoints != otherMatrixDescription.nPoints) return NO;
-	if (self.nElements != otherMatrixDescription.nElements) return NO;
-	if (self.nBytes != otherMatrixDescription.nBytes) return NO;
-	if (self.complexStride != otherMatrixDescription.complexStride) return NO;
-	if (self.dataFormat != otherMatrixDescription.dataFormat) return NO;
+//	if (self.nElements != otherMatrixDescription.nElements) return NO;
+//	if (self.nBytes != otherMatrixDescription.nBytes) return NO;
+//	if (self.complexStride != otherMatrixDescription.complexStride) return NO;
+//	if (self.dataFormat != otherMatrixDescription.dataFormat) return NO;
 	
 	BOOL flag = YES;
 	for (NSUInteger iDim=0; iDim<self.nDimensions; iDim++) {

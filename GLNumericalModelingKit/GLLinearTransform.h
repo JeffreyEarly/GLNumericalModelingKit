@@ -56,6 +56,13 @@ typedef NS_ENUM(NSUInteger, GLBoundaryCondition) {
  */
 + (NSMutableData *) dataWithFormat: (GLMatrixDescription *) matrixDescription fromMatrixBlock: (transformMatrix) theMatrixBlock;
 
+/** Write the given matrix to a specific memory buffer given its storage description.
+ @param data A data object enough storage for the given matrix description.
+ @param matrixDescription Matrix description object to be associated with the data.
+ @param theMatrixBlock The format independent matrix block.
+ */
++ (void) writeToData: (NSMutableData *) data withFormat: (GLMatrixDescription *) matrixDescription fromMatrixBlock: (transformMatrix) theMatrixBlock;
+
 /** Create a format independent matrix from some raw data and its storage description.
  @discussion This matrix block will strongly reference both the matrix description and the data object. In certain cases it may be appropriate to copy those objects before calling this method.
  @param matrixDescription Matrix description object associated with the data.
@@ -176,6 +183,12 @@ typedef NS_ENUM(NSUInteger, GLBoundaryCondition) {
  @returns A GLLinearTransform with fromDimensions that match dimensions, and toDimensions which may be different.
  */
 + (GLLinearTransform *) differentialOperatorWithDerivatives: (NSArray *) numDerivs fromDimensions: (NSArray *) dimensions forEquation: (GLEquation *) equation;
+
+/** Takes the tensor product (outer product) of an array linear transformations.
+ @param linearTransformations An array of linear transformations.
+ @returns A linear transformation with fromDimensions and toDimensions of all the linear transformations in the array.
+ */
++ (GLLinearTransform *) tensorProduct: (NSArray *) linearTransformations;
 
 /** Create a harmonic operator of arbitrary order that can act on multi-dimensional functions in the given dimensions.
  @param order Order n, is given by \nabla^{2n}
