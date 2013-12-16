@@ -470,10 +470,12 @@
 	free(cols);
 }
 
-//- (GLLinearTransform *) copyWithDataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering
-//{
-//	
-//}
+- (GLLinearTransform *) copyWithDataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering
+{
+	GLFormatShiftOperation *op = [[GLFormatShiftOperation alloc] initWithLinearTransformation: self dataType: dataFormat matrixFormat: matrixFormats ordering: ordering];
+	op = [self replaceWithExistingOperation: op];
+	return op.result[0];
+}
 
 /************************************************/
 /*		Pre-defined transformations             */

@@ -1075,3 +1075,35 @@
 }
 
 @end
+
+/************************************************/
+/*		GLFormatShiftOperation					*/
+/************************************************/
+
+#pragma mark -
+#pragma mark GLFormatShiftOperation
+#pragma mark
+
+@implementation GLFormatShiftOperation
+
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform dataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering
+{
+	GLLinearTransform *newLinearTransform = [[GLLinearTransform alloc] initTransformOfType: dataFormat withFromDimensions: linearTransform.fromDimensions toDimensions: linearTransform.toDimensions inFormat: matrixFormats withOrdering: ordering forEquation: linearTransform.equation matrix: nil];
+	transformMatrix matrixBlock = newLinearTransform.matrixBlock;
+	GLMatrixDescription *oldMatrixDescription = linearTransform.matrixDescription;
+	GLMatrixDescription *newMatrixDescription = newLinearTransform.matrixDescription;
+	
+	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+		transformMatrix matrix = matrixBlock ? matrixBlock : [GLLinearTransform matrixBlockWithFormat: oldMatrixDescription fromData: operandArray[0]];
+		[GLLinearTransform writeToData: resultArray[0] withFormat: newMatrixDescription fromMatrixBlock: matrix];
+	};
+	
+	if (( self = [super initWithResult: @[newLinearTransform] operand: @[linearTransform] buffers: @[] operation: op] )) {
+		
+	}
+	
+	return self;
+}
+
+@end
+

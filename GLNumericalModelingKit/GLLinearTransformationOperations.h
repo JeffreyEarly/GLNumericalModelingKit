@@ -139,4 +139,19 @@
 - (id) initWithLinearTransformations: (NSArray *) linearTransformations;
 @end
 
+/************************************************/
+/*		GLFormatShiftOperation				*/
+/************************************************/
+/** Copy the linear transformation with the data formatted according to new parameters.
+ @discussion This is not implemented for speed (and therefore shouldn't be used in a loop where speed is needed), but it should be able to convert to any format.
+ @param linearTransformation A linear transformation
+ @param dataFormat Specify the desired data format.
+ @param matrixFormats An array of GLMatrixFormat types specifying the necessary storage requires that should be allocated for a particular dimension pair.
+ @param ordering Whether the dense matrix indices should be column and row-major ordered.
+ @returns A new created GLLinearTransform instance in the requested format..
+ */
+@interface GLFormatShiftOperation : GLVariableOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform dataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering;
+@end
+
 
