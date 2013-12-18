@@ -740,6 +740,7 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 	
 	if (A.isComplex) {
 		A = [A copyWithDataType: kGLInterleavedComplexDataFormat matrixFormat: A.matrixFormats ordering: kGLColumnMatrixOrder];
+		result = [[GLLinearTransform alloc] initTransformOfType: kGLInterleavedComplexDataFormat withFromDimensions: A.toDimensions toDimensions: A.fromDimensions inFormat: A.matrixFormats withOrdering: kGLColumnMatrixOrder forEquation: A.equation matrix: nil];
 		
 		NSUInteger N = [A.fromDimensions[0] nPoints];
 		GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: N*sizeof(__CLPK_integer)];
@@ -773,6 +774,7 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 		};
 		
 	} else {
+		result = [GLLinearTransform transformOfType: format withFromDimensions: A.toDimensions toDimensions:A.fromDimensions inFormat:A.matrixFormats forEquation:A.equation matrix: nil];
 		NSUInteger N = [A.fromDimensions[0] nPoints];
 		GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: N*sizeof(__CLPK_integer)];
 		GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: N*N*sizeof(GLFloat)];

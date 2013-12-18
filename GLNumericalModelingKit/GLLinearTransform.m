@@ -264,17 +264,17 @@
 	
 	// This block retrieves the matrix value from the correct spot in memory (memIndex), given a particular memory location.
 	// The assignment is only dependent on the format and the total number of points.
-	GLFloatComplex (^retrieveData)(NSUInteger *, NSUInteger *, GLFloat *, NSUInteger) = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger memIndex ) {
+	GLFloatComplex (^retrieveData)(NSUInteger *, NSUInteger *, GLFloat *, NSUInteger) = [^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger memIndex ) {
 		if (matrixDescription.dataFormat == kGLRealDataFormat) {
 			return (GLFloatComplex) f[memIndex];
 		} else if (matrixDescription.dataFormat == kGLInterleavedComplexDataFormat) {
-			return f[2*memIndex] + I*f[2*memIndex+matrixDescription.complexStride];
+			return f[memIndex] + I*f[memIndex+matrixDescription.complexStride];
 		} else if (matrixDescription.dataFormat == kGLSplitComplexDataFormat) {
 			return f[memIndex] + I*f[memIndex+matrixDescription.complexStride];
 		} else {
 			return (GLFloatComplex) 0.0;
 		}
-	};
+	} copy];
 	
 	for (NSInteger iDim = matrixDescription.nDimensions-1; iDim >= 0; iDim--)
 	{
@@ -326,13 +326,13 @@
 			};
 		}
 		
-		retrieveData = loop;
+		retrieveData = [loop copy];
 	}
 	
 	transformMatrix matrixBlock = ^(NSUInteger *row, NSUInteger *col) {
 		return retrieveData(row, col, (GLFloat *)data.bytes, 0);
 	};
-	return matrixBlock;
+	return [matrixBlock copy];
 }
 
 
@@ -357,8 +357,8 @@
 		if (matrixDescription.dataFormat == kGLRealDataFormat) {
 			f[memIndex] = creal(value);
 		} else if (matrixDescription.dataFormat == kGLInterleavedComplexDataFormat) {
-			f[2*memIndex] = creal(value);
-			f[2*memIndex+matrixDescription.complexStride] = cimag(value);
+			f[memIndex] = creal(value);
+			f[memIndex+matrixDescription.complexStride] = cimag(value);
 		} else if (matrixDescription.dataFormat == kGLSplitComplexDataFormat) {
 			f[memIndex] = creal(value);
 			f[memIndex+matrixDescription.complexStride] = cimag(value);
@@ -369,8 +369,8 @@
 		if (matrixDescription.dataFormat == kGLRealDataFormat) {
 			f[memIndex] = 0.0;
 		} else if (matrixDescription.dataFormat == kGLInterleavedComplexDataFormat) {
-			f[2*memIndex] = 0.0;
-			f[2*memIndex+matrixDescription.complexStride] = 0.0;
+			f[memIndex] = 0.0;
+			f[memIndex+matrixDescription.complexStride] = 0.0;
 		} else if (matrixDescription.dataFormat == kGLSplitComplexDataFormat) {
 			f[memIndex] = 0.0;
 			f[memIndex+matrixDescription.complexStride] = 0.0;
