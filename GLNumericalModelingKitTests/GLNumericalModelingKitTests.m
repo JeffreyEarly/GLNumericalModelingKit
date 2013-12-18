@@ -1030,6 +1030,15 @@
             }
         }
 	}
+	
+	S = [S times: @(-1)];
+	[S dumpToConsole];
+	
+	GLLinearTransform *invS = [S inverse];
+	[invS dumpToConsole];
+	
+	GLLinearTransform *B = [invS times: [A times: S]];
+	[B dumpToConsole];
 }
 
 /************************************************/

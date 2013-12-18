@@ -8,6 +8,14 @@
 
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 
+/*!
+ * @function apply_matrix_loop
+ *
+ * @abstract
+ * Loops over other matrix dimensions, allowing you to treat one dimension in isolation from the others.
+ */
+void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescription *resultDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger ));
+
 #pragma mark -
 #pragma mark Transforms
 #pragma mark

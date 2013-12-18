@@ -58,12 +58,17 @@
 		if (self.matrixDescription.strides[0].matrixFormat == kGLIdentityMatrixFormat) {
 			[descrip appendFormat: @"Identity matrix A=I\n"];
 		} else if (self.matrixDescription.strides[0].matrixFormat == kGLDenseMatrixFormat) {
+			NSUInteger rs = self.matrixDescription.strides[0].rowStride;
+			NSUInteger cs = self.matrixDescription.strides[0].columnStride;
+			NSUInteger is = self.matrixDescription.complexStride;
+			
 			[descrip appendFormat: @"Dense matrix A=\n"];
 			
 			GLFloat *a = self.pointerValue;
 			for (NSUInteger i=0; i<self.matrixDescription.strides[0].nRows; i++) {
 				for (NSUInteger j=0; j<self.matrixDescription.strides[0].nColumns; j++) {
-					[descrip appendFormat: @"%6.2f\t", a[i*self.matrixDescription.strides[0].rowStride+j]];
+					if (!self.isComplex) [descrip appendFormat: @"%6.2f\t", a[i*rs+j*cs]];
+					else [descrip appendFormat: @"%6.2f + %6.2fi\t", a[i*rs+j*cs], a[i*rs+j*cs + is]];
 				}
 				[descrip appendFormat: @"\n"];
 			}
@@ -255,6 +260,8 @@
 
 + (transformMatrix) matrixBlockWithFormat: (GLMatrixDescription *) matrixDescription fromData: (NSMutableData *) data;
 {
+	data = [data copy];
+	
 	// This block retrieves the matrix value from the correct spot in memory (memIndex), given a particular memory location.
 	// The assignment is only dependent on the format and the total number of points.
 	GLFloatComplex (^retrieveData)(NSUInteger *, NSUInteger *, GLFloat *, NSUInteger) = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger memIndex ) {
@@ -472,9 +479,19 @@
 
 - (GLLinearTransform *) copyWithDataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering
 {
-	GLFormatShiftOperation *op = [[GLFormatShiftOperation alloc] initWithLinearTransformation: self dataType: dataFormat matrixFormat: matrixFormats ordering: ordering];
-	op = [self replaceWithExistingOperation: op];
-	return op.result[0];
+	BOOL formatIsTheSame = self.dataFormat == dataFormat;
+	formatIsTheSame &= self.matrixOrder == ordering;
+	for (NSUInteger i=0; i<self.matrixDescription.nDimensions; i++) {
+		formatIsTheSame &= self.matrixDescription.strides[i].matrixFormat == [matrixFormats[i] unsignedIntegerValue];
+	}
+	
+	if (!formatIsTheSame) {
+		GLFormatShiftOperation *op = [[GLFormatShiftOperation alloc] initWithLinearTransformation: self dataType: dataFormat matrixFormat: matrixFormats ordering: ordering];
+		op = [self replaceWithExistingOperation: op];
+		return op.result[0];
+	} else {
+		return self;
+	}
 }
 
 /************************************************/
