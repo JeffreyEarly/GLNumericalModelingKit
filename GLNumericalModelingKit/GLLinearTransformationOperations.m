@@ -13,7 +13,17 @@
 
 #import <Accelerate/Accelerate.h>
 
-void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescription *resultDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger ))
+typedef NS_ENUM(NSUInteger, GLTrivialPointHandling) {
+	kGLNoLoopOverTrivialPoints,
+	kGLLoopOverTrivialPoints,
+	kGLAutofillTrivialPoints
+};
+
+// Given M x = b,
+// the operand description describes M
+// the result description describes x or b
+// This will loop
+void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescription *resultDescription, NSUInteger loopIndex, GLTrivialPointHandling trivialPointHandling, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger ))
 {
 	NSUInteger lastNonTrivialNonLoopIndex = NSNotFound;
 	NSUInteger lastTrivialIndex = NSNotFound;
@@ -37,11 +47,13 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 	// Now we need the strides to match up to the inner loop
 	NSUInteger outEquationStride = lastNonTrivialNonLoopIndex == NSNotFound ? 0 : resultDescription.strides[lastNonTrivialNonLoopIndex].stride;
 	
+	// is it true that the totalEquations * totalTrivialPoints = result.nPoints
+	
 	// Finally, we need the outer loop strides and totals
 	NSUInteger totalOuterLoops = totalTrivialPoints;
 	NSUInteger outerLoopStride = lastTrivialIndex == NSNotFound ? 0 : resultDescription.strides[lastTrivialIndex].stride;
 	
-	if (totalOuterLoops > 1 && totalEquations > 1 ) {
+	if (trivialPointHandling == kGLLoopOverTrivialPoints && totalOuterLoops > 1 && totalEquations > 1 ) {
 		// This operation has two loops.
 		// The inner loop walks over non-trivial elements of the linear operator, while
 		// the out loop walks over trivial elements of the linear operator, really just to new x and b elements
@@ -57,7 +69,7 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 				block(inEquationPos, outEquationPos);
 			});
 		});
-	} else if (totalOuterLoops == 1 && totalEquations > 1 ) {
+	} else if (totalEquations > 1 && (totalOuterLoops == 1 || trivialPointHandling == kGLNoLoopOverTrivialPoints || trivialPointHandling == kGLAutofillTrivialPoints) ) {
 		dispatch_apply(totalEquations, queue, ^(size_t iteration) {
 			
 			NSUInteger inEquationPos = iteration*inEquationStride;
@@ -65,6 +77,16 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 			
 			block(inEquationPos, outEquationPos);
 		});
+		if (totalOuterLoops > 1 && trivialPointHandling == kGLAutofillTrivialPoints) {
+			
+			// Essentially take the result that was just computed, which should be of length N or totalNonTrivialPoints,
+			// and copy those points.
+			dispatch_apply(totalNonTrivialPoints, globalQueue, ^(size_t outIteration) {
+				GLFloat *theOutput = (GLFloat *) [resultArray[0] bytes];
+				vGL_vfill( &theOutput[ outIteration*outElementStride], &theOutput[outIteration*outElementStride], trivialPointStride, totalTrivialPoints);
+			});
+		}
+		
 	} else if (totalOuterLoops > 1 && totalEquations == 1 ) {
 		dispatch_apply(totalOuterLoops, queue, ^(size_t outerIteration) {
 			
@@ -727,14 +749,19 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
     if (linearTransform.matrixDescription.nDimensions != 1) {
         [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
     }
-    
-    GLLinearTransform *A = (GLLinearTransform *) linearTransform;
-    if (A.fromDimensions.count != A.toDimensions.count ) {
-        [NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
+	
+	if (linearTransform.matrixDescription.strides[0].matrixFormat != kGLDenseMatrixFormat) {
+        [NSException raise: @"MatrixWrongFormat" format: @"Can only inverse dense matrices."];
     }
 	
+	if (linearTransform.matrixDescription.strides[0].nRows != linearTransform.matrixDescription.strides[0].nColumns) {
+        [NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
+    }
+    
+    GLLinearTransform *A = (GLLinearTransform *) linearTransform;
+	
 	GLDataFormat format = A.isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: A.toDimensions toDimensions:A.fromDimensions inFormat:A.matrixFormats forEquation:A.equation matrix: nil];
+	GLLinearTransform *result;
 	NSArray *buffers;
 	variableOperation op;
 	
