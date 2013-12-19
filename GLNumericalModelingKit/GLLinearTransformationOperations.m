@@ -13,47 +13,36 @@
 
 #import <Accelerate/Accelerate.h>
 
-typedef NS_ENUM(NSUInteger, GLTrivialPointHandling) {
-	kGLNoLoopOverTrivialPoints,
-	kGLLoopOverTrivialPoints,
-	kGLAutofillTrivialPoints
-};
-
-// Given M x = b,
-// the operand description describes M
-// the result description describes x or b
-// This will loop
-void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescription *resultDescription, NSUInteger loopIndex, GLTrivialPointHandling trivialPointHandling, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger ))
+void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger ))
 {
 	NSUInteger lastNonTrivialNonLoopIndex = NSNotFound;
 	NSUInteger lastTrivialIndex = NSNotFound;
 	NSUInteger totalTrivialPoints = 1;
 	
-    for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
-		if (operandDescription.strides[index].matrixFormat == kGLIdentityMatrixFormat) {
+    for ( NSUInteger index=0; index < matrixDescription.nDimensions; index++) {
+		if (matrixDescription.strides[index].matrixFormat == kGLIdentityMatrixFormat) {
             lastTrivialIndex = index;
-			totalTrivialPoints *= operandDescription.strides[index].nPoints;
-        }
-        
-        if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat && index != loopIndex ) {
+			totalTrivialPoints *= matrixDescription.strides[index].nPoints;
+        } else if (matrixDescription.strides[index].matrixFormat == kGLDiagonalMatrixFormat && index != loopIndex ) {
 			lastNonTrivialNonLoopIndex = index;
+		} else {
+			[NSException raise: @"BadMatrixFormat" format:@"Cannot apply the matrix loop across a matrix of this format"];
 		}
     }
 	
 	// How many 'inner loop' steps we need to take depends on how many other nontrivial dimensions there are.
-	NSUInteger inEquationStride = lastNonTrivialNonLoopIndex == NSNotFound ? 0 : operandDescription.strides[lastNonTrivialNonLoopIndex].stride;
-	NSUInteger totalEquations = operandDescription.nPoints / operandDescription.strides[loopIndex].nPoints;
+	// Total equations should be the product of diagonal dimensions that are not the loop index.
+	NSUInteger inEquationStride = lastNonTrivialNonLoopIndex == NSNotFound ? 0 : matrixDescription.strides[lastNonTrivialNonLoopIndex].stride;
+	NSUInteger totalEquations = matrixDescription.nPoints / matrixDescription.strides[loopIndex].nPoints;
 	
 	// Now we need the strides to match up to the inner loop
-	NSUInteger outEquationStride = lastNonTrivialNonLoopIndex == NSNotFound ? 0 : resultDescription.strides[lastNonTrivialNonLoopIndex].stride;
-	
-	// is it true that the totalEquations * totalTrivialPoints = result.nPoints
+	NSUInteger outEquationStride = lastNonTrivialNonLoopIndex == NSNotFound ? 0 : vectorDescription.strides[lastNonTrivialNonLoopIndex].stride;
 	
 	// Finally, we need the outer loop strides and totals
 	NSUInteger totalOuterLoops = totalTrivialPoints;
-	NSUInteger outerLoopStride = lastTrivialIndex == NSNotFound ? 0 : resultDescription.strides[lastTrivialIndex].stride;
+	NSUInteger outerLoopStride = lastTrivialIndex == NSNotFound ? 0 : vectorDescription.strides[lastTrivialIndex].stride;
 	
-	if (trivialPointHandling == kGLLoopOverTrivialPoints && totalOuterLoops > 1 && totalEquations > 1 ) {
+	if (totalOuterLoops > 1 && totalEquations > 1 ) {
 		// This operation has two loops.
 		// The inner loop walks over non-trivial elements of the linear operator, while
 		// the out loop walks over trivial elements of the linear operator, really just to new x and b elements
@@ -69,7 +58,7 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 				block(inEquationPos, outEquationPos);
 			});
 		});
-	} else if (totalEquations > 1 && (totalOuterLoops == 1 || trivialPointHandling == kGLNoLoopOverTrivialPoints || trivialPointHandling == kGLAutofillTrivialPoints) ) {
+	} else if (totalOuterLoops == 1 && totalEquations > 1 ) {
 		dispatch_apply(totalEquations, queue, ^(size_t iteration) {
 			
 			NSUInteger inEquationPos = iteration*inEquationStride;
@@ -77,16 +66,6 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 			
 			block(inEquationPos, outEquationPos);
 		});
-		if (totalOuterLoops > 1 && trivialPointHandling == kGLAutofillTrivialPoints) {
-			
-			// Essentially take the result that was just computed, which should be of length N or totalNonTrivialPoints,
-			// and copy those points.
-			dispatch_apply(totalNonTrivialPoints, globalQueue, ^(size_t outIteration) {
-				GLFloat *theOutput = (GLFloat *) [resultArray[0] bytes];
-				vGL_vfill( &theOutput[ outIteration*outElementStride], &theOutput[outIteration*outElementStride], trivialPointStride, totalTrivialPoints);
-			});
-		}
-		
 	} else if (totalOuterLoops > 1 && totalEquations == 1 ) {
 		dispatch_apply(totalOuterLoops, queue, ^(size_t outerIteration) {
 			
@@ -543,6 +522,7 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
 	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
+	GLMatrixDescription *vectorDescription = result.matrixDescription;
     
 	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
         
@@ -581,10 +561,7 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 		
         self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 			
-			dispatch_apply(totalEquations, globalQueue, ^(size_t iteration) {
-				
-				NSInteger inEquationPos = iteration*inEquationStride;
-				NSInteger outEquationPos = iteration*outEquationStride;
+			apply_matrix_loop(matrixDescription, vectorDescription, denseIndex, globalQueue, ^(NSUInteger inEquationPos, NSUInteger outEquationPos) {
 				
 				NSMutableData *ipiv = [[GLMemoryPool sharedMemoryPool] dataWithLength: N*sizeof(__CLPK_integer)];
 				__CLPK_integer n = (__CLPK_integer) N;

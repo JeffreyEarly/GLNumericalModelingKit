@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) (format=pdflatex 2013.5.30)  12 DEC 2013 10:00
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) (format=pdflatex 2013.5.30)  19 DEC 2013 14:21
 entering extended mode
  \write18 enabled.
  file:line:error style messages enabled.
@@ -355,12 +355,18 @@ u-per-diag-o-nal ma-trix.To be ex-plicit,
  []
 
 [17] [18] [19] [20] [21]
-Overfull \hbox (14.42911pt too wide) in paragraph at lines 709--710
+Overfull \hbox (3.86836pt too wide) in paragraph at lines 730--731
+\OT1/cmr/m/n/10.95 The eigen-vec-tor prob-lem re-quires the same loops as the l
+in-ear trans-for-ma-tion prob-lem. 
+ []
+
+[22]
+Overfull \hbox (14.42911pt too wide) in paragraph at lines 755--756
 []\OT1/cmr/m/n/10.95 Note there is still a dis-tinc-tion to be made be-tween tr
 ans-for-ma-tions to and from a kGLDeltaBa-
  []
 
-[22] [23] [24] [25] (./Transforms.aux) ) 
+[23] [24] [25] [26] (./Transforms.aux) ) 
 Here is how much of TeX's memory you used:
  2988 strings out of 493315
  40742 string characters out of 6137904
@@ -387,10 +393,10 @@ s/cm/cmsy8.pfb></usr/local/texlive/2013/texmf-dist/fonts/type1/public/amsfonts/
 cm/cmti10.pfb></usr/local/texlive/2013/texmf-dist/fonts/type1/public/amsfonts/c
 m/cmtt10.pfb></usr/local/texlive/2013/texmf-dist/fonts/type1/public/amsfonts/sy
 mbols/msam10.pfb>
-Output written on Transforms.pdf (25 pages, 259101 bytes).
+Output written on Transforms.pdf (26 pages, 261338 bytes).
 PDF statistics:
- 154 PDF objects out of 1000 (max. 8388607)
- 108 compressed objects within 2 object streams
+ 157 PDF objects out of 1000 (max. 8388607)
+ 110 compressed objects within 2 object streams
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

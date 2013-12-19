@@ -666,13 +666,28 @@ Alternatively, DCT-II, the cosine function is even around $n=-1/2$ and $n=N-1/2$
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Linear Solvers}
+\section{Matrix Manipulation}
+
+Major types of matrix manipulation include,
+\begin{itemize}
+\item linear solvers,
+\item linear transforms,
+\item eigenvectors,
+\item matrix inversion,
+\item tensor products.
+\end{itemize}
+
+\subsection{Linear Solvers}
 
 We need to be able to solve the linear matrix equation,
 \begin{equation}
 M \vec{x} = \vec{b}
 \end{equation}
-for $\vec{x}$ given $M$ and $\vec{b}$.
+for $\vec{x}$ given $M$ and $\vec{b}$. Component-wise, our transformations might look like,
+\begin{equation}
+M^{ijk}_{lmn} x^{lmn} = b^{ijk}
+\end{equation}
+where each dimension is identified with a component pair, $i-l$, $j-m$, $k-n$ which are defined be identity, dense, diagonal, etc.
 
 Depending on whether the matrix is the identity, diagonal, tridiagonal, or dense, we need to choose a different solution algorithm. The matrix may be any one of these types in \emph{each} dimension, making the problem far more tricky. The current need is such that we only expect one dimension to be tridiagonal or dense, effectively meaning that we only need to solve the one-dimensional non-trivial problem. Specifically, we can solve the following types of equations,
 \begin{enumerate}
@@ -684,23 +699,43 @@ Depending on whether the matrix is the identity, diagonal, tridiagonal, or dense
 
 In the first case we simply return $\vec{b}$. In the second case, we simply have to divide $\vec{b}$ elements by the elements of $M$ (some repeated). In the third and fourth case, we need to loop over the elements in the diagonal dimensions, solving the tridiagonal or dense matrix problem in the other dimension.
 
-\subsection{Algorithm}
+For the solver we need to create a function which let's us focus on the one-dimensional problem, and let some outer-loop generalize that to the multidimensional case.
 
-Assuming we have only one non-diagonal dimension, the linear solver problem can be thought of as a number of independent one-dimensional linear problems. We need to find the stride between equations and total number of equations, and then just repeat the solver. In addition, a trivial dimension (one with the identity) will just repeat an existing solution across that dimension.
+If a dimension of the linear transformation is
+\begin{enumerate}
+\item the identity, then the \emph{computation} needs to be repeated across that dimension because there will be new values of $b$.
+\item a diagonal, then the \emph{computation} needs to loop across the diagonal.
+\end{enumerate}
+
+\subsection{Linear Transformations}
+
+We need to be able to solve the linear matrix equation,
+\begin{equation}
+M \vec{x} = \vec{b}
+\end{equation}
+for $\vec{b}$ given $M$ and $\vec{x}$. Component-wise, our transformations might look like,
+\begin{equation}
+M^{ijk}_{lmn} x^{lmn} = b^{ijk}
+\end{equation}
+where each dimension is identified with a component pair, $i-l$, $j-m$, $k-n$ which are defined be identity, dense, diagonal, etc.
+
+This follows nearly the same basic pattern as above, in that we need to isolate one dimension, and then the other dimensions we need to 
+\begin{enumerate}
+\item the identity, then the \emph{computation} needs to be repeated across that dimension because there will be new values of $b$.
+\item a diagonal, then the \emph{computation} needs to loop across the diagonal.
+\end{enumerate}
+
+\subsection{Eigenvectors}
+
+The eigenvector problem requires the same loops as the linear transformation problem.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\section{}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Linear Transformations
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \section{Linear Transformations}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 
 Now it's time to implement finite differencing and more general linear transformations. These require generalizations of the concepts above.
 
@@ -786,6 +821,17 @@ Here the first multiplication is $w^0 = c^0 v^1$, meaning we shift the operand.
 \subsection{Tensor product}
 
 We can define transformation or differentiation matrices on a single dimension, then scale up to multiple dimensions by taking the tensor product. This lets us define the derivative operators in a single dimension, then easily scale them up.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Multidimensional matrix solutions
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Multidimensional matrix solutions}
+
+Consider 
+
 
 \section{Class Hierarchy}
 
