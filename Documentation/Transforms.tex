@@ -12,7 +12,7 @@
 \newcolumntype{L}{>{\varwidth[c]{\linewidth}}l<{\endvarwidth}}
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
-\title{GLNumericalModelingKit Transforms}
+\title{GLNumericalModelingKit}
 \author{Jeffrey J. Early}
 %\date{}                                           % Activate to display a given date or no date
 
@@ -28,10 +28,60 @@
 
 GLNumericalModelingKit is an Objective-C framework designed to enable high performance numerical modeling of differential equations.
 
-The primary design goal of this framework is to eliminate the tedious an error prone programming required for numerical modeling by introducing a layer of abstraction on top of the usual code. From the outset, I wanted to be able to simply write \texttt{[psi x]} in objective-c and have that automatically take the x derivative of my variable psi, instead of fussing with memory buffers, differentiation matrices and Fourier transforms. GLNumericalModelingKit makes that possible, but also tries to be flexible enough to accommodate the unique demands that inevitably come with each project.
+The primary design goal of this framework is to eliminate the tedious an error prone programming required for numerical modeling by introducing a layer of abstraction on top of the usual code. From the outset, the goal was to be able to simply write \texttt{[psi x]} in Objective-C and have that automatically take the x derivative of the variable psi, instead of fussing with memory buffers, differentiation matrices and Fourier transforms. GLNumericalModelingKit makes that possible, but also tries to be flexible enough to accommodate the unique demands that inevitably come with each project.
 
 GLNumericalModelingKit consists of three major classes \emph{dimensions}, \emph{variables}, and \emph{variable operations} that map to familiar mathematical concepts. There are three types of variables, \emph{scalars} (which have no dimensions), \emph{functions} (which are defined on a set of dimensions) and \emph{linear transforms} (which transform functions between dimensions). The variable operations are used to perform all sorts of operations on the variables, including things such as addition, multiplication, interpolation, exponentiation, writing to files, Runge-Kutta time stepping, and so on. The linear transformations are used for Fourier, sine, cosine and Chebyshev transformations, differentiation, and other custom defined transformations. Taken together, these allow one to solve a fairly diverse set of mathematical problems.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\section{Mathematics}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The basic idea with numerical modeling to come up with a numerical approximation to some continuous function
+
+\begin{table}
+  \centering 
+\begin{tabular}{|r|c|l|}
+      \hline
+      Hierarchy & Conceptual & Discipline \tabularnewline \hline \hline
+      Level 0 & Continuous functions and differential equations & Calculus \tabularnewline \hline
+      Level 1 & Abstract vectors and linear transformations & Linear algebra \tabularnewline \hline
+      Level 2 & Vectors, matrices and matrix operations & Algorithm design \tabularnewline \hline
+      Level 3 & Memory buffers and floating point operations & Programming \tabularnewline \hline
+\end{tabular}
+  \caption{Conceptual model for the different layers that go into numerical modeling. GLNumericalModelingKit handles layers 2 and 3, so the practitioner can focus on levels 0 and 1.}\label{conceptual_layers}
+\end{table}
+
+Numerical modeling requires that we represent continuous mathematical objects, such as functions and differential operators, as discrete objects, such as vectors and matrices. For the following sections dealing with the transformation of functions, we treat the discrete functions as vectors in a function space. The components of the functions are represented as superscripted contravariant tensors, $f^i$, where as the vector basis functions are represented as $\bar{e}_j$. Summation is assumed when an index appears in an expression twice, once as a superscript and once as a subscript.
+
+In our notation all indices are zero based in order to be consistent with $C$ programming conventions and therefore run from $0$ through $n-1$. Superscripted indices indicate the row number, and subscripted indices indicate the column number.
+
+Some examples include a column vector,
+\begin{equation}
+v^i = \left[\begin{array}{c}v_0 \\v_1 \\v_2 \\ \vdots \\v_{n-1}\end{array}\right]
+\end{equation}
+the Kronecker delta,
+\begin{equation}
+\delta^i_j = \left[\begin{array}{cccc}1 & 0 & 0 & 0 \\0 & 1 & 0 & 0 \\0 & 0 & \ddots & 0 \\0 & 0 & 0 & 1\end{array}\right]
+\end{equation}
+the sub-diagonal Kronecker delta,
+\begin{equation}
+\delta^i_{j+1} = \delta^{i-1}_j = \left[\begin{array}{cccc}0 & 0 & 0 & 0 \\1 & 0 & 0 & 0 \\0 & \ddots & 0 & 0 \\0 & 0 & 1 & 0\end{array}\right]
+\end{equation}
+and the super-diagonal Kronecker delta,
+\begin{equation}
+\delta^i_{j-1} = \delta^{i+1}_j = \left[\begin{array}{cccc}0 & 1 & 0 & 0 \\0 & 0 & \ddots & 0 \\0 & 0 & 0 & 1 \\0 & 0 & 0 & 0\end{array}\right].
+\end{equation}
+
+A general sub-diagonal matrix can be represented as,
+\begin{equation}
+a^i \delta^i_{j+1} = a^{i} \delta^{i-1}_j = a_{j+1} \delta^i_{j+1} = a_{j+1} \delta^{i-1}_j = \left[\begin{array}{cccc}0 & 0 & 0 & 0 \\a_1 & 0 & 0 & 0 \\0 & \ddots & 0 & 0 \\0 & 0 & a_{n-1} & 0\end{array}\right]
+\end{equation}
+where the index $i$ is not summed because it does not appear as both a superscript and a subscript. A general super-diagonal matrix can similarly be represented as,
+\begin{equation}
+c^i \delta^i_{j-1} =c^{i+1} \delta^{i+1}_j = \left[\begin{array}{cccc}0 & c_0 & 0 & 0 \\0 & 0 & \ddots & 0 \\0 & 0 & 0 & c_{n-2} \\0 & 0 & 0 & 0\end{array}\right].
+\end{equation}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -46,18 +96,18 @@ Dimensions are what you would expect, defining a coordinate with respect to some
 
 All dimensions are defined with respect some basis. This determines how a function is interpreted and how a function is differentiated. For example, the default basis is kGLDeltaBasis, conceptually a series of delta functions at each point.
 
-At the heart of GLNumericalModelingKit is the ability to transform a variable between basis functions. If a one-dimensional function is defined on a dimension with basis kGLDeltaBasis, then you may transform this to kGLExponentialBasis or kGLCosineHalfShiftBasis, for example. The new coordinate defined with respect to the cosine basis, for example, should be thought of as coefficients of the cosine series. 
+At the heart of GLNumericalModelingKit is the ability to transform a variable between basis functions. If a one-dimensional function is defined on a dimension with basis kGLDeltaBasis, then you may transform this to kGLExponentialBasis or kGLCosineBasis, for example. The new coordinate defined with respect to the cosine basis, for example, should be thought of as coefficients of the cosine series. 
 
 \begin{tabular}{llL}
       \hline
       Basis Name & Discrete value & Basis \tabularnewline \hline \hline
       \verb"kGLDeltaBasis" & $x_n$ &\[  \bar{x}_n \equiv  \delta( x - x_n) \] \tabularnewline
       \verb"kGLExponentialBasis" & $f_n$  & \[ \bar{e}_n \equiv e^{-2\pi i f_n x} \] \tabularnewline
-      \verb"kGLSineHalfShiftBasis" & $f_n$ & \[ \bar{s}_n \equiv \sin( 2 \pi f_n x )\] \tabularnewline
-      \verb"kGLCosineHalfShiftBasis" & $f_n$ & \[  \bar{c}_n \equiv \cos ( 2 \pi f_n x )\] \tabularnewline
-       \verb"kGLSineBasis" & $f_n$ & \[ \bar{s}_n \equiv \sin ( 2 \pi f_n x )\] \tabularnewline
-      \verb"kGLCosineBasis"&$f_n$ & \[ \bar{c}_n \equiv \cos ( 2 \pi f_n x ) \] \tabularnewline 
+      \verb"kGLSineBasis" & $f_n$ & \[ \bar{s}_n \equiv \sin( 2 \pi f_n x )\] \tabularnewline
+      \verb"kGLCosineBasis" & $f_n$ & \[  \bar{c}_n \equiv \cos ( 2 \pi f_n x )\] \tabularnewline
       \verb"kGLChebyshevBasis"& $n$ & \[ \bar{t}_n \equiv  T_n(x) \] \tabularnewline 
+             \verb"kGLDiscreteSineTransformIBasis" & $f_n$ & \[ \bar{s}_n \equiv \sin ( 2 \pi f_n x )\] \tabularnewline
+      \verb"kGLDiscreteCosineTransformIBasis"&$f_n$ & \[ \bar{c}_n \equiv \cos ( 2 \pi f_n x ) \] \tabularnewline 
       \hline
 \end{tabular}
 
@@ -165,10 +215,10 @@ if we define $H^{n^\prime} \equiv \lambda^{k^\prime}_n h^n$ and $\bar{e}_{n^\pri
       \hline
       Basis & FFTW & Forward Transformation \tabularnewline \hline \hline
       \verb"kGLExponentialBasis" & \verb"FFTW_FORWARD" & \[ h_k = \sum_{n=0}^{N-1} H_n e^{-2\pi i k n/N} \] \tabularnewline
-      \verb"kGLSineHalfShiftBasis" & \verb"RODFT10" & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ \pi(n+1/2)(k+1)/N\right] \] \tabularnewline
-      \verb"kGLCosineHalfShiftBasis" & \verb"REDFT10" & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \cos \left[ \pi (n+1/2)k/N\right] \] \tabularnewline
-      \verb"kGLSineBasis" & \verb"RODFT00" & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ \pi(n+1)(k+1)/(N+1)\right] \] \tabularnewline
-      \verb"kGLCosineBasis" & \verb"REDFT00" & \[ h_k = H_{0} + (-1)^{k} H_{n-1} +  2 \sum_{n=1}^{N-2} H_n \cos \left[ \pi n k/(N-1)\right] \] \tabularnewline
+      \verb"kGLSineBasis" & \verb"RODFT10" & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ \pi(n+1/2)(k+1)/N\right] \] \tabularnewline
+      \verb"kGLCosineBasis" & \verb"REDFT10" & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \cos \left[ \pi (n+1/2)k/N\right] \] \tabularnewline
+      \verb"kGLDiscreteSineTransformIBasis" & \verb"RODFT00" & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ \pi(n+1)(k+1)/(N+1)\right] \] \tabularnewline
+      \verb"kGLDiscreteCosineTransformIBasis" & \verb"REDFT00" & \[ h_k = H_{0} + (-1)^{k} H_{n-1} +  2 \sum_{n=1}^{N-2} H_n \cos \left[ \pi n k/(N-1)\right] \] \tabularnewline
       \hline
 \end{tabular}
 
@@ -178,10 +228,10 @@ Given function $h_k$ in the frequency domain, the following transforms return fu
       \hline
       Basis & FFTW & Inverse Transformation \tabularnewline \hline \hline
       \verb"kGLExponentialBasis" & \verb"FFTW_INVERSE" & \[ H_n = \sum_{k=0}^{N-1} h_k e^{2\pi i k n/N} \] \tabularnewline
-      \verb"kGLSineHalfShiftBasis" & \verb"RODFT01" & \[ H_n = (-1)^n h_{N-1} + 2 \sum_{k=0}^{N-2} h_k \sin \left[ \pi(k+1)(n+1/2)/N\right] \] \tabularnewline
-      \verb"kGLCosineHalfShiftBasis" & \verb"REDFT01" & \[ H_n = h_{0} + 2 \sum_{k=1}^{N-1} h_k \cos \left[ \pi (n+1/2)k/N\right] \] \tabularnewline
-            \verb"kGLSineBasis" & \verb"RODFT00" & \[ H_n = 2 \sum_{k=0}^{N-1} h_k \sin \left[ \pi(n+1)(k+1)/(N+1)\right] \] \tabularnewline
-      \verb"kGLCosineBasis" & \verb"REDFT00" & \[ H_n = h_{0} + (-1)^{n} h_{k-1} +  2 \sum_{k=1}^{N-2} h_k \cos \left[ \pi n k/(N-1)\right] \] \tabularnewline
+      \verb"kGLSineBasis" & \verb"RODFT01" & \[ H_n = (-1)^n h_{N-1} + 2 \sum_{k=0}^{N-2} h_k \sin \left[ \pi(k+1)(n+1/2)/N\right] \] \tabularnewline
+      \verb"kGLCosineBasis" & \verb"REDFT01" & \[ H_n = h_{0} + 2 \sum_{k=1}^{N-1} h_k \cos \left[ \pi (n+1/2)k/N\right] \] \tabularnewline
+      \verb"kGLDiscreteSineTransformIBasis" & \verb"RODFT00" & \[ H_n = 2 \sum_{k=0}^{N-1} h_k \sin \left[ \pi(n+1)(k+1)/(N+1)\right] \] \tabularnewline
+      \verb"kGLDiscreteCosineTransformIBasis" & \verb"REDFT00" & \[ H_n = h_{0} + (-1)^{n} h_{k-1} +  2 \sum_{k=1}^{N-2} h_k \cos \left[ \pi n k/(N-1)\right] \] \tabularnewline
       \hline
 \end{tabular}
 
@@ -191,10 +241,10 @@ Each of these can be written in terms of a frequency and position, although we w
       \hline
       Basis &$x_n$ & $f_k$ & Forward Transformation \tabularnewline \hline \hline
       \verb"kGLExponentialBasis" & $n\Delta$ & $\frac{k}{N\Delta}$ & \[ h_k = \sum_{n=0}^{N-1} H_n e^{-2\pi i f_k x_n} \] \tabularnewline
-      \verb"kGLSineHalfShiftBasis" & $ n\Delta + \frac{\Delta}{2}$ & $\frac{k+1}{2N\Delta}$ & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ 2 \pi f_k x_n \right] \] \tabularnewline
-      \verb"kGLCosineHalfShiftBasis" & $ n\Delta + \frac{\Delta}{2}$ & $\frac{k}{2N\Delta}$ & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \cos \left[ 2 \pi f_k x_n \right] \] \tabularnewline
-       \verb"kGLSineBasis" & $n\Delta + \Delta$ & $\frac{k+1}{2 \Delta (N+1)}$ & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ 2 \pi f_k x_n \right] \] \tabularnewline
-      \verb"kGLCosineBasis"&$n\Delta$ & $\frac{k}{2 \Delta (N-1)}$ & \[ h_k = H_{0} + (-1)^{k} H_{n-1} +  2 \sum_{n=1}^{N-2} H_n \cos \left[ 2 \pi f_k x_n \right] \] \tabularnewline 
+      \verb"kGLSineBasis" & $ n\Delta + \frac{\Delta}{2}$ & $\frac{k+1}{2N\Delta}$ & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ 2 \pi f_k x_n \right] \] \tabularnewline
+      \verb"kGLCosineBasis" & $ n\Delta + \frac{\Delta}{2}$ & $\frac{k}{2N\Delta}$ & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \cos \left[ 2 \pi f_k x_n \right] \] \tabularnewline
+       \verb"kGLDiscreteSineTransformIBasis" & $n\Delta + \Delta$ & $\frac{k+1}{2 \Delta (N+1)}$ & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ 2 \pi f_k x_n \right] \] \tabularnewline
+      \verb"kGLDiscreteCosineTransformIBasis"&$n\Delta$ & $\frac{k}{2 \Delta (N-1)}$ & \[ h_k = H_{0} + (-1)^{k} H_{n-1} +  2 \sum_{n=1}^{N-2} H_n \cos \left[ 2 \pi f_k x_n \right] \] \tabularnewline 
       \hline
 \end{tabular}
 
@@ -202,10 +252,10 @@ Each of these can be written in terms of a frequency and position, although we w
       \hline
       Basis &$x_n$ & $f_k$ & Inverse Transformation \tabularnewline \hline \hline
       \verb"kGLExponentialBasis" & $n\Delta$ & $\frac{k}{N\Delta}$ & \[ H_n = \sum_{k=0}^{N-1} h_k e^{2\pi i f_k x_n} \] \tabularnewline
-      \verb"kGLSineHalfShiftBasis" & $ n\Delta + \frac{\Delta}{2}$ & $\frac{k+1}{2N\Delta}$ & \[ H_n = (-1)^n h_{N-1} + 2 \sum_{k=0}^{N-2} h_k \sin \left[ 2 \pi f_k x_n \right] \] \tabularnewline
-      \verb"kGLCosineHalfShiftBasis" & $ n\Delta + \frac{\Delta}{2}$ & $\frac{k}{2N\Delta}$ & \[ H_n = h_{0} + 2 \sum_{k=1}^{N-1} h_k \cos \left[ 2 \pi f_k x_n \right] \] \tabularnewline
-      \verb"kGLSineBasis" & $n\Delta + \Delta$ & $\frac{k+1}{2 \Delta (N+1)}$ & \[ H_n = 2 \sum_{k=0}^{N-1} h_k \sin \left[ 2 \pi f_k x_n \right] \] \tabularnewline
-      \verb"kGLCosineBasis"&$n\Delta$ & $\frac{k}{2 \Delta (N-1)}$ & \[ H_n = h_{0} + (-1)^{n} h_{n-1} +  2 \sum_{k=1}^{N-2} h_k \cos \left[ 2 \pi f_k x_n \right] \] \tabularnewline 
+      \verb"kGLSineBasis" & $ n\Delta + \frac{\Delta}{2}$ & $\frac{k+1}{2N\Delta}$ & \[ H_n = (-1)^n h_{N-1} + 2 \sum_{k=0}^{N-2} h_k \sin \left[ 2 \pi f_k x_n \right] \] \tabularnewline
+      \verb"kGLCosineBasis" & $ n\Delta + \frac{\Delta}{2}$ & $\frac{k}{2N\Delta}$ & \[ H_n = h_{0} + 2 \sum_{k=1}^{N-1} h_k \cos \left[ 2 \pi f_k x_n \right] \] \tabularnewline
+      \verb"kGLDiscreteSineTransformIBasis" & $n\Delta + \Delta$ & $\frac{k+1}{2 \Delta (N+1)}$ & \[ H_n = 2 \sum_{k=0}^{N-1} h_k \sin \left[ 2 \pi f_k x_n \right] \] \tabularnewline
+      \verb"kGLDiscreteCosineTransformIBasis"&$n\Delta$ & $\frac{k}{2 \Delta (N-1)}$ & \[ H_n = h_{0} + (-1)^{n} h_{n-1} +  2 \sum_{k=1}^{N-2} h_k \cos \left[ 2 \pi f_k x_n \right] \] \tabularnewline 
       \hline
 \end{tabular}
 
@@ -216,8 +266,8 @@ In contrast, the sine and cosine basis transforms are not defined at the same fr
 \begin{tabular}{lL}
       \hline
       Basis & Forward Transformation \tabularnewline \hline \hline
-      \verb"kGLSineBasis" & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ \pi(n+1)(k+1)/(N+1)\right] \] \tabularnewline
-      \verb"kGLCosineBasis" & \[ h_k = H_{0} + (-1)^{k} H_{n-1} +  2 \sum_{n=1}^{N-2} H_n \cos \left[ \pi n k/(N-1)\right] \] \tabularnewline
+      \verb"kGLDiscreteSineTransformIBasis" & \[ h_k = 2 \sum_{n=0}^{N-1} H_n \sin \left[ \pi(n+1)(k+1)/(N+1)\right] \] \tabularnewline
+      \verb"kGLDiscreteCosineTransformIBasis" & \[ h_k = H_{0} + (-1)^{k} H_{n-1} +  2 \sum_{n=1}^{N-2} H_n \cos \left[ \pi n k/(N-1)\right] \] \tabularnewline
       \hline
 \end{tabular}
 
@@ -366,43 +416,6 @@ A GLDifferentialOperatorPool is specific to a particular set of \emph{differenti
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\subsection{Notation}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-For the following sections dealing with the transformation of functions, we treat the discrete functions as vectors in a function space. The components of the functions are represented as superscripted contravariant tensors, $f^i$, where as the vector basis functions are represented as $\bar{e}_j$. Summation is assumed when an index appears in an expression twice, once as a superscript and once as a subscript.
-
-In our notation all indices are zero based in order to be consistent with $C$ programming conventions and therefore run from $0$ through $n-1$. Superscripted indices indicate the row number, and subscripted indices indicate the column number.
-
-Some examples include a column vector,
-\begin{equation}
-v^i = \left[\begin{array}{c}v_0 \\v_1 \\v_2 \\ \vdots \\v_{n-1}\end{array}\right]
-\end{equation}
-the Kronecker delta,
-\begin{equation}
-\delta^i_j = \left[\begin{array}{cccc}1 & 0 & 0 & 0 \\0 & 1 & 0 & 0 \\0 & 0 & \ddots & 0 \\0 & 0 & 0 & 1\end{array}\right]
-\end{equation}
-the sub-diagonal Kronecker delta,
-\begin{equation}
-\delta^i_{j+1} = \delta^{i-1}_j = \left[\begin{array}{cccc}0 & 0 & 0 & 0 \\1 & 0 & 0 & 0 \\0 & \ddots & 0 & 0 \\0 & 0 & 1 & 0\end{array}\right]
-\end{equation}
-and the super-diagonal Kronecker delta,
-\begin{equation}
-\delta^i_{j-1} = \delta^{i+1}_j = \left[\begin{array}{cccc}0 & 1 & 0 & 0 \\0 & 0 & \ddots & 0 \\0 & 0 & 0 & 1 \\0 & 0 & 0 & 0\end{array}\right].
-\end{equation}
-
-A general sub-diagonal matrix can be represented as,
-\begin{equation}
-a^i \delta^i_{j+1} = a^{i} \delta^{i-1}_j = a_{j+1} \delta^i_{j+1} = a_{j+1} \delta^{i-1}_j = \left[\begin{array}{cccc}0 & 0 & 0 & 0 \\a_1 & 0 & 0 & 0 \\0 & \ddots & 0 & 0 \\0 & 0 & a_{n-1} & 0\end{array}\right]
-\end{equation}
-where the index $i$ is not summed because it does not appear as both a superscript and a subscript. A general super-diagonal matrix can similarly be represented as,
-\begin{equation}
-c^i \delta^i_{j-1} =c^{i+1} \delta^{i+1}_j = \left[\begin{array}{cccc}0 & c_0 & 0 & 0 \\0 & 0 & \ddots & 0 \\0 & 0 & 0 & c_{n-2} \\0 & 0 & 0 & 0\end{array}\right].
-\end{equation}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
 \subsection{Implementation}
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -460,7 +473,7 @@ and takes the components of a function in the exponential basis and transforms i
 This linear transformation can be represented by a diagonal matrix.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{kGLSineHalfShiftBasis}
+\subsubsection{kGLSineBasis}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Starting with,
@@ -503,7 +516,7 @@ Higher derivatives with respect to $x$ result in,
 and so on.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{kGLCosineHalfShiftBasis}
+\subsubsection{kGLCosineBasis}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 We denote the $k$ frequency component in the cosine basis by $h_k^{\textrm{c}}$.
@@ -600,12 +613,12 @@ Taking derivatives of the function in the different basis,
 \begin{equation}
 h_k^\prime = \sum_{n=0}^{N-1} H_n \left( \frac{2 \pi i n}{N} \right) e^{2\pi i k n/N}
 \end{equation}
-a kGLSineBasis,
+a kGLDiscreteSineTransformIBasis,
 \begin{align}
 h_k^\prime  &= 2 \sum_{n=0}^{N-1} H_n \left( \frac{\pi (n+1)}{N+1} \right) \cos \left[ \pi(n+1)(k+1)/(N+1)\right] \\
 &= 2 \sum_{n=1}^{N-1} H_{n-1} \left( \frac{\pi n}{N} \right) \cos \left[ \pi n (k+1/2)/N\right]
 \end{align}
-a kGLSineHalfShiftBasis,
+a kGLSineBasis,
 \begin{align}
 h_k &= (-1)^k H_{N-1} + 2 \sum_{n=0}^{N-2} H_n \sin \left[ \pi(n+1)(k+1/2)/N\right] \\
 h_k^\prime &=2 \sum_{n=0}^{N-2} H_n  \left( \frac{\pi (n+1)}{N} \right) \cos \left[ \pi(n+1)(k+1/2)/N\right] \\
@@ -653,13 +666,28 @@ Alternatively, DCT-II, the cosine function is even around $n=-1/2$ and $n=N-1/2$
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Linear Solvers}
+\section{Matrix Manipulation}
+
+Major types of matrix manipulation include,
+\begin{itemize}
+\item linear solvers,
+\item linear transforms,
+\item eigenvectors,
+\item matrix inversion,
+\item tensor products.
+\end{itemize}
+
+\subsection{Linear Solvers}
 
 We need to be able to solve the linear matrix equation,
 \begin{equation}
 M \vec{x} = \vec{b}
 \end{equation}
-for $\vec{x}$ given $M$ and $\vec{b}$.
+for $\vec{x}$ given $M$ and $\vec{b}$. Component-wise, our transformations might look like,
+\begin{equation}
+M^{ijk}_{lmn} x^{lmn} = b^{ijk}
+\end{equation}
+where each dimension is identified with a component pair, $i-l$, $j-m$, $k-n$ which are defined be identity, dense, diagonal, etc.
 
 Depending on whether the matrix is the identity, diagonal, tridiagonal, or dense, we need to choose a different solution algorithm. The matrix may be any one of these types in \emph{each} dimension, making the problem far more tricky. The current need is such that we only expect one dimension to be tridiagonal or dense, effectively meaning that we only need to solve the one-dimensional non-trivial problem. Specifically, we can solve the following types of equations,
 \begin{enumerate}
@@ -671,23 +699,43 @@ Depending on whether the matrix is the identity, diagonal, tridiagonal, or dense
 
 In the first case we simply return $\vec{b}$. In the second case, we simply have to divide $\vec{b}$ elements by the elements of $M$ (some repeated). In the third and fourth case, we need to loop over the elements in the diagonal dimensions, solving the tridiagonal or dense matrix problem in the other dimension.
 
-\subsection{Algorithm}
+For the solver we need to create a function which let's us focus on the one-dimensional problem, and let some outer-loop generalize that to the multidimensional case.
 
-Assuming we have only one non-diagonal dimension, the linear solver problem can be thought of as a number of independent one-dimensional linear problems. We need to find the stride between equations and total number of equations, and then just repeat the solver. In addition, a trivial dimension (one with the identity) will just repeat an existing solution across that dimension.
+If a dimension of the linear transformation is
+\begin{enumerate}
+\item the identity, then the \emph{computation} needs to be repeated across that dimension because there will be new values of $b$.
+\item a diagonal, then the \emph{computation} needs to loop across the diagonal.
+\end{enumerate}
+
+\subsection{Linear Transformations}
+
+We need to be able to solve the linear matrix equation,
+\begin{equation}
+M \vec{x} = \vec{b}
+\end{equation}
+for $\vec{b}$ given $M$ and $\vec{x}$. Component-wise, our transformations might look like,
+\begin{equation}
+M^{ijk}_{lmn} x^{lmn} = b^{ijk}
+\end{equation}
+where each dimension is identified with a component pair, $i-l$, $j-m$, $k-n$ which are defined be identity, dense, diagonal, etc.
+
+This follows nearly the same basic pattern as above, in that we need to isolate one dimension, and then the other dimensions we need to 
+\begin{enumerate}
+\item the identity, then the \emph{computation} needs to be repeated across that dimension because there will be new values of $b$.
+\item a diagonal, then the \emph{computation} needs to loop across the diagonal.
+\end{enumerate}
+
+\subsection{Eigenvectors}
+
+The eigenvector problem requires the same loops as the linear transformation problem.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\section{}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Linear Transformations
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \section{Linear Transformations}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 
 Now it's time to implement finite differencing and more general linear transformations. These require generalizations of the concepts above.
 
@@ -773,6 +821,17 @@ Here the first multiplication is $w^0 = c^0 v^1$, meaning we shift the operand.
 \subsection{Tensor product}
 
 We can define transformation or differentiation matrices on a single dimension, then scale up to multiple dimensions by taking the tensor product. This lets us define the derivative operators in a single dimension, then easily scale them up.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Multidimensional matrix solutions
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Multidimensional matrix solutions}
+
+Consider 
+
 
 \section{Class Hierarchy}
 

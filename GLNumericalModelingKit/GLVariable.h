@@ -79,7 +79,7 @@ GLSplitComplex splitComplexFromData( NSData *data );
 @property(readonly, assign, nonatomic) NSUInteger nDataElements;
 
 /// Access to the raw computed data. If this variable is dependent on others, you should call -solve first, otherwise an empty (non-zeroed!) chunk of data will be returned.
-@property(readonly, strong, nonatomic) NSMutableData *data;
+@property(readwrite, strong, nonatomic) NSMutableData *data;
 
 /// Number of bytes allocated in the raw data, essentially the nDataElements*sizeof(GLFloat)
 @property(readonly, assign, nonatomic) NSUInteger dataBytes;
@@ -87,9 +87,6 @@ GLSplitComplex splitComplexFromData( NSData *data );
 /// Indicates whether or not an NSMutableData object has been assigned yet.
 @property(readonly, assign, nonatomic) BOOL hasData;
 
-// The data format for each dimension corresponds 1-1 with the dataFormats array.
-// If the data formats are homogenous, -dataFormat will return the value, otherwise
-// it will return kGLMixedDataFormat.
 @property(readonly, assign, nonatomic) GLDataFormat dataFormat;
 
 @property(readwrite, strong) GLMatrixDescription *matrixDescription;

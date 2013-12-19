@@ -15,7 +15,7 @@
 
 @implementation GLMatrixDescription
 
-- (GLMatrixDescription *) initWithVariable: (GLFunction *) variable
+- (GLMatrixDescription *) initWithFunction: (GLFunction *) variable
 {
     if ((self=[super init])) {
         self.nDimensions = variable.dimensions.count;
@@ -58,6 +58,8 @@
 			self.complexStride = self.nPoints;
 			self.nElements = 2*self.nPoints;
 		}
+		
+		self.nBytes = self.nElements*sizeof(GLFloat);
 		
 		for (NSUInteger iDim=0; iDim<self.nDimensions; iDim++) {
 			self.strides[iDim].complexStride = self.complexStride;
@@ -164,6 +166,8 @@
 			self.nElements = 2*self.nPoints;
 		}
 		
+		self.nBytes = self.nElements*sizeof(GLFloat);
+		
 		for (NSUInteger iDim=0; iDim<self.nDimensions; iDim++) {
 			self.strides[iDim].complexStride = self.complexStride;
 		}
@@ -174,6 +178,11 @@
 - (BOOL) isEqualToMatrixDescription: (GLMatrixDescription *) otherMatrixDescription
 {
 	if (self.nDimensions != otherMatrixDescription.nDimensions) return NO;
+	if (self.nPoints != otherMatrixDescription.nPoints) return NO;
+//	if (self.nElements != otherMatrixDescription.nElements) return NO;
+//	if (self.nBytes != otherMatrixDescription.nBytes) return NO;
+//	if (self.complexStride != otherMatrixDescription.complexStride) return NO;
+//	if (self.dataFormat != otherMatrixDescription.dataFormat) return NO;
 	
 	BOOL flag = YES;
 	for (NSUInteger iDim=0; iDim<self.nDimensions; iDim++) {
@@ -189,7 +198,7 @@
 		flag &= self.strides[iDim].diagonalStride == otherMatrixDescription.strides[iDim].diagonalStride;
 	}
 	
-	return YES;
+	return flag;
 }
 
 @end

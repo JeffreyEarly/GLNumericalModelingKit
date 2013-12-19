@@ -25,7 +25,7 @@
 // and multiple NetCDF files.
 
 typedef NS_ENUM(NSUInteger, GLGridType) {
-	kGLEndpointGrid = 0,            // A good grid for finite differencing
+	kGLEndpointGrid = 0,            // A good grid for finite differencing, or the time dimension
 	kGLInteriorGrid = 1,            // A good grid for transforming to a sine or cosine basis
 	kGLPeriodicGrid = 2,            // A good grid for transforming to an exponential basis.
 	kGLChebyshevEndpointGrid = 3,   // aka, 'extrema' or 'Lobatto' grid
@@ -34,13 +34,14 @@ typedef NS_ENUM(NSUInteger, GLGridType) {
 };
 
 typedef NS_ENUM(NSUInteger, GLBasisFunction) {
-	kGLDeltaBasis = 0,			// Spatial domain
-    kGLExponentialBasis = 1,	// Frequency domain
-	kGLCosineBasis = 2,			// Frequency domain
-	kGLSineBasis = 3,			// Frequency domain
-	kGLCosineHalfShiftBasis = 4,// Frequency domain
-	kGLSineHalfShiftBasis = 5,	// Frequency domain
-	kGLChebyshevBasis = 6
+	kGLDeltaBasis = 0,						// Spatial domain
+    kGLExponentialBasis = 1,				// Frequency domain
+	kGLCosineBasis = 2,						// Frequency domain
+	kGLSineBasis = 3,						// Frequency domain
+	kGLChebyshevBasis = 4,					// Frequency domain
+	
+	kGLDiscreteCosineTransformIBasis = 5,	// Esoteric basis; only use it if you know you need it. Frequency domain.
+	kGLDiscreteSineTransformIBasis = 6		// Esoteric basis; only use it if you know you need it. Frequency domain.
 };
 
 @class GLMutableDimension;

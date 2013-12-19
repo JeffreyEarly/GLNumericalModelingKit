@@ -180,6 +180,96 @@
 	}
 }
 
+- (void) testMatrixOrderingRowToColumn
+{
+	GLDimension *xDim = [GLDimension dimensionXWithNPoints:5 length: 5.0];
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLLinearTransform *A = [[GLLinearTransform alloc] initTransformOfType: kGLSplitComplexDataFormat withFromDimensions: @[xDim] toDimensions:@[xDim] inFormat:@[@(kGLDenseMatrixFormat)] withOrdering:kGLRowMatrixOrder forEquation: equation matrix: nil];
+	
+	GLFloat a_realp[5*5] =
+    {   0.108064791301352,   0.108064791301352,   0.732233989783721,   0.732233989783721,   0.460646436627129,
+		0.406312881322675,   0.406312881322675,  -0.026463011089023,  -0.026463011089023,   0.337703828285972,
+		0.102357685061564,   0.102357685061564,   0.191648728080536,   0.191648728080536,   0.308743941854130,
+		0.398631098084136,   0.398631098084136,  -0.079011062984309,  -0.079011062984309,  -0.743845837531074,
+		0.539535056047412,   0.539535056047412,  -0.291604754325538,  -0.291604754325538,   0.158529281647889};
+	
+	GLFloat a_imagp[5*5] =
+    {    0.168648343501007,  -0.168648343501007,   0,                   0,                 0,
+		-0.259009768920532,   0.259009768920532,  -0.016946754378572,   0.016946754378572, 0,
+		-0.508802314178709,   0.508802314178709,  -0.292565995475612,   0.292565995475612, 0,
+		-0.091333452369541,   0.091333452369541,  -0.078075936426824,   0.078075936426824, 0,
+		 0,                   0,                  -0.493102293052802,   0.493102293052802, 0};
+	
+	memcpy(A.splitComplex.realp, a_realp, A.nDataPoints*sizeof(GLFloat));
+	memcpy(A.splitComplex.imagp, a_imagp, A.nDataPoints*sizeof(GLFloat));
+	
+	GLLinearTransform *B = [A copyWithDataType: kGLSplitComplexDataFormat matrixFormat: A.matrixFormats ordering: kGLColumnMatrixOrder];
+	
+	NSUInteger A_rs = A.matrixDescription.strides[0].rowStride;
+	NSUInteger A_cs = A.matrixDescription.strides[0].columnStride;
+	NSUInteger A_is = A.matrixDescription.complexStride;
+	
+	NSUInteger B_rs = B.matrixDescription.strides[0].rowStride;
+	NSUInteger B_cs = B.matrixDescription.strides[0].columnStride;
+	NSUInteger B_is = B.matrixDescription.complexStride;
+	
+	for (NSUInteger i=0; i<xDim.nPoints; i++) {
+		for (NSUInteger j=0; j<xDim.nPoints; j++) {
+			if ( !fequalprec(A.pointerValue[i*A_rs + j*A_cs], B.pointerValue[i*B_rs + j*B_cs],1e-6) ) {
+				XCTFail(@"Expected %f, found %f.", A.pointerValue[i*A_rs + j*A_cs], B.pointerValue[i*B_rs + j*B_cs]);
+			}
+			if ( !fequalprec(A.pointerValue[i*A_rs + j*A_cs + A_is], B.pointerValue[i*B_rs + j*B_cs + B_is],1e-6) ) {
+				XCTFail(@"Expected %f, found %f.", A.pointerValue[i*A_rs + j*A_cs + A_is], B.pointerValue[i*B_rs + j*B_cs + B_is]);
+			}
+		}
+	}
+}
+
+- (void) testDataFormatSplitToInterleaved
+{
+	GLDimension *xDim = [GLDimension dimensionXWithNPoints:5 length: 5.0];
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLLinearTransform *A = [[GLLinearTransform alloc] initTransformOfType: kGLSplitComplexDataFormat withFromDimensions: @[xDim] toDimensions:@[xDim] inFormat:@[@(kGLDenseMatrixFormat)] withOrdering:kGLRowMatrixOrder forEquation: equation matrix: nil];
+	
+	GLFloat a_realp[5*5] =
+    {   0.108064791301352,   0.108064791301352,   0.732233989783721,   0.732233989783721,   0.460646436627129,
+		0.406312881322675,   0.406312881322675,  -0.026463011089023,  -0.026463011089023,   0.337703828285972,
+		0.102357685061564,   0.102357685061564,   0.191648728080536,   0.191648728080536,   0.308743941854130,
+		0.398631098084136,   0.398631098084136,  -0.079011062984309,  -0.079011062984309,  -0.743845837531074,
+		0.539535056047412,   0.539535056047412,  -0.291604754325538,  -0.291604754325538,   0.158529281647889};
+	
+	GLFloat a_imagp[5*5] =
+    {    0.168648343501007,  -0.168648343501007,   0,                   0,                 0,
+		-0.259009768920532,   0.259009768920532,  -0.016946754378572,   0.016946754378572, 0,
+		-0.508802314178709,   0.508802314178709,  -0.292565995475612,   0.292565995475612, 0,
+		-0.091333452369541,   0.091333452369541,  -0.078075936426824,   0.078075936426824, 0,
+		 0,                   0,                  -0.493102293052802,   0.493102293052802, 0};
+	
+	memcpy(A.splitComplex.realp, a_realp, A.nDataPoints*sizeof(GLFloat));
+	memcpy(A.splitComplex.imagp, a_imagp, A.nDataPoints*sizeof(GLFloat));
+	
+	GLLinearTransform *B = [A copyWithDataType: kGLInterleavedComplexDataFormat matrixFormat: A.matrixFormats ordering: kGLRowMatrixOrder];
+	
+	NSUInteger A_rs = A.matrixDescription.strides[0].rowStride;
+	NSUInteger A_cs = A.matrixDescription.strides[0].columnStride;
+	NSUInteger A_is = A.matrixDescription.complexStride;
+	
+	NSUInteger B_rs = B.matrixDescription.strides[0].rowStride;
+	NSUInteger B_cs = B.matrixDescription.strides[0].columnStride;
+	NSUInteger B_is = B.matrixDescription.complexStride;
+	
+	for (NSUInteger i=0; i<xDim.nPoints; i++) {
+		for (NSUInteger j=0; j<xDim.nPoints; j++) {
+			if ( !fequalprec(A.pointerValue[i*A_rs + j*A_cs], B.pointerValue[i*B_rs + j*B_cs],1e-6) ) {
+				XCTFail(@"Expected %f, found %f.", A.pointerValue[i*A_rs + j*A_cs], B.pointerValue[i*B_rs + j*B_cs]);
+			}
+			if ( !fequalprec(A.pointerValue[i*A_rs + j*A_cs + A_is], B.pointerValue[i*B_rs + j*B_cs + B_is],1e-6) ) {
+				XCTFail(@"Expected %f, found %f.", A.pointerValue[i*A_rs + j*A_cs + A_is], B.pointerValue[i*B_rs + j*B_cs + B_is]);
+			}
+		}
+	}
+}
+
 /************************************************/
 /*		Algebriac Vector-Scalar Tests			*/
 /************************************************/
@@ -577,7 +667,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
-    GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLCosineHalfShiftBasis forEquation:equation];
+    GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLCosineBasis forEquation:equation];
 	GLFunction *f_tilde = [matrix transform: f];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
@@ -688,7 +778,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
-	GLFunction *f_tilde = [f transformToBasis:@[@(kGLCosineBasis)]];
+	GLFunction *f_tilde = [f transformToBasis:@[@(kGLDiscreteCosineTransformIBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	
@@ -724,7 +814,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0];
-	GLFunction *f_tilde = [f transformToBasis:@[@(kGLSineBasis)]];
+	GLFunction *f_tilde = [f transformToBasis:@[@(kGLDiscreteSineTransformIBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	
@@ -758,7 +848,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[[x scalarMultiply: 2*2*M_PI] cos] scalarMultiply: 3.0] scalarAdd: 1.0];
-	GLFunction *f_tilde = [f transformToBasis:@[@(kGLCosineHalfShiftBasis)]];
+	GLFunction *f_tilde = [f transformToBasis:@[@(kGLCosineBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	
@@ -792,7 +882,7 @@
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
 	GLFunction *f = [[[x scalarMultiply: 2*2*M_PI] sin] scalarMultiply: 3.0];
-	GLFunction *f_tilde = [f transformToBasis:@[@(kGLSineHalfShiftBasis)]];
+	GLFunction *f_tilde = [f transformToBasis:@[@(kGLSineBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	
@@ -1030,6 +1120,9 @@
             }
         }
 	}
+	
+	GLLinearTransform *B = [[S inverse] times: [A times: S]];
+	[B dumpToConsole];
 }
 
 /************************************************/

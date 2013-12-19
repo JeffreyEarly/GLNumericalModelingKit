@@ -8,6 +8,14 @@
 
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 
+/*!
+ * @function apply_matrix_loop
+ *
+ * @abstract
+ * Loops over other matrix dimensions, allowing you to treat one dimension in isolation from the others.
+ */
+void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescription *resultDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger ));
+
 #pragma mark -
 #pragma mark Transforms
 #pragma mark
@@ -131,12 +139,27 @@
 /************************************************/
 /*		GLTensorProductOperation				*/
 /************************************************/
-/** Takes the tensor product (outer product) of an array one-dimensional linear transformations.
+/** Takes the tensor product (outer product) of an array linear transformations.
  @param linearTransformations An array of linear transformations.
  @returns A linear transformation with fromDimensions and toDimensions of all the linear transformations in the array.
  */
 @interface GLTensorProductOperation : GLVariableOperation
 - (id) initWithLinearTransformations: (NSArray *) linearTransformations;
+@end
+
+/************************************************/
+/*		GLFormatShiftOperation				*/
+/************************************************/
+/** Copy the linear transformation with the data formatted according to new parameters.
+ @discussion This is not implemented for speed (and therefore shouldn't be used in a loop where speed is needed), but it should be able to convert to any format.
+ @param linearTransformation A linear transformation
+ @param dataFormat Specify the desired data format.
+ @param matrixFormats An array of GLMatrixFormat types specifying the necessary storage requires that should be allocated for a particular dimension pair.
+ @param ordering Whether the dense matrix indices should be column and row-major ordered.
+ @returns A new created GLLinearTransform instance in the requested format..
+ */
+@interface GLFormatShiftOperation : GLVariableOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform dataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering;
 @end
 
 

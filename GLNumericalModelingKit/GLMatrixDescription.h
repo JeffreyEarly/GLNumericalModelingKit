@@ -65,7 +65,7 @@ typedef struct {
  @param aFunction A function object.
  @returns A new GLMatrixDescription object.
  */
-- (GLMatrixDescription *) initWithVariable: (GLFunction *) aFunction;
+- (GLMatrixDescription *) initWithFunction: (GLFunction *) aFunction;
 
 /** Creates a new matrix description based on the dimensions and formatting of the linear transformation.
  @param aLinearTransform A linear transformation object.
@@ -81,6 +81,9 @@ typedef struct {
 
 /// Total number of elements (double the number of points for complex formats)
 @property NSUInteger nElements;
+
+/// Total number of bytes required to store the matrix.
+@property NSUInteger nBytes;
 
 /// The stride/distance to the imaginary part of the point.
 @property NSUInteger complexStride;

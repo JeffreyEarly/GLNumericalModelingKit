@@ -15,7 +15,7 @@
 // Access the shared instance which maintains the pool of available data objects
 + (id)sharedMemoryPool;
 
-// Request an empty (but not necessarily zeroed) data object of a particular size
+/// Request an empty (but not necessarily zeroed) data object of a particular size in bytes.
 - (NSMutableData *) dataWithLength: (NSUInteger) numBytes;
 
 // Return the data object so that it can be used elsewhere.
