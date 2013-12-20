@@ -1174,9 +1174,6 @@
             }
         }
     }
-    
-	GLLinearTransform *B = [[S inverse] times: [A times: S]];
-	[B dumpToConsole];
 }
 
 /************************************************/
