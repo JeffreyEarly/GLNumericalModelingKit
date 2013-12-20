@@ -50,50 +50,67 @@
 	NSLog(@"%@", [self matrixDescriptionString]);
 }
 
+void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMutableString *descrip, NSUInteger iDim, GLFloat *a)
+{
+    if (matrixDescription.strides[iDim].matrixFormat == kGLIdentityMatrixFormat) {
+        [descrip appendFormat: @"Identity matrix A=I\n"];
+    } else if (matrixDescription.strides[iDim].matrixFormat == kGLDenseMatrixFormat) {
+        NSUInteger rs = matrixDescription.strides[iDim].rowStride;
+        NSUInteger cs = matrixDescription.strides[iDim].columnStride;
+        NSUInteger is = matrixDescription.complexStride;
+        
+        [descrip appendFormat: @"Dense matrix A=\n"];
+        
+        for (NSUInteger i=0; i<matrixDescription.strides[iDim].nRows; i++) {
+            for (NSUInteger j=0; j<matrixDescription.strides[iDim].nColumns; j++) {
+                
+                if (matrixDescription.nDimensions-1==iDim) {
+                    if (!is) [descrip appendFormat: @"%6.2f\t", a[i*rs+j*cs]];
+                    else [descrip appendFormat: @"%6.2f + %6.2fi\t", a[i*rs+j*cs], a[i*rs+j*cs + is]];
+                } else {
+                    [descrip appendFormat: @"\n"];
+                    createMatrixDescriptionString(matrixDescription, descrip, iDim+1, &(a[i*rs+j*cs]));
+                }
+                
+            }
+            [descrip appendFormat: @"\n"];
+        }
+        
+    } else {
+        
+        if (matrixDescription.strides[iDim].matrixFormat == kGLDiagonalMatrixFormat) {
+            [descrip appendFormat: @"Diagonal matrix A=\n"];
+        } else if (matrixDescription.strides[iDim].matrixFormat == kGLTridiagonalMatrixFormat) {
+            [descrip appendFormat: @"Tridiagonal matrix A=\n"];
+        } else if (matrixDescription.strides[iDim].matrixFormat == kGLSubdiagonalMatrixFormat) {
+            [descrip appendFormat: @"Subdiagonal matrix A=\n"];
+        } else if (matrixDescription.strides[iDim].matrixFormat == kGLSuperdiagonalMatrixFormat) {
+            [descrip appendFormat: @"Superdiagonal matrix A=\n"];
+        }
+        
+        NSUInteger ds = matrixDescription.strides[iDim].diagonalStride;
+        NSUInteger es = matrixDescription.strides[iDim].stride;
+        NSUInteger is = matrixDescription.complexStride;
+        
+        for (NSUInteger i=0; i<matrixDescription.strides[iDim].nDiagonalPoints; i++) {
+            for (NSUInteger iDiagonal=0; iDiagonal<matrixDescription.strides[iDim].nDiagonals; iDiagonal++) {
+                if (matrixDescription.nDimensions-1==iDim) {
+                    if (!is) [descrip appendFormat: @"%6.2f\t", a[iDiagonal*ds+i*es]];
+                    else [descrip appendFormat: @"%6.2f + %6.2fi\t", a[iDiagonal*ds+i*es], a[iDiagonal*ds+i*es+is]];
+                } else {
+                    [descrip appendFormat: @"\n"];
+                    createMatrixDescriptionString(matrixDescription, descrip, iDim+1, &(a[iDiagonal*ds+i*es]));
+                }
+            }
+            [descrip appendFormat: @"\n"];
+        }
+    }
+}
+
 - (NSString *) matrixDescriptionString
 {
 	NSMutableString *descrip = [NSMutableString string];
-	
-	if (self.fromDimensions.count == 1) {
-		if (self.matrixDescription.strides[0].matrixFormat == kGLIdentityMatrixFormat) {
-			[descrip appendFormat: @"Identity matrix A=I\n"];
-		} else if (self.matrixDescription.strides[0].matrixFormat == kGLDenseMatrixFormat) {
-			NSUInteger rs = self.matrixDescription.strides[0].rowStride;
-			NSUInteger cs = self.matrixDescription.strides[0].columnStride;
-			NSUInteger is = self.matrixDescription.complexStride;
-			
-			[descrip appendFormat: @"Dense matrix A=\n"];
-			
-			GLFloat *a = self.pointerValue;
-			for (NSUInteger i=0; i<self.matrixDescription.strides[0].nRows; i++) {
-				for (NSUInteger j=0; j<self.matrixDescription.strides[0].nColumns; j++) {
-					if (!self.isComplex) [descrip appendFormat: @"%6.2f\t", a[i*rs+j*cs]];
-					else [descrip appendFormat: @"%6.2f + %6.2fi\t", a[i*rs+j*cs], a[i*rs+j*cs + is]];
-				}
-				[descrip appendFormat: @"\n"];
-			}
-			
-		} else {
-			
-			if (self.matrixDescription.strides[0].matrixFormat == kGLDiagonalMatrixFormat) {
-				[descrip appendFormat: @"Diagonal matrix A=\n"];
-			} else if (self.matrixDescription.strides[0].matrixFormat == kGLTridiagonalMatrixFormat) {
-				[descrip appendFormat: @"Tridiagonal matrix A=\n"];
-			} else if (self.matrixDescription.strides[0].matrixFormat == kGLSubdiagonalMatrixFormat) {
-				[descrip appendFormat: @"Subdiagonal matrix A=\n"];
-			} else if (self.matrixDescription.strides[0].matrixFormat == kGLSuperdiagonalMatrixFormat) {
-				[descrip appendFormat: @"Superdiagonal matrix A=\n"];
-			}
-			
-			GLFloat *a = self.pointerValue;
-			for (NSUInteger i=0; i<self.matrixDescription.strides[0].nDiagonalPoints; i++) {
-				for (NSUInteger iDiagonal=0; iDiagonal<self.matrixDescription.strides[0].nDiagonals; iDiagonal++) {
-					[descrip appendFormat: @"%6.2f\t", a[iDiagonal*self.matrixDescription.strides[0].diagonalStride+i]];
-				}
-				[descrip appendFormat: @"\n"];
-			}
-		}
-	}
+	createMatrixDescriptionString(self.matrixDescription, descrip, 0, self.pointerValue);
 	
 	return descrip;
 }
