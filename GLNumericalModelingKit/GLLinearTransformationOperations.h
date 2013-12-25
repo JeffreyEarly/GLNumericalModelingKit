@@ -14,7 +14,9 @@
  * @abstract
  * Loops over other matrix dimensions, allowing you to treat one dimension in isolation from the others.
  */
-void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescription *resultDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger ));
+void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescription *resultDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger, NSUInteger ));
+
+NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex );
 
 #pragma mark -
 #pragma mark Transforms

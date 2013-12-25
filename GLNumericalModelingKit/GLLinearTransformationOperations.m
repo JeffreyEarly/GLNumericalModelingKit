@@ -13,7 +13,29 @@
 
 #import <Accelerate/Accelerate.h>
 
-void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger ))
+NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex )
+{
+    NSUInteger lastNonTrivialNonLoopIndex = NSNotFound;
+	NSUInteger lastTrivialIndex = NSNotFound;
+	NSUInteger totalTrivialPoints = 1;
+	
+    for ( NSUInteger index=0; index < matrixDescription.nDimensions; index++) {
+		if (matrixDescription.strides[index].matrixFormat == kGLIdentityMatrixFormat) {
+            lastTrivialIndex = index;
+			totalTrivialPoints *= matrixDescription.strides[index].nPoints;
+        } else if (matrixDescription.strides[index].matrixFormat == kGLDiagonalMatrixFormat && index != loopIndex ) {
+			lastNonTrivialNonLoopIndex = index;
+		} else if (index != loopIndex) {
+			[NSException raise: @"BadMatrixFormat" format:@"Cannot apply the matrix loop across a matrix of this format"];
+		}
+    }
+	NSUInteger totalEquations = matrixDescription.nPoints / matrixDescription.strides[loopIndex].nPoints;
+	NSUInteger totalOuterLoops = totalTrivialPoints;
+    
+    return totalEquations*totalOuterLoops;
+}
+
+void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger, NSUInteger ))
 {
 	NSUInteger lastNonTrivialNonLoopIndex = NSNotFound;
 	NSUInteger lastTrivialIndex = NSNotFound;
@@ -25,7 +47,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 			totalTrivialPoints *= matrixDescription.strides[index].nPoints;
         } else if (matrixDescription.strides[index].matrixFormat == kGLDiagonalMatrixFormat && index != loopIndex ) {
 			lastNonTrivialNonLoopIndex = index;
-		} else {
+		} else if (index != loopIndex) {
 			[NSException raise: @"BadMatrixFormat" format:@"Cannot apply the matrix loop across a matrix of this format"];
 		}
     }
@@ -55,7 +77,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 				NSUInteger inEquationPos = iteration*inEquationStride;
 				NSUInteger outEquationPos = outerOffset + iteration*outEquationStride;
 				
-				block(inEquationPos, outEquationPos);
+				block(outerIteration*iteration, inEquationPos, outEquationPos);
 			});
 		});
 	} else if (totalOuterLoops == 1 && totalEquations > 1 ) {
@@ -64,7 +86,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 			NSUInteger inEquationPos = iteration*inEquationStride;
 			NSUInteger outEquationPos = iteration*outEquationStride;
 			
-			block(inEquationPos, outEquationPos);
+			block(iteration, inEquationPos, outEquationPos);
 		});
 	} else if (totalOuterLoops > 1 && totalEquations == 1 ) {
 		dispatch_apply(totalOuterLoops, queue, ^(size_t outerIteration) {
@@ -74,10 +96,10 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 			NSUInteger inEquationPos = 0;
 			NSUInteger outEquationPos = outerOffset;
 			
-			block(inEquationPos, outEquationPos);
+			block(outerIteration, inEquationPos, outEquationPos);
 		});
 	} else if (totalOuterLoops == 1 && totalEquations == 1 ) {
-		block(0, 0);
+		block(0, 0, 0);
 	}
 }
 
@@ -247,7 +269,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 
         self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				
-			apply_matrix_loop(operandDescription, resultDescription, triIndex, globalQueue, ^(NSUInteger inEquationPos, NSUInteger outEquationPos) {
+			apply_matrix_loop(operandDescription, resultDescription, triIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
 				
 				GLFloat *f = (GLFloat *) [operandArray[0] bytes];
 				
@@ -432,7 +454,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
         
         self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
             
-            apply_matrix_loop(operandDescription, resultDescription, triIndex, globalQueue, ^(NSUInteger inEquationPos, NSUInteger outEquationPos) {
+            apply_matrix_loop(operandDescription, resultDescription, triIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
                 
                 GLFloat *f = (GLFloat *) [operandArray[0] bytes];
                 
@@ -494,23 +516,14 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
         [NSException raise: @"DimensionsNotEqualException" format: @"Destination dimensions of the linear operator must equal the resultant vector."];
     }
     
+	GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
+	
     NSUInteger denseIndex = NSNotFound;
-	NSUInteger lastNonTrivialNonDenseIndex = NSNotFound;
-	NSUInteger lastTrivialIndex = NSNotFound;
-	NSUInteger totalTrivialPoints = 1;
 	NSUInteger numDenseIndices = 0;
-    for ( NSUInteger index=0; index < linearTransform.matrixFormats.count; index++) {
-        NSNumber *num = linearTransform.matrixFormats[index];
-		
-        if ([num unsignedIntegerValue] == kGLDenseMatrixFormat) {
-            denseIndex = index;
+	for ( NSUInteger index=0; index < matrixDescription.nDimensions; index++) {
+        if (matrixDescription.strides[index].matrixFormat == kGLTridiagonalMatrixFormat ) {
 			numDenseIndices++;
-        } else if ([num unsignedIntegerValue] == kGLIdentityMatrixFormat) {
-            lastTrivialIndex = index;
-			totalTrivialPoints *= [linearTransform.fromDimensions[index] nPoints];
-        }
-        if ([num unsignedIntegerValue] != kGLIdentityMatrixFormat && [num unsignedIntegerValue] != kGLDenseMatrixFormat ) {
-			lastNonTrivialNonDenseIndex = index;
+			denseIndex = index;
 		}
     }
 	
@@ -524,86 +537,92 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.fromDimensions forEquation: linearTransform.equation];
 	GLMatrixDescription *vectorDescription = result.matrixDescription;
     
-	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
+    dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+    
+    NSUInteger N = matrixDescription.strides[denseIndex].nRows;
+    NSUInteger inElementStride = matrixDescription.strides[denseIndex].stride;
+    NSUInteger outElementStride = vectorDescription.strides[denseIndex].stride;
+    
+    // sgesv is only capable of handling input arrays with a stride of 1. For us, this means that if that lastNonTrivialNonDenseIndex is greater
+    // than the denseIndex, we have to copy the elements to a temporary, contiguous buffer.
+    if ( inElementStride != 1 ) {
+        NSLog(@"Warning! The dense dimension is not the last non-trivial dimensions, which results in slower solutions times due to an extra memory copy.");
+    }
+    // sgesv also overwrites the b vector (in Mx=b) with the output x. So we need to copy the output as well.
+    
+    NSUInteger totalLoops = compute_total_loops(matrixDescription, vectorDescription, denseIndex);
+    GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: totalLoops*N*sizeof(__CLPK_integer)];
+    NSMutableArray *buffers = [NSMutableArray arrayWithObject: buffer1];
+    if (inElementStride != 1) {
+        GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: matrixDescription.nBytes];
+        [buffers addObject: buffer2];
+    }
+    if (outElementStride != 1) {
+        GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: vectorDescription.nBytes];
+        [buffers addObject: buffer3];
+    }
+    
+    variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
         
-        GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
-        		
-        dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-		
-		// How many 'inner loop' steps we need to take depends on how many other nontrivial dimensions there are.
-        NSUInteger inEquationStride = lastNonTrivialNonDenseIndex == NSNotFound ? 0 : matrixDescription.strides[lastNonTrivialNonDenseIndex].stride;
-		NSUInteger totalEquations = linearTransform.nDataPoints / matrixDescription.strides[denseIndex].nPoints;
-		
-		// Now we need the strides to match up to the inner loop
-        NSUInteger outElementStride = result.matrixDescription.strides[denseIndex].stride;
-        NSUInteger outEquationStride = lastNonTrivialNonDenseIndex == NSNotFound ? 0 : result.matrixDescription.strides[lastNonTrivialNonDenseIndex].stride;
-        
-		// Finally, we need the outer loop strides and totals
-		// The totalTrivialPoints is the number of times we need to repeat a point
-		// trivialPointStride is the distance between those trivial points
-		// totalNonTrivialPoints is the number of points we need to copy
-		NSUInteger totalNonTrivialPoints = result.nDataPoints / totalTrivialPoints;
-		NSUInteger trivialPointStride = lastTrivialIndex == NSNotFound ? 0 : result.matrixDescription.strides[lastTrivialIndex].stride;
-		
-		// This operation has two loops.
-		// The inner loop walks over non-trivial elements of the linear operator, while
-		// the out loop walks over trivial elements of the linear operator, really just to new x and b elements
-        
-		NSUInteger N = matrixDescription.strides[denseIndex].nRows;
-		
-		if ( lastNonTrivialNonDenseIndex != NSNotFound && lastNonTrivialNonDenseIndex > denseIndex) {
-			NSLog(@"Warning! The dense dimension is not the last non-trivial dimensions, which results in slower solutions times.");
-		}
-		// sgesv is only capable of handling input arrays with a stride of 1. For us, this means that if that lastNonTrivialNonDenseIndex is greater
-		// than the denseIndex, we have to copy the elements to a temporary, contiguous buffer.
-		
-		// sgesv also overwrites the b vector (in Mx=b) with the output x. So we need to copy the output as well.
-		
-        self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-			
-			apply_matrix_loop(matrixDescription, vectorDescription, denseIndex, globalQueue, ^(NSUInteger inEquationPos, NSUInteger outEquationPos) {
-				
-				NSMutableData *ipiv = [[GLMemoryPool sharedMemoryPool] dataWithLength: N*sizeof(__CLPK_integer)];
-				__CLPK_integer n = (__CLPK_integer) N;
-				__CLPK_integer nrhs = 1;
-				__CLPK_integer info;
-				
-				GLFloat *MData = (GLFloat *) [operandArray[0] bytes];
-				GLFloat *bData = (GLFloat *) [operandArray[1] bytes];
-				GLFloat *xData = (GLFloat *) [resultArray[0] bytes];
-				
-				GLFloat *M;
-				GLFloat *b;
-				GLFloat *x;
-				if ( lastNonTrivialNonDenseIndex != NSNotFound && lastNonTrivialNonDenseIndex > denseIndex) {
-					[NSException raise: @"NotYetImplemented" format: @"This case is not yet implemented."];
-					return;
-				} else {
-					M = &(MData[inEquationPos]);
-					b = &(bData[outEquationPos]);
-					x = &(xData[outEquationPos]);
-					memcpy( x, b, n*n*sizeof(GLFloat));
-				}
-				
-				sgesv_( &n, &nrhs, M, &n, ipiv.mutableBytes, x, &n, (__CLPK_integer *) &info );
-				
-				if (info != 0) {
-					printf("sgesv failed with error code %d\n", (int)info);
-				}
-				
-				[[GLMemoryPool sharedMemoryPool] returnData: ipiv];
-				
-				if (totalTrivialPoints) {
-					dispatch_apply(totalNonTrivialPoints, globalQueue, ^(size_t outIteration) {
-						GLFloat *theOutput = (GLFloat *) [resultArray[0] bytes];
-						vGL_vfill( &theOutput[ outIteration*outElementStride], &theOutput[outIteration*outElementStride], trivialPointStride, totalTrivialPoints);
-					});
-					
-				}
-				
-			});
-        };
-        
+        apply_matrix_loop(matrixDescription, vectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+            __CLPK_integer *ipivData = (__CLPK_integer *) [bufferArray[0] bytes];
+            __CLPK_integer *ipiv = &(ipivData[iteration*N]);
+            __CLPK_integer n = (__CLPK_integer) N;
+            __CLPK_integer nrhs = 1;
+            __CLPK_integer info;
+            
+            GLFloat *MData = (GLFloat *) [operandArray[0] bytes];
+            GLFloat *bData = (GLFloat *) [operandArray[1] bytes];
+            GLFloat *xData = (GLFloat *) [resultArray[0] bytes];
+            
+            GLFloat *M;
+            GLFloat *b;
+            GLFloat *x;
+            
+            if (inElementStride != 1) {
+                // Take the strided data, copy it to the buffer unstrided.
+                GLFloat *Mstrided = &(MData[inEquationPos]);
+                GLFloat *MbufferData = (GLFloat *) [bufferArray[1] bytes];
+                M = &(MbufferData[N*N*iteration]);
+                for (NSUInteger i=0; i < matrixDescription.strides[denseIndex].nRows; i++) {
+                    for (NSUInteger j=0; j < matrixDescription.strides[denseIndex].nColumns; j++) {
+                        M[i+N*j] = Mstrided[i*matrixDescription.strides[denseIndex].rowStride + j*matrixDescription.strides[denseIndex].columnStride];
+                    }
+                }
+            } else {
+                M = &(MData[inEquationPos]);
+            }
+            
+            if ( outElementStride != 1) {
+                GLFloat *bstrided = &(bData[outEquationPos]);
+                GLFloat *xbufferData = (GLFloat *) [[bufferArray lastObject] bytes];
+                x = &(xbufferData[N*iteration]);
+                for (NSUInteger i=0; i < vectorDescription.strides[denseIndex].nRows; i++) {
+                    x[i] = bstrided[i*vectorDescription.strides[denseIndex].stride];
+                }
+            } else {
+                b = &(bData[outEquationPos]);
+                x = &(xData[outEquationPos]);
+                memcpy( x, b, n*n*sizeof(GLFloat));
+            }
+            
+            sgesv_( &n, &nrhs, M, &n, ipiv, x, &n, (__CLPK_integer *) &info );
+            
+            if (info != 0) {
+                printf("sgesv failed with error code %d\n", (int)info);
+            }
+            
+            if ( outElementStride != 1) {
+                GLFloat *output = &(xData[outEquationPos]);
+                for (NSUInteger i=0; i < vectorDescription.strides[denseIndex].nRows; i++) {
+                    output[i*vectorDescription.strides[denseIndex].stride] = x[i];
+                }
+            }
+            
+        });
+    };
+    
+	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function] buffers: buffers operation: op] )) {
     }
     return self;
 }
@@ -879,34 +898,50 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 	// Should check whether or not the matrix is symmetric.
 	GLVariable *eigenvalues = [GLFunction functionOfComplexTypeWithDimensions: eigenbasis forEquation: A.equation];
 	GLLinearTransform *eigentransform = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: eigenbasis toDimensions:A.fromDimensions inFormat:A.matrixFormats forEquation:A.equation matrix: nil];
-	GLMatrixDescription *resultDescription = eigentransform.matrixDescription;
+	GLMatrixDescription *resultMatrixDescription = eigentransform.matrixDescription;
+    GLMatrixDescription *resultVectorDescription = eigenvalues.matrixDescription;
     NSArray *results = @[eigenvalues, eigentransform];
 	
 	// http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/sgeev_ex.c.htm
 	
 	NSUInteger N = operandDescription.strides[denseIndex].nColumns;
+    NSUInteger lwork_size = 8*N;
+    NSUInteger totalLoops = compute_total_loops(operandDescription, resultMatrixDescription, denseIndex);
+    
 	// first buffer will be used to store the transpose (which will be overwritten)
-	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: A.nDataElements*sizeof(GLFloat)];
+	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
 	// second buffer will store the annoyingly formatted output
-	GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: A.nDataElements*sizeof(GLFloat)];
-	// third buffer is the lapack work buffer
-	GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: 8*N*sizeof(GLFloat)];
-	NSArray *buffers = @[buffer1, buffer2, buffer3];
+	GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
+    // third buffer will store the unstrided eigenvalue output
+	GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
+	// fourth buffer is the lapack work buffer
+	GLBuffer *buffer4 = [[GLBuffer alloc] initWithLength: totalLoops*lwork_size*sizeof(GLFloat)];
+	NSArray *buffers = @[buffer1, buffer2, buffer3, buffer4];
 	
 	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-		apply_matrix_loop(operandDescription, resultDescription, denseIndex, globalQueue, ^(NSUInteger inEquationPos, NSUInteger outEquationPos) {
+		apply_matrix_loop(operandDescription, resultVectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
 			GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 			
-			GLFloat *B = (GLFloat *) [bufferArray[0] bytes];
-			GLFloat *output = (GLFloat *) [bufferArray[1] bytes];
-			NSMutableData *work = bufferArray[2];
+			GLFloat *B_data = (GLFloat *) [bufferArray[0] bytes];
+            GLFloat *B = &(B_data[iteration*N*N]);
+            
+			GLFloat *output_data = (GLFloat *) [bufferArray[1] bytes];
+            GLFloat *output = &(output_data[iteration*N*N]);
+            
+            GLFloat *output_v_data = (GLFloat *) [bufferArray[2] bytes];
+            GLSplitComplex output_v;
+            output_v.realp = &(output_v_data[(2*iteration)*N]);
+            output_v.imagp = &(output_v_data[(2*iteration+1)*N]);
+            
+            GLFloat *work_data = (GLFloat *) [bufferArray[3] bytes];
+			GLFloat *work = &(work_data[iteration*lwork_size]);
 			
 			GLSplitComplex v = splitComplexFromData(resultArray[0]);
 			GLSplitComplex C = splitComplexFromData(resultArray[1]);
 			
 			// clapack takes matrices in column-major format.
 			// To be clever, we could use the left-eigenvectors instead of the right-eigenvectors and just take the conjugate, but we need to prevent the input from being overwritten anyway.
-			vGL_mtrans(&(A[inEquationPos]), operandDescription.strides[denseIndex].stride, B, 1, N,N);
+			vGL_mtrans(&(A[inEquationPos]), operandDescription.strides[denseIndex].stride, B, 1, N, N);
 			
 			char JOBVL ='N';
 			char JOBVR ='V';
@@ -914,7 +949,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 			__CLPK_integer lwork = 8*n;
 			__CLPK_integer info;
 			
-			sgeev_(&JOBVL, &JOBVR, &n, B, &n, v.realp, v.imagp, NULL, &n, output, &n, work.mutableBytes, &lwork, (__CLPK_integer *)&info);
+			sgeev_(&JOBVL, &JOBVR, &n, B, &n, output_v.realp, output_v.imagp, NULL, &n, output, &n, work, &lwork, (__CLPK_integer *)&info);
 			
 			if (info != 0) {
 				printf("sgeev failed with error code %d\n", (int)info);
@@ -925,25 +960,31 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 			// If the j-th and (j+1)-st eigenvalues form a complex conjugate pair,
 			// then v(j) = VR(:,j) + i*VR(:,j+1) and v(j+1) = VR(:,j) - i*VR(:,j+1).
 			// And, don't forget, we need to fix the transpose.
+			vGL_vclr( &(C.imagp[inEquationPos]), resultMatrixDescription.strides[denseIndex].stride,  resultMatrixDescription.strides[denseIndex].nPoints);
 			
-			vGL_vclr( &(C.imagp[outEquationPos]), resultDescription.strides[denseIndex].stride,  resultDescription.strides[denseIndex].nPoints);
-			
-			NSUInteger j=0;
-			NSUInteger rowStride = resultDescription.strides[denseIndex].rowStride;
-			NSUInteger colStride = resultDescription.strides[denseIndex].columnStride;
+            NSUInteger stride = resultVectorDescription.strides[denseIndex].stride;
+            for( NSUInteger i = 0; i < N; i++ ) {
+                v.realp[outEquationPos+i*stride] = output_v.realp[i];
+                v.imagp[outEquationPos+i*stride] = output_v.imagp[i];
+            }
+            
+            // inEquationPos should have the correct offsets because the output matrix has the same form as the input matrix.
+            NSUInteger rowStride = resultMatrixDescription.strides[denseIndex].rowStride;
+			NSUInteger colStride = resultMatrixDescription.strides[denseIndex].columnStride;
+            NSUInteger j=0;
 			for( NSUInteger i = 0; i < N; i++ ) { // i indicates which eigenvector we're copying
 				if ( v.imagp[i] == (GLFloat)0.0 ) {
 					for( NSUInteger k = 0; k < N; k++ ) { // k walks down the column
-						C.realp[outEquationPos+k*rowStride+i*colStride] = output[j*N+k];
+						C.realp[inEquationPos+k*rowStride+i*colStride] = output[j*N+k];
 					}
 					j++;
 				} else {
 					for( NSUInteger k = 0; k < N; k++ ) {
-						C.realp[outEquationPos+k*rowStride+i*colStride] = output[j*N+k];
-						C.imagp[outEquationPos+k*rowStride+i*colStride] = output[(j+1)*N+k];
+						C.realp[inEquationPos+k*rowStride+i*colStride] = output[j*N+k];
+						C.imagp[inEquationPos+k*rowStride+i*colStride] = output[(j+1)*N+k];
 						
-						C.realp[outEquationPos+k*rowStride+(i+1)*colStride] = output[j*N+k];
-						C.imagp[outEquationPos+k*rowStride+(i+1)*colStride] = -output[(j+1)*N+k];
+						C.realp[inEquationPos+k*rowStride+(i+1)*colStride] = output[j*N+k];
+						C.imagp[inEquationPos+k*rowStride+(i+1)*colStride] = -output[(j+1)*N+k];
 					}
 					j+=2;
 					i++;

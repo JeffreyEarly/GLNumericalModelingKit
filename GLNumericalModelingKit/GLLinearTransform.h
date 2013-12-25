@@ -33,7 +33,7 @@ typedef NSUInteger GLLinearTransformType;
 // The first argument indicates the row/destination indices, the second argument indicates the column/starting indices.
 typedef GLFloatComplex (^transformMatrix)(NSUInteger *, NSUInteger *);
 
-typedef NS_ENUM(NSUInteger, GLBoundaryCondition) {
+typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
 	kGLPeriodicBoundaryCondition = -1,
     kGLDirichletBoundaryCondition = 0,
 	kGLNeumannBoundaryCondition = 1
