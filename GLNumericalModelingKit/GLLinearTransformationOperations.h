@@ -19,6 +19,22 @@ void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescrip
 NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex );
 
 #pragma mark -
+#pragma mark Creation
+#pragma mark
+
+/************************************************/
+/*		GLDiagonalTransformCreationOperation	*/
+/************************************************/
+
+/** Places the values of the function along the diagonal of matrix
+ @param function The function to be placed along the diagonal.
+ @returns The transformed function with fromDimensions and toDimensions matching the dimension of the function.
+ */
+@interface GLDiagonalTransformCreationOperation : GLVariableOperation
+- (id) initWithFunction: (GLFunction *) function;
+@end
+
+#pragma mark -
 #pragma mark Transforms
 #pragma mark
 

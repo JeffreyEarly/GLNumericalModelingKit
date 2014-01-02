@@ -214,6 +214,13 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
  */
 + (GLLinearTransform *) spectralVanishingViscosityFilterWithDimensions: (NSArray *) dimensions scaledForAntialiasing: (BOOL) isAntialiasing forEquation: (GLEquation *) equation;
 
+/** Create a linear transformation with a function along the diagonal.
+ @discussion The fromDimensions and toDimensions of the linear transformation will match the dimensions of the diagonal.
+ @param aFunction A function.
+ @returns A GLLinearTransform with fromDimensions and toDimensions that match the function dimensions.
+ */
++ (GLLinearTransform *) linearTransformFromFunction: (GLFunction *) aFunction;
+
 // Assuming the linear transform was initialized with fromDims that match the diagonalVariable and a format of diag in each dimension
 - (void) setVariableAlongDiagonal: (GLFunction *) diagonalVariable;
 

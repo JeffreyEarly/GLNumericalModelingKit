@@ -103,6 +103,44 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 	}
 }
 
+#pragma mark -
+#pragma mark Creation
+#pragma mark
+
+/************************************************/
+/*		GLDiagonalTransformCreationOperation	*/
+/************************************************/
+
+/** Places the values of the function along the diagonal of matrix
+ @param function The function to be placed along the diagonal.
+ @returns The transformed function with fromDimensions and toDimensions matching the dimension of the function.
+ */
+@implementation GLDiagonalTransformCreationOperation
+- (id) initWithFunction: (GLFunction *) function
+{
+    NSMutableArray *matrixFormats = [NSMutableArray array];
+    for (GLDimension *aDim in function.dimensions) {
+        [matrixFormats addObject: @(kGLDiagonalMatrixFormat)];
+    }
+	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: function.dataFormat withFromDimensions: function.dimensions toDimensions:function.dimensions inFormat:matrixFormats forEquation:function.equation matrix:nil];
+	
+    if (function.name) {
+        result.name = [NSString stringWithFormat: @"%@_transform", function.name];
+    }
+    
+    NSUInteger nBytes = function.matrixDescription.nBytes;
+    if ((self = [super initWithResult:@[result] operand:@[function] buffers:nil operation:^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+        NSMutableData *result = resultArray[0];
+        NSMutableData *transform = operandArray[0];
+        memcpy(result.mutableBytes, transform.mutableBytes, nBytes);
+    }])) {
+        
+    }
+    
+    return self;
+}
+
+@end
 
 /************************************************/
 /*		GLSingleDiagonalTransformOperation		*/

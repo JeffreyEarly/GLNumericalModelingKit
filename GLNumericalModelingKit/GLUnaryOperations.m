@@ -602,7 +602,14 @@
 	NSMutableArray *newDimensions = [variable.dimensions mutableCopy];
 	[newDimensions removeObjectAtIndex: index];
 	
-	GLFunction *resultVariable = [GLFunction functionOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
+    
+	GLVariable *resultVariable;
+    
+    if (newDimensions.count) {
+        resultVariable = [GLFunction functionOfType: variable.dataFormat withDimensions: newDimensions forEquation: variable.equation];
+    } else {
+        resultVariable = [GLScalar scalarWithType: variable.dataFormat forEquation: variable.equation];
+    }
 	
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{
@@ -613,12 +620,10 @@
 		
 		// The spacing between the elements that we want to sum over.
 		// If we're collapsing the last index
-		NSUInteger summingStride=1;
-		for ( NSUInteger i=variable.dimensions.count-1; i>index; i--) {
-			summingStride *= [[variable.dimensions objectAtIndex: i] nPoints];
-		}
+		NSUInteger summingStride=variable.matrixDescription.strides[index].stride;
+        
 		// The number of elements that we want to sum over
-		NSUInteger summingPoints = [[newDimensions objectAtIndex: index] nPoints];
+		NSUInteger summingPoints = variable.matrixDescription.strides[index].nPoints;
 		
         // The tricky part is covering all combinations of (i,k) --- of which there are nx*nz. In this example, if we iterate m=0, m<nx*nz,
 		// then when m==nz, we actually want to skip to ny*nz, and then increment by ones again. (i/nz)*ny*nz + (i%nz)

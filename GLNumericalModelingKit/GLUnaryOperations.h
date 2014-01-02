@@ -141,7 +141,6 @@
 @interface GLDataTransposeOperation : GLVariableOperation
 - (GLDataTransposeOperation *) initWithLinearTransform: (GLLinearTransform *) transform;
 @end
-
 /************************************************/
 /*		GLDenseMatrixOperation					*/
 /************************************************/

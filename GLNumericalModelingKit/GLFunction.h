@@ -106,7 +106,14 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 #pragma mark Operations
 #pragma mark
 
-- (GLFunction *) dividedBy: (GLFunction *) otherVariable;
+/** Divides the function by the second variable: result = receiving variable / otherFunctionOrScalar.
+ @discussion This operation is treated differently depending on the otherFunctionOrScalar class.
+ @discussion The receiving function can be divided by a scalar (given as a GLScalar or NSNumber) or a function.
+ @discussion Note that a different algorithm is used depending on whether the scalar is given as a subclass of NSNumber or GLVariable. In the former case, the value is assumed constant and can't be altered in subsequent uses, while in the latter case it can vary. It is generally most computationally efficient to use the constant value.
+ @param otherFunctionOrScalar An input scalar or function.
+ @returns A GLFunction object.
+ */
+- (GLFunction *) dividedBy: (id) otherFunctionOrScalar;
 
 // C = A * B
 - (id) dot: (GLFunction *) otherVariable;

@@ -446,10 +446,30 @@
 #pragma mark Operations
 #pragma mark
 
-- (GLFunction *) dividedBy: (GLFunction *) otherVariable
+- (GLFunction *) dividedBy: (id) otherFunctionOrScalar
 {
-	GLDivisionOperation *operation = [[GLDivisionOperation alloc] initWithFirstOperand: self secondOperand: otherVariable];
-    operation = [self replaceWithExistingOperation: operation];
+	GLVariableOperation *operation;
+    
+    if ([[otherFunctionOrScalar class] isSubclassOfClass: [GLFunction class]]) {
+        operation = [[GLDivisionOperation alloc] initWithFirstOperand: self secondOperand: otherFunctionOrScalar];
+    } else if ([[otherFunctionOrScalar class] isSubclassOfClass: [NSNumber class]]) {
+        NSNumber *a = otherFunctionOrScalar;
+        GLFloat scalar = 1./a.doubleValue;
+        operation = [[GLScalarMultiplyOperation alloc] initWithVectorOperand: self scalarOperand: scalar];
+    } else if ([[otherFunctionOrScalar class] isSubclassOfClass: [GLScalar class]]) {
+        GLScalar *a = otherFunctionOrScalar;
+        operation = [[GLScalarDivideOperation alloc] initWithVectorOperand: a scalarOperand: 1.0];
+        operation = [a replaceWithExistingOperation: operation];
+        
+        operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: self secondOperand: operation.result[0]];
+    } else {
+        [NSException raise:@"InvalidArgument" format:@"Wrong object class"];
+    }
+    
+    if (operation) {
+        operation = [self replaceWithExistingOperation: operation];
+    }
+    
 	return operation.result[0];
 }
 

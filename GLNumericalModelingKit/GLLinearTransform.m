@@ -834,6 +834,12 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
 	return filter;
 }
 
++ (GLLinearTransform *) linearTransformFromFunction: (GLFunction *) aFunction
+{
+    GLDiagonalTransformCreationOperation *op = [[GLDiagonalTransformCreationOperation alloc] initWithFunction: aFunction];
+    return op.result[0];
+}
+
 - (void) setVariableAlongDiagonal: (GLFunction *) diagonalVariable
 {
     if (self.matrixDescription.nDimensions == 1)
