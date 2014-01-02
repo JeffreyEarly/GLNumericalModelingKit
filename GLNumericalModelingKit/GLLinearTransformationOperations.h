@@ -111,6 +111,14 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
 #pragma mark Manipulation
 #pragma mark
 
+/********************************************************/
+/*		GLDiagonalMatrixMatrixMultiplicationOperation   */
+/********************************************************/
+
+@interface GLDiagonalMatrixMatrixMultiplicationOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
+@end
+
 /************************************************/
 /*		GLMatrixMatrixMultiplicationOperation   */
 /************************************************/

@@ -667,6 +667,97 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 
 @end
 
+/********************************************************/
+/*		GLDiagonalMatrixMatrixMultiplicationOperation   */
+/********************************************************/
+
+#pragma mark -
+#pragma mark GLDiagonalMatrixMatrixMultiplicationOperation
+#pragma mark
+
+@implementation GLDiagonalMatrixMatrixMultiplicationOperation
+
+// This is copy and pasted from the superclass, needs to be properly retooled.
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
+{
+    
+    if ( ![A.fromDimensions isEqualToArray: B.toDimensions] ) {
+        [NSException raise: @"DimensionsNotEqualException" format: @"fromDimensions of A, must equal the toDimensions of B."];
+    }
+    
+    for ( NSUInteger index=0; index < A.matrixFormats.count; index++) {
+        NSNumber *format = A.matrixFormats[index];
+        if (format.unsignedIntegerValue != kGLDenseMatrixFormat) {
+            [NSException raise: @"MatrixWrongFormat" format: @"This operation can only be performed with a dense matrix."];
+        }
+    }
+    
+    if (A.matrixDescription.nDimensions != 1) {
+        [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
+    }
+	
+	BOOL isComplex = A.isComplex || B.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	
+	A = [A copyWithDataType: format matrixFormat: A.matrixFormats ordering: kGLRowMatrixOrder];
+	B = [B copyWithDataType: format matrixFormat: B.matrixFormats ordering: kGLRowMatrixOrder];
+    
+	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions:A.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
+    
+	if (( self = [super initWithResult: @[result] operand: @[A, B]] )) {
+                
+        int M = (int) A.matrixDescription.strides[0].nRows;
+        int N = (int) B.matrixDescription.strides[0].nColumns;
+		int K = (int) A.matrixDescription.strides[0].nColumns;
+		
+		if ( !A.isComplex && !B.isComplex)
+		{	// C = A.X
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+				vDSP_mmul( A, 1, B, 1, C, 1, M, N, K);
+			};
+		}
+		else if ( A.isComplex && !B.isComplex)
+		{	// (A+iB).(X) = A.X + iB.X
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData( operandArray[0] );
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
+				
+				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
+			};
+		}
+		else if ( !A.isComplex && B.isComplex)
+		{	// A.(X+iY) = A.X + iA.Y
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLSplitComplex B = splitComplexFromData( operandArray[1] );
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
+				
+				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
+			};
+		}
+		else if ( A.isComplex && B.isComplex)
+		{
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData(operandArray[0]);
+				GLSplitComplex B = splitComplexFromData(operandArray[1]);
+				GLSplitComplex C = splitComplexFromData(resultArray[0]);
+				
+				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
+			};
+		}
+		
+    }
+    return self;
+}
+
+@end
+
 /************************************************/
 /*		GLMatrixMatrixMultiplicationOperation   */
 /************************************************/
