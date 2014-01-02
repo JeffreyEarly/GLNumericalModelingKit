@@ -1065,6 +1065,10 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
 		operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: A secondOperand: B];
 	} else if (numDenseIndices == 1 && A.fromDimensions.count == 1 && [B.matrixFormats[0] unsignedIntegerValue] == kGLDenseMatrixFormat) {
 		operation = [[GLMatrixMatrixMultiplicationOperation alloc] initWithFirstOperand: A secondOperand: B];
+	} else if (A.fromDimensions.count == 1) {
+		A = [A copyWithDataType: A.dataFormat matrixFormat: @[@(kGLDenseMatrixFormat)] ordering:kGLRowMatrixOrder];
+		B = [B copyWithDataType: B.dataFormat matrixFormat: @[@(kGLDenseMatrixFormat)] ordering:kGLRowMatrixOrder];
+		operation = [[GLMatrixMatrixMultiplicationOperation alloc] initWithFirstOperand: A secondOperand: B];
 	} else {
 		[NSException raise: @"StupidMatrixMultiplication" format: @"You have requested the matrix multiplicatin of two matrices, but we only support diagonal matrices and 1D dense matrices."];
 	}
