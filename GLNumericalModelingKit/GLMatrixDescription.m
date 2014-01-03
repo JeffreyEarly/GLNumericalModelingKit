@@ -201,4 +201,45 @@
 	return flag;
 }
 
++ (NSArray *) commonFormatsFromLeft: (NSArray *) left right: (NSArray *) right
+{
+	NSMutableArray *result = [NSMutableArray array];
+	for (NSUInteger i=0; i<left.count; i++) {
+		GLMatrixFormat a = [left[i] unsignedIntegerValue];
+		GLMatrixFormat b = [right[i] unsignedIntegerValue];
+		GLMatrixFormat c;
+		
+		if (a==b) {
+			c = a;
+		} else if (a == kGLIdentityMatrixFormat) {
+			if (b == kGLSubdiagonalMatrixFormat || b == kGLSuperdiagonalMatrixFormat) {
+				c = kGLTridiagonalMatrixFormat;
+			} else {
+				c = b;
+			}
+		} else if (a == kGLDenseMatrixFormat) {
+			c = kGLDenseMatrixFormat;
+		} else if (a == kGLDiagonalMatrixFormat) {
+			if (b == kGLIdentityMatrixFormat) {
+				c = kGLDiagonalMatrixFormat;
+			} else if (b == kGLDenseMatrixFormat) {
+				c = kGLDenseMatrixFormat;
+			} else {
+				c = kGLTridiagonalMatrixFormat;
+			}
+			
+		} else {
+			if (b == kGLDenseMatrixFormat) {
+				c = kGLDenseMatrixFormat;
+			} else {
+				c = kGLTridiagonalMatrixFormat;
+			}
+		}
+		
+		result[i] = @(c);
+	}
+	
+	return result;
+}
+
 @end

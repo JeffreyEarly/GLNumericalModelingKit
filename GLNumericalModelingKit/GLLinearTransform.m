@@ -1120,6 +1120,13 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
 	return operation.result;
 }
 
+- (NSArray *) generalizedEigensystemWith: (GLLinearTransform *) B
+{
+	GLVariableOperation *operation = [[GLGeneralizedMatrixEigensystemOperation alloc] initWithFirstOperand: self secondOperand: B];
+	operation = [self replaceWithExistingOperation: operation];
+	return operation.result;
+}
+
 /************************************************/
 /*		Finite Differencing						*/
 /************************************************/
@@ -1226,6 +1233,7 @@ void weights( GLFloat z, GLFloat *x, NSUInteger m, GLFloat *c, NSUInteger n )
 	
 	return diff;
 }
+
 
 //if ( row[0] == col[0] ) {
 //	

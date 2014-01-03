@@ -315,4 +315,7 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
 - (GLLinearTransform *) matrixMultiply: (GLLinearTransform *) otherVariable;
 
 - (NSArray *) eigensystem;
+
+- (NSArray *) generalizedEigensystemWith: (GLLinearTransform *) B;
+
 @end

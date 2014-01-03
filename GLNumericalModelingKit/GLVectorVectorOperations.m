@@ -448,7 +448,11 @@
 					[NSException raise: @"DimensionsNotEqualException" format: @"When subtracting two matrices, the toDimensions of A, must equal the toDimensions of B."];
 				}
 				if ( ![A.matrixDescription isEqualToMatrixDescription: B.matrixDescription] ) {
-					[NSException raise: @"UnsupportedMatrixFormatException" format: @"Cannot subtract two matrices in different formats using this operation."];
+					NSArray *newMatrixFormats = [GLMatrixDescription commonFormatsFromLeft: A.matrixFormats right: B.matrixFormats];
+					A = [A copyWithDataType: A.dataFormat matrixFormat: newMatrixFormats ordering: A.matrixOrder];
+					B = [B copyWithDataType: B.dataFormat matrixFormat: newMatrixFormats ordering: A.matrixOrder];
+					op1 = A;
+					op2 = B;
 				}
 				if ( !op1.isComplex && !op2.isComplex) {
 					// C = A_real - B_real

@@ -992,6 +992,8 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 	
     NSUInteger denseIndex = NSNotFound;
 	NSUInteger numDenseIndices = 0;
+	NSUInteger densifiableIndex = NSNotFound;
+	NSUInteger numDensifiableIndices = 0;
 	for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
         if (operandDescription.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
 			numDenseIndices++;
@@ -1000,14 +1002,22 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 				[NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
 			}
 		} else if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat && operandDescription.strides[index].matrixFormat != kGLDiagonalMatrixFormat) {
-			[NSException raise: @"MatrixWrongFormat" format: @"Can only compute the eigensystem of matrices with identity, diagonal and dense formats."];
+			numDensifiableIndices++;
+			densifiableIndex = index;
 		}
     }
 	
-    if ( numDenseIndices != 1 ) {
-        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find exactly one dense index."];
+    if ( numDenseIndices+numDensifiableIndices != 1 ) {
+        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find exactly one non-diagonal index."];
     }
 	
+	if (numDensifiableIndices) {
+		NSLog(@"Warning: we are copy the matrix to a dense format. This is not efficient.");
+		NSMutableArray *matrixFormats = [A.matrixFormats mutableCopy];
+		matrixFormats[densifiableIndex] = @(kGLDenseMatrixFormat);
+		A = [A copyWithDataType: A.dataFormat matrixFormat: matrixFormats ordering: kGLRowMatrixOrder];
+		operandDescription = A.matrixDescription;
+	}
 	
 	// We need to construct a *new* eigenbasis.
 	// I'm not quite sure the right definitions to use.
@@ -1142,18 +1152,80 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 
 - (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B
 {
-    if (A.matrixDescription.nDimensions != 1 || B.matrixDescription.nDimensions != 1) {
-        [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
-    }
-    
-    if (A.fromDimensions.count != A.toDimensions.count || B.fromDimensions.count != B.toDimensions.count ) {
-        [NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
-    }
-	
 	for (NSUInteger i=0; i<A.fromDimensions.count; i++) {
 		if ( ![A.fromDimensions[i] isEqualToDimension: A.toDimensions[i]] ) {
 			[NSException raise: @"MatrixWrongFormat" format: @"By assumption, a linear transformation must be an endomorphism to compute the eigensystem."];
 		}
+	}
+	
+	GLMatrixDescription *operandDescription = A.matrixDescription;
+	
+    NSUInteger denseIndex = NSNotFound;
+	NSUInteger numDenseIndices = 0;
+	NSUInteger densifiableIndex = NSNotFound;
+	NSUInteger numDensifiableIndices = 0;
+	for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
+        if (operandDescription.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
+			numDenseIndices++;
+			denseIndex = index;
+			if (operandDescription.strides[index].nRows != operandDescription.strides[index].nColumns) {
+				[NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
+			}
+		} else if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat && operandDescription.strides[index].matrixFormat != kGLDiagonalMatrixFormat) {
+			numDensifiableIndices++;
+			densifiableIndex = index;
+		}
+    }
+	
+    if ( numDenseIndices+numDensifiableIndices != 1 ) {
+        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find exactly one non-diagonal index."];
+    }
+	
+	if (numDensifiableIndices) {
+		NSLog(@"Warning: we are copy the matrix to a dense format. This is not efficient.");
+		NSMutableArray *matrixFormats = [A.matrixFormats mutableCopy];
+		matrixFormats[densifiableIndex] = @(kGLDenseMatrixFormat);
+		A = [A copyWithDataType: A.dataFormat matrixFormat: matrixFormats ordering: kGLRowMatrixOrder];
+		operandDescription = A.matrixDescription;
+	}
+	
+	NSUInteger A_index = numDenseIndices ? denseIndex : densifiableIndex;
+	
+	operandDescription = B.matrixDescription;
+	
+	denseIndex = NSNotFound;
+	numDenseIndices = 0;
+	densifiableIndex = NSNotFound;
+	numDensifiableIndices = 0;
+	for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
+        if (operandDescription.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
+			numDenseIndices++;
+			denseIndex = index;
+			if (operandDescription.strides[index].nRows != operandDescription.strides[index].nColumns) {
+				[NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
+			}
+		} else if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat && operandDescription.strides[index].matrixFormat != kGLDiagonalMatrixFormat) {
+			numDensifiableIndices++;
+			densifiableIndex = index;
+		}
+    }
+	
+    if ( numDenseIndices+numDensifiableIndices != 1 ) {
+        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find exactly one non-diagonal index."];
+    }
+	
+	if (numDensifiableIndices) {
+		NSLog(@"Warning: we are copy the matrix to a dense format. This is not efficient.");
+		NSMutableArray *matrixFormats = [A.matrixFormats mutableCopy];
+		matrixFormats[densifiableIndex] = @(kGLDenseMatrixFormat);
+		B = [B copyWithDataType: B.dataFormat matrixFormat: matrixFormats ordering: kGLRowMatrixOrder];
+		operandDescription = B.matrixDescription;
+	}
+	
+	NSUInteger B_index = numDenseIndices ? denseIndex : densifiableIndex;
+	
+	if (A_index != B_index) {
+		[NSException raise: @"DenseIndexNotFound" format: @"The nondiagonal index for A and B must be the same."];
 	}
 	
 	// We need to construct a *new* eigenbasis.
@@ -1169,85 +1241,117 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		[eigenbasis addObject: newDim];
 	}
 	
+	dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+	
 	// Should check whether or not the matrix is symmetric.
 	GLVariable *eigenvalues = [GLFunction functionOfComplexTypeWithDimensions: eigenbasis forEquation: A.equation];
 	GLLinearTransform *eigentransform = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: eigenbasis toDimensions:A.toDimensions inFormat:A.matrixFormats forEquation:A.equation matrix: nil];
+	GLMatrixDescription *resultMatrixDescription = eigentransform.matrixDescription;
+    GLMatrixDescription *resultVectorDescription = eigenvalues.matrixDescription;
     NSArray *results = @[eigenvalues, eigentransform];
     
     // http://www.nag.com/lapack-ex/node122.html
     
-	NSUInteger N = [A.fromDimensions[0] nPoints];
+	NSUInteger N = operandDescription.strides[denseIndex].nColumns;
+    NSUInteger lwork_size = 8*N;
+    NSUInteger totalLoops = compute_total_loops(operandDescription, resultMatrixDescription, denseIndex);
+	
 	// first two buffers will be used to store the transpose (which will be overwritten)
-	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: A.nDataElements*sizeof(GLFloat)];
-    GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: B.nDataElements*sizeof(GLFloat)];
+	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
+    GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
+	// third buffer will store the 'alpha' part of the eigenvalues.
+    GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
     // third buffer will store the 'beta' part of the eigenvalues.
-    GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: N*sizeof(GLFloat)];
+    GLBuffer *buffer4 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
 	// fourth buffer will store the annoyingly formatted output
-	GLBuffer *buffer4 = [[GLBuffer alloc] initWithLength: A.nDataElements*sizeof(GLFloat)];
+	GLBuffer *buffer5 = [[GLBuffer alloc] initWithLength: resultMatrixDescription.nBytes];
 	// fifth buffer is the lapack work buffer
-	GLBuffer *buffer5 = [[GLBuffer alloc] initWithLength: 8*N*sizeof(GLFloat)];
-	NSArray *buffers = @[buffer1, buffer2, buffer3, buffer4, buffer5];
+	GLBuffer *buffer6 = [[GLBuffer alloc] initWithLength: totalLoops*lwork_size*sizeof(GLFloat)];
+	NSArray *buffers = @[buffer1, buffer2, buffer3, buffer4, buffer5, buffer6];
 	
 	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-		GLFloat *A_row = (GLFloat *) [operandArray[0] bytes];
-        GLFloat *B_row = (GLFloat *) [operandArray[1] bytes];
-		
-		GLFloat *A_col = (GLFloat *) [bufferArray[0] bytes];
-        GLFloat *B_col = (GLFloat *) [bufferArray[1] bytes];
-        
-        GLFloat *beta = (GLFloat *) [bufferArray[2] bytes];
-		GLFloat *output = (GLFloat *) [bufferArray[3] bytes];
-		NSMutableData *work = bufferArray[4];
-		
-		GLSplitComplex v = splitComplexFromData(resultArray[0]);
-		GLSplitComplex C = splitComplexFromData(resultArray[1]);
-		
-		// clapack takes matrices in column-major format.
-		vGL_mtrans(A_row, 1, A_col, 1, N, N);
-        vGL_mtrans(B_row, 1, B_col, 1, N, N);
-		
-		char JOBVL ='N';
-		char JOBVR ='V';
-		__CLPK_integer n = (__CLPK_integer) N;
-		__CLPK_integer lwork = 8*n;
-		__CLPK_integer info;
-		
-        sggev_(&JOBVL, &JOBVR, &n, A_col, &n, B_col, &n, v.realp, v.imagp, beta, NULL, &n, output, &n, work.mutableBytes, &lwork, &info);
-		
-		if (info != 0) {
-			printf("sggev failed with error code %d\n", (int)info);
-		}
-		
-		// Now we have to get the eigenvectors in the proper format.
-		// If the j-th eigenvalue is real, then v(j) = VR(:,j), the j-th column of VR.
-		// If the j-th and (j+1)-st eigenvalues form a complex conjugate pair,
-		// then v(j) = VR(:,j) + i*VR(:,j+1) and v(j+1) = VR(:,j) - i*VR(:,j+1).
-		// And, don't forget, we need to fix the transpose.
-		
-		vGL_vclr( C.imagp, 1,  N*N);
-		
-		NSUInteger j=0;
-		for( NSUInteger i = 0; i < N; i++ ) { // i indicates which eigenvector we're copying
-			if ( v.imagp[i] == (GLFloat)0.0 ) {
-				for( NSUInteger k = 0; k < N; k++ ) { // k walks down the column
-					C.realp[k*N+i] = output[j*N+k];
-				}
-				j++;
-			} else {
-				for( NSUInteger k = 0; k < N; k++ ) {
-					C.realp[k*N+i] = output[j*N+k];
-					C.imagp[k*N+i] = output[(j+1)*N+k];
-					
-					C.realp[k*N+(i+1)] = output[j*N+k];
-					C.imagp[k*N+(i+1)] = -output[(j+1)*N+k];
-				}
-				j+=2;
-				i++;
+		apply_matrix_loop(operandDescription, resultVectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+			GLFloat *A_row = (GLFloat *) [operandArray[0] bytes];
+			GLFloat *B_row = (GLFloat *) [operandArray[1] bytes];
+			
+			GLFloat *A_col_data = (GLFloat *) [bufferArray[0] bytes];
+			GLFloat *B_col_data = (GLFloat *) [bufferArray[1] bytes];
+			GLFloat *A_col = &(A_col_data[iteration*N*N]);
+			GLFloat *B_col = &(B_col_data[iteration*N*N]);
+			
+			GLFloat *output_v_data = (GLFloat *) [bufferArray[2] bytes];
+            GLSplitComplex output_v;
+            output_v.realp = &(output_v_data[(2*iteration)*N]);
+            output_v.imagp = &(output_v_data[(2*iteration+1)*N]);
+			
+			GLFloat *beta_data = (GLFloat *) [bufferArray[3] bytes];
+			GLFloat *beta = &(beta_data[iteration*N]);
+			
+			GLFloat *output_data = (GLFloat *) [bufferArray[4] bytes];
+            GLFloat *output = &(output_data[iteration*N*N]);
+			
+			GLFloat *work_data = (GLFloat *) [bufferArray[5] bytes];
+			GLFloat *work = &(work_data[iteration*lwork_size]);
+			
+			GLSplitComplex v = splitComplexFromData(resultArray[0]);
+			GLSplitComplex C = splitComplexFromData(resultArray[1]);
+			
+			// clapack takes matrices in column-major format.
+			vGL_mtrans(&(A_row[inEquationPos]), operandDescription.strides[denseIndex].stride, A_col, 1, N, N);
+			vGL_mtrans(&(B_row[inEquationPos]), operandDescription.strides[denseIndex].stride, B_col, 1, N, N);
+			
+			char JOBVL ='N';
+			char JOBVR ='V';
+			__CLPK_integer n = (__CLPK_integer) N;
+			__CLPK_integer lwork = 8*n;
+			__CLPK_integer info;
+			
+			sggev_(&JOBVL, &JOBVR, &n, A_col, &n, B_col, &n, output_v.realp, output_v.imagp, beta, NULL, &n, output, &n, work, &lwork, &info);
+			
+			if (info != 0) {
+				printf("sggev failed with error code %d\n", (int)info);
 			}
-		}
-        
-        vGL_vdiv(beta, 1, v.realp, 1, v.realp, 1, N);
-        vGL_vdiv(beta, 1, v.imagp, 1, v.imagp, 1, N);
+			
+			// Now we have to get the eigenvectors in the proper format.
+			// If the j-th eigenvalue is real, then v(j) = VR(:,j), the j-th column of VR.
+			// If the j-th and (j+1)-st eigenvalues form a complex conjugate pair,
+			// then v(j) = VR(:,j) + i*VR(:,j+1) and v(j+1) = VR(:,j) - i*VR(:,j+1).
+			// And, don't forget, we need to fix the transpose.
+			vGL_vclr( &(C.imagp[inEquationPos]), resultMatrixDescription.strides[denseIndex].stride,  resultMatrixDescription.strides[denseIndex].nPoints);
+			
+			NSUInteger stride = resultVectorDescription.strides[denseIndex].stride;
+            for( NSUInteger i = 0; i < N; i++ ) {
+                v.realp[outEquationPos+i*stride] = output_v.realp[i];
+                v.imagp[outEquationPos+i*stride] = output_v.imagp[i];
+            }
+			
+			// inEquationPos should have the correct offsets because the output matrix has the same form as the input matrix.
+            NSUInteger rowStride = resultMatrixDescription.strides[denseIndex].rowStride;
+			NSUInteger colStride = resultMatrixDescription.strides[denseIndex].columnStride;
+            NSUInteger j=0;
+			for( NSUInteger i = 0; i < N; i++ ) { // i indicates which eigenvector we're copying
+				if ( v.imagp[i] == (GLFloat)0.0 ) {
+					for( NSUInteger k = 0; k < N; k++ ) { // k walks down the column
+						C.realp[inEquationPos+k*rowStride+i*colStride] = output[j*N+k];
+					}
+					j++;
+				} else {
+					for( NSUInteger k = 0; k < N; k++ ) {
+						C.realp[inEquationPos+k*rowStride+i*colStride] = output[j*N+k];
+						C.imagp[inEquationPos+k*rowStride+i*colStride] = output[(j+1)*N+k];
+						
+						C.realp[inEquationPos+k*rowStride+(i+1)*colStride] = output[j*N+k];
+						C.imagp[inEquationPos+k*rowStride+(i+1)*colStride] = -output[(j+1)*N+k];
+					}
+					j+=2;
+					i++;
+				}
+			}
+
+			
+			vGL_vdiv(beta, 1, &(v.realp[outEquationPos]), stride, &(v.realp[outEquationPos]), stride, N);
+			vGL_vdiv(beta, 1, &(v.imagp[outEquationPos]), stride, &(v.imagp[outEquationPos]), stride, N);
+		});
 	};
 	
 	if (( self = [super initWithResult: results operand: @[A, B] buffers: buffers operation: op] )) {

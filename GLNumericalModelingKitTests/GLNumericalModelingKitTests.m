@@ -1176,6 +1176,70 @@
     }
 }
 
+- (void) test1DRealMatrixGeneralizedEigendecomposition
+{
+	NSUInteger N = 2;
+	GLDimension *xDim = [GLDimension dimensionXWithNPoints:N length: 2.0];
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
+	GLLinearTransform *B = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
+
+	GLFloat a[2*2] =
+	{	1/sqrt(2),	0.0,
+		0.0,		1.0 };
+	memcpy(A.pointerValue, a, A.nDataElements*sizeof(GLFloat));
+		
+	GLFloat b[2*2] =
+	{	0.0,	1.0,
+		-1/sqrt(2),	0.0 };
+	memcpy(B.pointerValue, b, B.nDataElements*sizeof(GLFloat));
+	
+	NSArray *system = [A generalizedEigensystemWith: B];
+	GLFunction *eigenvalues = system[0];
+	GLLinearTransform *S = system[1];
+		
+	GLFloat expected_eigval_realp[2] = { 0.0, 0.0};
+	GLFloat expected_eigval_imagp[2] = { 1.0, -1.0};
+	
+	GLFloat expected_eigvec_realp[2*2] =
+    { 1.0, 1.0, 0.0, 0.0 };
+	
+	GLFloat expected_eigvec_imagp[2*2] =
+    { 0.0, 0.0, -1/sqrt(2), 1/sqrt(2) };
+	
+	GLSplitComplex eigval = eigenvalues.splitComplex;
+	for (int i=0; i<N; i++) {
+		if ( !fequalprec(eigval.realp[i], expected_eigval_realp[i],1e-5) || !fequalprec(eigval.imagp[i], expected_eigval_imagp[i],1e-5) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_eigval_realp[i], expected_eigval_imagp[i], eigval.realp[i], eigval.imagp[i]);
+		}
+	}
+	
+    GLFloat reltol = 1e-6;
+	GLSplitComplex eigvec = S.splitComplex;
+	for (NSUInteger i=0; i<N; i++) {
+        BOOL didFlipSign = NO;
+        for (NSUInteger j=0; j<N; j++) {
+            BOOL isValid = fequalprec(eigvec.realp[j*N+i], expected_eigvec_realp[j*N+i],reltol) && fequalprec(eigvec.imagp[j*N+i], expected_eigvec_imagp[j*N+i],reltol);
+            BOOL isValidFlipped = fequalprec(eigvec.realp[j*N+i], -expected_eigvec_realp[j*N+i],reltol) && fequalprec(eigvec.imagp[j*N+i], -expected_eigvec_imagp[j*N+i],reltol);
+            if (j==0) {
+                if (!isValid && isValidFlipped) {
+                    didFlipSign = YES;
+                }
+            }
+            
+            if ( !((isValid && !didFlipSign) || (isValidFlipped && didFlipSign)) ) {
+                XCTFail(@"(%lu,%lu), Expected %f + I%f, found %f + I%f.",i/N, i%N, expected_eigvec_realp[j*N+i], expected_eigvec_imagp[j*N+i], eigvec.realp[j*N+i], eigvec.imagp[j*N+i]);
+            }
+        }
+	}
+	
+//	GLLinearTransform *C = [[S inverse] times: [A times: S]];
+//	[C dumpToConsole];
+//	
+//	C = [[S inverse] times: [B times: S]];
+//	[C dumpToConsole];
+}
+
 /************************************************/
 /*		Differential							*/
 /************************************************/

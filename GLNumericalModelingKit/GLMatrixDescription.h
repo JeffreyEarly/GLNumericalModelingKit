@@ -97,4 +97,7 @@ typedef struct {
 /// Returns yes if the matrices are in the same format.
 - (BOOL) isEqualToMatrixDescription: (GLMatrixDescription *) otherMatrixDescription;
 
+/// Returns the smallest format required to store both the left and right format.
++ (NSArray *) commonFormatsFromLeft: (NSArray *) A right: (NSArray *) B;
+
 @end
