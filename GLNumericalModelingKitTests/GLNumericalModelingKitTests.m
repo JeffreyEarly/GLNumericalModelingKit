@@ -1187,11 +1187,17 @@
 	GLFloat a[2*2] =
 	{	1/sqrt(2),	0.0,
 		0.0,		1.0 };
+//	GLFloat a[2*2] =
+//	{	1,	2,
+//		3,	4 };
 	memcpy(A.pointerValue, a, A.nDataElements*sizeof(GLFloat));
 		
 	GLFloat b[2*2] =
 	{	0.0,	1.0,
 		-1/sqrt(2),	0.0 };
+//	GLFloat b[2*2] =
+//	{	1,	0,
+//		0,	1 };
 	memcpy(B.pointerValue, b, B.nDataElements*sizeof(GLFloat));
 	
 	NSArray *system = [A generalizedEigensystemWith: B];
@@ -1263,7 +1269,7 @@
     
     GLFloat expected_eigval_imagp[2*2] = { 0,0,0,0};
     
-    GLFloat expected_eigvec_realp[2*2*2] = {-0.824564840132394,-0.806898221355074,-0.415973557919284,-0.343723769333440,0.565767464968992,0.590690494568872,-0.909376709132124,-0.939070801588044};
+    GLFloat expected_eigvec_realp[2*2*2] = {1.0,1.0,0.457427107756338,0.366025403784439,-0.686140661634507,-0.732050807568877,1.0,1.0};
     GLFloat expected_eigvec_imagp[2*2*2] = {0,0,0,0,0,0,0,0};
     
     GLSplitComplex eigval = eigenvalues.splitComplex;
