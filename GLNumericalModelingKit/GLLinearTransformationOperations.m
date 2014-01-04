@@ -1158,75 +1158,49 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		}
 	}
 	
+	NSMutableArray *matrixFormats = [NSMutableArray array];
+	NSUInteger candidateIndex = NSNotFound;
+	NSUInteger numCandidateIndices = 0;
+	BOOL aShouldFormatShift = NO;
+	BOOL bShouldFormatShift = NO;
+	for ( NSUInteger index=0; index < A.matrixDescription.nDimensions; index++) {
+		GLMatrixFormat a = A.matrixDescription.strides[index].matrixFormat;
+		GLMatrixFormat b = B.matrixDescription.strides[index].matrixFormat;
+		BOOL aIsCandidate = (a != kGLIdentityMatrixFormat && a != kGLDiagonalMatrixFormat);
+		BOOL bIsCandidate = (b != kGLIdentityMatrixFormat && b != kGLDiagonalMatrixFormat);
+		
+		if (aIsCandidate || bIsCandidate) {
+			numCandidateIndices++;
+			candidateIndex = index;
+			matrixFormats[index] = @(kGLDenseMatrixFormat);
+		} else { // okay, so both are either identity or diagonal
+			if ( a == b ) { // if they're the same, then there's no decision to make.
+				matrixFormats[index] = @(a);
+			} else { // if they're different, then we need to go with the most general, e.g., diagonal.
+				matrixFormats[index] = @(kGLDiagonalMatrixFormat);
+			}
+		}
+		
+		aShouldFormatShift |= (a != [matrixFormats[index] unsignedIntegerValue]);
+		bShouldFormatShift |= (b != [matrixFormats[index] unsignedIntegerValue]);
+	}
+	
+	if ( numCandidateIndices != 1 ) {
+        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find exactly one non-diagonal index."];
+    }
+	
+	if (aShouldFormatShift) {
+		A = [A copyWithDataType: A.dataFormat matrixFormat: matrixFormats ordering: kGLRowMatrixOrder];
+	}
+	
+	if (bShouldFormatShift) {
+		B = [B copyWithDataType: B.dataFormat matrixFormat: matrixFormats ordering: kGLRowMatrixOrder];
+	}
+	
+	
 	GLMatrixDescription *operandDescription = A.matrixDescription;
 	
-    NSUInteger denseIndex = NSNotFound;
-	NSUInteger numDenseIndices = 0;
-	NSUInteger densifiableIndex = NSNotFound;
-	NSUInteger numDensifiableIndices = 0;
-	for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
-        if (operandDescription.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
-			numDenseIndices++;
-			denseIndex = index;
-			if (operandDescription.strides[index].nRows != operandDescription.strides[index].nColumns) {
-				[NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
-			}
-		} else if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat && operandDescription.strides[index].matrixFormat != kGLDiagonalMatrixFormat) {
-			numDensifiableIndices++;
-			densifiableIndex = index;
-		}
-    }
-	
-    if ( numDenseIndices+numDensifiableIndices != 1 ) {
-        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find exactly one non-diagonal index."];
-    }
-	
-	if (numDensifiableIndices) {
-		NSLog(@"Warning: we are copy the matrix to a dense format. This is not efficient.");
-		NSMutableArray *matrixFormats = [A.matrixFormats mutableCopy];
-		matrixFormats[densifiableIndex] = @(kGLDenseMatrixFormat);
-		A = [A copyWithDataType: A.dataFormat matrixFormat: matrixFormats ordering: kGLRowMatrixOrder];
-		operandDescription = A.matrixDescription;
-	}
-	
-	NSUInteger A_index = numDenseIndices ? denseIndex : densifiableIndex;
-	
-	operandDescription = B.matrixDescription;
-	
-	denseIndex = NSNotFound;
-	numDenseIndices = 0;
-	densifiableIndex = NSNotFound;
-	numDensifiableIndices = 0;
-	for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
-        if (operandDescription.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
-			numDenseIndices++;
-			denseIndex = index;
-			if (operandDescription.strides[index].nRows != operandDescription.strides[index].nColumns) {
-				[NSException raise: @"MatrixWrongFormat" format: @"We can only do square matrices."];
-			}
-		} else if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat && operandDescription.strides[index].matrixFormat != kGLDiagonalMatrixFormat) {
-			numDensifiableIndices++;
-			densifiableIndex = index;
-		}
-    }
-	
-    if ( numDenseIndices+numDensifiableIndices != 1 ) {
-        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find exactly one non-diagonal index."];
-    }
-	
-	if (numDensifiableIndices) {
-		NSLog(@"Warning: we are copy the matrix to a dense format. This is not efficient.");
-		NSMutableArray *matrixFormats = [A.matrixFormats mutableCopy];
-		matrixFormats[densifiableIndex] = @(kGLDenseMatrixFormat);
-		B = [B copyWithDataType: B.dataFormat matrixFormat: matrixFormats ordering: kGLRowMatrixOrder];
-		operandDescription = B.matrixDescription;
-	}
-	
-	NSUInteger B_index = numDenseIndices ? denseIndex : densifiableIndex;
-	
-	if (A_index != B_index) {
-		[NSException raise: @"DenseIndexNotFound" format: @"The nondiagonal index for A and B must be the same."];
-	}
+    NSUInteger denseIndex = candidateIndex;
 	
 	// We need to construct a *new* eigenbasis.
 	// I'm not quite sure the right definitions to use.
@@ -1445,8 +1419,14 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform dataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering
 {
+	BOOL identityMatrix = YES;
+	for (NSNumber *format in linearTransform.matrixFormats) {
+		identityMatrix &= format.unsignedIntegerValue == kGLIdentityMatrixFormat;
+	}
+	
 	GLLinearTransform *newLinearTransform = [[GLLinearTransform alloc] initTransformOfType: dataFormat withFromDimensions: linearTransform.fromDimensions toDimensions: linearTransform.toDimensions inFormat: matrixFormats withOrdering: ordering forEquation: linearTransform.equation matrix: nil];
-	transformMatrix matrixBlock = newLinearTransform.matrixBlock;
+	
+	transformMatrix matrixBlock = linearTransform.matrixBlock;
 	GLMatrixDescription *oldMatrixDescription = linearTransform.matrixDescription;
 	GLMatrixDescription *newMatrixDescription = newLinearTransform.matrixDescription;
 	
@@ -1455,7 +1435,9 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		[GLLinearTransform writeToData: resultArray[0] withFormat: newMatrixDescription fromMatrixBlock: matrix];
 	};
 	
-	if (( self = [super initWithResult: @[newLinearTransform] operand: @[linearTransform] buffers: @[] operation: op] )) {
+	NSArray *operandArray = matrixBlock ? [NSArray array] : @[linearTransform];
+	
+	if (( self = [super initWithResult: @[newLinearTransform] operand: operandArray buffers: @[] operation: op] )) {
 		
 	}
 	

@@ -217,7 +217,7 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
 		// We loop through the dimensions and allocate enough memory for the variable
 		// defined on each dimension.
 		_nDataPoints = 0;
-		
+		BOOL identityMatrix = YES;
 		for (NSUInteger iDim=0; iDim < fromDims.count; iDim++)
 		{
 			GLDimension *fromDim = fromDims[iDim];
@@ -227,6 +227,8 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
 			if (_nDataPoints == 0 && matrixFormat != kGLIdentityMatrixFormat) {
 				_nDataPoints = 1;
 			}
+			
+			identityMatrix &= matrixFormat == kGLIdentityMatrixFormat;
 			
 			if ( matrixFormat == kGLIdentityMatrixFormat) {
 				_nDataPoints *= 1;
@@ -269,6 +271,17 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
         
         if (self.matrixBlock) {
 			self.data = [GLLinearTransform dataWithFormat: self.matrixDescription fromMatrixBlock: self.matrixBlock];
+		}
+		
+		if (identityMatrix) {
+			NSUInteger N = fromDims.count;
+			self.matrixBlock = ^( NSUInteger *row, NSUInteger *col ) {
+				BOOL onDiagonal = YES;
+				for (NSUInteger i=0; i<N; i++) {
+					onDiagonal &= row[i]==col[i];
+				}
+				return (GLFloatComplex) (onDiagonal ? 1 : 0);
+			};
 		}
 	}
 	
