@@ -142,4 +142,22 @@
 	return operation.result[0];
 }
 
+/************************************************/
+/*		Reading & Writing						*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Reading & Writing
+#pragma mark
+
+- (void) dumpToConsole
+{
+	return NSLog(@"%6.2f", self.pointerValue[0]);
+}
+
+//- (NSString *) graphvisDescription
+//{
+//    return [NSString stringWithFormat: @"Uninitialized rank %lu tensor", self.rank];
+//}
+
 @end

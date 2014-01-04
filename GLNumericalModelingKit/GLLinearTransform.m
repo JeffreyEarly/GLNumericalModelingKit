@@ -1226,10 +1226,10 @@ void weights( GLFloat z, GLFloat *x, NSUInteger m, GLFloat *c, NSUInteger n )
 		GLFloat *xVal = (GLFloat *) x.data.bytes;
 		GLFloat *c = buffer.mutableBytes;
 		
-		if (row[0] == 0) { // leftBC
+		if (row[0] == 0 && abs((int)col[0]-(int)row[0]) <= bandwidth) { // leftBC
 			weights( xVal[row[0]], &(xVal[row[0]]), leftBC, c, bandwidth+1);
 			return (GLFloatComplex) c[leftBC*(bandwidth+1)+col[0]];
-		} else if (row[0] == x.nPoints-1) { // rightBC
+		} else if (row[0] == x.nPoints-1 && abs((int)col[0]-(int)row[0]) <= bandwidth) { // rightBC
 			weights( xVal[row[0]], &(xVal[row[0]-bandwidth]), rightBC, c, bandwidth+1);
 			return (GLFloatComplex) c[rightBC*(bandwidth+1) + (bandwidth+1)+(col[0]-x.nPoints)];
 		} else if ( abs((int)col[0]-(int)row[0]) <= bandwidth) {

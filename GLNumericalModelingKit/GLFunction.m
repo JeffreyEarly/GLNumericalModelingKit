@@ -947,7 +947,7 @@
 			if ( i % n == 0 ) {
 				[descrip appendFormat: @"\n"];
 			}
-			[descrip appendFormat: @"%+1.1f ", f[i]/divisor];
+			[descrip appendFormat: @"%+1.1g ", f[i]/divisor];
 		}
 	}
 	
