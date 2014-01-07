@@ -115,6 +115,7 @@
 @interface GLAverageOperation : GLVariableOperation
 
 - (GLAverageOperation *) initWithFunction: (GLFunction *) variable dimensionIndex: (NSUInteger) index;
+- (GLAverageOperation *) initWithFunction: (GLFunction *) variable;
 @property NSUInteger dimIndex;
 @end
 

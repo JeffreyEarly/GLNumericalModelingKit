@@ -143,6 +143,54 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 @end
 
 /************************************************/
+/*		GLExpandMatrixDimensionsOperation		*/
+/************************************************/
+
+@implementation GLExpandMatrixDimensionsOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform fromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims
+{
+	if (fromDims.count != toDims.count || fromDims.count < linearTransform.fromDimensions.count) {
+		[NSException raise: @"BadFormat" format: @"Dimensions don't make sense."];
+	}
+	
+	NSMutableArray *matrixFormats = [NSMutableArray array];
+	NSUInteger iDim = 0;
+	for (NSUInteger i=0; i<fromDims.count; i++) {
+		GLDimension *fromDim = fromDims[i];
+		GLDimension *toDim = toDims[i];
+		if (iDim < linearTransform.fromDimensions.count && [linearTransform.fromDimensions[iDim] isEqualToDimension: fromDim] && [linearTransform.toDimensions[iDim] isEqualToDimension: toDim]) {
+			[matrixFormats addObject: linearTransform.matrixFormats[iDim]];
+			iDim++;
+		} else {
+			[matrixFormats addObject: @(kGLIdentityMatrixFormat)];
+		}
+	}
+	
+	if (iDim != linearTransform.fromDimensions.count) {
+		[NSException raise: @"BadFormat" format: @"Dimensions don't make sense."];
+	}
+	
+	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: linearTransform.dataFormat withFromDimensions: fromDims toDimensions:toDims inFormat:matrixFormats forEquation:linearTransform.equation matrix:nil];
+    NSUInteger nBytes = result.matrixDescription.nBytes;
+	
+	if (nBytes != linearTransform.matrixDescription.nBytes) {
+		[NSException raise: @"BadFormat" format: @"Urg. By assumption these shoudl be the same."];
+	}
+	
+    if ((self = [super initWithResult:@[result] operand:@[linearTransform] buffers:nil operation:^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+        NSMutableData *result = resultArray[0];
+        NSMutableData *transform = operandArray[0];
+        memcpy(result.mutableBytes, transform.mutableBytes, nBytes);
+    }])) {
+        
+    }
+    
+    return self;
+}
+
+@end
+
+/************************************************/
 /*		GLSingleDiagonalTransformOperation		*/
 /************************************************/
 

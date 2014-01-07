@@ -624,7 +624,7 @@
 	if (firstOperand.rank == 1 && secondOperand.rank == 1)
 	{
 		GLFunction *fOperand = (GLFunction *) firstOperand;
-		GLFunction *sOperand = (GLFunction *) firstOperand;
+		GLFunction *sOperand = (GLFunction *) secondOperand;
 		if (fOperand.dimensions.count && sOperand.dimensions.count && (fOperand.dimensions.count < sOperand.dimensions.count || sOperand.dimensions.count < fOperand.dimensions.count))
 		{
 			GLFunction *lowerDimVariable;

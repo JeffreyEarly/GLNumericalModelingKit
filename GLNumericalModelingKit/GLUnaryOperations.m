@@ -695,6 +695,41 @@
     return self;
 }
 
+- (GLAverageOperation *) initWithFunction: (GLFunction *) variable
+{
+	GLVariable *resultVariable = [GLScalar scalarWithType: variable.dataFormat forEquation: variable.equation];
+	
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
+	{
+        self.dimIndex = NSNotFound;
+		NSUInteger nPoints = variable.matrixDescription.nPoints;
+		if (resultVariable.dataFormat == kGLRealDataFormat)
+		{
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *a = [operandArray[0] mutableBytes];
+				GLFloat *b = [resultArray[0] mutableBytes];
+				vGL_meanv(a, 1, b, nPoints);
+				
+			};
+            self.graphvisDescription = [NSString stringWithFormat: @"average all dimensions (real formatting)"] ;
+		}
+        else if (resultVariable.dataFormat == kGLSplitComplexDataFormat)
+		{
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
+				GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
+				vGL_meanv(fromSplit.realp,1, toSplit.realp, nPoints);
+				vGL_meanv(fromSplit.imagp,1, toSplit.imagp, nPoints);
+				
+			};
+            self.graphvisDescription = [NSString stringWithFormat: @"average all dimensions (split complex formatting)"] ;
+		}
+		
+	}
+	
+    return self;
+}
+
 - (BOOL) isEqualToOperation: (id) otherOperation {
     if ( ![super isEqualToOperation: otherOperation] )  {
         return NO;

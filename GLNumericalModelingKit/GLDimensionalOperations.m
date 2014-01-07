@@ -18,7 +18,7 @@
 - (id) initWithOperand: (GLFunction *) variable dimension: (GLDimension *) dim
 {
 	if ([variable.dimensions containsObject: dim]) {
-		return nil;
+		[NSException raise:@"BadArgument" format:@"This function already contains that dimension"];
 	}
 	
 	NSMutableArray *newDimensions = [NSMutableArray arrayWithObject: dim];

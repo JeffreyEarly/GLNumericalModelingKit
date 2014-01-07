@@ -54,6 +54,9 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
 {
     if (matrixDescription.strides[iDim].matrixFormat == kGLIdentityMatrixFormat) {
         [descrip appendFormat: @"Identity matrix A=I\n"];
+		if (iDim+1 < matrixDescription.nDimensions) {
+			createMatrixDescriptionString(matrixDescription, descrip, iDim+1, a);
+		}
     } else if (matrixDescription.strides[iDim].matrixFormat == kGLDenseMatrixFormat) {
         NSUInteger rs = matrixDescription.strides[iDim].rowStride;
         NSUInteger cs = matrixDescription.strides[iDim].columnStride;
@@ -930,6 +933,14 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
 	return 2;
 }
 
+- (GLLinearTransform *) expandedWithFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims
+{
+	// The existing dimension have to be in the same order.
+	GLVariableOperation *operation = [[GLExpandMatrixDimensionsOperation alloc] initWithLinearTransformation: self fromDimensions: fromDims toDimensions: toDims];
+	operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 /************************************************/
 /*		Operations								*/
 /************************************************/
@@ -962,7 +973,7 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
         }
     }
 		
-	if (numDenseIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 1 && numIdentityIndices == 0) {
+	if (numDenseIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 1) {
 		// Tridiagonal matrix transformations.
 		GLTriadiagonalTransformOperation *operation = [[GLTriadiagonalTransformOperation alloc] initWithLinearTransformation: self function: x];
 		operation = [self replaceWithExistingOperation: operation];
@@ -985,7 +996,7 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
 	}
 	
 	NSString *descrip = [NSString stringWithFormat: @"No algorithm implemented to solve problem. This matrix contains (identity, diagonal, sub-diagonal, super-diagonal, tri-diagonal, dense)=(%lu,%lu,%lu,%lu,%lu,%lu) indices", numIdentityIndices, numDiagonalIndices,numSubDiagonalIndices, numSuperDiagonalIndices, numTriIndices, numDenseIndices];
-	[NSException exceptionWithName: @"BadFormat" reason:descrip userInfo:nil];
+	[NSException raise:@"BadFormat" format: @"%@", descrip];
 	
 	return nil;
 }

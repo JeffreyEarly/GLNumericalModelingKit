@@ -252,6 +252,8 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
 // the negative values. Returns nil if the variable is not hermitian.
 @property(readonly, strong, nonatomic) GLDimension *hermitianDimension;
 
+/// Increase the dimensionality of the transformation, by assuming the identity transform for the new dimensions.
+- (GLLinearTransform *) expandedWithFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims;
 
 /************************************************/
 /*		Data									*/

@@ -620,6 +620,13 @@
 	return operation.result[0];
 }
 
+- (GLFunction *) mean
+{
+	GLAverageOperation *operation = [[GLAverageOperation alloc] initWithFunction: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 - (id) setValue: (GLFloat) aScalar atIndices: (NSString *) string
 {
     GLSetValueOperation *operation = [[GLSetValueOperation alloc] initWithVectorOperand: self scalarOperand:aScalar indexString: string];

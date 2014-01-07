@@ -173,8 +173,10 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 // Returns a scalar GLVariable.
 - (id) max;
 
+
 // Computes the mean along the specified index, effectively collapsing the variable along that index.
 - (id) mean: (NSUInteger) index;
+- (id) mean;
 
 // Matlab style. String should be @"start:end,start:end,..."
 - (id) setValue: (GLFloat) aScalar atIndices: (NSString *) string;
@@ -212,7 +214,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 // This prepends the newDimension to the dimension list.
 // The dimension should have 1 point, if it has more, the values will simply be copied.
 // The returned variable may be mutable if the dimensions dictate.
-- (id) variableByAddingDimension: (GLDimension *) newDimension;
+- (GLFunction *) variableByAddingDimension: (GLDimension *) newDimension;
 
 // Returns a variable with only the elements indicated by by the array of ranges.
 // The size of the ranges array must match the number of dimensions.

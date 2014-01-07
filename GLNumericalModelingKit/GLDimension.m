@@ -105,6 +105,56 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 #pragma mark Convenience Methods
 #pragma mark
 
++ (NSArray *) dimensionsForRealFunctionWithDimensions: (NSArray *) dimensions transformedToBasis: (NSArray *) basis
+{
+	if ( basis.count == 1 && dimensions.count > 1) {
+        NSMutableArray *array = [NSMutableArray array];
+        for (NSUInteger i=0; i < dimensions.count; i++) {
+            [array addObject: basis.lastObject];
+        }
+        basis = array;
+    }
+	
+	
+	NSMutableArray *transformedDimensions = [NSMutableArray array];
+	NSUInteger lastExponentialIndex = NSNotFound;
+	for (NSUInteger i=0; i < dimensions.count; i++) {
+		if ([basis[i] unsignedIntegerValue] == kGLExponentialBasis) {
+			lastExponentialIndex = i;
+		}
+	}
+    
+	for (NSUInteger i=0; i < dimensions.count; i++) {
+		BOOL strictlyPositive = ( lastExponentialIndex == i || [basis[i] unsignedIntegerValue] > 1) ? YES : NO;
+		GLDimension *dim = [[GLDimension alloc] initAsDimension: dimensions[i] transformedToBasis: [basis[i] unsignedIntegerValue] strictlyPositive: strictlyPositive];
+		[transformedDimensions addObject: dim];
+	}
+	
+	return transformedDimensions;
+}
+
++ (NSArray *) dimensionsForComplexFunctionWithDimensions: (NSArray *) dimensions transformedToBasis: (NSArray *) basis
+{
+	if ( basis.count == 1 && dimensions.count > 1) {
+        NSMutableArray *array = [NSMutableArray array];
+        for (NSUInteger i=0; i < dimensions.count; i++) {
+            [array addObject: basis.lastObject];
+        }
+        basis = array;
+    }
+	
+	
+	NSMutableArray *transformedDimensions = [NSMutableArray array];
+	NSUInteger lastExponentialIndex = NSNotFound;
+	for (NSUInteger i=0; i < dimensions.count; i++) {
+		BOOL strictlyPositive = ( lastExponentialIndex == i || [basis[i] unsignedIntegerValue] > 1) ? YES : NO;
+		GLDimension *dim = [[GLDimension alloc] initAsDimension: dimensions[i] transformedToBasis: [basis[i] unsignedIntegerValue] strictlyPositive: strictlyPositive];
+		[transformedDimensions addObject: dim];
+	}
+	
+	return transformedDimensions;
+}
+
 + (GLDimension *) dimensionXWithNPoints: (NSUInteger) numPoints length: (GLFloat) theLength;{
 	GLDimension *aDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:numPoints domainMin:0 length:theLength];
 	aDim.name = @"x";

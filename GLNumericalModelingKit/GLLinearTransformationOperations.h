@@ -34,6 +34,20 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
 - (id) initWithFunction: (GLFunction *) function;
 @end
 
+/************************************************/
+/*		GLExpandMatrixDimensionsOperation		*/
+/************************************************/
+
+/** Add new dimension to a transformation, by assuming the identity transform for the new dimensions.
+ @param linearTransform Existing linear transformation.
+ @param fromDims New fromDimensions
+ @param toDims New toDimensions
+ @returns The more-or-less the same linear transformation, but with new fromDimensions and toDimensions.
+ */
+@interface GLExpandMatrixDimensionsOperation : GLVariableOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform fromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims;
+@end
+
 #pragma mark -
 #pragma mark Transforms
 #pragma mark

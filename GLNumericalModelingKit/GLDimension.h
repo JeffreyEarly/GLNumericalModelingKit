@@ -47,6 +47,9 @@ typedef NS_ENUM(NSUInteger, GLBasisFunction) {
 @class GLMutableDimension;
 @interface GLDimension : NSObject
 
++ (NSArray *) dimensionsForRealFunctionWithDimensions: (NSArray *) dimensions transformedToBasis: (NSArray *) basis;
++ (NSArray *) dimensionsForComplexFunctionWithDimensions: (NSArray *) dimensions transformedToBasis: (NSArray *) basis;
+
 /************************************************/
 /*		Convenience Methods						*/
 /************************************************/
