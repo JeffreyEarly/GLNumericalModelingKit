@@ -157,6 +157,8 @@ GLSplitComplex splitComplexFromData( NSData *data );
 #pragma mark Reading & Writing
 #pragma mark
 
+@property(readonly) NSString *matrixDescriptionString;
+
 // Description of the tensor appropriate for output in an object graph.
 @property(readonly) NSString *graphvisDescription;
 

@@ -882,84 +882,84 @@
 	return YES;
 }
 
-- (NSString *) matrixDescriptionString
-{
-	NSUInteger n = [[self.dimensions lastObject] nPoints];
-	n = n==0?1:n;
-	NSMutableString *descrip = [NSMutableString string];
-	
-	GLFloat max, min;
-	vGL_maxv( self.data.mutableBytes, 1, &max, self.nDataElements);
-	vGL_minv( self.data.mutableBytes, 1, &min, self.nDataElements);
-	
-	if ( fabs(min) > max) {
-		max = fabs(min);
-	}
-	
-	GLFloat divisor = pow(10, floor(log10(max)));
-	if ( divisor == 0.0) divisor = 1;
-	
-	if (0 && self.dataFormat == kGLSplitComplexDataFormat)
-	{
-		GLSplitComplex splitComplex = self.splitComplex;
-		[descrip appendFormat: @"%f * ", divisor];
+//- (NSString *) matrixDescriptionString
+//{
+//	NSUInteger n = [[self.dimensions lastObject] nPoints];
+//	n = n==0?1:n;
+//	NSMutableString *descrip = [NSMutableString string];
+//	
+//	GLFloat max, min;
+//	vGL_maxv( self.data.mutableBytes, 1, &max, self.nDataElements);
+//	vGL_minv( self.data.mutableBytes, 1, &min, self.nDataElements);
+//	
+//	if ( fabs(min) > max) {
+//		max = fabs(min);
+//	}
+//	
+//	GLFloat divisor = pow(10, floor(log10(max)));
+//	if ( divisor == 0.0) divisor = 1;
+//	
+//	if (0 && self.dataFormat == kGLSplitComplexDataFormat)
+//	{
+//		GLSplitComplex splitComplex = self.splitComplex;
+//		[descrip appendFormat: @"%f * ", divisor];
+////		for (NSUInteger i=0; i<self.nDataPoints; i++)
+////		{
+////			if ( i % n == 0 ) {
+////				[descrip appendFormat: @"\n"];
+////			}
+////			[descrip appendFormat: @"%1.1f ", sqrt(fabs(splitComplex.realp[i] * splitComplex.realp[i] - splitComplex.imagp[i] * splitComplex.imagp[i]))/divisor];
+////		}
+//		
 //		for (NSUInteger i=0; i<self.nDataPoints; i++)
 //		{
 //			if ( i % n == 0 ) {
 //				[descrip appendFormat: @"\n"];
 //			}
-//			[descrip appendFormat: @"%1.1f ", sqrt(fabs(splitComplex.realp[i] * splitComplex.realp[i] - splitComplex.imagp[i] * splitComplex.imagp[i]))/divisor];
+//			[descrip appendFormat: @"%+1.1f ", splitComplex.realp[i]/divisor];
 //		}
-		
-		for (NSUInteger i=0; i<self.nDataPoints; i++)
-		{
-			if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-			[descrip appendFormat: @"%+1.1f ", splitComplex.realp[i]/divisor];
-		}
-		
-		[descrip appendFormat: @" imagp \n"];
-		for (NSUInteger i=0; i<self.nDataPoints; i++)
-		{
-			if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-			[descrip appendFormat: @"%+1.1f ", splitComplex.imagp[i]/divisor];
-		}
-	}
-    if ( self.dimensions.count == 3)
-    {
-        NSUInteger m = [self.dimensions[2] nPoints] * [self.dimensions[1] nPoints];
-        GLFloat *f = self.pointerValue;
-		[descrip appendFormat: @"%g * ", divisor];
-		for (NSUInteger i=0; i<self.nDataElements; i++)
-		{
-			if ( i % m == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-            if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-            
-			[descrip appendFormat: @"%+1.1f ", f[i]/divisor];
-		}
-    }
-	else
-	{
-		GLFloat *f = self.pointerValue;
-		[descrip appendFormat: @"%g * ", divisor];
-		for (NSUInteger i=0; i<self.nDataElements; i++)
-		{
-			if ( i % n == 0 ) {
-				[descrip appendFormat: @"\n"];
-			}
-			[descrip appendFormat: @"%+1.1g ", f[i]/divisor];
-		}
-	}
-	
-	return descrip;
-}
+//		
+//		[descrip appendFormat: @" imagp \n"];
+//		for (NSUInteger i=0; i<self.nDataPoints; i++)
+//		{
+//			if ( i % n == 0 ) {
+//				[descrip appendFormat: @"\n"];
+//			}
+//			[descrip appendFormat: @"%+1.1f ", splitComplex.imagp[i]/divisor];
+//		}
+//	}
+//    if ( self.dimensions.count == 3)
+//    {
+//        NSUInteger m = [self.dimensions[2] nPoints] * [self.dimensions[1] nPoints];
+//        GLFloat *f = self.pointerValue;
+//		[descrip appendFormat: @"%g * ", divisor];
+//		for (NSUInteger i=0; i<self.nDataElements; i++)
+//		{
+//			if ( i % m == 0 ) {
+//				[descrip appendFormat: @"\n"];
+//			}
+//            if ( i % n == 0 ) {
+//				[descrip appendFormat: @"\n"];
+//			}
+//            
+//			[descrip appendFormat: @"%+1.1f ", f[i]/divisor];
+//		}
+//    }
+//	else
+//	{
+//		GLFloat *f = self.pointerValue;
+//		[descrip appendFormat: @"%g * ", divisor];
+//		for (NSUInteger i=0; i<self.nDataElements; i++)
+//		{
+//			if ( i % n == 0 ) {
+//				[descrip appendFormat: @"\n"];
+//			}
+//			[descrip appendFormat: @"%+1.1g ", f[i]/divisor];
+//		}
+//	}
+//	
+//	return descrip;
+//}
 
 - (void) dumpToConsole
 {
@@ -989,6 +989,9 @@
 	[extra appendString: self.isRealPartZero ? @" zero real part" : @" nonzero real part"];
 	[extra appendString: self.isImaginaryPartZero ? @", zero imaginary part" : @", nonzero imaginary part"];
 	[extra appendString: self.isHermitian ? @" and has hermitian symmetry." : @"."];
+	for (GLDimension *aDim in self.dimensions) {
+		[extra appendFormat: @"\n\t%@", aDim.description];
+	}
 	
     //return [NSString stringWithFormat: @"%@ <0x%lx> (%@: %lu points) %@\n", NSStringFromClass([self class]), (NSUInteger) self, self.name, self.nDataPoints, extra];
     

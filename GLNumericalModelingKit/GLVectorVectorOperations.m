@@ -453,6 +453,11 @@
 					B = [B copyWithDataType: B.dataFormat matrixFormat: newMatrixFormats ordering: A.matrixOrder];
 					op1 = A;
 					op2 = B;
+					result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions:B.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
+					result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
+					result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
+					numPoints = result.nDataPoints;
+					nDataElements = result.nDataElements;
 				}
 				if ( !op1.isComplex && !op2.isComplex) {
 					// C = A_real - B_real
