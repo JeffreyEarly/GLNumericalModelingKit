@@ -150,6 +150,19 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
 @end
 
 /************************************************/
+/*		GLMatrixNormalizationOperation          */
+/************************************************/
+
+#pragma mark -
+#pragma mark GLMatrixNormalizationOperation
+#pragma mark
+
+@interface GLMatrixNormalizationOperation : GLVariableOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform normalizationConstant: (GLFloat) aConst dimensionIndex: (NSUInteger) index;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform normalizationFunction: (GLFunction *) aFunction;
+@end
+
+/************************************************/
 /*		GLMatrixEigensystemOperation             */
 /************************************************/
 /** Finds the eigenvectors and eigenvalues of the matrix A.

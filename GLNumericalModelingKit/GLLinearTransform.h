@@ -320,4 +320,17 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
 
 - (NSArray *) generalizedEigensystemWith: (GLLinearTransform *) B;
 
+/** Returns a matrix with each column vector normalized by \int const * v * v = 1 where v is the column vector.
+ @param aScalar The scalar defined as 'const' in the normalization equation above.
+ @param dimIndex The index defining the column vectors to normalize.
+ @returns A normalized matrix in the same format.
+ */
+- (GLLinearTransform *) normalizeWithScalar: (GLFloat) aScalar acrossDimensions: (NSUInteger) dimIndex;
+
+/** Returns a matrix with each column vector normalized by \int f * v * v = 1 where v is the column vector.
+ @param aFunction The scalar defined as 'f' in the normalization equation above.
+ @returns A normalized matrix in the same format.
+ */
+- (GLLinearTransform *) normalizeWithFunction: (GLFunction *) aFunction;
+
 @end

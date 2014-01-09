@@ -424,7 +424,7 @@
 {
 	[self solve];
 	GLFloat max = 0.0;
-	vGL_maxv( (float *) self.data.bytes, 1, &max, self.nDataElements);
+	vGL_maxv( (GLFloat *) self.data.bytes, 1, &max, self.nDataElements);
 	return max;
 }
 
@@ -432,7 +432,7 @@
 {
 	[self solve];
 	GLFloat min = 0.0;
-	vGL_minv( (float *) self.data.bytes, 1, &min, self.nDataElements);
+	vGL_minv( (GLFloat *) self.data.bytes, 1, &min, self.nDataElements);
 	return min;
 }
 

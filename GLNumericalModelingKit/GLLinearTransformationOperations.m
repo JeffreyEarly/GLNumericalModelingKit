@@ -449,7 +449,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
 				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
-				vDSP_mmul( A, 1, B, 1, C, 1, M, N, K);
+				vGL_mmul( A, 1, B, 1, C, 1, M, N, K);
 			};
 		}
 		else if ( linearTransform.isComplex && !function.isComplex)
@@ -459,8 +459,8 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
+				vGL_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
+				vGL_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
 			};
 		}
 		else if ( !linearTransform.isComplex && function.isComplex)
@@ -470,8 +470,8 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 				GLSplitComplex B = splitComplexFromData( operandArray[1] );
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
+				vGL_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
+				vGL_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
 			};
 		}
 		else if ( linearTransform.isComplex && function.isComplex)
@@ -481,7 +481,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 				GLSplitComplex B = splitComplexFromData( operandArray[1] );
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
+				vGL_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
 			};
 		}
     }
@@ -1016,6 +1016,209 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 }
 
 @end
+
+/************************************************/
+/*		GLMatrixNormalizationOperation          */
+/************************************************/
+
+#pragma mark -
+#pragma mark GLMatrixNormalizationOperation
+#pragma mark
+
+@implementation GLMatrixNormalizationOperation
+
+// Int const*f*f = 1
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform normalizationConstant: (GLFloat) aConst dimensionIndex: (NSUInteger) index;
+{
+	GLLinearTransform *A = (GLLinearTransform *) linearTransform;
+	if (index >= A.fromDimensions.count) {
+		[NSException raise: @"InvalidIndex" format: @"The index you provided is greater than the number of dimensions."];
+	}
+	
+	if (aConst <= 0.0) {
+		[NSException raise: @"InvalidNormalization" format: @"The normalization must be nonzero."];
+	}
+	
+	if ( ![A.toDimensions[index] isEvenlySampled] ) {
+		[NSException raise: @"NotYetImplemented" format: @"Normalization is only possible on evenly sampled dimensions."];
+	}
+	
+	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.toDimensions toDimensions: A.fromDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
+	GLMatrixDescription *operandDescription = linearTransform.matrixDescription;
+	
+	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[index].nColumns;
+	NSUInteger vectorStride = operandDescription.strides[index].columnStride;
+	NSUInteger vectorLength = operandDescription.strides[index].nRows;
+	NSUInteger vectorElementStride = operandDescription.strides[index].rowStride;
+	NSUInteger complexStride = operandDescription.strides[index].complexStride;
+	
+	GLFloat deltaX = [A.toDimensions[index] sampleInterval];
+	
+	dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+	variableOperation op;
+	if (A.isComplex) {
+		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
+				
+				NSUInteger inEquationPos = iteration*vectorStride;
+				
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLSplitComplex Asplit;
+				Asplit.realp = &(A[inEquationPos]);
+				Asplit.imagp = &(A[inEquationPos+complexStride]);
+				
+				GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+				GLSplitComplex Bsplit;
+				Bsplit.realp = &(B[inEquationPos]);
+				Bsplit.imagp = &(B[inEquationPos+complexStride]);
+				
+				// square it
+				vGL_zvmags(&Asplit, vectorElementStride, Bsplit.realp, vectorElementStride, vectorLength);
+								
+				// sum it. sum = 1/(2*h) * (f_0 + 2*f_1 + 2*f_2 + ... + 2*f_{N-1} + 2*f_N
+				GLFloat sum = 0.0;
+				vGL_sve(Bsplit.realp, vectorElementStride, &sum, vectorLength);
+				sum = aConst * deltaX * (sum - Bsplit.realp[0]/2.0 - Bsplit.realp[0+vectorElementStride*(vectorLength-1)]/2.0);
+				
+				GLFloat norm = 1/sqrt(fabs(sum));
+				vGL_vsmul(Asplit.realp, vectorElementStride, &norm, Bsplit.realp, vectorElementStride, vectorLength);
+				vGL_vsmul(Asplit.imagp, vectorElementStride, &norm, Bsplit.imagp, vectorElementStride, vectorLength);
+			});
+		};
+	} else {
+		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+				
+				NSUInteger inEquationPos = iteration*vectorStride;
+
+				// square it
+				vGL_vsq(&(A[inEquationPos]), vectorElementStride, &(B[inEquationPos]), vectorElementStride, vectorLength);
+				
+				// sum it. sum = 1/(2*h) * (f_0 + 2*f_1 + 2*f_2 + ... + 2*f_{N-1} + 2*f_N
+				GLFloat sum = 0.0;
+				vGL_sve(&(B[inEquationPos]), vectorElementStride, &sum, vectorLength);
+				sum = aConst * deltaX * (sum - B[inEquationPos]/2.0 - B[inEquationPos+vectorElementStride*(vectorLength-1)]/2.0);
+				
+				GLFloat norm = 1/sqrt(fabs(sum));
+				vGL_vsmul(&(A[inEquationPos]), vectorElementStride, &norm, &(B[inEquationPos]), vectorElementStride, vectorLength);
+			});
+		};
+	}
+	
+	
+	if (( self = [super initWithResult: @[result] operand: @[A] buffers: @[] operation: op] )) {
+        
+    }
+    return self;
+}
+
+// Int aFunction*f*f = 1
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform normalizationFunction: (GLFunction *) aFunction
+{
+	GLLinearTransform *A = (GLLinearTransform *) linearTransform;
+	NSUInteger index = [A.toDimensions indexOfObject: aFunction.dimensions[0]];
+	if (index == NSNotFound) {
+		[NSException raise: @"InvalidIndex" format: @"The index you provided is greater than the number of dimensions."];
+	}
+	
+	if (aFunction.dimensions.count > 1) {
+		[NSException raise: @"InvalidNormalizationFunction" format: @"The normalization function can only be one dimensional at this point."];
+	}
+	
+	if ( ![A.toDimensions[index] isEvenlySampled] ) {
+		[NSException raise: @"NotYetImplemented" format: @"Normalization is only possible on evenly sampled dimensions."];
+	}
+	
+	if ( aFunction.isComplex ) {
+		[NSException raise: @"NotYetImplemented" format: @"Normalization is only possible on real function."];
+	}
+	
+	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.toDimensions toDimensions: A.fromDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
+	GLMatrixDescription *operandDescription = linearTransform.matrixDescription;
+	
+#warning The vector stride should be the columnStride for a 1D matrix, but could be 1 in a 3D matrix.
+	
+	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[index].nColumns;
+	NSUInteger vectorStride = 1; //operandDescription.strides[index].columnStride;
+	NSUInteger vectorLength = operandDescription.strides[index].nRows;
+	NSUInteger vectorElementStride = operandDescription.strides[index].rowStride;
+	NSUInteger complexStride = operandDescription.strides[index].complexStride;
+	
+	GLFloat deltaX = [A.toDimensions[index] sampleInterval];
+	
+	dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+	variableOperation op;
+	if (A.isComplex) {
+		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
+				
+				NSUInteger inEquationPos = iteration*vectorStride;
+				
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLSplitComplex Asplit;
+				Asplit.realp = &(A[inEquationPos]);
+				Asplit.imagp = &(A[inEquationPos+complexStride]);
+				
+				GLFloat *f = (GLFloat *) [operandArray[1] bytes];
+				
+				GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+				GLSplitComplex Bsplit;
+				Bsplit.realp = &(B[inEquationPos]);
+				Bsplit.imagp = &(B[inEquationPos+complexStride]);
+				
+				// square it
+				vGL_zvmags(&Asplit, vectorElementStride, Bsplit.realp, vectorElementStride, vectorLength);
+				
+				// Multiply by the normalization function.
+				vGL_vmul( Bsplit.realp, vectorElementStride, f, 1, Bsplit.realp, vectorElementStride, vectorLength );
+				
+				// sum it. sum = 1/(2*h) * (f_0 + 2*f_1 + 2*f_2 + ... + 2*f_{N-1} + 2*f_N
+				GLFloat sum = 0.0;
+				vGL_sve(Bsplit.realp, vectorElementStride, &sum, vectorLength);
+				sum = deltaX * (sum - Bsplit.realp[0]/2.0 - Bsplit.realp[0+vectorElementStride*(vectorLength-1)]/2.0);
+				
+				GLFloat norm = 1/sqrt(fabs(sum));
+				vGL_vsmul(Asplit.realp, vectorElementStride, &norm, Bsplit.realp, vectorElementStride, vectorLength);
+				vGL_vsmul(Asplit.imagp, vectorElementStride, &norm, Bsplit.imagp, vectorElementStride, vectorLength);
+			});
+		};
+	} else {
+		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *f = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+				
+				NSUInteger inEquationPos = iteration*vectorStride;
+				
+				// square it
+				vGL_vsq(&(A[inEquationPos]), vectorElementStride, &(B[inEquationPos]), vectorElementStride, vectorLength);
+				
+				// Multiply by the normalization function.
+				vGL_vmul( &(B[inEquationPos]), vectorElementStride, f, 1, &(B[inEquationPos]), vectorElementStride, vectorLength );
+				
+				// sum it. sum = 1/(2*h) * (f_0 + 2*f_1 + 2*f_2 + ... + 2*f_{N-1} + 2*f_N
+				GLFloat sum = 0.0;
+				vGL_sve(&(B[inEquationPos]), vectorElementStride, &sum, vectorLength);
+				sum = deltaX * (sum - B[inEquationPos]/2.0 - B[inEquationPos+vectorElementStride*(vectorLength-1)]/2.0);
+				
+				GLFloat norm = 1/sqrt(fabs(sum));
+				vGL_vsmul(&(A[inEquationPos]), vectorElementStride, &norm, &(B[inEquationPos]), vectorElementStride, vectorLength);
+			});
+		};
+	}
+	
+	
+	if (( self = [super initWithResult: @[result] operand: @[A, aFunction] buffers: @[] operation: op] )) {
+        
+    }
+    return self;
+}
+
+@end
+
 
 /************************************************/
 /*		GLMatrixEigensystemOperation            */

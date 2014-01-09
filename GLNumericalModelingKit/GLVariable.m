@@ -334,7 +334,7 @@ void createMatrixDescriptionString( GLMatrixDescription *matrixDescription, NSMu
 	GLFloat divisor = pow(10, floor(log10(max)));
 	if ( divisor == 0.0) divisor = 1;
 	
-	[descrip appendFormat: @"%g * ", divisor];
+	[descrip appendFormat: @"%g * \n", divisor];
 	createMatrixDescriptionStringRecursion(matrixDescription, descrip, @"(", @"(", 0, a, divisor, lastNonTrivialDimension, rank);
 }
 
@@ -394,7 +394,7 @@ void createMatrixDescriptionStringRecursion( GLMatrixDescription *matrixDescript
 					if (iDim+1 < matrixDescription.nDimensions) {
 						createMatrixDescriptionStringRecursion(matrixDescription, descrip, newLeftPos, newRightPos, iDim+1, &(a[i*rs+j*cs]), divisor, lastNonTrivialDimension, rank);
 					}
-                    if (!is) [descrip appendFormat: @"%6.2f\t", a[i*rs+j*cs]/divisor];
+                    if (!is) [descrip appendFormat: @"%6.6f\t", a[i*rs+j*cs]/divisor];
                     else [descrip appendFormat: @"%6.2f + %6.2fi\t", a[i*rs+j*cs]/divisor, a[i*rs+j*cs + is]/divisor];
                 } else {
                     [descrip appendFormat: @"\n"];

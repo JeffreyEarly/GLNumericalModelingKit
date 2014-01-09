@@ -1106,6 +1106,20 @@
 	return operation.result;
 }
 
+- (GLLinearTransform *) normalizeWithScalar: (GLFloat) aScalar acrossDimensions: (NSUInteger) dimIndex
+{
+	GLVariableOperation *operation = [[GLMatrixNormalizationOperation alloc] initWithLinearTransformation: self normalizationConstant: aScalar dimensionIndex: dimIndex];
+	operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLLinearTransform *) normalizeWithFunction: (GLFunction *) aFunction
+{
+	GLVariableOperation *operation = [[GLMatrixNormalizationOperation alloc] initWithLinearTransformation: self normalizationFunction: aFunction];
+	operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 /************************************************/
 /*		Finite Differencing						*/
 /************************************************/
@@ -1200,6 +1214,9 @@ void weights( GLFloat z, GLFloat *x, NSUInteger m, GLFloat *c, NSUInteger n )
 			return (GLFloatComplex) c[rightBC*(bandwidth+1) + (bandwidth+1)+(col[0]-x.nPoints)];
 		} else if ( abs((int)col[0]-(int)row[0]) <= bandwidth) {
 			NSUInteger a = row[0]<bandwidth?row[0]:bandwidth; // make sure we don't go below 0
+			if (row[0]+bandwidth > x.nPoints-1) { // Fix issues when we get to the right side the matrix
+				a += row[0]+bandwidth-x.nPoints+1;
+			}
 			weights( xVal[row[0]], &(xVal[row[0]-a]), numDerivs, c, n);
 			return (GLFloatComplex) c[numDerivs*n + a+(col[0]-row[0])];
 		} else {

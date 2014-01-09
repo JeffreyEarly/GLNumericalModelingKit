@@ -70,7 +70,8 @@ typedef	FFTSetupD	GLFFTSetup;
 #define	vGL_vsmul		vDSP_vsmulD			// Vector scalar multipy
 #define	vGL_vadd		vDSP_vaddD
 #define	vGL_vsmsa		vDSP_vsmsaD
-#define	vGL_vsq			vDSP_vsqD
+#define	vGL_vsq			vDSP_vsqD			// Square a real vector
+#define vGL_zvmags		vDSP_zvmagsD		// Square a complex vector
 #define	vGL_sve			vDSP_sveD
 #define	vGL_vsadd		vDSP_vsaddD
 #define	vGL_vmul		vDSP_vmulD
@@ -91,17 +92,23 @@ typedef	FFTSetupD	GLFFTSetup;
 #define	vGL_vmmsb		vDSP_vmmsbD
 #define	vGL_vmma		vDSP_vmmaD			// Vector multiply, multiply, add  ( A*B + C*D)
 
-#define vGL_mmov	vDSP_mmovD
+#define vGL_mmov		vDSP_mmovD
 #define vGL_mtrans		vDSP_mtransD		// Matrix transpose
 
 #define	vGL_fft2d_zip			vDSP_fft2d_zipD
 #define	vGL_fft2d_zop			vDSP_fft2d_zopD
 #define	vGL_create_fftsetup		vDSP_create_fftsetupD
 #define	vGL_destroy_fftsetup	vDSP_destroy_fftsetupD
-#define vGL_zvmags	vDSP_zvmagsD
+
 
 #define	vGL_ctoz        vDSP_ctozD          // Interleaved Complex->Split Complex
 #define	vGL_ztoc        vDSP_ztocD          // Split Complex->Interleaved Complex
+
+#define vGL_vtrapz		vDSP_vtrapzD		// Trapezoidal integration
+#define	vGL_vsimps		vDSP_vsimpsD		// Simpson integration
+
+#define vGL_mmul		vDSP_mmulD			// Real matrix multiplication
+#define vGL_zmmul		vDSP_zmmulD			// Complex matrix multiplication
 
 #else
 
@@ -145,7 +152,8 @@ typedef	FFTSetup	GLFFTSetup;
 #define	vGL_vsmul		vDSP_vsmul
 #define	vGL_vadd		vDSP_vadd
 #define	vGL_vsmsa		vDSP_vsmsa
-#define	vGL_vsq			vDSP_vsq
+#define	vGL_vsq			vDSP_vsq			// Square a real vector
+#define vGL_zvmags		vDSP_zvmags			// Square a complex vector
 #define	vGL_sve			vDSP_sve
 #define	vGL_vsadd		vDSP_vsadd
 #define	vGL_vmul		vDSP_vmul
@@ -174,10 +182,16 @@ typedef	FFTSetup	GLFFTSetup;
 #define	vGL_fft2d_zop			vDSP_fft2d_zop
 #define	vGL_create_fftsetup		vDSP_create_fftsetup
 #define	vGL_destroy_fftsetup	vDSP_destroy_fftsetup
-#define vGL_zvmags	vDSP_zvmags
 
-#define	vGL_ctoz        vDSP_ctoz          // Interleaved Complex->Split Complex
-#define	vGL_ztoc        vDSP_ztoc          // Split Complex->Interleaved Complex
+
+#define	vGL_ctoz        vDSP_ctoz			// Interleaved Complex->Split Complex
+#define	vGL_ztoc        vDSP_ztoc			// Split Complex->Interleaved Complex
+
+#define vGL_vtrapz		vDSP_vtrapz			// Trapezoidal integration
+#define	vGL_vsimps		vDSP_vsimps			// Simpson integration
+
+#define vGL_mmul		vDSP_mmul			// Real matrix multiplication
+#define vGL_zmmul		vDSP_zmmul			// Complex matrix multiplication
 
 #endif
 
