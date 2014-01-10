@@ -12,11 +12,17 @@
  * @function apply_matrix_loop
  *
  * @abstract
- * Loops over other matrix dimensions, allowing you to treat one dimension in isolation from the others.
+ * Loops over other matrix dimensions, allowing you to treat one dimension in isolation from the others. Given an equation of the form A x = b.
  */
-void apply_matrix_loop( GLMatrixDescription *operandDescription, GLMatrixDescription *resultDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger, NSUInteger ));
+void apply_matrix_vector_loop( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger, NSUInteger ));
 
-NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex );
+NSUInteger compute_total_matrix_vector_loops( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex );
+
+/************************************************/
+/*                                              */
+/*		Creation                                */
+/*                                              */
+/************************************************/
 
 #pragma mark -
 #pragma mark Creation
@@ -48,9 +54,19 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform fromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims;
 @end
 
+
+
+/************************************************/
+/*                                              */
+/*		Vector Multiplication (Transforms)      */
+/*                                              */
+/************************************************/
+
 #pragma mark -
-#pragma mark Transforms
+#pragma mark Vector Multiplication (Transforms)
 #pragma mark
+
+// Operations that find b, in A x = b
 
 /************************************************/
 /*		GLSingleDiagonalTransformOperation		*/
@@ -68,7 +84,9 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
 /************************************************/
 /*		GLTriadiagonalTransformOperation		*/
 /************************************************/
+
 /** Find b in A x = b for matrices A that are in tridiagonal format.
+ @discussion The matrices must have exactly one tridiagonal dimension. The remaining dimensions can be diagonal or identity.
  @param linearTransform The linear transform representing matrix A.
  @param function The function representing vector x.
  @returns The solution function, b.
@@ -81,6 +99,7 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
 /*		GLDenseMatrixTransformOperation         */
 /************************************************/
 /** Find b in A x = b for matrices A that are in dense format.
+  @discussion The matrices must have exactly one dense dimension. The remaining dimensions can be diagonal or identity.
  @param linearTransform The linear transform representing matrix A.
  @param function The function representing vector x.
  @returns The solution function, b.
@@ -91,9 +110,47 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
 
 
 
+/************************************************/
+/*                                              */
+/*		Matrix Multiplication                   */
+/*                                              */
+/************************************************/
+
+#pragma mark -
+#pragma mark Matrix Multiplication
+#pragma mark
+
+// Operations that find C, in A.B = C
+
+/********************************************************/
+/*		GLDiagonalMatrixMatrixMultiplicationOperation   */
+/********************************************************/
+
+@interface GLDiagonalMatrixMatrixMultiplicationOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
+@end
+
+/************************************************/
+/*		GLMatrixMatrixMultiplicationOperation   */
+/************************************************/
+
+@interface GLMatrixMatrixMultiplicationOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
+@end
+
+
+
+/************************************************/
+/*                                              */
+/*		Solvers                              */
+/*                                              */
+/************************************************/
+
 #pragma mark -
 #pragma mark Solvers
 #pragma mark
+
+// Operations that find x in A x = b
 
 /************************************************/
 /*		GLTriadiagonalSolverOperation			*/
@@ -121,25 +178,18 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
 @end
 
 
+
+/************************************************/
+/*                                              */
+/*		Inversion                               */
+/*                                              */
+/************************************************/
+
 #pragma mark -
-#pragma mark Manipulation
+#pragma mark Inversion
 #pragma mark
 
-/********************************************************/
-/*		GLDiagonalMatrixMatrixMultiplicationOperation   */
-/********************************************************/
-
-@interface GLDiagonalMatrixMatrixMultiplicationOperation : GLVariableOperation
-- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
-@end
-
-/************************************************/
-/*		GLMatrixMatrixMultiplicationOperation   */
-/************************************************/
-
-@interface GLMatrixMatrixMultiplicationOperation : GLVariableOperation
-- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
-@end
+// Operations that find B in B.A=I
 
 /************************************************/
 /*		GLMatrixInversionOperation              */
@@ -148,6 +198,18 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
 @interface GLMatrixInversionOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform;
 @end
+
+
+
+/************************************************/
+/*                                              */
+/*		Other                                   */
+/*                                              */
+/************************************************/
+
+#pragma mark -
+#pragma mark Other
+#pragma mark
 
 /************************************************/
 /*		GLMatrixNormalizationOperation          */
