@@ -38,6 +38,7 @@
 			
             if (iDim == variable.dimensions.count-1) {
                 self.strides[iDim].stride = variable.dataFormat == kGLInterleavedComplexDataFormat ? 2 : 1;
+                self.elementStride = self.strides[iDim].stride;
             } else {
                 self.strides[iDim].stride = self.strides[iDim+1].nPoints * self.strides[iDim+1].stride;
             }
@@ -133,7 +134,8 @@
 					}
 				}
 				if ( !foundNontrivialDimension) {
-					self.strides[iDim].stride = linearTransform.dataFormat == kGLInterleavedComplexDataFormat ? 2 : 1;;
+					self.strides[iDim].stride = linearTransform.dataFormat == kGLInterleavedComplexDataFormat ? 2 : 1;
+                    self.elementStride = self.strides[iDim].stride;
 				}
 			}
 			

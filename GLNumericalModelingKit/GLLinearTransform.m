@@ -933,7 +933,7 @@
 		GLTriadiagonalTransformOperation *operation = [[GLTriadiagonalTransformOperation alloc] initWithLinearTransformation: self function: x];
 		operation = [self replaceWithExistingOperation: operation];
 		return operation.result[0];
-	} else if (numDenseIndices == 1 && numDiagonalIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numIdentityIndices == 0) {
+	} else if (numDenseIndices == 1 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0) {
 		// Dense matrix transformations.
 		GLDenseMatrixTransformOperation *operation = [[GLDenseMatrixTransformOperation alloc] initWithLinearTransformation: self function: x];
 		operation = [self replaceWithExistingOperation: operation];

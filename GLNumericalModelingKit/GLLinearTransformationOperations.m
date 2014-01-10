@@ -413,26 +413,36 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
         [NSException raise: @"DimensionsNotEqualException" format: @"From dimensions of the linear operator must equal the operand vector."];
     }
     
-    for (NSNumber *format in linearTransform.matrixFormats) {
-        if (format.unsignedIntegerValue != kGLDenseMatrixFormat) {
-            [NSException raise: @"MatrixWrongFormat" format: @"This operation can only be performed with a dense matrix."];
-        }
+    GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
+    NSUInteger denseIndex = NSNotFound;
+	NSUInteger numDenseIndices = 0;
+	for ( NSUInteger index=0; index < matrixDescription.nDimensions; index++) {
+        if (matrixDescription.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
+			numDenseIndices++;
+			denseIndex = index;
+		}
     }
-    
-    if (linearTransform.matrixDescription.nDimensions != 1) {
-        [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
+	
+    if ( numDenseIndices != 1 ) {
+        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find a dense index."];
     }
 
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
 	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+    GLMatrixDescription *vectorDescription = result.matrixDescription;
 	
+    // This does a check to make sure the formatting is correct.
+    compute_total_loops( matrixDescription, vectorDescription, denseIndex);
+    
     if (linearTransform.name && function.name) {
         result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
     }
     
+    dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+    
 	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
-        GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
+        
         
 //        int M = (int) matrixDescription.strides[0].nRows;
 //        int N = (int) matrixDescription.strides[0].nColumns;
@@ -440,16 +450,20 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 //            cblas_sgemv( CblasRowMajor,  CblasNoTrans, M, N, 1.0, fOperand.bytes, M, sOperand.bytes, 1.0, 1.0, result.mutableBytes, 1);
 //        };
 		
-		int M = (int) matrixDescription.strides[0].nRows;
+        NSUInteger matrixStride = matrixDescription.strides[denseIndex].stride;
+        NSUInteger vectorStride = vectorDescription.strides[denseIndex].stride;
+		int M = (int) matrixDescription.strides[denseIndex].nRows;
         int N = (int) 1;
-		int K = (int) matrixDescription.strides[0].nColumns;
+		int K = (int) matrixDescription.strides[denseIndex].nColumns;
 		if ( !linearTransform.isComplex && !function.isComplex)
 		{	// C = A.X
 			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
-				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
-				vGL_mmul( A, 1, B, 1, C, 1, M, N, K);
+                apply_matrix_loop(matrixDescription, vectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+                    GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+                    GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+                    GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+                    vGL_mmul( &(A[inEquationPos]), matrixStride, &(B[outEquationPos]), vectorStride, &(C[outEquationPos]), vectorStride, M, N, K);
+                });
 			};
 		}
 		else if ( linearTransform.isComplex && !function.isComplex)
@@ -607,7 +621,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
     NSUInteger denseIndex = NSNotFound;
 	NSUInteger numDenseIndices = 0;
 	for ( NSUInteger index=0; index < matrixDescription.nDimensions; index++) {
-        if (matrixDescription.strides[index].matrixFormat == kGLTridiagonalMatrixFormat ) {
+        if (matrixDescription.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
 			numDenseIndices++;
 			denseIndex = index;
 		}
@@ -1043,11 +1057,18 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		[NSException raise: @"NotYetImplemented" format: @"Normalization is only possible on evenly sampled dimensions."];
 	}
 	
-	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.toDimensions toDimensions: A.fromDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
+	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.fromDimensions toDimensions: A.toDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
 	GLMatrixDescription *operandDescription = linearTransform.matrixDescription;
 	
+	NSUInteger lastNonTrivialIndex = NSNotFound;
+    for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
+		if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat) {
+            lastNonTrivialIndex = index;
+        }
+    }
+    
 	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[index].nColumns;
-	NSUInteger vectorStride = operandDescription.strides[index].columnStride;
+	NSUInteger vectorStride = lastNonTrivialIndex > index ? operandDescription.strides[lastNonTrivialIndex].stride : operandDescription.strides[index].columnStride;
 	NSUInteger vectorLength = operandDescription.strides[index].nRows;
 	NSUInteger vectorElementStride = operandDescription.strides[index].rowStride;
 	NSUInteger complexStride = operandDescription.strides[index].complexStride;
@@ -1135,13 +1156,18 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		[NSException raise: @"NotYetImplemented" format: @"Normalization is only possible on real function."];
 	}
 	
-	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.toDimensions toDimensions: A.fromDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
+	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.fromDimensions toDimensions: A.toDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
 	GLMatrixDescription *operandDescription = linearTransform.matrixDescription;
 	
-#warning The vector stride should be the columnStride for a 1D matrix, but could be 1 in a 3D matrix.
-	
+	NSUInteger lastNonTrivialIndex = NSNotFound;
+    for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
+		if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat) {
+            lastNonTrivialIndex = index;
+        }
+    }
+    
 	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[index].nColumns;
-	NSUInteger vectorStride = 1; //operandDescription.strides[index].columnStride;
+	NSUInteger vectorStride = lastNonTrivialIndex > index ? operandDescription.strides[lastNonTrivialIndex].stride : operandDescription.strides[index].columnStride;
 	NSUInteger vectorLength = operandDescription.strides[index].nRows;
 	NSUInteger vectorElementStride = operandDescription.strides[index].rowStride;
 	NSUInteger complexStride = operandDescription.strides[index].complexStride;
@@ -1268,19 +1294,24 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		matrixFormats[densifiableIndex] = @(kGLDenseMatrixFormat);
 		A = [A copyWithDataType: A.dataFormat matrixFormat: matrixFormats ordering: kGLRowMatrixOrder];
 		operandDescription = A.matrixDescription;
+        denseIndex = densifiableIndex;
 	}
 	
 	// We need to construct a *new* eigenbasis.
 	// I'm not quite sure the right definitions to use.
 	NSMutableArray *eigenbasis = [NSMutableArray array];
 	for (GLDimension *dim in A.fromDimensions) {
-		GLDimension *newDim = [[GLDimension alloc] initDimensionWithGrid: dim.gridType nPoints: dim.nPoints domainMin:dim.domainMin length: dim.domainLength];
-		if (dim.name && ![dim.name isEqualToString: @""]) {
-			newDim.name = [NSString stringWithFormat: @"%@_eigen", dim.name];
-		} else {
-			newDim.name = @"eigen";
-		}
-		[eigenbasis addObject: newDim];
+        if ([A.fromDimensions indexOfObject: dim] == denseIndex) {
+            GLDimension *newDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: dim.nPoints domainMin:0 length: dim.nPoints-1];
+            if (dim.name && ![dim.name isEqualToString: @""]) {
+                newDim.name = [NSString stringWithFormat: @"%@_eigenmode", dim.name];
+            } else {
+                newDim.name = @"eigenmode";
+            }
+            [eigenbasis addObject: newDim];
+        } else {
+            [eigenbasis addObject: dim];
+        }
 	}
 	
 	dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
@@ -1457,13 +1488,17 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 	// I'm not quite sure the right definitions to use.
 	NSMutableArray *eigenbasis = [NSMutableArray array];
 	for (GLDimension *dim in A.fromDimensions) {
-		GLDimension *newDim = [[GLDimension alloc] initDimensionWithGrid: dim.gridType nPoints: dim.nPoints domainMin:dim.domainMin length: dim.domainLength];
-		if (dim.name && ![dim.name isEqualToString: @""]) {
-			newDim.name = [NSString stringWithFormat: @"%@_eigen", dim.name];
-		} else {
-			newDim.name = @"eigen";
-		}
-		[eigenbasis addObject: newDim];
+        if ([A.fromDimensions indexOfObject: dim] == denseIndex) {
+            GLDimension *newDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: dim.nPoints domainMin:0 length: dim.nPoints-1];
+            if (dim.name && ![dim.name isEqualToString: @""]) {
+                newDim.name = [NSString stringWithFormat: @"%@_eigenmode", dim.name];
+            } else {
+                newDim.name = @"eigenmode";
+            }
+            [eigenbasis addObject: newDim];
+        } else {
+            [eigenbasis addObject: dim];
+        }
 	}
 	
 	dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);

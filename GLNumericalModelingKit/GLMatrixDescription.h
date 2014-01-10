@@ -88,6 +88,9 @@ typedef struct {
 /// The stride/distance to the imaginary part of the point.
 @property NSUInteger complexStride;
 
+/// The stride/distance to the next point.
+@property NSUInteger elementStride;
+
 /// The format being used to store the data
 @property GLDataFormat dataFormat;
 

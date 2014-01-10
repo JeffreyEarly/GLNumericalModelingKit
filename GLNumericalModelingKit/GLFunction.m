@@ -963,7 +963,7 @@
 
 - (void) dumpToConsole
 {
-	NSLog(@"%@", [self matrixDescriptionString]);
+	NSLog(@"%@", [self description]);
 }
 
 - (NSString *) graphvisDescription

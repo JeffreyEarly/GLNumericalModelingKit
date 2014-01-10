@@ -51,6 +51,21 @@ GLSplitComplex splitComplexFromData( NSData *data )
     return nil;
 }
 
++ (GLVariable *) variableOfRealTypeWithPrototype: (GLVariable *) variable
+{
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        return [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        return [[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        GLLinearTransform *matrix = (GLLinearTransform *) variable;
+        return [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil];
+    }
+    return nil;
+}
+
 - (id) initWithType: (GLDataFormat) dataFormat withEquation: (GLEquation *) theEquation
 {
 	if (!theEquation) {
@@ -304,6 +319,37 @@ GLSplitComplex splitComplexFromData( NSData *data )
         return operation.result[0];
     }
 	return nil;
+}
+
+- (instancetype) makeRealIfPossible
+{
+    if (!self.isComplex) {
+        return self;
+    }
+    
+    BOOL isReal = YES;
+    GLFloat *value = self.pointerValue;
+    NSUInteger es = self.matrixDescription.elementStride;
+    NSUInteger cs = self.matrixDescription.complexStride;
+    GLFloat prec = sizeof(GLFloat) == 4 ? 1e-6 : 1e-14;
+    for (NSUInteger i=0; i<self.matrixDescription.nPoints; i++ ) {
+        GLFloat imagp = fabs(value[i*es+cs]);
+        isReal &= (imagp < prec || imagp/cabs(value[i*es] + value[i*es+cs]*I) < prec);
+        if (!isReal) {
+            break;
+        }
+    }
+    
+    if (isReal) {
+        GLVariable *result = [GLVariable variableOfRealTypeWithPrototype: self];
+        GLFloat *b = result.pointerValue;
+        for (NSUInteger i=0; i<self.matrixDescription.nPoints; i++ ) {
+            b[i] = value[i*es];
+        }
+        return result;
+    } else {
+        return self;
+    }
 }
 
 /************************************************/
