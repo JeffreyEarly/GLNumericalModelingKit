@@ -176,7 +176,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 
 // Computes the mean along the specified index, effectively collapsing the variable along that index.
 - (id) mean: (NSUInteger) index;
-- (id) mean;
+- (GLScalar *) mean;
 
 // Matlab style. String should be @"start:end,start:end,..."
 - (id) setValue: (GLFloat) aScalar atIndices: (NSString *) string;

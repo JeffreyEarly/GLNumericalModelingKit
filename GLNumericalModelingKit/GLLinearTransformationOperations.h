@@ -18,6 +18,9 @@ void apply_matrix_vector_loop( GLMatrixDescription *matrixDescription, GLMatrixD
 
 NSUInteger compute_total_matrix_vector_loops( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex );
 
+void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription *matrixB, GLMatrixDescription *matrixC, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger, NSUInteger ));
+
+
 /************************************************/
 /*                                              */
 /*		Creation                                */
@@ -54,7 +57,20 @@ NSUInteger compute_total_matrix_vector_loops( GLMatrixDescription *matrixDescrip
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform fromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims;
 @end
 
+/************************************************/
+/*		GLReduceMatrixDimensionsOperation		*/
+/************************************************/
 
+/** Reduce the dimensions of the linear transformation.
+ @param linearTransform Existing linear transformation.
+ @param fromString A string, in matlab format, describing the subset of indices requested.
+ @param toString A string, in matlab format, describing the subset of indices requested.
+ @returns The more-or-less the same linear transformation, but with new fromDimensions and toDimensions.
+ */
+
+@interface GLReduceMatrixDimensionsOperation : GLVariableOperation
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform fromDimensionsIndexString: (NSString *) fromString toDimensionsIndexString: (NSString *) toString;
+@end
 
 /************************************************/
 /*                                              */

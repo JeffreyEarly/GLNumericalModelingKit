@@ -736,6 +736,8 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	} else {
 		aDim = [[GLDimension alloc] initWithPoints: [self.points objectsAtIndexes: [NSIndexSet indexSetWithIndexesInRange: range]]];
 	}
+	aDim.name = self.name;
+	aDim.units = self.units;
 	
 	return aDim;
 }

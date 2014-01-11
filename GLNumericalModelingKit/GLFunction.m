@@ -620,7 +620,7 @@
 	return operation.result[0];
 }
 
-- (GLFunction *) mean
+- (GLScalar *) mean
 {
 	GLAverageOperation *operation = [[GLAverageOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
