@@ -120,6 +120,14 @@
 @end
 
 /************************************************/
+/*		GLIntegrationOperation					*/
+/************************************************/
+
+@interface GLIntegrationOperation : GLVariableOperation
+- (GLIntegrationOperation *) initWithFunction: (GLFunction *) variable;
+@end
+
+/************************************************/
 /*		GLInterleavedToSplitComplexOperation    */
 /************************************************/
 

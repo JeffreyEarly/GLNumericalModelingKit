@@ -1417,6 +1417,29 @@
 }
 
 /************************************************/
+/*		Integration								*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Integration
+#pragma mark
+
+- (void) test1DRealIntegration
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 101 domainMin: 0.0 length: 2.0];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension:xDim withDimensions:@[xDim] forEquation:equation];
+	
+	GLScalar *a = [x integrate];
+	
+	GLFloat *output = a.pointerValue;
+	GLFloat expected = 2.0;
+	if ( !fequalprec(output[0], expected, 1e-5) ) {
+		XCTFail(@"Expected %f, found %f.", expected, output[0]);
+	}
+}
+
+/************************************************/
 /*		Optimizer                               */
 /************************************************/
 

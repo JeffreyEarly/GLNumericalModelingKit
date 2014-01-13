@@ -178,6 +178,8 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 - (id) mean: (NSUInteger) index;
 - (GLScalar *) mean;
 
+- (GLScalar *) integrate;
+
 // Matlab style. String should be @"start:end,start:end,..."
 - (id) setValue: (GLFloat) aScalar atIndices: (NSString *) string;
 - (id) setVariableValue: (GLScalar *) aScalarVariable atIndices: (NSString *) string;

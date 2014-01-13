@@ -627,6 +627,13 @@
 	return operation.result[0];
 }
 
+- (GLScalar *) integrate
+{
+	GLIntegrationOperation *operation = [[GLIntegrationOperation alloc] initWithFunction: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 - (id) setValue: (GLFloat) aScalar atIndices: (NSString *) string
 {
     GLSetValueOperation *operation = [[GLSetValueOperation alloc] initWithVectorOperand: self scalarOperand:aScalar indexString: string];
