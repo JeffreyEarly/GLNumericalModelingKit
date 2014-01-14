@@ -39,12 +39,24 @@
 @property(readwrite, strong) GLDimension *frequencyDomainDimension;
 @property(readwrite, weak) GLDimension *spatialDomainDimension;
 
+@property(readwrite, strong, nonatomic) NSMapTable *rangeSubdimensionMap;
+
 @end
 
 static NSMapTable *dimensionMapTableMap = nil;
 static NSMapTable *transformSpatialDimensionMap = nil;
 
 @implementation GLDimension
+
+/************************************************/
+/*		Related Dimensions						*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Related Dimensions
+#pragma mark
+
+// These methods are used to store dimensions that are related to each other, either as transformed dimensions or subdimensions.
 
 // Returns a map table for the requested spatial dimension which maps to transformed dimensions
 + (NSMapTable *) transformMapForDimension: (GLDimension *) aDimension
@@ -723,6 +735,14 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 
 - (GLDimension *) subdimensionWithRange: (NSRange) range
 {
+	if (self.rangeSubdimensionMap) {
+		for (NSValue *value in self.rangeSubdimensionMap) {
+			if ( NSEqualRanges( value.rangeValue, range)) {
+				return [self.rangeSubdimensionMap objectForKey: value];
+			}
+		}
+	}
+	
 	if (range.location > self.nPoints - 1) return nil;
 	if ((range.location + range.length) > self.nPoints) return nil;
 	if (range.location == 0 && range.length == self.nPoints) return self;
@@ -738,6 +758,11 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	}
 	aDim.name = self.name;
 	aDim.units = self.units;
+	
+	if (!self.rangeSubdimensionMap) {
+		self.rangeSubdimensionMap = [NSMapTable strongToStrongObjectsMapTable];
+	}
+	[self.rangeSubdimensionMap setObject: aDim forKey: [NSValue valueWithRange: range]];
 	
 	return aDim;
 }

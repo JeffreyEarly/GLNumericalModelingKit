@@ -1287,9 +1287,9 @@
 		} else if ( op1.isComplex && !op2.isComplex) {
 			// C = A_complex / B_real
 			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLSplitComplex A = splitComplexFromData([operandArray[0] bytes]);
+				GLSplitComplex A = splitComplexFromData(operandArray[0]);
 				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
-				GLSplitComplex C = splitComplexFromData([resultArray[0] bytes]);
+				GLSplitComplex C = splitComplexFromData(resultArray[0]);
 				vGL_vdiv( B, 1, A.realp, 1, C.realp, 1, nDataPoints); // Note that vdiv does: C = B / A
 				vGL_vdiv( B, 1, A.imagp, 1, C.imagp, 1, nDataPoints); // Note that vdiv does: C = B / A
 			};
@@ -1298,17 +1298,17 @@
 			// C = A_complex / B_complex
 			if (useComplexArithmetic) {
 				operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-					GLSplitComplex A = splitComplexFromData([operandArray[0] bytes]);
-					GLSplitComplex B = splitComplexFromData([operandArray[1] bytes]);
-					GLSplitComplex C = splitComplexFromData([resultArray[0] bytes]);
+					GLSplitComplex A = splitComplexFromData(operandArray[0]);
+					GLSplitComplex B = splitComplexFromData(operandArray[1]);
+					GLSplitComplex C = splitComplexFromData(resultArray[0]);
 					vGL_zvdiv( &B, 1, &A, 1, &C, 1, nDataPoints); // Note that vdiv does: C = B / A
 				};
 				graphvisDescription = [NSString stringWithFormat: @"division (complex function, complex function)"];
 			} else {
 				operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-					GLSplitComplex A = splitComplexFromData([operandArray[0] bytes]);
-					GLSplitComplex B = splitComplexFromData([operandArray[1] bytes]);
-					GLSplitComplex C = splitComplexFromData([resultArray[0] bytes]);
+					GLSplitComplex A = splitComplexFromData(operandArray[0]);
+					GLSplitComplex B = splitComplexFromData(operandArray[1]);
+					GLSplitComplex C = splitComplexFromData(resultArray[0]);
 					vGL_vdiv( B.realp, 1, A.realp, 1, C.realp, 1, nDataPoints);
 					vGL_vdiv( B.imagp, 1, A.imagp, 1, C.imagp, 1, nDataPoints);
 				};
