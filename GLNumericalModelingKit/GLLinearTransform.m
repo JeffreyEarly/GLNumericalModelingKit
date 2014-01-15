@@ -898,6 +898,13 @@
 	return operation.result[0];
 }
 
+- (GLLinearTransform *) reducedFromDimensions: (NSString *) fromString toDimension: (NSString *) toString
+{
+	GLVariableOperation *operation = [[GLReduceMatrixDimensionsOperation alloc] initWithLinearTransformation: self fromDimensionsIndexString: fromString toDimensionsIndexString:toString];
+	operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 /************************************************/
 /*		Operations								*/
 /************************************************/
@@ -935,7 +942,7 @@
 		GLTriadiagonalTransformOperation *operation = [[GLTriadiagonalTransformOperation alloc] initWithLinearTransformation: self function: x];
 		operation = [self replaceWithExistingOperation: operation];
 		return operation.result[0];
-	} else if (numDenseIndices == 1 && numDiagonalIndices == 0 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0 && numIdentityIndices == 0) {
+	} else if (numDenseIndices == 1 && numSubDiagonalIndices == 0 && numSuperDiagonalIndices == 0 && numTriIndices == 0) {
 		// Dense matrix transformations.
 		GLDenseMatrixTransformOperation *operation = [[GLDenseMatrixTransformOperation alloc] initWithLinearTransformation: self function: x];
 		operation = [self replaceWithExistingOperation: operation];
@@ -1019,36 +1026,47 @@
 		[NSException raise: @"DimensionsNotEqualException" format: @"When multiplying two matrices, the fromDimensions of A, must equal the toDimensions of B."];
 	}
 	
-	NSUInteger numIdentityIndices = 0;
-	NSUInteger numDiagonalIndices = 0;
-	NSUInteger numSubDiagonalIndices = 0;
-	NSUInteger numSuperDiagonalIndices = 0;
-	NSUInteger numTriIndices = 0;
-	NSUInteger numDenseIndices = 0;
-	for ( NSNumber *num in self.matrixFormats ) {
-        if ([num unsignedIntegerValue] == kGLIdentityMatrixFormat) {
-			numIdentityIndices++;
-        } else if ([num unsignedIntegerValue] == kGLDiagonalMatrixFormat) {
-			numDiagonalIndices++;
-        } else if ([num unsignedIntegerValue] == kGLSubdiagonalMatrixFormat) {
-			numSubDiagonalIndices++;
-        } else if ([num unsignedIntegerValue] == kGLSuperdiagonalMatrixFormat) {
-			numSuperDiagonalIndices++;
-        } else if ([num unsignedIntegerValue] == kGLTridiagonalMatrixFormat) {
-			numTriIndices++;
-        } else if ([num unsignedIntegerValue] == kGLDenseMatrixFormat) {
-			numDenseIndices++;
-        }
-    }
+	NSUInteger numDiagonalIndicesMatrixA = 0;
+	NSUInteger numDensifiableIndicesMatrixA = 0;
+	NSUInteger densifiableIndexMatrixA = NSNotFound;
 	
+	NSUInteger numDiagonalIndicesMatrixB = 0;
+	NSUInteger numDensifiableIndicesMatrixB = 0;
+	NSUInteger densifiableIndexMatrixB = NSNotFound;
+	
+	for ( NSUInteger index=0; index<A.fromDimensions.count; index++ ) {
+		GLMatrixFormat formatA = [A.matrixFormats[index] unsignedIntegerValue];
+		GLMatrixFormat formatB = [B.matrixFormats[index] unsignedIntegerValue];
+		
+		if (formatA == kGLDiagonalMatrixFormat) {
+			numDiagonalIndicesMatrixA++;
+		} else if (formatA == kGLSubdiagonalMatrixFormat || formatA == kGLSuperdiagonalMatrixFormat || formatA == kGLTridiagonalMatrixFormat || formatA == kGLDenseMatrixFormat) {
+			numDensifiableIndicesMatrixA++;
+			densifiableIndexMatrixA = index;
+		}
+		
+        if (formatB == kGLDiagonalMatrixFormat) {
+			numDiagonalIndicesMatrixB++;
+		} else if (formatB == kGLSubdiagonalMatrixFormat || formatB == kGLSuperdiagonalMatrixFormat || formatB == kGLTridiagonalMatrixFormat || formatB == kGLDenseMatrixFormat) {
+			numDensifiableIndicesMatrixB++;
+			densifiableIndexMatrixB = index;
+		}
+    }
+		
 	GLVariableOperation *operation;
-	if (numDiagonalIndices == A.fromDimensions.count && [A.matrixDescription isEqualToMatrixDescription: B.matrixDescription]) {
+	if (numDiagonalIndicesMatrixA == A.fromDimensions.count && [A.matrixDescription isEqualToMatrixDescription: B.matrixDescription]) {
 		operation = [[GLMultiplicationOperation alloc] initWithFirstOperand: A secondOperand: B];
-	} else if (numDenseIndices == 1 && A.fromDimensions.count == 1 && [B.matrixFormats[0] unsignedIntegerValue] == kGLDenseMatrixFormat) {
-		operation = [[GLMatrixMatrixMultiplicationOperation alloc] initWithFirstOperand: A secondOperand: B];
-	} else if (A.fromDimensions.count == 1) {
-		A = [A copyWithDataType: A.dataFormat matrixFormat: @[@(kGLDenseMatrixFormat)] ordering:kGLRowMatrixOrder];
-		B = [B copyWithDataType: B.dataFormat matrixFormat: @[@(kGLDenseMatrixFormat)] ordering:kGLRowMatrixOrder];
+	} else if ( (numDensifiableIndicesMatrixA <= 1 || numDensifiableIndicesMatrixB <= 1) && (densifiableIndexMatrixA == densifiableIndexMatrixB || densifiableIndexMatrixA == NSNotFound || densifiableIndexMatrixB == NSNotFound ) ) {
+		NSUInteger index = densifiableIndexMatrixA == NSNotFound ? densifiableIndexMatrixB : densifiableIndexMatrixA;
+		if (index == NSNotFound) {
+			[NSException raise:@"StupidMatrixMultiplication" format: @"This is possible, but what's the logic?"];
+		}
+		NSMutableArray *newMatrixAFormats = [A.matrixFormats mutableCopy];
+		NSMutableArray *newMatrixBFormats = [B.matrixFormats mutableCopy];
+		newMatrixAFormats[index] = @(kGLDenseMatrixFormat);
+		newMatrixBFormats[index] = @(kGLDenseMatrixFormat);
+		A = [A copyWithDataType: A.dataFormat matrixFormat: newMatrixAFormats ordering:kGLRowMatrixOrder];
+		B = [B copyWithDataType: B.dataFormat matrixFormat: newMatrixBFormats ordering:kGLRowMatrixOrder];
 		operation = [[GLMatrixMatrixMultiplicationOperation alloc] initWithFirstOperand: A secondOperand: B];
 	} else {
 		[NSException raise: @"StupidMatrixMultiplication" format: @"You have requested the matrix multiplicatin of two matrices, but we only support diagonal matrices and 1D dense matrices."];

@@ -746,6 +746,39 @@
 @end
 
 /************************************************/
+/*		GLIntegrationOperation					*/
+/************************************************/
+
+@implementation GLIntegrationOperation
+
+- (GLIntegrationOperation *) initWithFunction: (GLFunction *) variable
+{
+	if (variable.dataFormat != kGLRealDataFormat && variable.dimensions.count != 1) {
+        [NSException raise: @"BadFormat" format: @"This operation can only take variables one-dimensional real variables."];
+    }
+
+	GLScalar *result = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: variable.equation];
+	NSUInteger N = variable.nDataElements;
+	GLFloat deltaX = [variable.dimensions[0] sampleInterval];
+	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+		GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+		GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+	
+		// sum it. sum = 1/(2*h) * (f_0 + 2*f_1 + 2*f_2 + ... + 2*f_{N-1} + 2*f_N
+		vGL_sve(A, 1, B, N);
+		*B = deltaX*(*B - A[0]/2.0 - A[N-1]/2.0);
+	};
+	
+	
+	if (( self = [super initWithResult: @[result] operand: @[variable] buffers: @[] operation: op] )) {
+        
+    }
+    return self;
+}
+
+@end
+
+/************************************************/
 /*		GLInterleavedToSplitComplexOperation    */
 /************************************************/
 

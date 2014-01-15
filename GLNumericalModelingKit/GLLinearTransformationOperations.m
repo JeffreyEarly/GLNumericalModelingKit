@@ -13,7 +13,7 @@
 
 #import <Accelerate/Accelerate.h>
 
-NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex )
+NSUInteger compute_total_matrix_vector_loops( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex )
 {
     NSUInteger lastNonTrivialNonLoopIndex = NSNotFound;
 	NSUInteger lastTrivialIndex = NSNotFound;
@@ -35,7 +35,7 @@ NSUInteger compute_total_loops( GLMatrixDescription *matrixDescription, GLMatrix
     return totalEquations*totalOuterLoops;
 }
 
-void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger, NSUInteger ))
+void apply_matrix_vector_loop( GLMatrixDescription *matrixDescription, GLMatrixDescription *vectorDescription, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger, NSUInteger ))
 {
 	NSUInteger lastNonTrivialNonLoopIndex = NSNotFound;
 	NSUInteger lastTrivialIndex = NSNotFound;
@@ -102,6 +102,95 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		block(0, 0, 0);
 	}
 }
+
+// A.B=C
+// Matrix A
+void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription *matrixB, GLMatrixDescription *matrixC, NSUInteger loopIndex, dispatch_queue_t queue, void (^block)(NSUInteger, NSUInteger, NSUInteger ))
+{
+	NSUInteger lastNonTrivialNonLoopIndexMatrixA = NSNotFound;
+	NSUInteger lastTrivialIndexMatrixA = NSNotFound;
+	NSUInteger totalTrivialPointsMatrixA = 1;
+    
+    NSUInteger lastNonTrivialNonLoopIndexMatrixB = NSNotFound;
+	NSUInteger lastTrivialIndexMatrixB = NSNotFound;
+	NSUInteger totalTrivialPointsMatrixB = 1;
+    
+    NSUInteger matrixCStride = 0;
+	
+    for ( NSUInteger index=0; index < matrixA.nDimensions; index++) {
+        if (matrixA.strides[index].matrixFormat == kGLIdentityMatrixFormat && matrixB.strides[index].matrixFormat == kGLIdentityMatrixFormat && index != loopIndex) {
+            // Do nothing. Both matrices are trivial for this dimension.
+        } else if (matrixA.strides[index].matrixFormat == kGLIdentityMatrixFormat && matrixB.strides[index].matrixFormat == kGLDiagonalMatrixFormat && index != loopIndex) {
+            lastTrivialIndexMatrixA = index;
+			totalTrivialPointsMatrixA *= matrixA.strides[index].nPoints;
+            lastNonTrivialNonLoopIndexMatrixB = index;
+        } else if (matrixA.strides[index].matrixFormat == kGLDiagonalMatrixFormat && matrixB.strides[index].matrixFormat == kGLIdentityMatrixFormat && index != loopIndex) {
+            lastTrivialIndexMatrixB = index;
+			totalTrivialPointsMatrixB *= matrixB.strides[index].nPoints;
+            lastNonTrivialNonLoopIndexMatrixA = index;
+        } else if (index != loopIndex) {
+			[NSException raise: @"BadMatrixFormat" format:@"Cannot apply the matrix loop across a matrix of this format"];
+		}
+        
+        if (matrixC.strides[index].matrixFormat !=kGLIdentityMatrixFormat && index != loopIndex) {
+            matrixCStride = matrixC.strides[index].stride;
+        }
+    }
+	
+	// How many 'inner loop' steps we need to take depends on how many other nontrivial dimensions there are.
+	// Total equations should be the product of diagonal dimensions that are not the loop index.
+	NSUInteger matrixAStride = lastNonTrivialNonLoopIndexMatrixA == NSNotFound ? 0 : matrixA.strides[lastNonTrivialNonLoopIndexMatrixA].stride;
+	NSUInteger matrixALoops = matrixA.nPoints / matrixA.strides[loopIndex].nPoints;
+	
+	// Now we need the strides to match up to the inner loop
+	NSUInteger matrixBStride = lastNonTrivialNonLoopIndexMatrixB == NSNotFound ? 0 : matrixB.strides[lastNonTrivialNonLoopIndexMatrixB].stride;
+	NSUInteger matrixBLoops = matrixB.nPoints / matrixB.strides[loopIndex].nPoints;
+	
+	// Finally, we need the outer loop strides and totals
+	NSUInteger matrixCStrideALoop = lastNonTrivialNonLoopIndexMatrixA == NSNotFound ? 0 : matrixC.strides[lastNonTrivialNonLoopIndexMatrixA].stride;
+	NSUInteger matrixCStrideBLoop = lastNonTrivialNonLoopIndexMatrixB == NSNotFound ? 0 : matrixC.strides[lastNonTrivialNonLoopIndexMatrixB].stride;
+    
+	if (matrixALoops > 1 && matrixBLoops > 1 ) {
+		// This operation has two loops.
+		// The inner loop walks over non-trivial elements of the linear operator, while
+		// the out loop walks over trivial elements of the linear operator, really just to new x and b elements
+		dispatch_apply(matrixALoops, queue, ^(size_t matrixAIteration) {
+			NSInteger matrixAPosition = matrixAIteration*matrixAStride;
+			
+			dispatch_apply(matrixBLoops, queue, ^(size_t matrixBIteration) {
+				NSInteger matrixBPosition = matrixBIteration*matrixBStride;
+                
+				NSInteger matrixCPosition = matrixAIteration*matrixCStrideALoop + matrixBIteration*matrixCStrideBLoop;
+				
+				block(matrixAPosition, matrixBPosition, matrixCPosition);
+			});
+		});
+	} else if (matrixALoops > 1 && matrixBLoops == 1 ) {
+		dispatch_apply(matrixALoops, queue, ^(size_t matrixAIteration) {
+            NSInteger matrixAPosition = matrixAIteration*matrixAStride;
+			NSInteger matrixBPosition = 0;
+            NSInteger matrixCPosition = matrixAIteration*matrixCStride;
+            
+			block(matrixAPosition, matrixBPosition, matrixCPosition);
+		});
+	} else if (matrixALoops == 1 && matrixBLoops > 1 ) {
+		dispatch_apply(matrixBLoops, queue, ^(size_t matrixBIteration) {
+			NSInteger matrixAPosition = 0;
+			NSInteger matrixBPosition = matrixBIteration*matrixBStride;
+            NSInteger matrixCPosition = matrixBIteration*matrixCStride;
+			
+			block(matrixAPosition, matrixBPosition, matrixCPosition);
+		});
+	} else if (matrixALoops == 1 && matrixBLoops == 1 ) {
+		block(0, 0, 0);
+	}
+}
+
+/************************************************/
+/*                                              */
+/*		Creation                                */
+/*                                              */
+/************************************************/
 
 #pragma mark -
 #pragma mark Creation
@@ -190,13 +279,62 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 
 @end
 
+
 /************************************************/
-/*		GLSingleDiagonalTransformOperation		*/
+/*		GLReduceMatrixDimensionsOperation		*/
+/************************************************/
+
+@implementation GLReduceMatrixDimensionsOperation
+
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform fromDimensionsIndexString: (NSString *) fromString toDimensionsIndexString: (NSString *) toString
+{
+	NSArray *fromRanges = [GLDimension rangesFromIndexString: fromString usingDimensions: linearTransform.fromDimensions];
+	NSMutableArray *fromDimensions = [NSMutableArray array];
+	for (NSUInteger iDim=0; iDim<linearTransform.fromDimensions.count; iDim++) {
+		fromDimensions[iDim] = [linearTransform.fromDimensions[iDim] subdimensionWithRange: [fromRanges[iDim] rangeValue]];
+	}
+	
+	NSArray *toRanges = [GLDimension rangesFromIndexString: toString usingDimensions: linearTransform.toDimensions];
+	NSMutableArray *toDimensions = [NSMutableArray array];
+	for (NSUInteger iDim=0; iDim<linearTransform.toDimensions.count; iDim++) {
+		toDimensions[iDim] = [linearTransform.toDimensions[iDim] subdimensionWithRange: [toRanges[iDim] rangeValue]];
+	}
+	
+	GLLinearTransform *newLinearTransform = [GLLinearTransform transformOfType: linearTransform.dataFormat withFromDimensions: fromDimensions toDimensions: toDimensions inFormat: linearTransform.matrixFormats forEquation:linearTransform.equation matrix: nil];
+	
+	transformMatrix matrixBlock = linearTransform.matrixBlock;
+	GLMatrixDescription *oldMatrixDescription = linearTransform.matrixDescription;
+	GLMatrixDescription *newMatrixDescription = newLinearTransform.matrixDescription;
+	
+	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+		transformMatrix matrix = matrixBlock ? matrixBlock : [GLLinearTransform matrixBlockWithFormat: oldMatrixDescription fromData: operandArray[0]];
+		[GLLinearTransform writeToData: resultArray[0] withFormat: newMatrixDescription fromMatrixBlock: matrix];
+	};
+	
+	NSArray *operandArray = matrixBlock ? [NSArray array] : @[linearTransform];
+	
+	if (( self = [super initWithResult: @[newLinearTransform] operand: operandArray buffers: @[] operation: op] )) {
+		
+	}
+	
+	return self;
+}
+
+@end
+
+/************************************************/
+/*                                              */
+/*		Vector Multiplication (Transforms)      */
+/*                                              */
 /************************************************/
 
 #pragma mark -
-#pragma mark GLSingleDiagonalTransformOperation
+#pragma mark Vector Multiplication
 #pragma mark
+
+/************************************************/
+/*		GLSingleDiagonalTransformOperation		*/
+/************************************************/
 
 @implementation GLSingleDiagonalTransformOperation
 
@@ -307,10 +445,6 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 /*		GLTriadiagonalTransformOperation		*/
 /************************************************/
 
-#pragma mark -
-#pragma mark GLTriadiagonalTransformOperation
-#pragma mark
-
 @implementation GLTriadiagonalTransformOperation
 
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function
@@ -335,6 +469,9 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
     }
     
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
+    if (isComplex) {
+        [NSException raise:@"NotYetImplemented" format:@"Complex tridiagonal multiplication is not yet implemented"];
+    }
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
 	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
 	GLMatrixDescription *resultDescription = result.matrixDescription;
@@ -355,7 +492,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 
         self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				
-			apply_matrix_loop(operandDescription, resultDescription, triIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+			apply_matrix_vector_loop(operandDescription, resultDescription, triIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
 				
 				GLFloat *f = (GLFloat *) [operandArray[0] bytes];
 				
@@ -401,10 +538,6 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 /*		GLDenseMatrixTransformOperation		*/
 /************************************************/
 
-#pragma mark -
-#pragma mark GLDenseMatrixTransformOperation
-#pragma mark
-
 @implementation GLDenseMatrixTransformOperation
 
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function
@@ -413,26 +546,36 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
         [NSException raise: @"DimensionsNotEqualException" format: @"From dimensions of the linear operator must equal the operand vector."];
     }
     
-    for (NSNumber *format in linearTransform.matrixFormats) {
-        if (format.unsignedIntegerValue != kGLDenseMatrixFormat) {
-            [NSException raise: @"MatrixWrongFormat" format: @"This operation can only be performed with a dense matrix."];
-        }
+    GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
+    NSUInteger denseIndex = NSNotFound;
+	NSUInteger numDenseIndices = 0;
+	for ( NSUInteger index=0; index < matrixDescription.nDimensions; index++) {
+        if (matrixDescription.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
+			numDenseIndices++;
+			denseIndex = index;
+		}
     }
-    
-    if (linearTransform.matrixDescription.nDimensions != 1) {
-        [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
+	
+    if ( numDenseIndices != 1 ) {
+        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find a dense index."];
     }
 
 	BOOL isComplex = linearTransform.isComplex || function.isComplex;
 	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
 	GLFunction *result = [GLFunction functionOfType: format withDimensions: linearTransform.toDimensions forEquation: linearTransform.equation];
+    GLMatrixDescription *vectorDescription = result.matrixDescription;
 	
+    // This does a check to make sure the formatting is correct.
+    compute_total_matrix_vector_loops( matrixDescription, vectorDescription, denseIndex);
+    
     if (linearTransform.name && function.name) {
         result.name = [NSString stringWithFormat: @"%@_%@", function.name, linearTransform.name];
     }
     
+    dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+    
 	if (( self = [super initWithResult: @[result] operand: @[linearTransform, function]] )) {
-        GLMatrixDescription *matrixDescription = linearTransform.matrixDescription;
+        
         
 //        int M = (int) matrixDescription.strides[0].nRows;
 //        int N = (int) matrixDescription.strides[0].nColumns;
@@ -440,16 +583,20 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 //            cblas_sgemv( CblasRowMajor,  CblasNoTrans, M, N, 1.0, fOperand.bytes, M, sOperand.bytes, 1.0, 1.0, result.mutableBytes, 1);
 //        };
 		
-		int M = (int) matrixDescription.strides[0].nRows;
+        NSUInteger matrixStride = matrixDescription.strides[denseIndex].stride;
+        NSUInteger vectorStride = vectorDescription.strides[denseIndex].stride;
+		int M = (int) matrixDescription.strides[denseIndex].nRows;
         int N = (int) 1;
-		int K = (int) matrixDescription.strides[0].nColumns;
+		int K = (int) matrixDescription.strides[denseIndex].nColumns;
 		if ( !linearTransform.isComplex && !function.isComplex)
 		{	// C = A.X
 			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
-				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
-				vGL_mmul( A, 1, B, 1, C, 1, M, N, K);
+                apply_matrix_vector_loop(matrixDescription, vectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+                    GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+                    GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+                    GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+                    vGL_mmul( &(A[inEquationPos]), matrixStride, &(B[outEquationPos]), vectorStride, &(C[outEquationPos]), vectorStride, M, N, K);
+                });
 			};
 		}
 		else if ( linearTransform.isComplex && !function.isComplex)
@@ -489,6 +636,221 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 }
 
 @end
+
+
+/************************************************/
+/*                                              */
+/*		Matrix Multiplication                   */
+/*                                              */
+/************************************************/
+
+#pragma mark -
+#pragma mark Matrix Multiplication
+#pragma mark
+
+
+/********************************************************/
+/*		GLDiagonalMatrixMatrixMultiplicationOperation   */
+/********************************************************/
+
+@implementation GLDiagonalMatrixMatrixMultiplicationOperation
+
+// This is copy and pasted from the superclass, needs to be properly retooled.
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
+{
+    
+    if ( ![A.fromDimensions isEqualToArray: B.toDimensions] ) {
+        [NSException raise: @"DimensionsNotEqualException" format: @"fromDimensions of A, must equal the toDimensions of B."];
+    }
+    
+    for ( NSUInteger index=0; index < A.matrixFormats.count; index++) {
+        NSNumber *format = A.matrixFormats[index];
+        if (format.unsignedIntegerValue != kGLDenseMatrixFormat) {
+            [NSException raise: @"MatrixWrongFormat" format: @"This operation can only be performed with a dense matrix."];
+        }
+    }
+    
+    if (A.matrixDescription.nDimensions != 1) {
+        [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
+    }
+	
+	BOOL isComplex = A.isComplex || B.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	
+	A = [A copyWithDataType: format matrixFormat: A.matrixFormats ordering: kGLRowMatrixOrder];
+	B = [B copyWithDataType: format matrixFormat: B.matrixFormats ordering: kGLRowMatrixOrder];
+    
+	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions:A.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
+    
+	if (( self = [super initWithResult: @[result] operand: @[A, B]] )) {
+        
+        int M = (int) A.matrixDescription.strides[0].nRows;
+        int N = (int) B.matrixDescription.strides[0].nColumns;
+		int K = (int) A.matrixDescription.strides[0].nColumns;
+		
+		if ( !A.isComplex && !B.isComplex)
+		{	// C = A.X
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+				vDSP_mmul( A, 1, B, 1, C, 1, M, N, K);
+			};
+		}
+		else if ( A.isComplex && !B.isComplex)
+		{	// (A+iB).(X) = A.X + iB.X
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData( operandArray[0] );
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
+				
+				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
+			};
+		}
+		else if ( !A.isComplex && B.isComplex)
+		{	// A.(X+iY) = A.X + iA.Y
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLSplitComplex B = splitComplexFromData( operandArray[1] );
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
+				
+				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
+			};
+		}
+		else if ( A.isComplex && B.isComplex)
+		{
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData(operandArray[0]);
+				GLSplitComplex B = splitComplexFromData(operandArray[1]);
+				GLSplitComplex C = splitComplexFromData(resultArray[0]);
+				
+				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
+			};
+		}
+		
+    }
+    return self;
+}
+
+@end
+
+/************************************************/
+/*		GLMatrixMatrixMultiplicationOperation   */
+/************************************************/
+
+@implementation GLMatrixMatrixMultiplicationOperation
+
+// This is copy and pasted from the superclass, needs to be properly retooled.
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
+{
+    
+    if ( ![A.fromDimensions isEqualToArray: B.toDimensions] ) {
+        [NSException raise: @"DimensionsNotEqualException" format: @"fromDimensions of A, must equal the toDimensions of B."];
+    }
+    
+    GLMatrixDescription *matrixA = A.matrixDescription;
+	GLMatrixDescription *matrixB = B.matrixDescription;
+    NSUInteger denseIndex = NSNotFound;
+	NSUInteger numDenseIndices = 0;
+	for ( NSUInteger index=0; index < matrixA.nDimensions; index++) {
+        if (matrixA.strides[index].matrixFormat == kGLDenseMatrixFormat && matrixB.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
+			numDenseIndices++;
+			denseIndex = index;
+		}
+    }
+	
+    if ( numDenseIndices != 1 ) {
+        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find a dense index."];
+    }
+	
+	BOOL isComplex = A.isComplex || B.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	
+	A = [A copyWithDataType: format matrixFormat: A.matrixFormats ordering: kGLRowMatrixOrder];
+	B = [B copyWithDataType: format matrixFormat: B.matrixFormats ordering: kGLRowMatrixOrder];
+    
+	NSArray *matrixFormats = [GLMatrixDescription commonFormatsFromLeft: A.matrixFormats right: B.matrixFormats];
+	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions:A.toDimensions inFormat: matrixFormats forEquation:B.equation matrix: nil];
+    GLMatrixDescription *matrixC = result.matrixDescription;
+	dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+	
+	if (( self = [super initWithResult: @[result] operand: @[A, B]] )) {
+        
+		//GLLinearTransform *C = result;
+        
+        int M = (int) A.matrixDescription.strides[denseIndex].nRows;
+        int N = (int) B.matrixDescription.strides[denseIndex].nColumns;
+		int K = (int) A.matrixDescription.strides[denseIndex].nColumns;
+		
+        //		int lda = (int) A.matrixDescription.strides[0].rowStride;
+        //        int ldb = (int) B.matrixDescription.strides[0].rowStride;
+        //		int ldc = (int) C.matrixDescription.strides[0].rowStride;
+        //
+        //        self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
+        //			cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0, fOperand.bytes, lda, sOperand.bytes, ldb, 0.0, result.mutableBytes, ldc);
+        //        };
+		
+		if ( !A.isComplex && !B.isComplex)
+		{	// C = A.X
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				apply_matrix_matrix_loop(matrixA, matrixB, matrixC, denseIndex, globalQueue, ^(NSUInteger matrixAPosition, NSUInteger matrixBPosition, NSUInteger matrixCPosition) {
+					GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+					GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+					GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+					vDSP_mmul( &(A[matrixAPosition]), matrixA.strides[denseIndex].stride, &(B[matrixBPosition]), matrixB.strides[denseIndex].stride, &(C[matrixCPosition]), matrixC.strides[denseIndex].stride, M, N, K);
+				});
+			};
+		}
+		else if ( A.isComplex && !B.isComplex)
+		{	// (A+iB).(X) = A.X + iB.X
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData( operandArray[0] );
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
+				
+				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
+			};
+		}
+		else if ( !A.isComplex && B.isComplex)
+		{	// A.(X+iY) = A.X + iA.Y
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLSplitComplex B = splitComplexFromData( operandArray[1] );
+				GLSplitComplex C = splitComplexFromData( resultArray[0] );
+				
+				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
+				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
+			};
+		}
+		else if ( A.isComplex && B.isComplex)
+		{
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLSplitComplex A = splitComplexFromData(operandArray[0]);
+				GLSplitComplex B = splitComplexFromData(operandArray[1]);
+				GLSplitComplex C = splitComplexFromData(resultArray[0]);
+				
+				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
+			};
+		}
+		
+    }
+    return self;
+}
+
+@end
+
+/************************************************/
+/*                                              */
+/*		Solvers                              */
+/*                                              */
+/************************************************/
+
+#pragma mark -
+#pragma mark Solvers
+#pragma mark
 
 /************************************************/
 /*		GLTriadiagonalSolverOperation			*/
@@ -540,7 +902,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
         
         self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
             
-            apply_matrix_loop(operandDescription, resultDescription, triIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+            apply_matrix_vector_loop(operandDescription, resultDescription, triIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
                 
                 GLFloat *f = (GLFloat *) [operandArray[0] bytes];
                 
@@ -607,7 +969,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
     NSUInteger denseIndex = NSNotFound;
 	NSUInteger numDenseIndices = 0;
 	for ( NSUInteger index=0; index < matrixDescription.nDimensions; index++) {
-        if (matrixDescription.strides[index].matrixFormat == kGLTridiagonalMatrixFormat ) {
+        if (matrixDescription.strides[index].matrixFormat == kGLDenseMatrixFormat ) {
 			numDenseIndices++;
 			denseIndex = index;
 		}
@@ -636,7 +998,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
     }
     // sgesv also overwrites the b vector (in Mx=b) with the output x. So we need to copy the output as well.
     
-    NSUInteger totalLoops = compute_total_loops(matrixDescription, vectorDescription, denseIndex);
+    NSUInteger totalLoops = compute_total_matrix_vector_loops(matrixDescription, vectorDescription, denseIndex);
     GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: totalLoops*N*sizeof(__CLPK_integer)];
     NSMutableArray *buffers = [NSMutableArray arrayWithObject: buffer1];
     if (inElementStride != 1) {
@@ -650,7 +1012,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
     
     variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
         
-        apply_matrix_loop(matrixDescription, vectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+        apply_matrix_vector_loop(matrixDescription, vectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
             __CLPK_integer *ipivData = (__CLPK_integer *) [bufferArray[0] bytes];
             __CLPK_integer *ipiv = &(ipivData[iteration*N]);
             __CLPK_integer n = (__CLPK_integer) N;
@@ -715,197 +1077,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 
 @end
 
-/********************************************************/
-/*		GLDiagonalMatrixMatrixMultiplicationOperation   */
-/********************************************************/
 
-#pragma mark -
-#pragma mark GLDiagonalMatrixMatrixMultiplicationOperation
-#pragma mark
-
-@implementation GLDiagonalMatrixMatrixMultiplicationOperation
-
-// This is copy and pasted from the superclass, needs to be properly retooled.
-- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
-{
-    
-    if ( ![A.fromDimensions isEqualToArray: B.toDimensions] ) {
-        [NSException raise: @"DimensionsNotEqualException" format: @"fromDimensions of A, must equal the toDimensions of B."];
-    }
-    
-    for ( NSUInteger index=0; index < A.matrixFormats.count; index++) {
-        NSNumber *format = A.matrixFormats[index];
-        if (format.unsignedIntegerValue != kGLDenseMatrixFormat) {
-            [NSException raise: @"MatrixWrongFormat" format: @"This operation can only be performed with a dense matrix."];
-        }
-    }
-    
-    if (A.matrixDescription.nDimensions != 1) {
-        [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
-    }
-	
-	BOOL isComplex = A.isComplex || B.isComplex;
-	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	
-	A = [A copyWithDataType: format matrixFormat: A.matrixFormats ordering: kGLRowMatrixOrder];
-	B = [B copyWithDataType: format matrixFormat: B.matrixFormats ordering: kGLRowMatrixOrder];
-    
-	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions:A.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
-    
-	if (( self = [super initWithResult: @[result] operand: @[A, B]] )) {
-                
-        int M = (int) A.matrixDescription.strides[0].nRows;
-        int N = (int) B.matrixDescription.strides[0].nColumns;
-		int K = (int) A.matrixDescription.strides[0].nColumns;
-		
-		if ( !A.isComplex && !B.isComplex)
-		{	// C = A.X
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
-				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
-				vDSP_mmul( A, 1, B, 1, C, 1, M, N, K);
-			};
-		}
-		else if ( A.isComplex && !B.isComplex)
-		{	// (A+iB).(X) = A.X + iB.X
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLSplitComplex A = splitComplexFromData( operandArray[0] );
-				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
-				GLSplitComplex C = splitComplexFromData( resultArray[0] );
-				
-				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
-			};
-		}
-		else if ( !A.isComplex && B.isComplex)
-		{	// A.(X+iY) = A.X + iA.Y
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-				GLSplitComplex B = splitComplexFromData( operandArray[1] );
-				GLSplitComplex C = splitComplexFromData( resultArray[0] );
-				
-				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
-			};
-		}
-		else if ( A.isComplex && B.isComplex)
-		{
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLSplitComplex A = splitComplexFromData(operandArray[0]);
-				GLSplitComplex B = splitComplexFromData(operandArray[1]);
-				GLSplitComplex C = splitComplexFromData(resultArray[0]);
-				
-				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
-			};
-		}
-		
-    }
-    return self;
-}
-
-@end
-
-/************************************************/
-/*		GLMatrixMatrixMultiplicationOperation   */
-/************************************************/
-
-#pragma mark -
-#pragma mark GLMatrixMatrixMultiplicationOperation
-#pragma mark
-
-@implementation GLMatrixMatrixMultiplicationOperation
-
-// This is copy and pasted from the superclass, needs to be properly retooled.
-- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
-{
-    
-    if ( ![A.fromDimensions isEqualToArray: B.toDimensions] ) {
-        [NSException raise: @"DimensionsNotEqualException" format: @"fromDimensions of A, must equal the toDimensions of B."];
-    }
-    
-    for ( NSUInteger index=0; index < A.matrixFormats.count; index++) {
-        NSNumber *format = A.matrixFormats[index];
-        if (format.unsignedIntegerValue != kGLDenseMatrixFormat) {
-            [NSException raise: @"MatrixWrongFormat" format: @"This operation can only be performed with a dense matrix."];
-        }
-    }
-    
-    if (A.matrixDescription.nDimensions != 1) {
-        [NSException raise: @"MatrixWrongFormat" format: @"We can only do one dimensional matrices at the moment."];
-    }
-	
-	BOOL isComplex = A.isComplex || B.isComplex;
-	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
-	
-	A = [A copyWithDataType: format matrixFormat: A.matrixFormats ordering: kGLRowMatrixOrder];
-	B = [B copyWithDataType: format matrixFormat: B.matrixFormats ordering: kGLRowMatrixOrder];
-
-	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions:A.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
-    
-	if (( self = [super initWithResult: @[result] operand: @[A, B]] )) {
-        
-		//GLLinearTransform *C = result;
-		        
-        int M = (int) A.matrixDescription.strides[0].nRows;
-        int N = (int) B.matrixDescription.strides[0].nColumns;
-		int K = (int) A.matrixDescription.strides[0].nColumns;
-		
-//		int lda = (int) A.matrixDescription.strides[0].rowStride;
-//        int ldb = (int) B.matrixDescription.strides[0].rowStride;
-//		int ldc = (int) C.matrixDescription.strides[0].rowStride;
-//		
-//        self.blockOperation = ^(NSMutableData *result, NSData *fOperand, NSData *sOperand) {
-//			cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0, fOperand.bytes, lda, sOperand.bytes, ldb, 0.0, result.mutableBytes, ldc);
-//        };
-		
-		if ( !A.isComplex && !B.isComplex)
-		{	// C = A.X
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
-				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
-				vDSP_mmul( A, 1, B, 1, C, 1, M, N, K);
-			};
-		}
-		else if ( A.isComplex && !B.isComplex)
-		{	// (A+iB).(X) = A.X + iB.X
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLSplitComplex A = splitComplexFromData( operandArray[0] );
-				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
-				GLSplitComplex C = splitComplexFromData( resultArray[0] );
-				
-				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
-			};
-		}
-		else if ( !A.isComplex && B.isComplex)
-		{	// A.(X+iY) = A.X + iA.Y
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-				GLSplitComplex B = splitComplexFromData( operandArray[1] );
-				GLSplitComplex C = splitComplexFromData( resultArray[0] );
-				
-				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
-			};
-		}
-		else if ( A.isComplex && B.isComplex)
-		{
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLSplitComplex A = splitComplexFromData(operandArray[0]);
-				GLSplitComplex B = splitComplexFromData(operandArray[1]);
-				GLSplitComplex C = splitComplexFromData(resultArray[0]);
-				
-				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
-			};
-		}
-		
-    }
-    return self;
-}
-
-@end
 
 /************************************************/
 /*		GLMatrixInversionOperation              */
@@ -1043,11 +1215,18 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		[NSException raise: @"NotYetImplemented" format: @"Normalization is only possible on evenly sampled dimensions."];
 	}
 	
-	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.toDimensions toDimensions: A.fromDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
+	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.fromDimensions toDimensions: A.toDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
 	GLMatrixDescription *operandDescription = linearTransform.matrixDescription;
 	
+	NSUInteger lastNonTrivialIndex = NSNotFound;
+    for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
+		if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat) {
+            lastNonTrivialIndex = index;
+        }
+    }
+    
 	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[index].nColumns;
-	NSUInteger vectorStride = operandDescription.strides[index].columnStride;
+	NSUInteger vectorStride = lastNonTrivialIndex > index ? operandDescription.strides[lastNonTrivialIndex].stride : operandDescription.strides[index].columnStride;
 	NSUInteger vectorLength = operandDescription.strides[index].nRows;
 	NSUInteger vectorElementStride = operandDescription.strides[index].rowStride;
 	NSUInteger complexStride = operandDescription.strides[index].complexStride;
@@ -1135,13 +1314,18 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		[NSException raise: @"NotYetImplemented" format: @"Normalization is only possible on real function."];
 	}
 	
-	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.toDimensions toDimensions: A.fromDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
+	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: A.dataFormat withFromDimensions: A.fromDimensions toDimensions: A.toDimensions inFormat: A.matrixFormats withOrdering: A.matrixOrder forEquation: A.equation matrix: nil];
 	GLMatrixDescription *operandDescription = linearTransform.matrixDescription;
 	
-#warning The vector stride should be the columnStride for a 1D matrix, but could be 1 in a 3D matrix.
-	
-	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[index].nColumns;
-	NSUInteger vectorStride = 1; //operandDescription.strides[index].columnStride;
+	NSUInteger lastNonTrivialIndex = NSNotFound;
+    for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
+		if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat) {
+            lastNonTrivialIndex = index;
+        }
+    }
+    
+	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[index].nRows;
+	NSUInteger vectorStride = lastNonTrivialIndex > index ? operandDescription.strides[lastNonTrivialIndex].stride : operandDescription.strides[index].columnStride;
 	NSUInteger vectorLength = operandDescription.strides[index].nRows;
 	NSUInteger vectorElementStride = operandDescription.strides[index].rowStride;
 	NSUInteger complexStride = operandDescription.strides[index].complexStride;
@@ -1268,19 +1452,24 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 		matrixFormats[densifiableIndex] = @(kGLDenseMatrixFormat);
 		A = [A copyWithDataType: A.dataFormat matrixFormat: matrixFormats ordering: kGLRowMatrixOrder];
 		operandDescription = A.matrixDescription;
+        denseIndex = densifiableIndex;
 	}
 	
 	// We need to construct a *new* eigenbasis.
 	// I'm not quite sure the right definitions to use.
 	NSMutableArray *eigenbasis = [NSMutableArray array];
 	for (GLDimension *dim in A.fromDimensions) {
-		GLDimension *newDim = [[GLDimension alloc] initDimensionWithGrid: dim.gridType nPoints: dim.nPoints domainMin:dim.domainMin length: dim.domainLength];
-		if (dim.name && ![dim.name isEqualToString: @""]) {
-			newDim.name = [NSString stringWithFormat: @"%@_eigen", dim.name];
-		} else {
-			newDim.name = @"eigen";
-		}
-		[eigenbasis addObject: newDim];
+        if ([A.fromDimensions indexOfObject: dim] == denseIndex) {
+            GLDimension *newDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: dim.nPoints domainMin:0 length: dim.nPoints-1];
+            if (dim.name && ![dim.name isEqualToString: @""]) {
+                newDim.name = [NSString stringWithFormat: @"%@_eigenmode", dim.name];
+            } else {
+                newDim.name = @"eigenmode";
+            }
+            [eigenbasis addObject: newDim];
+        } else {
+            [eigenbasis addObject: dim];
+        }
 	}
 	
 	dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
@@ -1296,7 +1485,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 	
 	NSUInteger N = operandDescription.strides[denseIndex].nColumns;
     NSUInteger lwork_size = 8*N;
-    NSUInteger totalLoops = compute_total_loops(operandDescription, resultMatrixDescription, denseIndex);
+    NSUInteger totalLoops = compute_total_matrix_vector_loops(operandDescription, resultMatrixDescription, denseIndex);
     
 	// first buffer will be used to store the transpose (which will be overwritten)
 	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
@@ -1309,7 +1498,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 	NSArray *buffers = @[buffer1, buffer2, buffer3, buffer4];
 	
 	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-		apply_matrix_loop(operandDescription, resultVectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+		apply_matrix_vector_loop(operandDescription, resultVectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
 			GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 			
 			GLFloat *B_data = (GLFloat *) [bufferArray[0] bytes];
@@ -1457,13 +1646,17 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 	// I'm not quite sure the right definitions to use.
 	NSMutableArray *eigenbasis = [NSMutableArray array];
 	for (GLDimension *dim in A.fromDimensions) {
-		GLDimension *newDim = [[GLDimension alloc] initDimensionWithGrid: dim.gridType nPoints: dim.nPoints domainMin:dim.domainMin length: dim.domainLength];
-		if (dim.name && ![dim.name isEqualToString: @""]) {
-			newDim.name = [NSString stringWithFormat: @"%@_eigen", dim.name];
-		} else {
-			newDim.name = @"eigen";
-		}
-		[eigenbasis addObject: newDim];
+        if ([A.fromDimensions indexOfObject: dim] == denseIndex) {
+            GLDimension *newDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: dim.nPoints domainMin:0 length: dim.nPoints-1];
+            if (dim.name && ![dim.name isEqualToString: @""]) {
+                newDim.name = [NSString stringWithFormat: @"%@_eigenmode", dim.name];
+            } else {
+                newDim.name = @"eigenmode";
+            }
+            [eigenbasis addObject: newDim];
+        } else {
+            [eigenbasis addObject: dim];
+        }
 	}
 	
 	dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
@@ -1479,7 +1672,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
     
 	NSUInteger N = operandDescription.strides[denseIndex].nColumns;
     NSUInteger lwork_size = 8*N;
-    NSUInteger totalLoops = compute_total_loops(operandDescription, resultMatrixDescription, denseIndex);
+    NSUInteger totalLoops = compute_total_matrix_vector_loops(operandDescription, resultMatrixDescription, denseIndex);
 	
 	// first two buffers will be used to store the transpose (which will be overwritten)
 	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
@@ -1495,7 +1688,7 @@ void apply_matrix_loop( GLMatrixDescription *matrixDescription, GLMatrixDescript
 	NSArray *buffers = @[buffer1, buffer2, buffer3, buffer4, buffer5, buffer6];
 	
 	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-		apply_matrix_loop(operandDescription, resultVectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+		apply_matrix_vector_loop(operandDescription, resultVectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
 			GLFloat *A_row = (GLFloat *) [operandArray[0] bytes];
 			GLFloat *B_row = (GLFloat *) [operandArray[1] bytes];
 			

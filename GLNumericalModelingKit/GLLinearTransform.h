@@ -255,6 +255,8 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
 /// Increase the dimensionality of the transformation, by assuming the identity transform for the new dimensions.
 - (GLLinearTransform *) expandedWithFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims;
 
+- (GLLinearTransform *) reducedFromDimensions: (NSString *) fromString toDimension: (NSString *) toString;
+
 /************************************************/
 /*		Data									*/
 /************************************************/
@@ -277,6 +279,7 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
 
 /** Copy the linear transformation with the data formatted according to new parameters.
  @discussion This is not implemented for speed (and therefore shouldn't be used in a loop where speed is needed), but it should be able to convert to any format.
+ @discussion Calling this method with a format and ordering that already matches is a no-op, and therefore is safe to call without performance penalty.
  @param dataFormat Specify whether or not the transformation is real or complex.
  @param matrixFormats An array of GLMatrixFormat types specifying the necessary storage requires that should be allocated for a particular dimension pair.
  @param ordering Whether the dense matrix indices should be column and row-major ordered.

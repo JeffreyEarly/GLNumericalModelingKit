@@ -949,7 +949,67 @@
 #pragma mark Linear Algebra
 #pragma mark
 
--(void) testRealMatrixMultiplication
+// A = [1 2; 3 4]; x = [1; 2]; A*x = [5; 11];
+-(void) test1DRealMatrixVectorMultiplication
+{
+    GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
+	GLDimension *yDim = [GLDimension dimensionYWithNPoints:2 length: 2.0];
+	
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
+	GLFloat a[4] = {1.0, 2.0, 3.0, 4.0};
+    memcpy(A.pointerValue, a, A.nDataElements*sizeof(GLFloat));
+    
+    GLFunction *X = [GLFunction functionOfRealTypeWithDimensions: @[yDim] forEquation:equation];
+    GLFloat x[2] = {1.0, 2.0};
+    memcpy(X.pointerValue, x, X.nDataElements*sizeof(GLFloat));
+    
+    GLFunction *B = [A transform: X];
+	GLFloat *output = B.pointerValue;
+	
+	GLFloat expected[2] = { 5.0, 11.0 };
+    
+	for (int i=0; i<2; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
+// A = [1 2; 3 4]; x = [1; 2]; A*x = [5; 11];
+// A = [2 3; 1 2]; v = [1; 1]; A*v = [5; 3];
+-(void) test2DRealMatrixVectorMultiplication
+{
+    GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
+	GLDimension *yDim = [GLDimension dimensionYWithNPoints:2 length: 2.0];
+	
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim, yDim] toDimensions: @[xDim, yDim] inFormat: @[@(kGLDenseMatrixFormat), @(kGLDiagonalMatrixFormat)] forEquation: equation matrix: nil];
+	GLFloat a[8] = {1.0, 2.0, 2.0, 3.0, 3.0, 1.0, 4.0, 2.0};
+    memcpy(A.pointerValue, a, A.nDataElements*sizeof(GLFloat));
+    
+    GLFunction *X = [GLFunction functionOfRealTypeWithDimensions: @[xDim, yDim] forEquation:equation];
+    GLFloat x[4] = {1.0, 1.0, 2.0, 1.0};
+    memcpy(X.pointerValue, x, X.nDataElements*sizeof(GLFloat));
+    
+    GLFunction *B = [A transform: X];
+	GLFloat *output = B.pointerValue;
+	
+	GLFloat expected[4] = { 5.0, 5.0, 11.0, 3.0 };
+    
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
+
+
+
+-(void) testRealMatrixMatrixMultiplication
 {
 	GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
 	GLDimension *yDim = [GLDimension dimensionYWithNPoints:3 length: 3.0];
@@ -981,7 +1041,7 @@
 	}
 }
 
--(void) testComplexMatrixMultiplication
+-(void) testComplexMatrixMatrixMultiplication
 {
 	GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
 	GLDimension *yDim = [GLDimension dimensionYWithNPoints:3 length: 3.0];
@@ -1354,6 +1414,29 @@
 //		}
 //		printf("\n");
 //	}
+}
+
+/************************************************/
+/*		Integration								*/
+/************************************************/
+
+#pragma mark -
+#pragma mark Integration
+#pragma mark
+
+- (void) test1DRealIntegration
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 101 domainMin: 0.0 length: 2.0];
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension:xDim withDimensions:@[xDim] forEquation:equation];
+	
+	GLScalar *a = [x integrate];
+	
+	GLFloat *output = a.pointerValue;
+	GLFloat expected = 2.0;
+	if ( !fequalprec(output[0], expected, 1e-5) ) {
+		XCTFail(@"Expected %f, found %f.", expected, output[0]);
+	}
 }
 
 /************************************************/

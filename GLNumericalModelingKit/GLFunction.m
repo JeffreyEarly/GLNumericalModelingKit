@@ -620,9 +620,16 @@
 	return operation.result[0];
 }
 
-- (GLFunction *) mean
+- (GLScalar *) mean
 {
 	GLAverageOperation *operation = [[GLAverageOperation alloc] initWithFunction: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) integrate
+{
+	GLIntegrationOperation *operation = [[GLIntegrationOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }
@@ -963,7 +970,7 @@
 
 - (void) dumpToConsole
 {
-	NSLog(@"%@", [self matrixDescriptionString]);
+	NSLog(@"%@", [self description]);
 }
 
 - (NSString *) graphvisDescription
