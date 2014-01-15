@@ -691,13 +691,15 @@
         }
 	} else if (k.basisFunction == kGLChebyshevBasis)
     {
-        if (numDerivs > 1) [NSException exceptionWithName: @"NotYetImplemented" reason:@"Chebyshev derivatives greater than 1 are not yet implemented" userInfo:nil];
+        if (numDerivs > 1) [NSException exceptionWithName: @"NotYetImplemented" reason:@"Chebyshev derivatives greater than 1 are not yet implemented. See comments." userInfo:nil];
+        
+        // Matlab script for higher order derivatives here: http://dip.sun.ac.za/~weideman/research/differ.html
 		diff = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix:^( NSUInteger *row, NSUInteger *col ) {
             GLFloat *kVal = (GLFloat *) k.data.bytes;
             return (GLFloatComplex) (  (col[0] >= row[0]+1 && (row[0]+col[0])%2==1)  ? 2.*kVal[col[0]] : 0.0);
         }];
 	} else {
-        [NSException exceptionWithName: @"NotYetImplemented" reason:@"Derivatives for that basis are not yet implemented" userInfo:nil];
+        [NSException raise: @"NotYetImplemented" format:@"Derivatives for that basis are not yet implemented"];
     }
     
     return diff;
