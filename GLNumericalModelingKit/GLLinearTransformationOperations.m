@@ -608,17 +608,20 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				
 				vGL_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
 				vGL_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
+                NSLog(@"Warning, vector loop not implemeneted");
 			};
 		}
 		else if ( !linearTransform.isComplex && function.isComplex)
 		{	// A.(X+iY) = A.X + iA.Y
 			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-				GLSplitComplex B = splitComplexFromData( operandArray[1] );
-				GLSplitComplex C = splitComplexFromData( resultArray[0] );
-				
-				vGL_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
-				vGL_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
+                apply_matrix_vector_loop(matrixDescription, vectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
+                    GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+                    GLSplitComplex B = splitComplexFromData( operandArray[1] );
+                    GLSplitComplex C = splitComplexFromData( resultArray[0] );
+                    
+                    vGL_mmul( &(A[inEquationPos]), matrixStride, &(B.realp[outEquationPos]), vectorStride, &(C.realp[outEquationPos]), vectorStride, M, N, K);
+                    vGL_mmul( &(A[inEquationPos]), matrixStride, &(B.imagp[outEquationPos]), vectorStride, &(C.imagp[outEquationPos]), vectorStride, M, N, K);
+                });
 			};
 		}
 		else if ( linearTransform.isComplex && function.isComplex)
@@ -629,6 +632,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
 				vGL_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
+                NSLog(@"Warning, vector loop not implemeneted");
 			};
 		}
     }
@@ -812,6 +816,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				
 				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
 				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
+                NSLog(@"Warning, vector loop not implemeneted");
 			};
 		}
 		else if ( !A.isComplex && B.isComplex)
@@ -823,6 +828,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				
 				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
 				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
+                NSLog(@"Warning, vector loop not implemeneted");
 			};
 		}
 		else if ( A.isComplex && B.isComplex)
@@ -833,6 +839,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLSplitComplex C = splitComplexFromData(resultArray[0]);
 				
 				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
+                NSLog(@"Warning, vector loop not implemeneted");
 			};
 		}
 		

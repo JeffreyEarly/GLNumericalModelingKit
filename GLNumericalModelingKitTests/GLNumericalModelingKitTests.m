@@ -950,7 +950,7 @@
 #pragma mark
 
 // A = [1 2; 3 4]; x = [1; 2]; A*x = [5; 11];
--(void) test1DRealMatrixVectorMultiplication
+-(void) test1DRealMatrixRealVectorMultiplication
 {
     GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
 	GLDimension *yDim = [GLDimension dimensionYWithNPoints:2 length: 2.0];
@@ -977,9 +977,38 @@
 	}
 }
 
+// A = [1 2; 3 4]; x = [1+i; 2+i]; A*x = [5+3i; 11+7i];
+-(void) test1DRealMatrixComplexVectorMultiplication
+{
+    GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
+	GLDimension *yDim = [GLDimension dimensionYWithNPoints:2 length: 2.0];
+	
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[yDim] toDimensions: @[xDim] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: nil];
+	GLFloat a[4] = {1.0, 2.0, 3.0, 4.0};
+    memcpy(A.pointerValue, a, A.nDataElements*sizeof(GLFloat));
+    
+    GLFunction *X = [GLFunction functionOfComplexTypeWithDimensions: @[yDim] forEquation:equation];
+    GLFloat x[4] = {1.0, 2.0, 1.0, 1.0};
+    memcpy(X.pointerValue, x, X.nDataElements*sizeof(GLFloat));
+    
+    GLFunction *B = [A transform: X];
+	GLSplitComplex output = B.splitComplex;
+	
+    GLFloat expected_realp[2] = {5.0, 11.0};
+	GLFloat expected_imagp[2] = {3.0, 7.0};
+    
+	for (int i=0; i<2; i++) {
+		if ( !fequal(output.realp[i], expected_realp[i]) || !fequal(output.imagp[i], expected_imagp[i]) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_realp[i], expected_imagp[i], output.realp[i], output.imagp[i]);
+		}
+	}
+}
+
 // A = [1 2; 3 4]; x = [1; 2]; A*x = [5; 11];
 // A = [2 3; 1 2]; v = [1; 1]; A*v = [5; 3];
--(void) test2DRealMatrixVectorMultiplication
+-(void) test2DRealMatrixRealVectorMultiplication
 {
     GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
 	GLDimension *yDim = [GLDimension dimensionYWithNPoints:2 length: 2.0];
@@ -1006,7 +1035,35 @@
 	}
 }
 
-
+// A = [1 2; 3 4]; x = [1+i; 2+i]; A*x = [5+3i; 11+7i];
+// A = [2 3; 1 2]; v = [1+i; 1+2i]; A*v = [5+8i; 3+5i];
+-(void) test2DRealMatrixComplexVectorMultiplication
+{
+    GLDimension *xDim = [GLDimension dimensionXWithNPoints:2 length: 2.0];
+	GLDimension *yDim = [GLDimension dimensionYWithNPoints:2 length: 2.0];
+	
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim, yDim] toDimensions: @[xDim, yDim] inFormat: @[@(kGLDenseMatrixFormat), @(kGLDiagonalMatrixFormat)] forEquation: equation matrix: nil];
+	GLFloat a[8] = {1.0, 2.0, 2.0, 3.0, 3.0, 1.0, 4.0, 2.0};
+    memcpy(A.pointerValue, a, A.nDataElements*sizeof(GLFloat));
+    
+    GLFunction *X = [GLFunction functionOfComplexTypeWithDimensions: @[xDim, yDim] forEquation:equation];
+    GLFloat x[8] = {1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 2.0};
+    memcpy(X.pointerValue, x, X.nDataElements*sizeof(GLFloat));
+    
+    GLFunction *B = [A transform: X];
+	GLSplitComplex output = B.splitComplex;
+	    
+    GLFloat expected_realp[4] = {5.0, 5.0, 11.0, 3.0};
+	GLFloat expected_imagp[4] = {3.0, 8.0, 7.0, 5.0};
+    
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output.realp[i], expected_realp[i]) || !fequal(output.imagp[i], expected_imagp[i]) ) {
+			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_realp[i], expected_imagp[i], output.realp[i], output.imagp[i]);
+		}
+	}
+}
 
 
 -(void) testRealMatrixMatrixMultiplication

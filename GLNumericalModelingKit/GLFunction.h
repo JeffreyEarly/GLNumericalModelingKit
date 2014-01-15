@@ -216,7 +216,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 // This prepends the newDimension to the dimension list.
 // The dimension should have 1 point, if it has more, the values will simply be copied.
 // The returned variable may be mutable if the dimensions dictate.
-- (GLFunction *) variableByAddingDimension: (GLDimension *) newDimension;
+- (id) variableByAddingDimension: (GLDimension *) newDimension;
 
 // Returns a variable with only the elements indicated by by the array of ranges.
 // The size of the ranges array must match the number of dimensions.

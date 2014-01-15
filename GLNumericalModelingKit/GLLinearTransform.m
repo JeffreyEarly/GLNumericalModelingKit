@@ -246,9 +246,9 @@
 	return self;
 }
 
-+ (transformMatrix) matrixBlockWithFormat: (GLMatrixDescription *) matrixDescription fromData: (NSMutableData *) data;
++ (transformMatrix) matrixBlockWithFormat: (GLMatrixDescription *) matrixDescription fromData: (NSMutableData *) datain;
 {
-	data = [data copy];
+	NSMutableData *data = [datain copy];
 	
 	// This block retrieves the matrix value from the correct spot in memory (memIndex), given a particular memory location.
 	// The assignment is only dependent on the format and the total number of points.
@@ -373,8 +373,10 @@
 		void (^loop)( NSUInteger *, NSUInteger *, GLFloat *, NSUInteger );
         
 		if (stride.matrixFormat == kGLIdentityMatrixFormat) {
-			// We store nothing in this case---so there is no loop.
+			// We store nothing in this case---so there is no loop. BUT, we still need the row to equal the col.
 			loop = ^( NSUInteger *row, NSUInteger *col, GLFloat *f, NSUInteger index ) {
+                row[iDim] = 0;
+                col[iDim] = 0;
 				assignData( row, col, f, index);
 			};
 		} else if (stride.matrixFormat == kGLDenseMatrixFormat) {
