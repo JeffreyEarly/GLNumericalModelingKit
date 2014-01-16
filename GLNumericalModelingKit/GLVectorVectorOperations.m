@@ -15,15 +15,137 @@
 /*		GLAdditionOperation						*/
 /************************************************/
 
+@interface GLAdditionOperation ()
+@property(readwrite) BOOL canOperateInPlace;
+@end
+
 @implementation GLAdditionOperation
 
-- (id) initWithFirstOperand: (GLVariable *) fOperand secondOperand: (GLVariable *) sOperand;
+- (id) initWithFirstOperand: (GLVariable *) firstOperand secondOperand: (GLVariable *) secondOperand;
 {
+	
+	/********************************************************************/
+	/*		vector - lower dimensional vector multiplication			*/
+	/********************************************************************/
+	if (firstOperand.rank == 1 && secondOperand.rank == 1)
+	{
+		GLFunction *fOperand = (GLFunction *) firstOperand;
+		GLFunction *sOperand = (GLFunction *) secondOperand;
+		if (fOperand.dimensions.count && sOperand.dimensions.count && (fOperand.dimensions.count < sOperand.dimensions.count || sOperand.dimensions.count < fOperand.dimensions.count))
+		{
+			GLFunction *lowerDimVariable;
+			GLFunction *higherDimVariable;
+			if (fOperand.dimensions.count < sOperand.dimensions.count) {
+				lowerDimVariable = fOperand;
+				higherDimVariable = sOperand;
+			} else {
+				lowerDimVariable = sOperand;
+				higherDimVariable = fOperand;
+			}
+			
+			// In this scenario the first-operand has fewer dimensions than the second operand, but those dimensions are in the same order.
+			// So, this would look like h(x,y) = f(x)*g(x,y)
+			// Note that we are not allowing h(x,y,z) = f(x,z)*g(x,y,z) because the indexing is trickier
+			NSInteger lastIndex = NSNotFound;
+			for (GLDimension *dim in lowerDimVariable.dimensions) {
+				NSUInteger index = [higherDimVariable.dimensions indexOfObject: dim];
+				if (index == NSNotFound) {
+					[NSException raise: @"Dimensional mismatch" format: @"The lower dimensional variable must have a subset of dimensions from the higher dimensional variable. It does not!"];
+				} else if ( lastIndex != NSNotFound && lastIndex+1 != index) {
+					[NSException raise: @"Dimensional mismatch" format: @"The lower dimensional variable must have a subset of dimensions *in the same order (with no gaps)* as the higher dimensional variable. It does not!"];
+				}
+				lastIndex = index;
+			}
+			
+			// Now we know enough to build the result.
+			BOOL isPurelyReal = (fOperand.isPurelyReal && sOperand.isPurelyReal) || (fOperand.isPurelyImaginary && sOperand.isPurelyImaginary);
+			GLFunction *result = [[higherDimVariable class] functionOfType: isPurelyReal ? kGLRealDataFormat : kGLSplitComplexDataFormat withDimensions: higherDimVariable.dimensions forEquation: higherDimVariable.equation];
+			result.isPurelyReal = isPurelyReal;
+			result.isPurelyImaginary= (fOperand.isPurelyReal && sOperand.isPurelyImaginary) || (fOperand.isPurelyImaginary && sOperand.isPurelyReal);
+			
+			if (( self = [super initWithResult: @[result] operand: @[lowerDimVariable, higherDimVariable]] )) {
+				// Example: h(x,y,z) = f(y)*g(x,y,z)
+				// where g_ijk is indexed with i*ny*nz + j*nz + k
+				// and therefore we want to loop over i*ny*nz+k while striding by nz
+				//
+				// multiplicationStride = nz
+				// multiplicationLength = ny
+				//
+				// innerLoopStride = 1
+				// outerLoopStride = ny*nz
+				// innerLoopSize = nz
+				// innerLoopLength = nx*nz
+				
+				GLMatrixDescription *matrixDescription = higherDimVariable.matrixDescription;
+				NSUInteger lastMultiplicationIndex = [higherDimVariable.dimensions indexOfObject: lowerDimVariable.dimensions.lastObject];
+				
+				NSUInteger multiplicationStride = matrixDescription.strides[lastMultiplicationIndex].stride;
+				NSUInteger multiplicationLength = lowerDimVariable.nDataPoints;
+				
+				NSMutableArray *missingDimensions = [NSMutableArray arrayWithArray: higherDimVariable.dimensions];
+				[missingDimensions removeObjectsInArray: lowerDimVariable.dimensions];
+				NSUInteger lastMissingDimIndex = [higherDimVariable.dimensions indexOfObject: missingDimensions.lastObject];
+				
+				NSUInteger innerLoopStride = matrixDescription.strides[lastMissingDimIndex].stride;
+				NSUInteger innerLoopSize = matrixDescription.strides[lastMissingDimIndex].nPoints;
+				
+				NSUInteger outerLoopStride = 0;
+				NSUInteger outerLoopSize = 1;
+				
+				if ( missingDimensions.count > 1) {
+					NSUInteger firstMissingDimIndex = [higherDimVariable.dimensions indexOfObject: missingDimensions[0]];
+					outerLoopStride = matrixDescription.strides[firstMissingDimIndex].stride;
+					outerLoopSize = matrixDescription.strides[firstMissingDimIndex].nPoints;
+				}
+				
+				if ( !lowerDimVariable.isComplex && !higherDimVariable.isComplex )
+				{
+					dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+					NSUInteger totalLoops = outerLoopSize*innerLoopSize;
+					self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+						const GLFloat *lowerF = [operandArray[0] bytes];
+						const GLFloat *higherF = [operandArray[1] bytes];
+						GLFloat *higherOut = [resultArray[0] mutableBytes];
+						
+						dispatch_apply(totalLoops, globalQueue, ^(size_t iteration) {
+							NSUInteger index = (iteration/innerLoopSize)*outerLoopStride + (iteration%innerLoopSize)*innerLoopStride;
+							vGL_vadd( lowerF, 1, &(higherF[index]), multiplicationStride, &(higherOut[index]), multiplicationStride, multiplicationLength);
+						});
+					};
+					self.canOperateInPlace = YES;
+					self.graphvisDescription = [NSString stringWithFormat: @"multiplication (real %lu dim, real %lu dim)", (unsigned long)lowerDimVariable.dimensions.count, (unsigned long)higherDimVariable.dimensions.count];
+				}
+				else if ( lowerDimVariable.isComplex && !higherDimVariable.isComplex )
+				{
+					dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+					NSUInteger totalLoops = outerLoopSize*innerLoopSize;
+					self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+						const GLSplitComplex lowerF = splitComplexFromData(operandArray[0]);
+						const GLFloat *higherF = [operandArray[1] bytes];
+						const GLSplitComplex higherOut = splitComplexFromData(resultArray[0]);
+						dispatch_apply(totalLoops, globalQueue, ^(size_t iteration) {
+							NSUInteger index = (iteration/innerLoopSize)*outerLoopStride + (iteration%innerLoopSize)*innerLoopStride;
+							// (a + i b)*(x) = a x + i b x
+							vGL_vadd( lowerF.realp, 1, &(higherF[index]), multiplicationStride, &(higherOut.realp[index]), multiplicationStride, multiplicationLength);
+							vGL_vadd( lowerF.imagp, 1, &(higherF[index]), multiplicationStride, &(higherOut.imagp[index]), multiplicationStride, multiplicationLength);
+						});
+					};
+					self.canOperateInPlace = YES;
+					self.graphvisDescription = [NSString stringWithFormat: @"multiplication (complex %lu dim, real %lu dim)", (unsigned long)lowerDimVariable.dimensions.count, (unsigned long)higherDimVariable.dimensions.count];
+				} else {
+					[NSException raise: @"MethodNotImplemented" format: @"This case has not yet been implemented."];
+				}
+				
+			}
+			return self;
+		}
+	}
+	
     // We order the operands so that scalars are always in the first position.
     // We can do this in this case because order doesn't matter for addition.
-    GLDataFormat format = (fOperand.isPurelyReal && sOperand.isPurelyReal) ? kGLRealDataFormat : kGLSplitComplexDataFormat;
-    GLVariable *op1 = (sOperand.rank < fOperand.rank) ? sOperand : fOperand;
-    GLVariable *op2 = (sOperand.rank < fOperand.rank) ? fOperand : sOperand;
+    GLDataFormat format = (firstOperand.isPurelyReal && secondOperand.isPurelyReal) ? kGLRealDataFormat : kGLSplitComplexDataFormat;
+    GLVariable *op1 = (secondOperand.rank < firstOperand.rank) ? secondOperand : firstOperand;
+    GLVariable *op2 = (secondOperand.rank < firstOperand.rank) ? firstOperand : secondOperand;
     GLVariable *result;
 	variableOperation operation;
 	NSString *graphvisDescription;
@@ -32,8 +154,8 @@
 	if (op2.rank == 0)
 	{	// scalar-scalar
 		result = [[GLScalar alloc] initWithType: format forEquation: op1.equation];
-		result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
-		result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
+		result.isPurelyReal = firstOperand.isPurelyReal && secondOperand.isPurelyReal;
+		result.isPurelyImaginary = firstOperand.isPurelyImaginary && secondOperand.isPurelyImaginary;
 		
 		if ( !op1.isComplex && !op2.isComplex) {
 			graphvisDescription = [NSString stringWithFormat: @"add (real scalar, real scalar)"];
@@ -81,8 +203,8 @@
 		{	// scalar-function or function-function
 			GLFunction *func2 = (GLFunction *) op2;
 			result = [GLFunction functionOfType:format withDimensions: func2.dimensions forEquation: op2.equation];
-			result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
-			result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
+			result.isPurelyReal = firstOperand.isPurelyReal && secondOperand.isPurelyReal;
+			result.isPurelyImaginary = firstOperand.isPurelyImaginary && secondOperand.isPurelyImaginary;
 			
 			numPoints = result.nDataPoints;
 			nDataElements = result.nDataElements;
@@ -128,8 +250,8 @@
 		} else if (op2.rank == 2) {
 			GLLinearTransform *B = (GLLinearTransform *) op2;
 			result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions:B.toDimensions inFormat:B.matrixFormats forEquation:B.equation matrix: nil];
-			result.isPurelyReal = fOperand.isPurelyReal && sOperand.isPurelyReal;
-			result.isPurelyImaginary = fOperand.isPurelyImaginary && sOperand.isPurelyImaginary;
+			result.isPurelyReal = firstOperand.isPurelyReal && secondOperand.isPurelyReal;
+			result.isPurelyImaginary = firstOperand.isPurelyImaginary && secondOperand.isPurelyImaginary;
 			
 			numPoints = result.nDataPoints;
 			nDataElements = result.nDataElements;

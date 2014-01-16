@@ -399,6 +399,30 @@
 	}
 }
 
+- (void) testVectorVectorMixedDimensionAddition
+{
+	NSUInteger Nx = 4;
+	NSUInteger Ny = 5;
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: Nx domainMin:0 length:Nx-1];
+	GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: Ny domainMin:0 length:Ny-1];
+	
+	GLFunction *x1D = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	GLFunction *x2D = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim,yDim] forEquation: equation];
+	GLFunction *y2D = [GLFunction functionOfRealTypeFromDimension: yDim withDimensions: @[xDim,yDim] forEquation: equation];
+	
+	GLFunction *sum1 = [x1D plus: y2D];
+	GLFunction *sum2 = [x2D plus: y2D];
+	
+	GLFloat *output = sum1.pointerValue;
+	GLFloat *expected = sum2.pointerValue;
+	for (int i=0; i<Nx*Ny; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
 - (void)testVectorPowerOperationCaseI
 {
 	// Case I: real vector (real variable type). Testing (1, 2, 3, 4)^2.0

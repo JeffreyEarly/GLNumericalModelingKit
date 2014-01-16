@@ -62,6 +62,8 @@
 // To be called after the operation is complete.
 - (void) tearDownDependencies;
 
+@property(readwrite, nonatomic) BOOL canOperateInPlace;
+
 @end
 
 @implementation GLVariableOperation : NSOperation
@@ -104,10 +106,6 @@
 }
 
 @synthesize isEnqueued;
-
-- (BOOL) canOperateInPlace {
-	return NO;
-}
 
 - (BOOL) isEqualToOperation: (id) otherOperation {
     if ( ![[self class] isSubclassOfClass: [otherOperation class]] )  {
