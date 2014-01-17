@@ -12,7 +12,7 @@
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 
 @class GLDimension, GLFunction, GLVariable;
-@interface GLEquation : NSObject
+@interface GLEquation : NSObject <NSCoding>
 
 // An equation can be thought of as the "controller" of the variables, in the MVC paradigm.
 

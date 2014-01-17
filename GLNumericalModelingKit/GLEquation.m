@@ -45,6 +45,24 @@
 	dispatch_queue_t serialDispatchQueue;
 }
 
+static NSString *GLEquationDimensionOperatorPoolMapTableKey = @"GLEquationDimensionOperatorPoolMapTableKey";
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [coder encodeObject: self.dimensionOperatorPoolMapTable forKey:GLEquationDimensionOperatorPoolMapTableKey];
+}
+
+- (id)initWithCoder:(NSCoder *)decoder
+{
+    if ((self=[super init])) {
+        fftwf_init_threads();
+		operationQueue = [[NSOperationQueue alloc] init];
+		serialDispatchQueue = dispatch_queue_create( "com.EarlyInnovations.SerialEquationQueue", NULL );
+        self.dimensionOperatorPoolMapTable = [decoder decodeObjectForKey: GLEquationDimensionOperatorPoolMapTableKey];
+        self.basisDictionary = [NSMutableDictionary dictionary];
+    }
+    return self;
+}
+
 - (id) init
 {
 	if ((self = [super init])) {

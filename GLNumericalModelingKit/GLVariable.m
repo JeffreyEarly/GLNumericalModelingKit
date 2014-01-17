@@ -34,6 +34,20 @@ GLSplitComplex splitComplexFromData( NSData *data )
 	return fbar;
 }
 
+static NSString *GLVariableEquationKey = @"GLVariableEquationKey";
+static NSString *GLVariableNameKey = @"GLVariableNameKey";
+static NSString *GLVariableUnitsKey = @"GLVariableUnitsKey";
+static NSString *GLVariableMetadataKey = @"GLVariableMetadataKey";
+static NSString *GLVariableUniqueIDKey = @"GLVariableUniqueIDKey";
+static NSString *GLVariableIsImaginaryPartZeroKey = @"GLVariableIsImaginaryPartZeroKey";
+static NSString *GLVariableIsRealPartZeroKey = @"GLVariableIsRealPartZeroKey";
+static NSString *GLVariableNDataPointsKey = @"GLVariableNDataPointsKey";
+static NSString *GLVariableNDataElementsKey = @"GLVariableNDataElementsKey";
+static NSString *GLVariableDataFormatKey = @"GLVariableDataFormatKey";
+static NSString *GLVariableDataBytesKey = @"GLVariableDataBytesKey";
+static NSString *GLVariableDataKey = @"GLVariableDataKey";
+static NSString *GLVariableMatrixDescriptionKey = @"GLVariableMatrixDescriptionKey";
+
 @implementation GLVariable
 
 + (GLVariable *) variableWithPrototype: (GLVariable *) variable
@@ -86,6 +100,51 @@ GLSplitComplex splitComplexFromData( NSData *data )
 	return self;
 }
 
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [coder encodeObject: self.equation forKey:GLVariableEquationKey];
+    
+    if (self.name) [coder encodeObject:self.name forKey:GLVariableNameKey];
+    if (self.units) [coder encodeObject:self.units forKey:GLVariableUnitsKey];
+    if (_metadata) [coder encodeObject:_metadata forKey:GLVariableMetadataKey];
+    
+    [coder encodeObject: @(self.uniqueID) forKey:GLVariableUniqueIDKey];
+    [coder encodeObject: @(self.isImaginaryPartZero) forKey:GLVariableIsImaginaryPartZeroKey];
+    [coder encodeObject: @(self.isRealPartZero) forKey:GLVariableIsRealPartZeroKey];
+    
+    [coder encodeObject: @(self.nDataPoints) forKey:GLVariableNDataPointsKey];
+    [coder encodeObject: @(self.nDataElements) forKey:GLVariableNDataElementsKey];
+    [coder encodeObject: @(self.dataFormat) forKey:GLVariableDataFormatKey];
+    
+    [coder encodeObject: @(self.dataBytes) forKey:GLVariableDataBytesKey];
+    [coder encodeObject: self.data forKey:GLVariableDataKey];
+    
+    [coder encodeObject: self.matrixDescription forKey:GLVariableMatrixDescriptionKey];
+}
+
+- (id)initWithCoder:(NSCoder *)decoder
+{
+    if ((self=[super init])) {
+        _equation = [decoder decodeObjectForKey:GLVariableEquationKey];
+        _name = [decoder decodeObjectForKey: GLVariableNameKey];
+        _units = [decoder decodeObjectForKey: GLVariableUnitsKey];
+        _metadata = [decoder decodeObjectForKey: GLVariableMetadataKey];
+        
+        _uniqueID = [[decoder decodeObjectForKey: GLVariableUniqueIDKey] unsignedIntegerValue];
+        _isImaginaryPartZero = [[decoder decodeObjectForKey: GLVariableIsImaginaryPartZeroKey] boolValue];
+        _isRealPartZero = [[decoder decodeObjectForKey: GLVariableIsRealPartZeroKey] boolValue];
+        
+        _nDataPoints = [[decoder decodeObjectForKey: GLVariableNDataPointsKey] unsignedIntegerValue];
+        _nDataElements = [[decoder decodeObjectForKey: GLVariableNDataElementsKey] unsignedIntegerValue];
+        _dataFormat = [[decoder decodeObjectForKey: GLVariableDataFormatKey] unsignedIntegerValue];
+        
+        _dataBytes = [[decoder decodeObjectForKey: GLVariableDataBytesKey] unsignedIntegerValue];
+        _data = [decoder decodeObjectForKey: GLVariableDataKey];
+        
+        _matrixDescription = [decoder decodeObjectForKey: GLVariableMatrixDescriptionKey];
+    }
+    return self;
+}
 
 - (NSMutableDictionary *) metadata {
 	if (!_metadata) {

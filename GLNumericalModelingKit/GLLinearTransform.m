@@ -41,6 +41,24 @@
 	return self;
 }
 
+static NSString *GLLinearTransformToDimensionsKey = @"GLLinearTransformToDimensionsKey";
+static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDimensionsKey";
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [super encodeWithCoder: coder];
+    [coder encodeObject: self.toDimensions forKey: GLLinearTransformToDimensionsKey];
+    [coder encodeObject: self.fromDimensions forKey: GLLinearTransformFromDimensionsKey];
+}
+
+- (id)initWithCoder:(NSCoder *)coder {
+    if ((self=[super initWithCoder: coder])) {
+        _toDimensions = [coder decodeObjectForKey: GLLinearTransformToDimensionsKey];
+        _fromDimensions = [coder decodeObjectForKey: GLLinearTransformFromDimensionsKey];
+    }
+    return self;
+}
+
 @synthesize nDataPoints = _nDataPoints;
 @synthesize nDataElements = _nDataElements;
 @synthesize dataBytes = _dataBytes;

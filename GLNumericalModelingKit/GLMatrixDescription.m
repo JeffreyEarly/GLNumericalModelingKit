@@ -13,7 +13,43 @@
 @property(readwrite, strong) NSMutableData *stridesData;
 @end
 
+static NSString *GLMatrixDescriptionNDimensionsKey = @"GLMatrixDescriptionNDimensionsKey";
+static NSString *GLMatrixDescriptionNPointsKey = @"GLMatrixDescriptionNPointsKey";
+static NSString *GLMatrixDescriptionNElementsKey = @"GLMatrixDescriptionNElementsKey";
+static NSString *GLMatrixDescriptionNBytesKey = @"GLMatrixDescriptionNBytesKey";
+static NSString *GLMatrixDescriptionComplexStrideKey = @"GLMatrixDescriptionComplexStrideKey";
+static NSString *GLMatrixDescriptionElementStrideKey = @"GLMatrixDescriptionElementStrideKey";
+static NSString *GLMatrixDescriptionDataFormatKey = @"GLMatrixDescriptionDataFormatKey";
+static NSString *GLMatrixDescriptionStridesDataKey = @"GLMatrixDescriptionStridesDataKey";
+
 @implementation GLMatrixDescription
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [coder encodeObject: @(self.nDimensions) forKey:GLMatrixDescriptionNDimensionsKey];
+    [coder encodeObject: @(self.nPoints) forKey:GLMatrixDescriptionNPointsKey];
+    [coder encodeObject: @(self.nElements) forKey:GLMatrixDescriptionNElementsKey];
+    [coder encodeObject: @(self.nBytes) forKey:GLMatrixDescriptionNBytesKey];
+    [coder encodeObject: @(self.complexStride) forKey:GLMatrixDescriptionComplexStrideKey];
+    [coder encodeObject: @(self.elementStride) forKey:GLMatrixDescriptionElementStrideKey];
+    [coder encodeObject: @(self.dataFormat) forKey:GLMatrixDescriptionDataFormatKey];
+    [coder encodeObject: self.stridesData forKey:GLMatrixDescriptionStridesDataKey];
+}
+
+- (id)initWithCoder:(NSCoder *)decoder
+{
+    if ((self=[super init])) {
+        _nDimensions = [[decoder decodeObjectForKey: GLMatrixDescriptionNDimensionsKey] unsignedIntegerValue];
+        _nPoints = [[decoder decodeObjectForKey: GLMatrixDescriptionNPointsKey] unsignedIntegerValue];
+        _nElements = [[decoder decodeObjectForKey: GLMatrixDescriptionNElementsKey] unsignedIntegerValue];
+        _nBytes = [[decoder decodeObjectForKey: GLMatrixDescriptionNBytesKey] unsignedIntegerValue];
+        _complexStride = [[decoder decodeObjectForKey: GLMatrixDescriptionComplexStrideKey] unsignedIntegerValue];
+        _elementStride = [[decoder decodeObjectForKey: GLMatrixDescriptionElementStrideKey] unsignedIntegerValue];
+        _dataFormat = [[decoder decodeObjectForKey: GLMatrixDescriptionDataFormatKey] unsignedIntegerValue];
+        _stridesData = [decoder decodeObjectForKey: GLMatrixDescriptionStridesDataKey];
+    }
+    return self;
+}
 
 - (GLMatrixDescription *) initWithFunction: (GLFunction *) variable
 {

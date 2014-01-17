@@ -273,6 +273,24 @@
 @synthesize nDataElements = _nDataElements;
 @synthesize dataBytes = _dataBytes;
 
+static NSString *GLFunctionDimensionsKey = @"GLFunctionDimensionsKey";
+static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainKey";
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [super encodeWithCoder: coder];
+    [coder encodeObject: self.dimensions forKey: GLFunctionDimensionsKey];
+    [coder encodeObject: @(self.isFrequencyDomain) forKey: GLFunctionIsFrequencyDomainKey];
+}
+
+- (id)initWithCoder:(NSCoder *)coder {
+    if ((self=[super initWithCoder: coder])) {
+        _dimensions = [coder decodeObjectForKey: GLFunctionDimensionsKey];
+        _isFrequencyDomain = [[coder decodeObjectForKey: GLFunctionIsFrequencyDomainKey] boolValue];
+    }
+    return self;
+}
+
 - (id) initVariableOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) theEquation
 {
 	if (!theDimensions) {

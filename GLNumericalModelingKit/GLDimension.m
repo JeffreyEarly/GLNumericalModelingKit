@@ -10,26 +10,16 @@
 
 @interface GLDimension ()
 {
+    // These are made public so that the subclass NSMutableDimension can use them directly.
     @public
-	NSString *name;
-	NSString *units;
-	
-	NSUInteger _nPoints;
-	GLGridType _gridType;
-	GLFloat _domainMin;
-	GLFloat _domainLength;
-	BOOL isPeriodic;
-	BOOL isEvenlySampled;
-	GLFloat sampleInterval;
-	BOOL isFrequencyDomain;
-	BOOL isMutable;
-	GLBasisFunction _basisFunction;
-	
-	NSMutableData *data;
-	NSUInteger dataBytes;
-	
-	GLDimension *fourierTransformedDimension;
-	NSMapTable *_scaledDimensionMapTable;
+    GLFloat _sampleInterval;
+    GLFloat _domainMin;
+    GLFloat _domainLength;
+    NSUInteger _nPoints;
+    NSUInteger _dataBytes;
+    
+    @private
+    NSMapTable *_scaledDimensionMapTable;
 }
 
 - (void) populateEvenlySampledValues;
@@ -38,7 +28,7 @@
 // If I do set this as strong-strong, we have a retain cycle. What to do!
 @property(readwrite, strong) GLDimension *frequencyDomainDimension;
 @property(readwrite, weak) GLDimension *spatialDomainDimension;
-
+@property(readwrite, nonatomic) BOOL isMutable;
 @property(readwrite, strong, nonatomic) NSMapTable *rangeSubdimensionMap;
 
 @end
@@ -46,7 +36,89 @@
 static NSMapTable *dimensionMapTableMap = nil;
 static NSMapTable *transformSpatialDimensionMap = nil;
 
+static NSString *GLDimensionNameKey = @"GLDimensionNameKey";
+static NSString *GLDimensionUnitsKey = @"GLDimensionUnitsKey";
+static NSString *GLDimensionNPointsKey = @"GLDimensionNPointsKey";
+static NSString *GLDimensionDomainMinKey = @"GLDimensionDomainMinKey";
+static NSString *GLDimensionDomainLengthKey = @"GLDimensionDomainLengthKey";
+static NSString *GLDimensionGridTypeKey = @"GLDimensionGridTypeKey";
+static NSString *GLDimensionIsEvenlySampledKey = @"GLDimensionIsEvenlySampledKey";
+static NSString *GLDimensionSampleIntervalKey = @"GLDimensionSampleIntervalKey";
+static NSString *GLDimensionIsMutableKey = @"GLDimensionIsMutableKey";
+static NSString *GLDimensionBasisFunctionKey = @"GLDimensionBasisFunctionKey";
+static NSString *GLDimensionDifferentiationBasisKey = @"GLDimensionDifferentiationBasisKey";
+static NSString *GLDimensionIsStrictlyPositiveKey = @"GLDimensionIsStrictlyPositiveKey";
+static NSString *GLDimensionNDataBytesKey = @"GLDimensionNDataBytesKey";
+static NSString *GLDimensionDataKey = @"GLDimensionDataKey";
+static NSString *GLDimensionMapTableKey = @"GLDimensionMapTableKey";
+static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionKey";
+
 @implementation GLDimension
+
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    if (self.name) [coder encodeObject:self.name forKey:GLDimensionNameKey];
+    if (self.units) [coder encodeObject:self.units forKey:GLDimensionUnitsKey];
+    
+    [coder encodeObject: @(self.nPoints) forKey:GLDimensionNPointsKey];
+    [coder encodeObject: @(self.domainMin) forKey:GLDimensionDomainMinKey];
+    [coder encodeObject: @(self.domainLength) forKey:GLDimensionDomainLengthKey];
+    [coder encodeObject: @(self.gridType) forKey:GLDimensionGridTypeKey];
+    [coder encodeObject: @(self.isEvenlySampled) forKey:GLDimensionIsEvenlySampledKey];
+    [coder encodeObject: @(self.sampleInterval) forKey:GLDimensionSampleIntervalKey];
+    [coder encodeObject: @(self.isMutable) forKey:GLDimensionIsMutableKey];
+    [coder encodeObject: @(self.basisFunction) forKey:GLDimensionBasisFunctionKey];
+    [coder encodeObject: @(self.differentiationBasis) forKey:GLDimensionDifferentiationBasisKey];
+    [coder encodeObject: @(self.isStrictlyPositive) forKey:GLDimensionIsStrictlyPositiveKey];
+    
+    [coder encodeObject: @(self.dataBytes) forKey:GLDimensionNDataBytesKey];
+    [coder encodeObject: self.data forKey:GLDimensionDataKey];
+    
+    if (self.basisFunction == kGLDeltaBasis) {
+        NSMapTable *dimensionMapTable = [GLDimension transformMapForDimension: self];
+        if (dimensionMapTable) [coder encodeObject: dimensionMapTable forKey:GLDimensionMapTableKey];
+    } else {
+        GLDimension *spatialDimension = [GLDimension spatialDimensionForTransformDimension: self];
+        if (spatialDimension) [coder encodeObject: spatialDimension forKey:GLDimensionSpatialDimensionKey];
+    }
+}
+
+- (id)initWithCoder:(NSCoder *)decoder
+{
+    if ((self=[super init])) {
+        _name = [decoder decodeObjectForKey: GLDimensionNameKey];
+        _units = [decoder decodeObjectForKey: GLDimensionUnitsKey];
+        
+        _nPoints = [[decoder decodeObjectForKey: GLDimensionNPointsKey] unsignedIntegerValue];
+        _domainMin = [[decoder decodeObjectForKey: GLDimensionDomainMinKey] doubleValue];
+        _domainLength = [[decoder decodeObjectForKey: GLDimensionDomainLengthKey] doubleValue];
+        _gridType = [[decoder decodeObjectForKey: GLDimensionGridTypeKey] unsignedIntegerValue];
+        _isEvenlySampled = [[decoder decodeObjectForKey: GLDimensionIsEvenlySampledKey] boolValue];
+        _sampleInterval = [[decoder decodeObjectForKey: GLDimensionSampleIntervalKey] doubleValue];
+        _isMutable = [[decoder decodeObjectForKey: GLDimensionIsMutableKey] boolValue];
+        _basisFunction = [[decoder decodeObjectForKey: GLDimensionBasisFunctionKey] unsignedIntegerValue];
+        _differentiationBasis = [[decoder decodeObjectForKey: GLDimensionDifferentiationBasisKey] unsignedIntegerValue];
+        _isStrictlyPositive = [[decoder decodeObjectForKey: GLDimensionIsStrictlyPositiveKey] boolValue];
+        
+        _dataBytes = [[decoder decodeObjectForKey: GLDimensionNDataBytesKey] unsignedIntegerValue];
+        _data = [decoder decodeObjectForKey: GLDimensionDataKey];
+        
+        NSMapTable *dimensionMapTable = [decoder decodeObjectForKey: GLDimensionMapTableKey];
+        if (dimensionMapTable) {
+            NSMapTable *existingDimensionMapTable = [GLDimension transformMapForDimension: self];
+            for (id key in dimensionMapTable) {
+                [existingDimensionMapTable setObject: [dimensionMapTable objectForKey: key] forKey: key];
+            }
+        }
+        
+        GLDimension *spatialDimension = [decoder decodeObjectForKey: GLDimensionSpatialDimensionKey];
+        if (spatialDimension) {
+            [GLDimension setSpatialDimension:spatialDimension forTransformDimension:self];
+        }
+    }
+    return self;
+}
 
 /************************************************/
 /*		Related Dimensions						*/
@@ -92,6 +164,8 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	
 	[transformMap setObject: tDim forKey:[NSNumber numberWithUnsignedInteger: key]];
 }
+
+
 
 + (void) setSpatialDimension: (GLDimension *) sDim forTransformDimension: (GLDimension *) tDim
 {
@@ -208,61 +282,60 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 {
 	if ((self = [super init]))
 	{
-		isPeriodic = gridType == kGLPeriodicGrid;
 		_gridType = gridType;
 		_nPoints = numPoints;
 		_domainMin = theMin;
 		_domainLength = theLength;
-		self.basisFunction = kGLDeltaBasis;
-		isMutable = NO;
+		_basisFunction = kGLDeltaBasis;
+		_isMutable = NO;
 		
-		dataBytes = _nPoints*sizeof(GLFloat);
-		data =[NSMutableData dataWithLength: dataBytes];
+		_dataBytes = _nPoints*sizeof(GLFloat);
+		_data =[NSMutableData dataWithLength: _dataBytes];
 		
 		GLFloat *f = self.data.mutableBytes;
 		
 		if (gridType == kGLEndpointGrid)
 		{
-			isEvenlySampled = YES;
-			sampleInterval = self.nPoints > 1 ? _domainLength / ( (double) (self.nPoints-1)) : 0;
+			_isEvenlySampled = YES;
+			_sampleInterval = self.nPoints > 1 ? _domainLength / ( (double) (self.nPoints-1)) : 0;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
-				f[i] = sampleInterval * ( (GLFloat) i) + _domainMin;
+				f[i] = _sampleInterval * ( (GLFloat) i) + _domainMin;
 			}
 			_differentiationBasis = kGLDeltaBasis;
 		}
 		else if (gridType == kGLInteriorGrid)
 		{
-			isEvenlySampled = YES;
-			sampleInterval = self.nPoints > 1 ? _domainLength / ( (double) (self.nPoints)) : 0;
+			_isEvenlySampled = YES;
+			_sampleInterval = self.nPoints > 1 ? _domainLength / ( (double) (self.nPoints)) : 0;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
-				f[i] = sampleInterval * ( (GLFloat) i + 0.5) + _domainMin;
+				f[i] = _sampleInterval * ( (GLFloat) i + 0.5) + _domainMin;
 			}
 			_differentiationBasis = kGLCosineBasis;
 		}
 		else if (gridType == kGLPeriodicGrid)
 		{
-			isEvenlySampled = YES;
-			sampleInterval = self.nPoints > 1 ? _domainLength / ( (double) (self.nPoints)) : 0;
+			_isEvenlySampled = YES;
+			_sampleInterval = self.nPoints > 1 ? _domainLength / ( (double) (self.nPoints)) : 0;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
-				f[i] = sampleInterval * ( (GLFloat) i ) + _domainMin;
+				f[i] = _sampleInterval * ( (GLFloat) i ) + _domainMin;
 			}
 			_differentiationBasis = kGLExponentialBasis;
 		}
 		else if (gridType == kGLChebyshevEndpointGrid)
 		{
-			isEvenlySampled = NO;
-			sampleInterval = self.nPoints > 1 ? M_PI / ( (double) (self.nPoints-1)) : 0;
+			_isEvenlySampled = NO;
+			_sampleInterval = self.nPoints > 1 ? M_PI / ( (double) (self.nPoints-1)) : 0;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
-				f[i] = 0.5 * _domainLength * (cos( sampleInterval * ( (GLFloat) i ) ) + 1.0) + _domainMin;
+				f[i] = 0.5 * _domainLength * (cos( _sampleInterval * ( (GLFloat) i ) ) + 1.0) + _domainMin;
 			}
 			_differentiationBasis = kGLChebyshevBasis;
 		}
 		else if (gridType == kGLChebyshevInteriorGrid)
 		{
-			isEvenlySampled = NO;
-			sampleInterval = self.nPoints > 1 ? M_PI / ( (double) (self.nPoints)) : 0;
+			_isEvenlySampled = NO;
+			_sampleInterval = self.nPoints > 1 ? M_PI / ( (double) (self.nPoints)) : 0;
 			for (NSUInteger i=0; i<self.nPoints; i++) {
-				f[i] = 0.5 * _domainLength * (cos( sampleInterval * ( (GLFloat) i + 0.5 ) ) + 1.0) + _domainMin;
+				f[i] = 0.5 * _domainLength * (cos( _sampleInterval * ( (GLFloat) i + 0.5 ) ) + 1.0) + _domainMin;
 			}
 			_differentiationBasis = kGLChebyshevBasis;
 		}
@@ -281,16 +354,16 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	{
 		GLFloat *fFrom = (GLFloat *) values.bytes;
 		
-		isEvenlySampled = NO;
+		_isEvenlySampled = NO;
 		_gridType = kGLEndpointGrid;
 		_nPoints = numPoints;
 		_domainMin = fFrom[0];
 		_domainLength = fFrom[numPoints-1] - fFrom[0];
-		self.basisFunction = kGLDeltaBasis;
-		isMutable = NO;
+		_basisFunction = kGLDeltaBasis;
+		_isMutable = NO;
 		
-		dataBytes = self.nPoints*sizeof(GLFloat);
-		data =[NSMutableData dataWithLength: dataBytes];
+		_dataBytes = self.nPoints*sizeof(GLFloat);
+		_data =[NSMutableData dataWithLength: _dataBytes];
 		
 		GLFloat *f = self.data.mutableBytes;
 		for (NSUInteger i=0; i < self.nPoints; i++) {
@@ -309,16 +382,16 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	
 	if ((self = [super init]))
 	{
-		isEvenlySampled = NO;
+		_isEvenlySampled = NO;
 		_gridType = kGLEndpointGrid;
 		_nPoints = pointsArray.count;
 		_domainMin = [[pointsArray objectAtIndex:0] doubleValue];
 		_domainLength = [[pointsArray lastObject] doubleValue] - [[pointsArray objectAtIndex:0] doubleValue];
-		self.basisFunction = kGLDeltaBasis;
-		isMutable = NO;
+		_basisFunction = kGLDeltaBasis;
+		_isMutable = NO;
 		
-		dataBytes = self.nPoints*sizeof(GLFloat);
-		data =[NSMutableData dataWithLength: dataBytes];
+		_dataBytes = self.nPoints*sizeof(GLFloat);
+		_data =[NSMutableData dataWithLength: _dataBytes];
 		
 		GLFloat *f = self.data.mutableBytes;
 		NSUInteger i=0;
@@ -400,10 +473,9 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 		
 		NSString *inverseUnits = spatialDimension.units ? [NSString stringWithFormat: @"cycles per %@", self.units] : @"cycles";
 		
-		isEvenlySampled = YES;
+		_isEvenlySampled = YES;
 		_gridType = kGLEndpointGrid;
-		isFrequencyDomain = YES;
-		isMutable = NO;
+		_isMutable = NO;
 		_differentiationBasis = basis;
 		
 		self.basisFunction = basis;
@@ -424,7 +496,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
                 }
 				_nPoints = spatialDimension.nPoints;
 				_domainMin = -_domainLength/2;
-				sampleInterval = _domainLength / ( (double) (self.nPoints));
+				_sampleInterval = _domainLength / ( (double) (self.nPoints));
 			}
 			else
 			{	// 0..fc --- negative frequencies ignored because they're found with the conjugate of the function.
@@ -435,7 +507,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
                     _domainLength = ((GLFloat) spatialDimension.nPoints/2 + 1)/(spatialDimension.domainLength+spatialDimension.sampleInterval);
                 }
 				_nPoints = spatialDimension.nPoints/2 + 1;
-				sampleInterval = _domainLength / ( (double) (self.nPoints));
+				_sampleInterval = _domainLength / ( (double) (self.nPoints));
 			}
 		}
 		else if (self.basisFunction == kGLDiscreteCosineTransformIBasis )
@@ -447,7 +519,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
                 _domainLength = ((GLFloat) spatialDimension.nPoints-1)/(2*spatialDimension.domainLength);
             }
             _nPoints = spatialDimension.nPoints;
-            sampleInterval = _domainLength / ( (double) (self.nPoints-1));
+            _sampleInterval = _domainLength / ( (double) (self.nPoints-1));
 		}
         else if (self.basisFunction == kGLCosineBasis)
         {
@@ -465,7 +537,7 @@ static NSMapTable *transformSpatialDimensionMap = nil;
             }
             
             _nPoints = spatialDimension.nPoints;
-            sampleInterval = _domainLength / ( (double) (self.nPoints-1));
+            _sampleInterval = _domainLength / ( (double) (self.nPoints-1));
         }
 		else if (self.basisFunction == kGLDiscreteSineTransformIBasis)
 		{
@@ -476,8 +548,8 @@ static NSMapTable *transformSpatialDimensionMap = nil;
                 _domainLength = ((GLFloat) spatialDimension.nPoints)/(2*(spatialDimension.domainLength+2*spatialDimension.sampleInterval));
             }
             _nPoints = spatialDimension.nPoints;
-            sampleInterval = _domainLength / ( (double) (self.nPoints));
-			_domainMin = sampleInterval;
+            _sampleInterval = _domainLength / ( (double) (self.nPoints));
+			_domainMin = _sampleInterval;
 			
 		}
         else if (self.basisFunction == kGLSineBasis)
@@ -495,21 +567,21 @@ static NSMapTable *transformSpatialDimensionMap = nil;
                 }
             }
             _nPoints = spatialDimension.nPoints;
-            sampleInterval = _domainLength / ( (double) (self.nPoints-1));
-			_domainMin = sampleInterval;
+            _sampleInterval = _domainLength / ( (double) (self.nPoints-1));
+			_domainMin = _sampleInterval;
         }
 		else if (self.basisFunction == kGLChebyshevBasis )
 		{
             _domainLength = 2.0*((GLFloat) spatialDimension.nPoints-1)/(spatialDimension.domainLength);
             _nPoints = spatialDimension.nPoints;
-            sampleInterval = _domainLength / ( (double) (self.nPoints-1));
+            _sampleInterval = _domainLength / ( (double) (self.nPoints-1));
 		}
 		else {
 			[NSException raise: @"CaseNotImplemented" format: @"This case has not been implemented"];
 		}
 		
-		dataBytes = self.nPoints*sizeof(GLFloat);
-		data =[NSMutableData dataWithLength: dataBytes];
+		_dataBytes = self.nPoints*sizeof(GLFloat);
+		_data =[NSMutableData dataWithLength: _dataBytes];
 		[self populateEvenlySampledValues];
 		
 		self.name = inverseName;
@@ -524,9 +596,6 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	
 	return self;
 }
-
-@synthesize frequencyDomainDimension;
-@synthesize spatialDomainDimension;
 
 - (GLDimension *) initAsFourierTransformOfDimension: (GLDimension *) existingDimension
 {
@@ -562,18 +631,16 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 		
 		NSString *inverseUnits = existingDimension.units ? [NSString stringWithFormat: @"cycles per %@", self.units] : @"cycles";
 		
-		isEvenlySampled = YES;
-		isPeriodic = NO;
+		_isEvenlySampled = YES;
 		_nPoints = existingDimension.nPoints;
 		_domainMin = 0.0;
 		_domainLength = ((GLFloat) existingDimension.nPoints)/existingDimension.domainLength;
-		isFrequencyDomain = YES;
-		isMutable = NO;
-		self.basisFunction = kGLExponentialBasis;
-		self.isStrictlyPositive = NO;
+		_isMutable = NO;
+		_basisFunction = kGLExponentialBasis;
+		_isStrictlyPositive = NO;
 		
-		dataBytes = self.nPoints*sizeof(GLFloat);
-		data =[NSMutableData dataWithLength: dataBytes];
+		_dataBytes = self.nPoints*sizeof(GLFloat);
+		_data =[NSMutableData dataWithLength: _dataBytes];
 		[self populateEvenlySampledValues];
 		
 		self.name = inverseName;
@@ -594,16 +661,14 @@ static NSMapTable *transformSpatialDimensionMap = nil;
         _gridType = existingDim.gridType;
         _domainMin = (existingDim.domainMin)*scale+delta;
         _domainLength = (existingDim.domainLength)*scale;
-        sampleInterval = (existingDim.sampleInterval)*scale;
+        _sampleInterval = (existingDim.sampleInterval)*scale;
         
-        isEvenlySampled = existingDim.isEvenlySampled;
-        isPeriodic = existingDim.isPeriodic;
-        isFrequencyDomain = existingDim.isFrequencyDomain;
-        self.basisFunction = existingDim.basisFunction;
-        self.isStrictlyPositive = existingDim.isStrictlyPositive;
+        _isEvenlySampled = existingDim.isEvenlySampled;
+        _basisFunction = existingDim.basisFunction;
+        _isStrictlyPositive = existingDim.isStrictlyPositive;
         
-        dataBytes = self.nPoints*sizeof(GLFloat);
-		data =[NSMutableData dataWithLength: dataBytes];
+        _dataBytes = self.nPoints*sizeof(GLFloat);
+		_data =[NSMutableData dataWithLength: _dataBytes];
 		[self populateEvenlySampledValues];
         
         self.name = existingDim.name;
@@ -649,9 +714,6 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 #pragma mark Metadata
 #pragma mark
 
-@synthesize name;
-@synthesize units;
-
 /************************************************/
 /*		Essential Properties					*/
 /************************************************/
@@ -660,28 +722,19 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 #pragma mark Essential Properties
 #pragma mark
 
-@synthesize nPoints=_nPoints;
-@synthesize sampleInterval;
-@synthesize domainLength=_domainLength;
-@synthesize domainMin=_domainMin;
-
 - (BOOL) isPeriodic {
 	return (_gridType == kGLPeriodicGrid);
-}
-
-@synthesize isEvenlySampled;
-@synthesize basisFunction=_basisFunction;
-
-- (BOOL) isMutable {
-	return NO;
 }
 
 - (BOOL) isFrequencyDomain {
 	return self.basisFunction > 0 ? YES : NO;
 }
 
-
-
+@synthesize domainLength=_domainLength;
+@synthesize domainMin=_domainMin;
+@synthesize sampleInterval=_sampleInterval;
+@synthesize nPoints=_nPoints;
+@synthesize dataBytes=_dataBytes;
 
 /************************************************/
 /*		Value									*/
@@ -701,9 +754,6 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	}
     return 0.0;
 }
-
-@synthesize data;
-@synthesize dataBytes;
 
 - (NSArray *) points
 {
@@ -1043,10 +1093,6 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	[self populateEvenlySampledValues];
 }
 
-- (GLFloat) domainMin {
-    return [super domainMin];
-}
-
 - (void) setDomainLength:(GLFloat) length
 {
 	[self willChangeValueForKey: @"sampleInterval"];
@@ -1054,15 +1100,15 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	if (self.isPeriodic)
 	{
 		if (_nPoints > 0) {
-			sampleInterval = _domainLength / ( (double) _nPoints);
+			_sampleInterval = _domainLength / ( (double) _nPoints);
 		}
 	}
 	else
 	{
 		if (_nPoints > 1) {
-			sampleInterval = _domainLength / ( (double) (_nPoints-1));
+			_sampleInterval = _domainLength / ( (double) (_nPoints-1));
 		} else {
-			sampleInterval = 0;
+			_sampleInterval = 0;
 		}
 	}
 	[self didChangeValueForKey: @"sampleInterval"];
@@ -1070,25 +1116,22 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	[self populateEvenlySampledValues];
 }
 
-- (GLFloat) domainLength {
-    return [super domainLength];
-}
 
 - (void) setSampleInterval:(GLFloat)anInterval
 {
 	[self willChangeValueForKey: @"domainLength"];
 	[self willChangeValueForKey: @"sampleInterval"];
-	sampleInterval = anInterval;
+	_sampleInterval = anInterval;
 	if (self.isPeriodic)
 	{
-		_domainLength = ( (double) _nPoints) * sampleInterval;
+		_domainLength = ( (double) _nPoints) * _sampleInterval;
 	}
 	else
 	{
 		if (_nPoints == 0) {
 			_domainLength = 0;
 		} else {
-			_domainLength = ( (double) (_nPoints-1)) * sampleInterval;
+			_domainLength = ( (double) (_nPoints-1)) * _sampleInterval;
 		}
 	}
 	[self didChangeValueForKey: @"sampleInterval"];
@@ -1097,37 +1140,33 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	[self populateEvenlySampledValues];
 }
 
-- (GLFloat) sampleInterval {
-    return [super sampleInterval];
-}
 
-
-- (void) setIsPeriodic:(BOOL)periodicity
-{
-    [self willChangeValueForKey: @"domainLength"];
-	[self willChangeValueForKey: @"isPeriodic"];
-	isPeriodic = periodicity;
-	if (isPeriodic)
-	{
-		_domainLength = ( (double) _nPoints) * sampleInterval;
-	}
-	else
-	{
-		if (_nPoints == 0) {
-			_domainLength = 0;
-		} else {
-			_domainLength = ( (double) (_nPoints-1)) * sampleInterval;
-		}
-	}
-	[self didChangeValueForKey: @"isPeriodic"];
-	[self didChangeValueForKey: @"domainLength"];
-	
-	[self populateEvenlySampledValues];
-}
-
-- (BOOL) isPeriodic {
-    return [super isPeriodic];
-}
+//- (void) setIsPeriodic:(BOOL)periodicity
+//{
+//    [self willChangeValueForKey: @"domainLength"];
+//	[self willChangeValueForKey: @"isPeriodic"];
+//	isPeriodic = periodicity;
+//	if (isPeriodic)
+//	{
+//		_domainLength = ( (double) _nPoints) * sampleInterval;
+//	}
+//	else
+//	{
+//		if (_nPoints == 0) {
+//			_domainLength = 0;
+//		} else {
+//			_domainLength = ( (double) (_nPoints-1)) * sampleInterval;
+//		}
+//	}
+//	[self didChangeValueForKey: @"isPeriodic"];
+//	[self didChangeValueForKey: @"domainLength"];
+//	
+//	[self populateEvenlySampledValues];
+//}
+//
+//- (BOOL) isPeriodic {
+//    return [super isPeriodic];
+//}
 
 
 /************************************************/
@@ -1146,18 +1185,18 @@ static NSMapTable *transformSpatialDimensionMap = nil;
 	[self willChangeValueForKey: @"nPoints"];
 	[self willChangeValueForKey: @"domainLength"];
 	_nPoints = n;
-    dataBytes = _nPoints*sizeof(GLFloat);
-    [self.data setLength: dataBytes];
+    _dataBytes = _nPoints*sizeof(GLFloat);
+    [self.data setLength: _dataBytes];
 	if (self.isPeriodic)
 	{
-		_domainLength = ( (double) _nPoints) * sampleInterval;
+		_domainLength = ( (double) _nPoints) * _sampleInterval;
 	}
 	else
 	{
 		if (_nPoints == 0) {
 			_domainLength = 0;
 		} else {
-			_domainLength = ( (double) (_nPoints-1)) * sampleInterval;
+			_domainLength = ( (double) (_nPoints-1)) * _sampleInterval;
 		}
 	}
 	[self didChangeValueForKey: @"domainLength"];
@@ -1181,8 +1220,8 @@ static NSMapTable *transformSpatialDimensionMap = nil;
     [self willChangeValueForKey: @"nPoints"];
     [self willChangeValueForKey: @"domainLength"];
     _nPoints = _nPoints+pointsArray.count;
-    dataBytes = _nPoints*sizeof(GLFloat);
-    [self.data setLength: dataBytes];
+    _dataBytes = _nPoints*sizeof(GLFloat);
+    [self.data setLength: _dataBytes];
     
     GLFloat *f = self.data.mutableBytes;
     NSUInteger i=_nPoints-pointsArray.count;

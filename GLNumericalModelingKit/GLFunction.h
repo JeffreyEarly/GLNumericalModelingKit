@@ -63,6 +63,8 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 // Derived property that returns YES if any one of the dimensions is in the frequency domain.
 @property(readonly, assign, nonatomic) BOOL isFrequencyDomain;
 
+// This symmetry stuff isn't used and might be crap.
+
 // The symmetry (none, even, or odd) of each dimension.
 @property(readwrite, strong, nonatomic) NSMutableArray *realSymmetry;
 @property(readwrite, strong, nonatomic) NSMutableArray *imaginarySymmetry;

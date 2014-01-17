@@ -18,6 +18,18 @@
 
 @implementation GLScalar
 
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [super encodeWithCoder: coder];
+}
+
+- (id)initWithCoder:(NSCoder *)coder {
+    if ((self=[super initWithCoder: coder])) {
+        
+    }
+    return self;
+}
+
 @synthesize nDataPoints = _nDataPoints;
 @synthesize nDataElements = _nDataElements;
 @synthesize dataBytes = _dataBytes;

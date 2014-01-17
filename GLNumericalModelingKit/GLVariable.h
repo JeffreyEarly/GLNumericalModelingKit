@@ -12,7 +12,7 @@
 GLSplitComplex splitComplexFromData( NSData *data );
 
 @class GLVariableOperation, GLEquation;
-@interface GLVariable : NSObject
+@interface GLVariable : NSObject <NSCoding>
 
 /** Creates a new variable (GLScalar, GLFunction, GLLinearTransform) with the same format and dimensions.
  @discussion This does not respect the underlying symmetries of the variable (eg, Hermitian).

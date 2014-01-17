@@ -57,7 +57,7 @@ typedef struct {
 } GLDataStride;
 
 @class GLLinearTransform, GLFunction;
-@interface GLMatrixDescription : NSObject
+@interface GLMatrixDescription : NSObject <NSCoding>
 
 /** Creates a new matrix description based on the dimensions and formatting of the function.
  @discussion Functions are treated as "dense" column vectors.
