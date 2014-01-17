@@ -515,7 +515,131 @@
 	}
 }
 
-- (void) test2DPeriodicInterpolation
+- (void) test2DEndpointPeriodicInterpolation
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:6 domainMin:0.0 length:5.0];
+	GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:5 domainMin:0.0 length:5.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim,yDim] forEquation: equation];
+	GLFunction *y = [GLFunction functionOfRealTypeFromDimension: yDim withDimensions: @[xDim,yDim] forEquation: equation];
+	
+	// There are really 8 cases to check in a doubly periodic domain.
+	GLDimension *interpDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:8 domainMin:0.0 length:7.0];
+	GLFunction *xInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
+	GLFunction *yInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
+    
+    // How many extra times we want to wrap. Shouldn't make a difference.
+	GLFloat n = 0.0;
+	
+	// Scenario 1
+	GLFloat DeltaMinus = -1.25 - n*5.0; // Should correspond to 3.75 (.75 between 3 and 4)
+	GLFloat DeltaPlus = 5.25 + n*5.0;	// Should correspond to 0.25 (.25 between 0 and 1)
+	GLFloat Middle = 2.5 + n*5.0;
+
+	GLFloat DeltaMinusResult = 3.75;
+	GLFloat DeltaPlusResult = 0.25;
+	GLFloat MiddleResult = 2.5;
+    GLFloat DeltaMinusResultEndPoint = 0.0;
+	GLFloat DeltaPlusResultEndPoint = 5.0;
+    
+	// Scenario 2
+//	GLFloat DeltaMinus = -.25 - n*5.0; // Should correspond to 1.0 (.75 between 4 and 0)
+//	GLFloat DeltaPlus = 4.25 + n*5.0;	// Should correspond to 3.0  (.25 between 4 and 0)
+//	GLFloat Middle = 2.5 + n*5.0;
+//	
+//	GLFloat DeltaMinusResult = 1.0;
+//	GLFloat DeltaPlusResult = 3.0;
+//	GLFloat MiddleResult = 2.5;
+//    GLFloat DeltaMinusResultEndPoint = 0.0;
+//	GLFloat DeltaPlusResultEndPoint = 4.25;
+	
+	xInterp.pointerValue[0] = DeltaMinus; yInterp.pointerValue[0] = Middle;
+	xInterp.pointerValue[1] = DeltaMinus; yInterp.pointerValue[1] = DeltaPlus;
+	xInterp.pointerValue[2] = Middle; yInterp.pointerValue[2] = DeltaPlus;
+	xInterp.pointerValue[3] = DeltaPlus; yInterp.pointerValue[3] = DeltaPlus;
+	xInterp.pointerValue[4] = DeltaPlus; yInterp.pointerValue[4] = Middle;
+	xInterp.pointerValue[5] = DeltaPlus; yInterp.pointerValue[5] = DeltaMinus;
+	xInterp.pointerValue[6] = Middle; yInterp.pointerValue[6] = DeltaMinus;
+	xInterp.pointerValue[7] = DeltaMinus; yInterp.pointerValue[7] = DeltaMinus;
+	
+	GLFloat expectedX[8] = {DeltaMinusResultEndPoint, DeltaMinusResultEndPoint, MiddleResult, DeltaPlusResultEndPoint, DeltaPlusResultEndPoint, DeltaPlusResultEndPoint, MiddleResult, DeltaMinusResultEndPoint};
+	GLFloat expectedY[8] = {MiddleResult, DeltaPlusResult, DeltaPlusResult, DeltaPlusResult, MiddleResult, DeltaMinusResult, DeltaMinusResult, DeltaMinusResult};
+	
+    GLFunction *interpolatedX = [x interpolateAtPoints: @[xInterp, yInterp]];
+	GLFunction *interpolatedY = [y interpolateAtPoints: @[xInterp, yInterp]];
+    
+    GLFloat *xout = interpolatedX.pointerValue;
+	GLFloat *yout = interpolatedY.pointerValue;
+    for (int i=0; i<8; i++) {
+		if ( !fequal(xout[i], expectedX[i]) || !fequal(yout[i], expectedY[i]) ) {
+			XCTFail(@"Case %d failed. Expected (%f, %f), found (%f, %f).", i, expectedX[i], expectedY[i], xout[i], yout[i]);
+		}
+	}
+}
+
+- (void) test2DPeriodicEndpointInterpolation
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:5 domainMin:0.0 length:5.0];
+	GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:6 domainMin:0.0 length:5.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim,yDim] forEquation: equation];
+	GLFunction *y = [GLFunction functionOfRealTypeFromDimension: yDim withDimensions: @[xDim,yDim] forEquation: equation];
+	
+	// There are really 8 cases to check in a doubly periodic domain.
+	GLDimension *interpDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:8 domainMin:0.0 length:7.0];
+	GLFunction *xInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
+	GLFunction *yInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
+    
+    // How many extra times we want to wrap. Shouldn't make a difference.
+	GLFloat n = 0.0;
+	
+	// Scenario 1
+//	GLFloat DeltaMinus = -1.25 - n*5.0; // Should correspond to 3.75 (.75 between 3 and 4)
+//	GLFloat DeltaPlus = 5.25 + n*5.0;	// Should correspond to 0.25 (.25 between 0 and 1)
+//	GLFloat Middle = 2.5 + n*5.0;
+//    
+//	GLFloat DeltaMinusResult = 3.75;
+//	GLFloat DeltaPlusResult = 0.25;
+//	GLFloat MiddleResult = 2.5;
+//    GLFloat DeltaMinusResultEndPoint = 0.0;
+//	GLFloat DeltaPlusResultEndPoint = 5.0;
+    
+	// Scenario 2
+	GLFloat DeltaMinus = -.25 - n*5.0; // Should correspond to 1.0 (.75 between 4 and 0)
+	GLFloat DeltaPlus = 4.25 + n*5.0;	// Should correspond to 3.0  (.25 between 4 and 0)
+	GLFloat Middle = 2.5 + n*5.0;
+
+	GLFloat DeltaMinusResult = 1.0;
+	GLFloat DeltaPlusResult = 3.0;
+	GLFloat MiddleResult = 2.5;
+    GLFloat DeltaMinusResultEndPoint = 0.0;
+	GLFloat DeltaPlusResultEndPoint = 4.25;
+	
+	xInterp.pointerValue[0] = DeltaMinus; yInterp.pointerValue[0] = Middle;
+	xInterp.pointerValue[1] = DeltaMinus; yInterp.pointerValue[1] = DeltaPlus;
+	xInterp.pointerValue[2] = Middle; yInterp.pointerValue[2] = DeltaPlus;
+	xInterp.pointerValue[3] = DeltaPlus; yInterp.pointerValue[3] = DeltaPlus;
+	xInterp.pointerValue[4] = DeltaPlus; yInterp.pointerValue[4] = Middle;
+	xInterp.pointerValue[5] = DeltaPlus; yInterp.pointerValue[5] = DeltaMinus;
+	xInterp.pointerValue[6] = Middle; yInterp.pointerValue[6] = DeltaMinus;
+	xInterp.pointerValue[7] = DeltaMinus; yInterp.pointerValue[7] = DeltaMinus;
+	
+	GLFloat expectedX[8] = {DeltaMinusResult, DeltaMinusResult, MiddleResult, DeltaPlusResult, DeltaPlusResult, DeltaPlusResult, MiddleResult, DeltaMinusResult};
+	GLFloat expectedY[8] = {MiddleResult, DeltaPlusResultEndPoint, DeltaPlusResultEndPoint, DeltaPlusResultEndPoint, MiddleResult, DeltaMinusResultEndPoint, DeltaMinusResultEndPoint, DeltaMinusResultEndPoint};
+	
+    GLFunction *interpolatedX = [x interpolateAtPoints: @[xInterp, yInterp]];
+	GLFunction *interpolatedY = [y interpolateAtPoints: @[xInterp, yInterp]];
+    
+    GLFloat *xout = interpolatedX.pointerValue;
+	GLFloat *yout = interpolatedY.pointerValue;
+    for (int i=0; i<8; i++) {
+		if ( !fequal(xout[i], expectedX[i]) || !fequal(yout[i], expectedY[i]) ) {
+			XCTFail(@"Case %d failed. Expected (%f, %f), found (%f, %f).", i, expectedX[i], expectedY[i], xout[i], yout[i]);
+		}
+	}
+}
+
+- (void) test2DPeriodicPeriodicInterpolation
 {
     GLEquation *equation = [[GLEquation alloc] init];
     GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:5 domainMin:0.0 length:5.0];
@@ -532,17 +656,17 @@
 	GLFloat n = 0.0;
 	
 	// Scenario 1
-//	GLFloat DeltaMinus = -1.25 - n*5.0; // Should correspond to 3.75
-//	GLFloat DeltaPlus = 5.25 + n*5.0;	// Should correspond to 0.25
-//	GLFloat Middle = 2.5 + n*5.0;
-//	
-//	GLFloat DeltaMinusResult = 3.75;
-//	GLFloat DeltaPlusResult = 0.25;
-//	GLFloat MiddleResult = 2.5;
+    //	GLFloat DeltaMinus = -1.25 - n*5.0; // Should correspond to 3.75 (.75 between 3 and 4)
+    //	GLFloat DeltaPlus = 5.25 + n*5.0;	// Should correspond to 0.25 (.25 between 0 and 1)
+    //	GLFloat Middle = 2.5 + n*5.0;
+    //
+    //	GLFloat DeltaMinusResult = 3.75;
+    //	GLFloat DeltaPlusResult = 0.25;
+    //	GLFloat MiddleResult = 2.5;
 	
 	// Scenario 2
-	GLFloat DeltaMinus = -.25 - n*5.0; // Should correspond to 3.75
-	GLFloat DeltaPlus = 4.25 + n*5.0;	// Should correspond to 0.25
+	GLFloat DeltaMinus = -.25 - n*5.0; // Should correspond to 1.0 (.75 between 4 and 0)
+	GLFloat DeltaPlus = 4.25 + n*5.0;	// Should correspond to 3.0  (.25 between 4 and 0)
 	GLFloat Middle = 2.5 + n*5.0;
 	
 	GLFloat DeltaMinusResult = 1.0;
@@ -569,6 +693,79 @@
     for (int i=0; i<8; i++) {
 		if ( !fequal(xout[i], expectedX[i]) || !fequal(yout[i], expectedY[i]) ) {
 			XCTFail(@"Case %d failed. Expected (%f, %f), found (%f, %f).", i, expectedX[i], expectedY[i], xout[i], yout[i]);
+		}
+	}
+}
+
+- (void) test3DEndpointPeriodicPeriodicInterpolation
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:6 domainMin:0.0 length:5.0];
+    GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:5 domainMin:0.0 length:5.0];
+	GLDimension *zDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints:5 domainMin:0.0 length:5.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim,yDim,zDim] forEquation: equation];
+	GLFunction *y = [GLFunction functionOfRealTypeFromDimension: yDim withDimensions: @[xDim,yDim,zDim] forEquation: equation];
+    GLFunction *z = [GLFunction functionOfRealTypeFromDimension: zDim withDimensions: @[xDim,yDim,zDim] forEquation: equation];
+	
+	// There are really 6 faces + 8 vertices = 14 cases to check in a triply periodic domain. But, to keep things simple we'll create a loop.
+	GLDimension *interpDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:27 domainMin:0.0 length:26.0];
+	GLFunction *xInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
+	GLFunction *yInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
+	GLFunction *zInterp = [GLFunction functionOfRealTypeFromDimension: interpDim withDimensions: @[interpDim] forEquation: equation];
+    
+	// How many extra times we want to wrap. Shouldn't make a difference.
+	GLFloat n = 0.0;
+	
+	// Scenario 1
+    //	GLFloat DeltaMinus = -1.25 - n*5.0; // Should correspond to 3.75 (.75 between 3 and 4)
+    //	GLFloat DeltaPlus = 5.25 + n*5.0;	// Should correspond to 0.25 (.25 between 0 and 1)
+    //	GLFloat Middle = 2.5 + n*5.0;
+    //
+    //	GLFloat DeltaMinusResult = 3.75;
+    //	GLFloat DeltaPlusResult = 0.25;
+    //	GLFloat MiddleResult = 2.5;
+	
+	// Scenario 2
+	GLFloat DeltaMinus = -.25 - n*5.0; // Should correspond to 1.0 (.75 between 4 and 0)
+	GLFloat DeltaPlus = 4.25 + n*5.0;	// Should correspond to 3.0  (.25 between 4 and 0)
+	GLFloat Middle = 2.5 + n*5.0;
+	
+	GLFloat DeltaMinusResult = 1.0;
+	GLFloat DeltaPlusResult = 3.0;
+	GLFloat MiddleResult = 2.5;
+    GLFloat DeltaMinusResultEndPoint = 0.0;
+	GLFloat DeltaPlusResultEndPoint = 4.25;
+    
+    GLFloat *expectedX = malloc(27*sizeof(GLFloat));
+    GLFloat *expectedY = malloc(27*sizeof(GLFloat));
+    GLFloat *expectedZ = malloc(27*sizeof(GLFloat));
+    int itr=0;
+    for (int i=0;i<3;i++) {
+        for (int j=0;j<3;j++) {
+            for (int k=0;k<3;k++) {
+                xInterp.pointerValue[itr] = i==0 ? DeltaMinus : (i==1 ? Middle : DeltaPlus);
+                yInterp.pointerValue[itr] = j==0 ? DeltaMinus : (j==1 ? Middle : DeltaPlus);
+                zInterp.pointerValue[itr] = k==0 ? DeltaMinus : (k==1 ? Middle : DeltaPlus);
+                
+                expectedX[itr] = i==0 ? DeltaMinusResultEndPoint : (i==1 ? MiddleResult : DeltaPlusResultEndPoint);
+                expectedY[itr] = j==0 ? DeltaMinusResult : (j==1 ? MiddleResult : DeltaPlusResult);
+                expectedZ[itr] = k==0 ? DeltaMinusResult : (k==1 ? MiddleResult : DeltaPlusResult);
+                
+                itr++;
+            }
+        }
+    }
+	
+    GLFunction *interpolatedX = [x interpolateAtPoints: @[xInterp, yInterp, zInterp]];
+	GLFunction *interpolatedY = [y interpolateAtPoints: @[xInterp, yInterp, zInterp]];
+    GLFunction *interpolatedZ = [z interpolateAtPoints: @[xInterp, yInterp, zInterp]];
+    
+    GLFloat *xout = interpolatedX.pointerValue;
+	GLFloat *yout = interpolatedY.pointerValue;
+    GLFloat *zout = interpolatedZ.pointerValue;
+    for (int i=0; i<27; i++) {
+		if ( !fequal(xout[i], expectedX[i]) || !fequal(yout[i], expectedY[i]) || !fequal(zout[i], expectedZ[i]) ) {
+			XCTFail(@"Case %d failed. Interpolate at (%f, %f, %f). Expected (%f, %f, %f), found (%f, %f, %f).", i, xInterp.pointerValue[i], yInterp.pointerValue[i], zInterp.pointerValue[i], expectedX[i], expectedY[i], expectedZ[i], xout[i], yout[i], zout[i]);
 		}
 	}
 }
