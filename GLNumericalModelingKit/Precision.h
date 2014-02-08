@@ -94,6 +94,7 @@ typedef	FFTSetupD	GLFFTSetup;
 
 #define vGL_mmov		vDSP_mmovD
 #define vGL_mtrans		vDSP_mtransD		// Matrix transpose
+#define vGL_vsorti		vDSP_vsortiD		// Vector index in-place sort
 
 #define	vGL_fft2d_zip			vDSP_fft2d_zipD
 #define	vGL_fft2d_zop			vDSP_fft2d_zopD
@@ -175,8 +176,9 @@ typedef	FFTSetup	GLFFTSetup;
 #define	vGL_vmmsb		vDSP_vmmsb
 #define	vGL_vmma		vDSP_vmma
 
-#define vGL_mmov	vDSP_mmov
+#define vGL_mmov		vDSP_mmov
 #define vGL_mtrans		vDSP_mtrans			// Matrix transpose
+#define vGL_vsorti		vDSP_vsorti			// Vector index in-place sort
 
 #define	vGL_fft2d_zip			vDSP_fft2d_zip
 #define	vGL_fft2d_zop			vDSP_fft2d_zop

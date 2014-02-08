@@ -1421,7 +1421,12 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 
 @implementation GLMatrixEigensystemOperation
 
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform
+{
+	return [self initWithLinearTransformation: linearTransform sort: NSOrderedAscending];
+}
+
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform sort: (NSComparisonResult) sortOrder;
 {
 	GLLinearTransform *A = (GLLinearTransform *) linearTransform;
     for (NSUInteger i=0; i<A.fromDimensions.count; i++) {
@@ -1541,6 +1546,24 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				printf("sgeev failed with error code %d\n", (int)info);
 			}
 			
+			// First sort the eigenvalues (using a memory buffer that we know won't be needed again)
+			// This could break on a 2x2 array... should probably just allocate buffers, rather than re-use.
+			vDSP_Length *index = (vDSP_Length *) &(B[N]);
+			if (sortOrder != NSOrderedSame)
+			{
+				vDSP_Length *rvindex = &(index[2*N]);
+				for (NSUInteger i=0; i<N; i++) {
+					rvindex[i]=i;
+				}
+				// store the squared magnitude in B, since it's not being used anyway
+				GLFloat *mag = &(B[0]);
+				vGL_zvabs( &output_v, 1, mag, 1, N);
+				vGL_vsorti( mag, rvindex, NULL, N, sortOrder == NSOrderedAscending ? 1 : -1);
+				for (NSUInteger i=0; i<N; i++) {
+					index[rvindex[i]] = i;
+				}
+			}
+
 			// Now we have to get the eigenvectors in the proper format.
 			// If the j-th eigenvalue is real, then v(j) = VR(:,j), the j-th column of VR.
 			// If the j-th and (j+1)-st eigenvalues form a complex conjugate pair,
@@ -1548,34 +1571,38 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 			// And, don't forget, we need to fix the transpose.
 			vGL_vclr( &(C.imagp[inEquationPos]), resultMatrixDescription.strides[denseIndex].stride,  resultMatrixDescription.strides[denseIndex].nPoints);
 			
+			// Eigenvector stride
             NSUInteger stride = resultVectorDescription.strides[denseIndex].stride;
-            for( NSUInteger i = 0; i < N; i++ ) {
-                v.realp[outEquationPos+i*stride] = output_v.realp[i];
-                v.imagp[outEquationPos+i*stride] = output_v.imagp[i];
-            }
-            
             // inEquationPos should have the correct offsets because the output matrix has the same form as the input matrix.
             NSUInteger rowStride = resultMatrixDescription.strides[denseIndex].rowStride;
 			NSUInteger colStride = resultMatrixDescription.strides[denseIndex].columnStride;
             NSUInteger j=0;
-			for( NSUInteger i = 0; i < N; i++ ) { // i indicates which eigenvector we're copying
-				if ( v.imagp[i] == (GLFloat)0.0 ) {
+			for( NSUInteger i = 0; i < N; i++ ) { // i indicates which eigenvector/eigenvalue we're copying
+				// First copy the eigenvalue to the right spot
+				v.realp[outEquationPos+index[i]*stride] = output_v.realp[i];
+                v.imagp[outEquationPos+index[i]*stride] = output_v.imagp[i];
+				
+				if ( output_v.imagp[i] == (GLFloat)0.0 ) {
 					for( NSUInteger k = 0; k < N; k++ ) { // k walks down the column
-						C.realp[inEquationPos+k*rowStride+i*colStride] = output[j*N+k];
+						C.realp[inEquationPos+k*rowStride+index[i]*colStride] = output[j*N+k];
 					}
 					j++;
 				} else {
 					for( NSUInteger k = 0; k < N; k++ ) {
-						C.realp[inEquationPos+k*rowStride+i*colStride] = output[j*N+k];
-						C.imagp[inEquationPos+k*rowStride+i*colStride] = output[(j+1)*N+k];
+						C.realp[inEquationPos+k*rowStride+index[i]*colStride] = output[j*N+k];
+						C.imagp[inEquationPos+k*rowStride+index[i]*colStride] = output[(j+1)*N+k];
 						
-						C.realp[inEquationPos+k*rowStride+(i+1)*colStride] = output[j*N+k];
-						C.imagp[inEquationPos+k*rowStride+(i+1)*colStride] = -output[(j+1)*N+k];
+						v.realp[outEquationPos+index[i+1]*stride] = output_v.realp[i+1];
+						v.imagp[outEquationPos+index[i+1]*stride] = output_v.imagp[i+1];
+						
+						C.realp[inEquationPos+k*rowStride+index[i+1]*colStride] = output[j*N+k];
+						C.imagp[inEquationPos+k*rowStride+index[i+1]*colStride] = -output[(j+1)*N+k];
 					}
 					j+=2;
 					i++;
 				}
 			}
+			
 		});
 	};
 	

@@ -251,6 +251,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
  */
 @interface GLMatrixEigensystemOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform sort: (NSComparisonResult) sortOrder;
 @end
 
 /************************************************/
