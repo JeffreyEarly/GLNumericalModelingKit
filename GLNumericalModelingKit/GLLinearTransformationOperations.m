@@ -1423,7 +1423,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform
 {
-	return [self initWithLinearTransformation: linearTransform sort: NSOrderedAscending];
+	return [self initWithLinearTransformation: linearTransform sort: NSOrderedDescending];
 }
 
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform sort: (NSComparisonResult) sortOrder;
@@ -1500,14 +1500,20 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
     NSUInteger totalLoops = compute_total_matrix_vector_loops(operandDescription, resultMatrixDescription, denseIndex);
     
 	// first buffer will be used to store the transpose (which will be overwritten)
-	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
+	GLBuffer *buffer0 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
 	// second buffer will store the annoyingly formatted output
-	GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
+	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
     // third buffer will store the unstrided eigenvalue output
-	GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
+	GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
 	// fourth buffer is the lapack work buffer
-	GLBuffer *buffer4 = [[GLBuffer alloc] initWithLength: totalLoops*lwork_size*sizeof(GLFloat)];
-	NSArray *buffers = @[buffer1, buffer2, buffer3, buffer4];
+	GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: totalLoops*lwork_size*sizeof(GLFloat)];
+    // fifth buffer will store the magnitude of the eigenvalues
+	GLBuffer *buffer4 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nPoints*sizeof(vDSP_Length)];
+    // sixth buffer will store the index
+	GLBuffer *buffer5 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nPoints*sizeof(vDSP_Length)];
+    // seventh buffer will store the reverse index
+	GLBuffer *buffer6 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nPoints*sizeof(GLFloat)];
+	NSArray *buffers = @[buffer0, buffer1, buffer2, buffer3, buffer4, buffer5, buffer6];
 	
 	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 		apply_matrix_vector_loop(operandDescription, resultVectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
@@ -1546,23 +1552,22 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				printf("sgeev failed with error code %d\n", (int)info);
 			}
 			
-			// First sort the eigenvalues (using a memory buffer that we know won't be needed again)
-			// This could break on a 2x2 array... should probably just allocate buffers, rather than re-use.
-			vDSP_Length *index = (vDSP_Length *) &(B[N]);
+			// First sort the eigenvalues
+			vDSP_Length *index = (vDSP_Length *) [bufferArray[4] bytes];
+            vDSP_Length *rvindex = (vDSP_Length *) [bufferArray[5] bytes];
+            for (NSUInteger i=0; i<N; i++) {
+                rvindex[i]=i;
+            }
 			if (sortOrder != NSOrderedSame)
 			{
-				vDSP_Length *rvindex = &(index[2*N]);
-				for (NSUInteger i=0; i<N; i++) {
-					rvindex[i]=i;
-				}
 				// store the squared magnitude in B, since it's not being used anyway
-				GLFloat *mag = &(B[0]);
+				GLFloat *mag = (GLFloat *) [bufferArray[6] bytes];
 				vGL_zvabs( &output_v, 1, mag, 1, N);
 				vGL_vsorti( mag, rvindex, NULL, N, sortOrder == NSOrderedAscending ? 1 : -1);
-				for (NSUInteger i=0; i<N; i++) {
-					index[rvindex[i]] = i;
-				}
 			}
+            for (NSUInteger i=0; i<N; i++) {
+                index[rvindex[i]] = i;
+            }
 
 			// Now we have to get the eigenvectors in the proper format.
 			// If the j-th eigenvalue is real, then v(j) = VR(:,j), the j-th column of VR.

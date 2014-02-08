@@ -315,16 +315,16 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
             _nDataElements *= aDim.nPoints;
             _nDataPoints *= aDim.nPoints;
             
-            if (aDim.basisFunction == kGLDeltaBasis) {
-                self.realSymmetry[idx] = @(kGLNoSymmetry);
-                self.imaginarySymmetry[idx] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
-            } else if (aDim.basisFunction == kGLDiscreteCosineTransformIBasis || aDim.basisFunction == kGLCosineBasis) {
-                self.realSymmetry[idx] = @(kGLEvenSymmetry);
-                self.imaginarySymmetry[idx] = @(kGLZeroSymmetry);
-            } else if (aDim.basisFunction == kGLDiscreteSineTransformIBasis || aDim.basisFunction == kGLSineBasis) {
-                self.realSymmetry[idx] = @(kGLOddSymmetry);
-                self.imaginarySymmetry[idx] = @(kGLZeroSymmetry);
-            }
+//            if (aDim.basisFunction == kGLDeltaBasis) {
+//                self.realSymmetry[idx] = @(kGLNoSymmetry);
+//                self.imaginarySymmetry[idx] = (dataFormat == kGLRealDataFormat ? @(kGLZeroSymmetry) : @(kGLNoSymmetry));
+//            } else if (aDim.basisFunction == kGLDiscreteCosineTransformIBasis || aDim.basisFunction == kGLCosineBasis) {
+//                self.realSymmetry[idx] = @(kGLEvenSymmetry);
+//                self.imaginarySymmetry[idx] = @(kGLZeroSymmetry);
+//            } else if (aDim.basisFunction == kGLDiscreteSineTransformIBasis || aDim.basisFunction == kGLSineBasis) {
+//                self.realSymmetry[idx] = @(kGLOddSymmetry);
+//                self.imaginarySymmetry[idx] = @(kGLZeroSymmetry);
+//            }
             
 			_isFrequencyDomain |= aDim.isFrequencyDomain;
 		}

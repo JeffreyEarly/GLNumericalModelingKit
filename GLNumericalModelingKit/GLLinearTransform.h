@@ -319,7 +319,11 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
 
 - (GLLinearTransform *) matrixMultiply: (GLLinearTransform *) otherVariable;
 
+// Default ordering is descending (by magnitude), so the largest eigenvalue comes first.
 - (NSArray *) eigensystem;
+
+// Alternate ordering. NSOrderedSame leaves the ordering unchanged from the solver.
+- (NSArray *) eigensystemWithOrder: (NSComparisonResult) sortOrder;
 
 - (NSArray *) generalizedEigensystemWith: (GLLinearTransform *) B;
 

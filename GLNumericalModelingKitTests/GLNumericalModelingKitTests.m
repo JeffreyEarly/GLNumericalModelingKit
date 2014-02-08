@@ -1403,7 +1403,7 @@
 			7.31,  -6.43,  -6.16,   2.47,   5.58};
 	memcpy(A.pointerValue, a, A.nDataElements*sizeof(GLFloat));
 	
-	NSArray *system = [A eigensystem];
+	NSArray *system = [A eigensystemWithOrder: NSOrderedSame];
 	GLFunction *eigenvalues = system[0];
 	GLLinearTransform *S = system[1];
 	
@@ -1478,11 +1478,12 @@
 	GLFunction *eigenvalues = system[0];
 	GLLinearTransform *S = system[1];
     
-    GLFloat expected_eigval_realp[2*2] = { -0.372281323269014,0.267949192431123,5.372281323269014,3.732050807568877};
+    // By default, eigensystem orders by decreasing eigenvalue for *each* eigenvalue problem.
+    GLFloat expected_eigval_realp[2*2] = { 5.372281323269014,3.732050807568877,-0.372281323269014,0.267949192431123};
     
     GLFloat expected_eigval_imagp[2*2] = { 0,0,0,0};
     
-    GLFloat expected_eigvec_realp[2*2*2] = {-0.824564840132394,-0.806898221355074,-0.415973557919284,-0.343723769333440,0.565767464968992,0.590690494568872,-0.909376709132124,-0.939070801588044};
+    GLFloat expected_eigvec_realp[2*2*2] = {-0.415973557919284,-0.343723769333440,-0.824564840132394,-0.806898221355074,-0.909376709132124,-0.939070801588044,0.565767464968992,0.590690494568872};
     GLFloat expected_eigvec_imagp[2*2*2] = {0,0,0,0,0,0,0,0};
     
     GLSplitComplex eigval = eigenvalues.splitComplex;

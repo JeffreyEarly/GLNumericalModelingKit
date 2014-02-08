@@ -1139,6 +1139,13 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
 	return operation.result;
 }
 
+- (NSArray *) eigensystemWithOrder: (NSComparisonResult) sortOrder
+{
+	GLVariableOperation *operation = [[GLMatrixEigensystemOperation alloc] initWithLinearTransformation: self sort: sortOrder];
+	operation = [self replaceWithExistingOperation: operation];
+	return operation.result;
+}
+
 - (NSArray *) generalizedEigensystemWith: (GLLinearTransform *) B
 {
 	GLVariableOperation *operation = [[GLGeneralizedMatrixEigensystemOperation alloc] initWithFirstOperand: self secondOperand: B];
