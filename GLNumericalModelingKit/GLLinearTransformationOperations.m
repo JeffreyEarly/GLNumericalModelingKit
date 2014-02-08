@@ -1377,7 +1377,12 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 		};
 	} else {
 		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
+            
+#warning Needs an outer loop
+            // the problem is that we're not getting past the first 10 vectors, we simply hit the second component of the 1st vector instead of the start of the 11th vector.
+            
+            for (NSUInteger iteration=0; iteration<totalVectors; iteration++) {
+//			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
 				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 				GLFloat *f = (GLFloat *) [operandArray[1] bytes];
 				GLFloat *B = (GLFloat *) [resultArray[0] bytes];
@@ -1397,7 +1402,17 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				
 				GLFloat norm = 1/sqrt(fabs(sum));
 				vGL_vsmul(&(A[inEquationPos]), vectorElementStride, &norm, &(B[inEquationPos]), vectorElementStride, vectorLength);
-			});
+                
+                for (NSUInteger i=0; i<vectorLength; i++) {
+                    printf("%6.6f\t", A[inEquationPos+i*vectorElementStride]);
+                }
+                printf("\n");
+                for (NSUInteger i=0; i<vectorLength; i++) {
+                    printf("%6.6f\t", B[inEquationPos+i*vectorElementStride]);
+                }
+                printf("\n\n");
+//			});
+            };
 		};
 	}
 	
@@ -1507,11 +1522,11 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 	GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
 	// fourth buffer is the lapack work buffer
 	GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: totalLoops*lwork_size*sizeof(GLFloat)];
-    // fifth buffer will store the magnitude of the eigenvalues
+    // this buffer will store the index
 	GLBuffer *buffer4 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nPoints*sizeof(vDSP_Length)];
-    // sixth buffer will store the index
+    // this buffer will store the reverse index
 	GLBuffer *buffer5 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nPoints*sizeof(vDSP_Length)];
-    // seventh buffer will store the reverse index
+    // this buffer will store the magnitude of the eigenvalues
 	GLBuffer *buffer6 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nPoints*sizeof(GLFloat)];
 	NSArray *buffers = @[buffer0, buffer1, buffer2, buffer3, buffer4, buffer5, buffer6];
 	
@@ -1547,28 +1562,31 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 			__CLPK_integer info;
 			
 			sgeev_(&JOBVL, &JOBVR, &n, B, &n, output_v.realp, output_v.imagp, NULL, &n, output, &n, work, &lwork, (__CLPK_integer *)&info);
-			
+     
 			if (info != 0) {
 				printf("sgeev failed with error code %d\n", (int)info);
 			}
 			
 			// First sort the eigenvalues
-			vDSP_Length *index = (vDSP_Length *) [bufferArray[4] bytes];
-            vDSP_Length *rvindex = (vDSP_Length *) [bufferArray[5] bytes];
+            vDSP_Length *index_data = (vDSP_Length *) [bufferArray[4] bytes];
+			vDSP_Length *index = &(index_data[iteration*N]);
+            vDSP_Length *rvindex_data = (vDSP_Length *) [bufferArray[5] bytes];
+			vDSP_Length *rvindex = &(rvindex_data[iteration*N]);
             for (NSUInteger i=0; i<N; i++) {
                 rvindex[i]=i;
             }
 			if (sortOrder != NSOrderedSame)
 			{
 				// store the squared magnitude in B, since it's not being used anyway
-				GLFloat *mag = (GLFloat *) [bufferArray[6] bytes];
+                GLFloat *mag_data = (GLFloat *) [bufferArray[6] bytes];
+				GLFloat *mag = &(mag_data[iteration*N]);
 				vGL_zvabs( &output_v, 1, mag, 1, N);
 				vGL_vsorti( mag, rvindex, NULL, N, sortOrder == NSOrderedAscending ? 1 : -1);
 			}
             for (NSUInteger i=0; i<N; i++) {
                 index[rvindex[i]] = i;
             }
-
+            
 			// Now we have to get the eigenvectors in the proper format.
 			// If the j-th eigenvalue is real, then v(j) = VR(:,j), the j-th column of VR.
 			// If the j-th and (j+1)-st eigenvalues form a complex conjugate pair,
