@@ -1234,6 +1234,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
     
 	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[index].nColumns;
 	NSUInteger vectorStride = lastNonTrivialIndex > index ? operandDescription.strides[lastNonTrivialIndex].stride : operandDescription.strides[index].columnStride;
+    NSUInteger nVectorsPerIndex = lastNonTrivialIndex > index ? totalVectors : operandDescription.strides[index].nColumns;
 	NSUInteger vectorLength = operandDescription.strides[index].nRows;
 	NSUInteger vectorElementStride = operandDescription.strides[index].rowStride;
 	NSUInteger complexStride = operandDescription.strides[index].complexStride;
@@ -1246,7 +1247,8 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
 				
-				NSUInteger inEquationPos = iteration*vectorStride;
+                NSUInteger bigSkip = (iteration/nVectorsPerIndex)*nVectorsPerIndex*vectorLength;
+				NSUInteger inEquationPos = bigSkip + (iteration%nVectorsPerIndex)*vectorStride;
 				
 				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 				GLSplitComplex Asplit;
@@ -1277,7 +1279,8 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 				GLFloat *B = (GLFloat *) [resultArray[0] bytes];
 				
-				NSUInteger inEquationPos = iteration*vectorStride;
+                NSUInteger bigSkip = (iteration/nVectorsPerIndex)*nVectorsPerIndex*vectorLength;
+				NSUInteger inEquationPos = bigSkip + (iteration%nVectorsPerIndex)*vectorStride;
 
 				// square it
 				vGL_vsq(&(A[inEquationPos]), vectorElementStride, &(B[inEquationPos]), vectorElementStride, vectorLength);
@@ -1333,6 +1336,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
     
 	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[index].nRows;
 	NSUInteger vectorStride = lastNonTrivialIndex > index ? operandDescription.strides[lastNonTrivialIndex].stride : operandDescription.strides[index].columnStride;
+    NSUInteger nVectorsPerIndex = lastNonTrivialIndex > index ? totalVectors : operandDescription.strides[index].nColumns;
 	NSUInteger vectorLength = operandDescription.strides[index].nRows;
 	NSUInteger vectorElementStride = operandDescription.strides[index].rowStride;
 	NSUInteger complexStride = operandDescription.strides[index].complexStride;
@@ -1345,7 +1349,8 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
 				
-				NSUInteger inEquationPos = iteration*vectorStride;
+                NSUInteger bigSkip = (iteration/nVectorsPerIndex)*nVectorsPerIndex*vectorLength;
+				NSUInteger inEquationPos = bigSkip + (iteration%nVectorsPerIndex)*vectorStride;
 				
 				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 				GLSplitComplex Asplit;
@@ -1377,17 +1382,13 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 		};
 	} else {
 		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-            
-#warning Needs an outer loop
-            // the problem is that we're not getting past the first 10 vectors, we simply hit the second component of the 1st vector instead of the start of the 11th vector.
-            
-            for (NSUInteger iteration=0; iteration<totalVectors; iteration++) {
-//			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
+			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
 				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 				GLFloat *f = (GLFloat *) [operandArray[1] bytes];
 				GLFloat *B = (GLFloat *) [resultArray[0] bytes];
 				
-				NSUInteger inEquationPos = iteration*vectorStride;
+                NSUInteger bigSkip = (iteration/nVectorsPerIndex)*nVectorsPerIndex*vectorLength;
+				NSUInteger inEquationPos = bigSkip + (iteration%nVectorsPerIndex)*vectorStride;
 				
 				// square it
 				vGL_vsq(&(A[inEquationPos]), vectorElementStride, &(B[inEquationPos]), vectorElementStride, vectorLength);
@@ -1402,17 +1403,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				
 				GLFloat norm = 1/sqrt(fabs(sum));
 				vGL_vsmul(&(A[inEquationPos]), vectorElementStride, &norm, &(B[inEquationPos]), vectorElementStride, vectorLength);
-                
-                for (NSUInteger i=0; i<vectorLength; i++) {
-                    printf("%6.6f\t", A[inEquationPos+i*vectorElementStride]);
-                }
-                printf("\n");
-                for (NSUInteger i=0; i<vectorLength; i++) {
-                    printf("%6.6f\t", B[inEquationPos+i*vectorElementStride]);
-                }
-                printf("\n\n");
-//			});
-            };
+			});
 		};
 	}
 	
