@@ -182,6 +182,8 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 
 - (GLScalar *) integrate;
 
+- (GLFunction *) makeHermitian;
+
 // Matlab style. String should be @"start:end,start:end,..."
 - (id) setValue: (GLFloat) aScalar atIndices: (NSString *) string;
 - (id) setVariableValue: (GLScalar *) aScalarVariable atIndices: (NSString *) string;

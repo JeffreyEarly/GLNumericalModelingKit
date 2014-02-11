@@ -91,7 +91,7 @@
 		NSUInteger nDataElements = resultVariable.nDataElements;
 		self.buffer = @[ [[GLBuffer alloc] initWithLength: nDataElements*sizeof(GLFloat)] ];
         BOOL halfComplex2D = resultVariable.dimensions.count == 2 && [resultVariable.dimensions[0] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[1] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[1] isStrictlyPositive];
-        BOOL halfComplex3D = resultVariable.dimensions.count == 3 && [resultVariable.dimensions[1] basisFunction] == kGLDeltaBasis && [resultVariable.dimensions[1] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[2] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[2] isStrictlyPositive];
+        BOOL halfComplex3D = resultVariable.dimensions.count == 3 && [resultVariable.dimensions[0] basisFunction] == kGLDeltaBasis && [resultVariable.dimensions[1] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[2] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[2] isStrictlyPositive];
         if (nDataElements % 2 == 1) [NSException raise: @"StupidImplementationException" format: @"Can't deal with odd numbers"];
 		
 		variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
@@ -177,8 +177,8 @@
                         C.realp[(z*kDimNPoints+(kDimNPoints-i))*lDimNPoints] = C.realp[(z*kDimNPoints+i)*lDimNPoints];
                         C.imagp[(z*kDimNPoints+(kDimNPoints-i))*lDimNPoints] = -C.imagp[(z*kDimNPoints+i)*lDimNPoints];
                         
-                        C.realp[(z*kDimNPoints+(kDimNPoints-i))*lDimNPoints+(lDimNPoints-1)] = C.realp[(z*kDimNPoints+(kDimNPoints-i))*lDimNPoints+(lDimNPoints-1)];
-                        C.imagp[(z*kDimNPoints+(kDimNPoints-i))*lDimNPoints+(lDimNPoints-1)] = -C.imagp[(z*kDimNPoints+(kDimNPoints-i))*lDimNPoints+(lDimNPoints-1)];
+                        C.realp[(z*kDimNPoints+(kDimNPoints-i))*lDimNPoints+(lDimNPoints-1)] = C.realp[(z*kDimNPoints+i)*lDimNPoints+(lDimNPoints-1)];
+                        C.imagp[(z*kDimNPoints+(kDimNPoints-i))*lDimNPoints+(lDimNPoints-1)] = -C.imagp[(z*kDimNPoints+i)*lDimNPoints+(lDimNPoints-1)];
                     }
                     
                     // For the four self-conjugate components, that means that there can be no imaginary component

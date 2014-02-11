@@ -158,3 +158,13 @@
 @interface GLDenseMatrixOperation : GLVariableOperation
 - (GLDenseMatrixOperation *) initWithLinearTransform: (GLLinearTransform *) transform;
 @end
+
+/************************************************/
+/*		GLMakeHermitianOperation                     */
+/************************************************/
+
+// Fixes the components to make hermitian.
+
+@interface GLMakeHermitianOperation : GLVariableOperation
+- (GLMakeHermitianOperation *) initWithFunction: (GLVariable *) variable;
+@end

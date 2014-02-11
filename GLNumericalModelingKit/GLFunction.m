@@ -645,6 +645,13 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 	return operation.result[0];
 }
 
+- (GLFunction *) makeHermitian
+{
+	GLMakeHermitianOperation *operation = [[GLMakeHermitianOperation alloc] initWithFunction: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 - (GLScalar *) integrate
 {
 	GLIntegrationOperation *operation = [[GLIntegrationOperation alloc] initWithFunction: self];
