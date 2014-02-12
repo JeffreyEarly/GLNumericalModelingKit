@@ -102,6 +102,8 @@ static NSString *GLVariableMatrixDescriptionKey = @"GLVariableMatrixDescriptionK
 
 - (void)encodeWithCoder:(NSCoder *)coder
 {
+    [self solve];
+    
     [coder encodeObject: self.equation forKey:GLVariableEquationKey];
     
     if (self.name) [coder encodeObject:self.name forKey:GLVariableNameKey];
