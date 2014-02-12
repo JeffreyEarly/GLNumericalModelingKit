@@ -73,16 +73,16 @@ GLSplitComplex splitComplexFromData( NSData *data );
 #pragma mark
 
 /// The total number of components saved to the data. Note that some formats may not save zeros, for example, while others may save extra points than required.
-@property(readonly, assign, nonatomic) NSUInteger nDataPoints;
+@property(readwrite, assign, nonatomic) NSUInteger nDataPoints;
 
 /// For a real number, the number of data points is equal to the number of elements. For a complex number, there are twice as many elements as points.
-@property(readonly, assign, nonatomic) NSUInteger nDataElements;
+@property(readwrite, assign, nonatomic) NSUInteger nDataElements;
 
 /// Access to the raw computed data. If this variable is dependent on others, you should call -solve first, otherwise an empty (non-zeroed!) chunk of data will be returned.
 @property(readwrite, strong, nonatomic) NSMutableData *data;
 
 /// Number of bytes allocated in the raw data, essentially the nDataElements*sizeof(GLFloat)
-@property(readonly, assign, nonatomic) NSUInteger dataBytes;
+@property(readwrite, assign, nonatomic) NSUInteger dataBytes;
 
 /// Indicates whether or not an NSMutableData object has been assigned yet.
 @property(readonly, assign, nonatomic) BOOL hasData;

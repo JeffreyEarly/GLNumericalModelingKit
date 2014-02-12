@@ -137,6 +137,7 @@ static NSString *GLVariableMatrixDescriptionKey = @"GLVariableMatrixDescriptionK
         _nDataPoints = [[decoder decodeObjectForKey: GLVariableNDataPointsKey] unsignedIntegerValue];
         _nDataElements = [[decoder decodeObjectForKey: GLVariableNDataElementsKey] unsignedIntegerValue];
         _dataFormat = [[decoder decodeObjectForKey: GLVariableDataFormatKey] unsignedIntegerValue];
+        _isComplex = _dataFormat == kGLRealDataFormat ? NO : YES;
         
         _dataBytes = [[decoder decodeObjectForKey: GLVariableDataBytesKey] unsignedIntegerValue];
         _data = [decoder decodeObjectForKey: GLVariableDataKey];

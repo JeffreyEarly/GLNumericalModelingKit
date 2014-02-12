@@ -47,6 +47,7 @@ static NSString *GLMatrixDescriptionStridesDataKey = @"GLMatrixDescriptionStride
         _elementStride = [[decoder decodeObjectForKey: GLMatrixDescriptionElementStrideKey] unsignedIntegerValue];
         _dataFormat = [[decoder decodeObjectForKey: GLMatrixDescriptionDataFormatKey] unsignedIntegerValue];
         _stridesData = [decoder decodeObjectForKey: GLMatrixDescriptionStridesDataKey];
+        self.strides = self.stridesData.mutableBytes;
     }
     return self;
 }

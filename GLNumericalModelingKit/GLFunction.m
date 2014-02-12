@@ -269,9 +269,9 @@
 //	return self;
 //}
 
-@synthesize nDataPoints = _nDataPoints;
-@synthesize nDataElements = _nDataElements;
-@synthesize dataBytes = _dataBytes;
+//@synthesize nDataPoints = _nDataPoints;
+//@synthesize nDataElements = _nDataElements;
+//@synthesize dataBytes = _dataBytes;
 
 static NSString *GLFunctionDimensionsKey = @"GLFunctionDimensionsKey";
 static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainKey";
@@ -305,15 +305,15 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 		
 		// We loop through the dimensions and allocate enough memory for the variable
 		// defined on each dimension.
-		_nDataPoints = 1;
-		_nDataElements = 1;
+		self.nDataPoints = 1;
+		self.nDataElements = 1;
 		self.realSymmetry = [NSMutableArray array];
 		self.imaginarySymmetry = [NSMutableArray array];
 		for ( GLDimension *aDim in theDimensions ) {
             NSUInteger idx = [theDimensions indexOfObject: aDim];
             
-            _nDataElements *= aDim.nPoints;
-            _nDataPoints *= aDim.nPoints;
+            self.nDataElements *= aDim.nPoints;
+            self.nDataPoints *= aDim.nPoints;
             
 //            if (aDim.basisFunction == kGLDeltaBasis) {
 //                self.realSymmetry[idx] = @(kGLNoSymmetry);
@@ -330,10 +330,10 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 		}
         
         if (dataFormat == kGLSplitComplexDataFormat) {
-            _nDataElements *= 2;
+            self.nDataElements *= 2;
         }
 		
-		_dataBytes = _nDataElements*sizeof(GLFloat);
+		self.dataBytes = self.nDataElements*sizeof(GLFloat);
         
         self.matrixDescription = [[GLMatrixDescription alloc] initWithFunction: self];
 	}	

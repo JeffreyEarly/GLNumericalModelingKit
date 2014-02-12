@@ -55,6 +55,11 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
     if ((self=[super initWithCoder: coder])) {
         _toDimensions = [coder decodeObjectForKey: GLLinearTransformToDimensionsKey];
         _fromDimensions = [coder decodeObjectForKey: GLLinearTransformFromDimensionsKey];
+        NSMutableArray*array = [NSMutableArray array];
+        for (NSUInteger iDim = 0; iDim < self.matrixDescription.nDimensions; iDim++) {
+            array[iDim] = @(self.matrixDescription.strides[iDim].matrixFormat);
+        }
+        _matrixFormats=array;
     }
     return self;
 }
