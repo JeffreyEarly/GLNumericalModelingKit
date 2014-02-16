@@ -117,6 +117,14 @@
 @end
 
 /************************************************/
+/*		GLMinOperation							*/
+/************************************************/
+
+@interface GLMinOperation : GLVariableOperation
+- (GLMinOperation *) initWithFunction: (GLFunction *) variable;
+@end
+
+/************************************************/
 /*		GLAverageOperation						*/
 /************************************************/
 

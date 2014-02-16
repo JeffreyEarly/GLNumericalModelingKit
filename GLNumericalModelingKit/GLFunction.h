@@ -176,7 +176,9 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 - (id) pow: (GLFloat) aScalar;
 
 // Returns a scalar GLVariable.
-- (id) max;
+- (GLScalar *) max;
+
+- (GLScalar *) min;
 
 
 // Computes the mean along the specified index, effectively collapsing the variable along that index.

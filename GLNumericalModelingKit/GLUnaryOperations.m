@@ -622,7 +622,7 @@
 
 - (GLMaxOperation *) initWithFunction: (GLFunction *) variable
 {
-	GLFunction *resultVariable = [GLFunction functionOfRealTypeWithDimensions: [NSArray array] forEquation: variable.equation];
+	GLScalar *resultVariable = [GLScalar scalarWithType: kGLRealDataFormat forEquation: variable.equation];
 	
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
 	{		
@@ -633,6 +633,32 @@
 			vGL_maxv( (GLFloat *) operand.bytes, 1, result.mutableBytes, nDataElements);
 		};
         self.graphvisDescription = @"max";
+	}
+	
+    return self;
+}
+
+@end
+
+/************************************************/
+/*		GLMinOperation							*/
+/************************************************/
+
+@implementation GLMinOperation
+
+- (GLMinOperation *) initWithFunction: (GLFunction *) variable
+{
+	GLScalar *resultVariable = [GLScalar scalarWithType: kGLRealDataFormat forEquation: variable.equation];
+	
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
+	{
+		NSUInteger nDataElements = ((GLFunction *)self.operand[0]).nDataElements;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
+			vGL_minv( (GLFloat *) operand.bytes, 1, result.mutableBytes, nDataElements);
+		};
+        self.graphvisDescription = @"min";
 	}
 	
     return self;
