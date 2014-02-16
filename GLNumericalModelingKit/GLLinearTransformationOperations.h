@@ -154,7 +154,13 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 - (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
 @end
 
+/************************************************/
+/*		GLMatrixMatrixMultiplicationOperation   */
+/************************************************/
 
+@interface GLMatrixMatrixDiagonalDenseMultiplicationOperation : GLVariableOperation
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
+@end
 
 /************************************************/
 /*                                              */

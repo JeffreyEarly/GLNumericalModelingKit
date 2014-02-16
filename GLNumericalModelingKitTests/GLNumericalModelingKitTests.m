@@ -8,6 +8,7 @@
 
 #import <XCTest/XCTest.h>
 #import <GLNumericalModelingKit/GLNumericalModelingKit.h>
+#import <GLNumericalModelingKit/GLLinearTransformationOperations.h>
 
 @interface GLNumericalModelingKitTests : XCTestCase
 
@@ -442,6 +443,46 @@
 		}
 	}
 }
+
+/************************************************/
+/*		Summation Test                          */
+/************************************************/
+
+#pragma mark -
+#pragma mark Summation Test
+#pragma mark
+
+- (void) testSingleVectorSummation
+{
+	NSUInteger Nx = 4;
+	NSUInteger Ny = 5;
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: Nx domainMin:0 length:Nx-1];
+	GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: Ny domainMin:0 length:Ny-1];
+	
+	GLFunction *x2D = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim,yDim] forEquation: equation];
+	
+	GLFunction *sum0 = [x2D sum: 0];
+	GLFunction *sum1 = [x2D sum: 1];
+	
+    GLFloat expected0[5] = {6.0, 6.0, 6.0, 6.0, 6.0};
+    GLFloat expected1[4] = {0.0, 5.0, 10.0, 15.0};
+    
+	GLFloat *output = sum0.pointerValue;
+	for (int i=0; i<5; i++) {
+		if ( !fequal(output[i], expected0[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected0[i], output[i]);
+		}
+	}
+    
+    output = sum1.pointerValue;
+	for (int i=0; i<4; i++) {
+		if ( !fequal(output[i], expected1[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected1[i], output[i]);
+		}
+	}
+}
+
 
 /************************************************/
 /*		Interpolation Tests                     */
@@ -1357,6 +1398,27 @@
 			XCTFail(@"Expected %f + I%f, found %f + I%f.", expected_realp[i], expected_imagp[i], output.realp[i], output.imagp[i]);
 		}
 	}
+}
+
+-(void) testSpecialMatrixMatrixMultiplication
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 2 domainMin:0.0 length:3.0];
+	GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 3 domainMin:1.0 length:2.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim,yDim] forEquation:equation];
+    GLFunction *y = [GLFunction functionOfRealTypeFromDimension: yDim withDimensions: @[xDim,yDim] forEquation:equation];
+	GLFunction *t = [x plus: y];
+	
+	
+	GLLinearTransform *A = [GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: @[xDim,yDim] toDimensions: @[xDim,yDim] inFormat: @[@(kGLDiagonalMatrixFormat), @(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
+		return (GLFloatComplex) 1.0;
+	}];
+	GLLinearTransform *B = [GLLinearTransform linearTransformFromFunction: t];
+	
+	GLMatrixMatrixDiagonalDenseMultiplicationOperation *op = [[GLMatrixMatrixDiagonalDenseMultiplicationOperation alloc] initWithFirstOperand: A secondOperand: B];
+    GLLinearTransform *C = op.result[0];
+    [C dumpToConsole];
+    
 }
 
 - (void) testRealMatrixInversion

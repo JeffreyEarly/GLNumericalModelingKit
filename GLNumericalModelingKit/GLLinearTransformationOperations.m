@@ -128,7 +128,12 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
             lastTrivialIndexMatrixB = index;
 			totalTrivialPointsMatrixB *= matrixB.strides[index].nPoints;
             lastNonTrivialNonLoopIndexMatrixA = index;
-        } else if (index != loopIndex) {
+        }
+//        else if (matrixA.strides[index].matrixFormat == kGLDiagonalMatrixFormat && matrixB.strides[index].matrixFormat == kGLDiagonalMatrixFormat && index != loopIndex) {
+//            lastNonTrivialNonLoopIndexMatrixA = index;
+//            lastNonTrivialNonLoopIndexMatrixB = index;
+//        }
+        else if (index != loopIndex) {
 			[NSException raise: @"BadMatrixFormat" format:@"Cannot apply the matrix loop across a matrix of this format"];
 		}
         
@@ -843,6 +848,94 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 			};
 		}
 		
+    }
+    return self;
+}
+
+@end
+
+/************************************************/
+/*		GLMatrixMatrixDiagonalDenseMultiplicationOperation   */
+/************************************************/
+
+@implementation GLMatrixMatrixDiagonalDenseMultiplicationOperation
+
+// This is copy and pasted from the superclass, needs to be properly retooled.
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
+{
+    
+    if ( ![A.fromDimensions isEqualToArray: B.toDimensions] ) {
+        [NSException raise: @"DimensionsNotEqualException" format: @"fromDimensions of A, must equal the toDimensions of B."];
+    }
+    
+    GLMatrixDescription *matrixA = A.matrixDescription;
+	GLMatrixDescription *matrixB = B.matrixDescription;
+    NSUInteger denseDiagonalIndex = NSNotFound;
+	NSUInteger numDenseDiagonalIndices = 0;
+	for ( NSUInteger index=0; index < matrixA.nDimensions; index++) {
+        if (matrixA.strides[index].matrixFormat == kGLDenseMatrixFormat && matrixB.strides[index].matrixFormat == kGLDiagonalMatrixFormat ) {
+			numDenseDiagonalIndices++;
+			denseDiagonalIndex = index;
+		} else if (matrixA.strides[index].matrixFormat == kGLDiagonalMatrixFormat && matrixB.strides[index].matrixFormat == kGLDiagonalMatrixFormat ) {
+			
+		} else {
+            [NSException raise: @"BadFormat" format: @"Can't handle this."];
+        }
+    }
+	
+    if ( numDenseDiagonalIndices != 1 ) {
+        [NSException raise: @"DenseIndexNotFound" format: @"Unable to find a dense index."];
+    }
+	
+	BOOL isComplex = A.isComplex || B.isComplex;
+	GLDataFormat format = isComplex ? kGLSplitComplexDataFormat : kGLRealDataFormat;
+	
+	A = [A copyWithDataType: format matrixFormat: A.matrixFormats ordering: kGLRowMatrixOrder];
+	B = [B copyWithDataType: format matrixFormat: B.matrixFormats ordering: kGLRowMatrixOrder];
+    
+	NSArray *matrixFormats = [GLMatrixDescription commonFormatsFromLeft: A.matrixFormats right: B.matrixFormats];
+	GLLinearTransform *result = [GLLinearTransform transformOfType: format withFromDimensions: B.fromDimensions toDimensions:A.toDimensions inFormat: matrixFormats forEquation:B.equation matrix: nil];
+	
+	GLMatrixDescription *operandDescription = A.matrixDescription;
+	
+	NSUInteger lastNonTrivialIndex = NSNotFound;
+    for ( NSUInteger index=0; index < operandDescription.nDimensions; index++) {
+		if (operandDescription.strides[index].matrixFormat != kGLIdentityMatrixFormat) {
+            lastNonTrivialIndex = index;
+        }
+    }
+    
+	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[denseDiagonalIndex].nColumns;
+	NSUInteger vectorStride = lastNonTrivialIndex > denseDiagonalIndex ? operandDescription.strides[lastNonTrivialIndex].stride : operandDescription.strides[denseDiagonalIndex].columnStride;
+    NSUInteger nVectorsPerIndex = lastNonTrivialIndex > denseDiagonalIndex ? totalVectors : operandDescription.strides[denseDiagonalIndex].nColumns;
+	NSUInteger vectorLength = operandDescription.strides[denseDiagonalIndex].nRows;
+	NSUInteger vectorElementStride = operandDescription.strides[denseDiagonalIndex].rowStride;
+	
+	dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+	variableOperation op;
+	if (A.isComplex) {
+
+	} else {
+		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+                GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+				
+                NSUInteger bigSkip = (iteration/nVectorsPerIndex)*nVectorsPerIndex*vectorLength;
+				NSUInteger inEquationPos = bigSkip + (iteration%nVectorsPerIndex)*vectorStride;
+                
+                NSUInteger bigSkip2 = (iteration/nVectorsPerIndex)*nVectorsPerIndex;
+				NSUInteger inEquationPos2 = bigSkip2 + (iteration%nVectorsPerIndex)*vectorStride;
+                
+				vGL_vsmul(&(A[inEquationPos]), vectorElementStride, &(B[iteration]), &(C[inEquationPos]), vectorElementStride, vectorLength);
+			});
+		};
+	}
+	
+	
+	if (( self = [super initWithResult: @[result] operand: @[A,B] buffers: @[] operation: op] )) {
+        
     }
     return self;
 }

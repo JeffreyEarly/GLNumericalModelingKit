@@ -547,6 +547,13 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 	return operation.result[0];
 }
 
+- (GLFunction *) tanh
+{
+	GLHyperbolicTangentOperation *operation = [[GLHyperbolicTangentOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 - (GLFunction *) sqrt
 {	
 	GLSquareRootOperation *operation = [[GLSquareRootOperation alloc] initWithVariable: self];
@@ -641,6 +648,20 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 - (GLScalar *) mean
 {
 	GLAverageOperation *operation = [[GLAverageOperation alloc] initWithFunction: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLFunction *) sum: (NSUInteger) index
+{
+	GLSummationOperation *operation = [[GLSummationOperation alloc] initWithFunction: self dimensionIndex: index];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) sum
+{
+	GLSummationOperation *operation = [[GLSummationOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
 }

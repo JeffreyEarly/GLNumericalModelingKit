@@ -61,6 +61,14 @@
 @end
 
 /************************************************/
+/*		GLHyperbolicTangentOperation			*/
+/************************************************/
+// variable = sin( variable )
+@interface GLHyperbolicTangentOperation : GLVariableOperation
+- (GLHyperbolicTangentOperation *) initWithVariable: (GLVariable *) variable;
+@end
+
+/************************************************/
 /*		GLInverseTangentOperation				*/
 /************************************************/
 // variable = atan( variable )
@@ -116,6 +124,17 @@
 
 - (GLAverageOperation *) initWithFunction: (GLFunction *) variable dimensionIndex: (NSUInteger) index;
 - (GLAverageOperation *) initWithFunction: (GLFunction *) variable;
+@property NSUInteger dimIndex;
+@end
+
+/************************************************/
+/*		GLSummationOperation					*/
+/************************************************/
+
+@interface GLSummationOperation : GLVariableOperation
+
+- (GLSummationOperation *) initWithFunction: (GLFunction *) variable dimensionIndex: (NSUInteger) index;
+- (GLSummationOperation *) initWithFunction: (GLFunction *) variable;
 @property NSUInteger dimIndex;
 @end
 

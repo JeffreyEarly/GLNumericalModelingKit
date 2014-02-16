@@ -38,7 +38,7 @@
 		8157ADCC17F9FCDB002A6ED6 /* GLVectorVectorOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADAE17F9FCDA002A6ED6 /* GLVectorVectorOperations.m */; };
 		8157ADCD17F9FCDB002A6ED6 /* GLBasisTransformationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADAF17F9FCDB002A6ED6 /* GLBasisTransformationOperations.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADCE17F9FCDB002A6ED6 /* GLBasisTransformationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB017F9FCDB002A6ED6 /* GLBasisTransformationOperations.m */; };
-		8157ADCF17F9FCDB002A6ED6 /* GLLinearTransformationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB117F9FCDB002A6ED6 /* GLLinearTransformationOperations.h */; };
+		8157ADCF17F9FCDB002A6ED6 /* GLLinearTransformationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB117F9FCDB002A6ED6 /* GLLinearTransformationOperations.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADD017F9FCDB002A6ED6 /* GLLinearTransformationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB217F9FCDB002A6ED6 /* GLLinearTransformationOperations.m */; };
 		8157ADD317F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB517F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADD417F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB617F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.m */; };
@@ -472,6 +472,7 @@
 				81CABBF818089D7C00758DF1 /* GLVariable.h in Headers */,
 				813629FC182AC8C1001A8E1D /* GLBuffer.h in Headers */,
 				8194543A183534DC000BD412 /* GLMinimizationOperation.h in Headers */,
+				8157ADCF17F9FCDB002A6ED6 /* GLLinearTransformationOperations.h in Headers */,
 				8157ADCB17F9FCDB002A6ED6 /* GLVectorVectorOperations.h in Headers */,
 				8157AE1C17F9FDEB002A6ED6 /* GLLowLevelNetCDF.h in Headers */,
 				8157AE1817F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.h in Headers */,
@@ -484,7 +485,6 @@
 				8157AE2317FA1289002A6ED6 /* fftw3.h in Headers */,
 				8157ADD517F9FCDB002A6ED6 /* GLDimensionalOperations.h in Headers */,
 				8157ADFC17F9FD66002A6ED6 /* GLDSPFourierTransform.h in Headers */,
-				8157ADCF17F9FCDB002A6ED6 /* GLLinearTransformationOperations.h in Headers */,
 				8157ADC717F9FCDB002A6ED6 /* GLNullaryOperations.h in Headers */,
 				8157ADE317F9FCE6002A6ED6 /* GLMemoryPool.h in Headers */,
 				8157ADED17F9FCED002A6ED6 /* GLFourierTransform.h in Headers */,
