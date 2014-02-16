@@ -83,9 +83,17 @@
 // variable = clip(operand, min, max)
 @implementation GLNormalDistributionOperation
 
+
+
 - (id) initWithResult: (GLFunction *) resultVariable
 {
-	if (( self = [super initWithResult: @[resultVariable] operand: @[]] ))
+    return [self initWithResult: resultVariable seed: nil];
+}
+
+- (id) initWithResult: (GLFunction *) resultVariable seed: (GLScalar *) seed
+{
+    BOOL hasSeed = seed != nil;
+	if (( self = [super initWithResult: @[resultVariable] operand: hasSeed ? @[seed] : @[]] ))
 	{
 
 		NSUInteger nDataElements = resultVariable.nDataElements;
@@ -94,6 +102,7 @@
         BOOL halfComplex3D = resultVariable.dimensions.count == 3 && [resultVariable.dimensions[0] basisFunction] == kGLDeltaBasis && [resultVariable.dimensions[1] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[2] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[2] isStrictlyPositive];
         if (nDataElements % 2 == 1) [NSException raise: @"StupidImplementationException" format: @"Can't deal with odd numbers"];
 		
+        
 		variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 			const int halfTheElements = (int) nDataElements/2;
 			
@@ -102,6 +111,10 @@
 			GLFloat *B = (GLFloat *) [bufferArray[0] bytes];
 			GLFloat *B2 = &(B[halfTheElements]);
 			
+            if (hasSeed) {
+                GLFloat *seed = (GLFloat *) [operandArray[0] bytes];
+                srand( (unsigned int) seed);
+            }
 			// Put random numbers (0,1) into the buffer
 			for (NSUInteger i=0; i<nDataElements; i++) {
 				B[i] = ((double) rand())/( (double) RAND_MAX );

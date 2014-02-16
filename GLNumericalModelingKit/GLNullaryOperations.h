@@ -32,4 +32,5 @@
  */
 @interface GLNormalDistributionOperation : GLVariableOperation
 - (id) initWithResult: (GLFunction *) result;
+- (id) initWithResult: (GLFunction *) result seed: (GLScalar *) seed;
 @end
