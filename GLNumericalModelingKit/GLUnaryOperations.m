@@ -674,6 +674,12 @@
 
 - (GLAverageOperation *) initWithFunction: (GLFunction *) variable dimensionIndex: (NSUInteger) index
 {
+    GLDimension *dim = variable.dimensions[index];
+    return [self initWithFunction: variable dimensionIndex: index range: NSMakeRange(0, dim.nPoints)];
+}
+
+- (GLAverageOperation *) initWithFunction: (GLFunction *) variable dimensionIndex: (NSUInteger) index range: (NSRange) aRange;
+{
 	NSMutableArray *newDimensions = [variable.dimensions mutableCopy];
 	[newDimensions removeObjectAtIndex: index];
 	
@@ -686,85 +692,131 @@
         resultVariable = [GLScalar scalarWithType: variable.dataFormat forEquation: variable.equation];
     }
 	
-	if (( self = [super initWithResult: @[resultVariable] operand: @[variable]] ))
-	{
-        self.dimIndex = index;
-        
-		// index = i*ny*nz + j*nz + k
-		// For example: for a given (i,k), we want to sum over all j's. The stride between j elements, is nz and there are clearly ny of them.
-		
-		// The spacing between the elements that we want to sum over.
-		// If we're collapsing the last index
-		NSUInteger summingStride=variable.matrixDescription.strides[index].stride;
-        
-		// The number of elements that we want to sum over
-		NSUInteger summingPoints = variable.matrixDescription.strides[index].nPoints;
-		
-        // The tricky part is covering all combinations of (i,k) --- of which there are nx*nz. In this example, if we iterate m=0, m<nx*nz,
-		// then when m==nz, we actually want to skip to ny*nz, and then increment by ones again. (i/nz)*ny*nz + (i%nz)
-        // Collapse nx:
-        //  k = m%nz
-        //  j = m/nz
-        //  index = (m/nz)*nz + (m%nz)*1
-        // Collapse ny:
-        //  k = m%nz
-        //  i = m/nz
-        //  index = (m/nz)*ny*nz + (m%nz)*1
-        // Collapse nz:
-        //  j = m%ny
-        //  i = m/ny
-        //  index = (m/ny)*ny*nz + (m%ny)*nz
-        //
-        // Collapse nx (alt):
-        //  index = (m/ny*nz)*0 + (m%ny*nz)*1
-        // Collapse ny (alt):
-        //  index = (m/nz)*ny*nz + (m%nz)*1
-        // Collapse nz (alt):
-        //  index = (m/1)*nz + (m%1)*0
-        
-        // This takes the more general form of: index = (m/divisor)*a + (m%divisor)*b
-        // The divisor is the stride of the dimension being collapsed.
-        // The coefficient a is the stride of the next slower dimension than the one being collapsed (or 0)
-        // The coefficient b is 1 if a faster dimension remains, zero otherwise.
-        
-        // The number of points we'll return in the end.
-		NSUInteger nDataPoints = resultVariable.nDataPoints;
-        NSUInteger divisor = [GLDimension strideOfDimensionAtIndex: index inArray: variable.dimensions];
-        NSUInteger a = index > 0 ? [GLDimension strideOfDimensionAtIndex: index-1 inArray: variable.dimensions] : 0;
-        NSUInteger b = index < variable.dimensions.count-1 ? 1 : 0;
-		
-		if (resultVariable.dataFormat == kGLRealDataFormat)
-		{
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				NSMutableData *result = resultArray[0];
-				NSMutableData *operand = operandArray[0];
-				dispatch_apply( nDataPoints, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(size_t iteration) {
-                    NSUInteger index = (iteration/divisor)*a + (iteration%divisor)*b;
-					GLFloat *op = (GLFloat *) operand.bytes;
-					GLFloat *res = (GLFloat *) result.mutableBytes;
-					vGL_meanv(&op[index], summingStride, &res[iteration], summingPoints);
-				});
-				
-			};
-            self.graphvisDescription = [NSString stringWithFormat: @"average dimension %lu (real formatting)", index] ;
-		}
+    // index = i*ny*nz + j*nz + k
+    // For example: for a given (i,k), we want to sum over all j's. The stride between j elements, is nz and there are clearly ny of them.
+    
+    // The spacing between the elements that we want to sum over.
+    // If we're collapsing the last index
+    NSUInteger summingStride=variable.matrixDescription.strides[index].stride;
+    
+    // The number of elements that we want to sum over
+    NSUInteger summingPoints = variable.matrixDescription.strides[index].nPoints;
+    
+    // The tricky part is covering all combinations of (i,k) --- of which there are nx*nz. In this example, if we iterate m=0, m<nx*nz,
+    // then when m==nz, we actually want to skip to ny*nz, and then increment by ones again. (i/nz)*ny*nz + (i%nz)
+    // Collapse nx:
+    //  k = m%nz
+    //  j = m/nz
+    //  index = (m/nz)*nz + (m%nz)*1
+    // Collapse ny:
+    //  k = m%nz
+    //  i = m/nz
+    //  index = (m/nz)*ny*nz + (m%nz)*1
+    // Collapse nz:
+    //  j = m%ny
+    //  i = m/ny
+    //  index = (m/ny)*ny*nz + (m%ny)*nz
+    //
+    // Collapse nx (alt):
+    //  index = (m/ny*nz)*0 + (m%ny*nz)*1
+    // Collapse ny (alt):
+    //  index = (m/nz)*ny*nz + (m%nz)*1
+    // Collapse nz (alt):
+    //  index = (m/1)*nz + (m%1)*0
+    
+    // This takes the more general form of: index = (m/divisor)*a + (m%divisor)*b
+    // The divisor is the stride of the dimension being collapsed.
+    // The coefficient a is the stride of the next slower dimension than the one being collapsed (or 0)
+    // The coefficient b is 1 if a faster dimension remains, zero otherwise.
+    
+    // The number of points we'll return in the end.
+    NSUInteger nDataPoints = resultVariable.nDataPoints;
+    NSUInteger divisor = [GLDimension strideOfDimensionAtIndex: index inArray: variable.dimensions];
+    NSUInteger a = index > 0 ? [GLDimension strideOfDimensionAtIndex: index-1 inArray: variable.dimensions] : 0;
+    NSUInteger b = index < variable.dimensions.count-1 ? 1 : 0;
+    
+    GLDimension *dim = variable.dimensions[index];
+    
+    variableOperation op;
+    NSString *graphvisDescription;
+    NSArray *buffers = @[];
+    if (dim.isEvenlySampled)
+    {
+        if (resultVariable.dataFormat == kGLRealDataFormat)
+        {
+            op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+                NSMutableData *result = resultArray[0];
+                NSMutableData *operand = operandArray[0];
+                dispatch_apply( nDataPoints, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(size_t iteration) {
+                    NSUInteger index = (iteration/divisor)*a + (iteration%divisor)*b + aRange.location * summingStride;
+                    GLFloat *op = (GLFloat *) operand.bytes;
+                    GLFloat *res = (GLFloat *) result.mutableBytes;
+                    vGL_meanv(&op[index], summingStride, &res[iteration], aRange.length);
+                });
+                
+            };
+            graphvisDescription = [NSString stringWithFormat: @"average dimension %lu (real formatting)", index] ;
+        }
         else if (resultVariable.dataFormat == kGLSplitComplexDataFormat)
-		{
-			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-				
-				dispatch_apply( nDataPoints, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(size_t iteration) {
-                    NSUInteger index = (iteration/divisor)*a + (iteration%divisor)*b;
+        {
+            op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+                
+                dispatch_apply( nDataPoints, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(size_t iteration) {
+                    NSUInteger index = (iteration/divisor)*a + (iteration%divisor)*b+ aRange.location * summingStride;
                     GLSplitComplex toSplit = splitComplexFromData(resultArray[0]);
                     GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
-					vGL_meanv(fromSplit.realp + index*sizeof(GLFloat), summingStride, toSplit.realp + index*sizeof(GLFloat), summingPoints);
-                    vGL_meanv(fromSplit.imagp + index*sizeof(GLFloat), summingStride, toSplit.imagp + index*sizeof(GLFloat), summingPoints);
-
-				});
-				
-			};
-            self.graphvisDescription = [NSString stringWithFormat: @"average dimension %lu (split complex formatting)", index] ;
-		}
-
+                    vGL_meanv(fromSplit.realp + index*sizeof(GLFloat), summingStride, toSplit.realp + index*sizeof(GLFloat), aRange.length);
+                    vGL_meanv(fromSplit.imagp + index*sizeof(GLFloat), summingStride, toSplit.imagp + index*sizeof(GLFloat), aRange.length);
+                    
+                });
+                
+            };
+            graphvisDescription = [NSString stringWithFormat: @"average dimension %lu (split complex formatting)", index] ;
+        }
+    } else {
+        NSData *dimensionData = dim.data;
+        NSData *dimensionDiffData = [[GLMemoryPool sharedMemoryPool] dataWithLength: dimensionData.length];
+        GLFloat *dimPoints = (GLFloat *) dimensionData.bytes;
+        GLFloat *dimDiffPoints = (GLFloat *) dimensionDiffData.bytes;
+        vGL_vsub(&(dimPoints[0]), 1, &(dimPoints[1]), 1, dimDiffPoints, 1, dim.nPoints-1); // vsub does C = B - A
+        GLFloat length = [dim valueAtIndex: aRange.location+aRange.length] - [dim valueAtIndex: aRange.location];
+        GLBuffer *aBuffer = [[GLBuffer alloc] initWithLength: variable.dataBytes];
+        buffers = @[aBuffer];
+#warning check this!!!
+        if (resultVariable.dataFormat == kGLRealDataFormat)
+        {
+            op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+                NSMutableData *result = resultArray[0];
+                NSMutableData *operand = operandArray[0];
+                NSMutableData *buffer = bufferArray[0];
+                dispatch_apply( nDataPoints, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(size_t iteration) {
+                    NSUInteger index = (iteration/divisor)*a + (iteration%divisor)*b + aRange.location * summingStride;
+                    GLFloat *op = (GLFloat *) operand.bytes;
+                    GLFloat *res = (GLFloat *) result.mutableBytes;
+                    GLFloat *buf = (GLFloat *) buffer.mutableBytes;
+                    
+                    // now integrate: 1/2 sum_{n=0}^{n-2} (x_{n+1} - x_n) * ( f(n+1) + f(n) )
+                    vGL_vadd( &op[index], summingStride, &op[index+summingStride], summingStride, &buf[index], summingStride, aRange.length-1 );
+                    //vGL_vmul(&(B[inEquationPos]), vectorElementStride, dimDiff, 1, &(B[inEquationPos]), vectorElementStride, nPointsMinusOne);
+                    vGL_vmul(&buf[index], summingStride, &(dimDiffPoints[aRange.location]), 1, &buf[index], summingStride, aRange.length-1);
+                    GLFloat sum = 0.0;
+                    vGL_sve(&(buf[index]), summingStride, &sum, aRange.length-1);
+                    res[iteration] = sum/(2*length);
+                });
+                
+            };
+            graphvisDescription = [NSString stringWithFormat: @"average dimension %lu (real formatting)", index] ;
+        }
+        else if (resultVariable.dataFormat == kGLSplitComplexDataFormat)
+        {
+            [NSException raise:@"NotYetImplemented" format:@"NotYetImplemented"];
+        }
+    }
+    
+	if (( self = [super initWithResult: @[resultVariable] operand: @[variable] buffers: buffers operation: op] ))
+	{
+        self.dimIndex = index;
+        self.graphvisDescription = graphvisDescription;
 	}
 	
     return self;

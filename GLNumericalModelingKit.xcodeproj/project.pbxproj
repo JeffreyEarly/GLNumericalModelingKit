@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		81271F2618B1DF65001057FE /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 81271F2518B1DF65001057FE /* Foundation.framework */; };
 		813629FC182AC8C1001A8E1D /* GLBuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 813629FA182AC8C1001A8E1D /* GLBuffer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		813629FD182AC8C1001A8E1D /* GLBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = 813629FB182AC8C1001A8E1D /* GLBuffer.m */; };
 		8157AD1417F9FB8D002A6ED6 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AD1317F9FB8D002A6ED6 /* Cocoa.framework */; };
@@ -101,7 +102,21 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		81271F2218B1DF65001057FE /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		81271F2418B1DF65001057FE /* RandomWalk */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = RandomWalk; sourceTree = BUILT_PRODUCTS_DIR; };
+		81271F2518B1DF65001057FE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		813629FA182AC8C1001A8E1D /* GLBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLBuffer.h; sourceTree = "<group>"; };
 		813629FB182AC8C1001A8E1D /* GLBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLBuffer.m; sourceTree = "<group>"; };
 		8157AD1017F9FB8D002A6ED6 /* GLNumericalModelingKit.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = GLNumericalModelingKit.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -198,6 +213,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		81271F2118B1DF65001057FE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				81271F2618B1DF65001057FE /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8157AD0D17F9FB8D002A6ED6 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -243,6 +266,7 @@
 			children = (
 				8157AD1017F9FB8D002A6ED6 /* GLNumericalModelingKit.dylib */,
 				8157AD2317F9FB8D002A6ED6 /* GLNumericalModelingKitTests.xctest */,
+				81271F2418B1DF65001057FE /* RandomWalk */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -259,6 +283,7 @@
 				8157AE2017F9FE76002A6ED6 /* Accelerate.framework */,
 				8157AD1317F9FB8D002A6ED6 /* Cocoa.framework */,
 				8157AD2417F9FB8D002A6ED6 /* XCTest.framework */,
+				81271F2518B1DF65001057FE /* Foundation.framework */,
 				8157AD1517F9FB8D002A6ED6 /* Other Frameworks */,
 			);
 			name = Frameworks;
@@ -496,6 +521,23 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		81271F2318B1DF65001057FE /* RandomWalk */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 81271F3018B1DF65001057FE /* Build configuration list for PBXNativeTarget "RandomWalk" */;
+			buildPhases = (
+				81271F2018B1DF65001057FE /* Sources */,
+				81271F2118B1DF65001057FE /* Frameworks */,
+				81271F2218B1DF65001057FE /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RandomWalk;
+			productName = RandomWalk;
+			productReference = 81271F2418B1DF65001057FE /* RandomWalk */;
+			productType = "com.apple.product-type.tool";
+		};
 		8157AD0F17F9FB8D002A6ED6 /* GLNumericalModelingKit */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8157AD3417F9FB8D002A6ED6 /* Build configuration list for PBXNativeTarget "GLNumericalModelingKit" */;
@@ -559,6 +601,7 @@
 			targets = (
 				8157AD0F17F9FB8D002A6ED6 /* GLNumericalModelingKit */,
 				8157AD2217F9FB8D002A6ED6 /* GLNumericalModelingKitTests */,
+				81271F2318B1DF65001057FE /* RandomWalk */,
 			);
 		};
 /* End PBXProject section */
@@ -575,6 +618,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		81271F2018B1DF65001057FE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8157AD0C17F9FB8D002A6ED6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -643,6 +693,30 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		81271F2E18B1DF65001057FE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "RandomWalk/RandomWalk-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		81271F2F18B1DF65001057FE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "RandomWalk/RandomWalk-Prefix.pch";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		8157AD3217F9FB8D002A6ED6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -808,6 +882,14 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		81271F3018B1DF65001057FE /* Build configuration list for PBXNativeTarget "RandomWalk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				81271F2E18B1DF65001057FE /* Debug */,
+				81271F2F18B1DF65001057FE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
 		8157AD0B17F9FB8D002A6ED6 /* Build configuration list for PBXProject "GLNumericalModelingKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
