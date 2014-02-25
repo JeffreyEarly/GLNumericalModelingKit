@@ -779,7 +779,7 @@
         GLFloat *dimPoints = (GLFloat *) dimensionData.bytes;
         GLFloat *dimDiffPoints = (GLFloat *) dimensionDiffData.bytes;
         vGL_vsub(&(dimPoints[0]), 1, &(dimPoints[1]), 1, dimDiffPoints, 1, dim.nPoints-1); // vsub does C = B - A
-        GLFloat length = [dim valueAtIndex: aRange.location+aRange.length] - [dim valueAtIndex: aRange.location];
+        GLFloat length = [dim valueAtIndex: aRange.location+aRange.length-1] - [dim valueAtIndex: aRange.location];
         GLBuffer *aBuffer = [[GLBuffer alloc] initWithLength: variable.dataBytes];
         buffers = @[aBuffer];
 #warning check this!!!
@@ -794,10 +794,9 @@
                     GLFloat *op = (GLFloat *) operand.bytes;
                     GLFloat *res = (GLFloat *) result.mutableBytes;
                     GLFloat *buf = (GLFloat *) buffer.mutableBytes;
-                    
+            
                     // now integrate: 1/2 sum_{n=0}^{n-2} (x_{n+1} - x_n) * ( f(n+1) + f(n) )
                     vGL_vadd( &op[index], summingStride, &op[index+summingStride], summingStride, &buf[index], summingStride, aRange.length-1 );
-                    //vGL_vmul(&(B[inEquationPos]), vectorElementStride, dimDiff, 1, &(B[inEquationPos]), vectorElementStride, nPointsMinusOne);
                     vGL_vmul(&buf[index], summingStride, &(dimDiffPoints[aRange.location]), 1, &buf[index], summingStride, aRange.length-1);
                     GLFloat sum = 0.0;
                     vGL_sve(&(buf[index]), summingStride, &sum, aRange.length-1);

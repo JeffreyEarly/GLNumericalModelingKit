@@ -645,6 +645,13 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 	return operation.result[0];
 }
 
+- (GLFunction *) mean: (NSUInteger) index range: (NSRange) range
+{
+	GLAverageOperation *operation = [[GLAverageOperation alloc] initWithFunction: self dimensionIndex: index range: range];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 - (GLFunction *) mean: (NSUInteger) index
 {
 	GLAverageOperation *operation = [[GLAverageOperation alloc] initWithFunction: self dimensionIndex: index];

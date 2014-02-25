@@ -483,6 +483,47 @@
 	}
 }
 
+- (void) testAveragingOperation
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:5 domainMin:0.0 length:4.0];
+    GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:5 domainMin:0.0 length:4.0];
+	GLDimension *zDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:5 domainMin:0.0 length:4.0];
+    GLFunction *z = [GLFunction functionOfRealTypeFromDimension: zDim withDimensions: @[zDim,xDim,yDim] forEquation: equation];
+    
+    GLFunction *meanValue = [z mean: 0 range: NSMakeRange(1, 2)];
+    GLFunction *expectedResult = [GLFunction functionOfRealTypeWithDimensions: @[xDim,yDim] forEquation: equation];
+    expectedResult = [expectedResult setValue: 1.5 atIndices: @":,:"];
+    
+    GLFloat *output = meanValue.pointerValue;
+    GLFloat *expected = expectedResult.pointerValue;
+	for (int i=0; i<xDim.nPoints*yDim.nPoints; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
+- (void) testAveragingOperationUnevenGrid
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:5 domainMin:0.0 length:4.0];
+    GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints:5 domainMin:0.0 length:4.0];
+	GLDimension *zDim = [[GLDimension alloc] initWithPoints: @[ @(0), @(3), @(4), @(7), @(10) ]];
+    GLFunction *z = [GLFunction functionOfRealTypeFromDimension: zDim withDimensions: @[zDim,xDim,yDim] forEquation: equation];
+    
+    GLFunction *meanValue = [z mean: 0 range: NSMakeRange(1, 2)];
+    GLFunction *expectedResult = [GLFunction functionOfRealTypeWithDimensions: @[xDim,yDim] forEquation: equation];
+    expectedResult = [expectedResult setValue: 3.5 atIndices: @":,:"];
+    
+    GLFloat *output = meanValue.pointerValue;
+    GLFloat *expected = expectedResult.pointerValue;
+	for (int i=0; i<xDim.nPoints*yDim.nPoints; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
 
 /************************************************/
 /*		Interpolation Tests                     */

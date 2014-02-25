@@ -182,6 +182,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 
 
 // Computes the mean along the specified index, effectively collapsing the variable along that index.
+- (id) mean: (NSUInteger) index range: (NSRange) range;
 - (id) mean: (NSUInteger) index;
 - (GLScalar *) mean;
 

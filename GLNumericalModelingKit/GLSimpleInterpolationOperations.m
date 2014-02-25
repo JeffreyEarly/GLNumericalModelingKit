@@ -360,7 +360,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
                 NSMutableData *resultData = [result objectAtIndex: i];
                 
                 // (1-frac)*firstInterp + frac*secondInterp
-                vGL_vmma( left.mutableBytes, 1, firstInterpData.mutableBytes, 1, right.mutableBytes, 1, secondInterpData.mutableBytes, 1, resultData.mutableBytes, 1, numInterpPoints);
+                vGL_vmma( left.bytes, 1, firstInterpData.mutableBytes, 1, right.bytes, 1, secondInterpData.mutableBytes, 1, resultData.mutableBytes, 1, numInterpPoints);
                 
 //                GLFloat *a =(GLFloat *) left.mutableBytes;
 //                GLFloat *b =(GLFloat *) firstInterpData.mutableBytes;
