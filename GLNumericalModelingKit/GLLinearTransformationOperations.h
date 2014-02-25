@@ -272,6 +272,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
  */
 @interface GLGeneralizedMatrixEigensystemOperation : GLVariableOperation
 - (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B sort: (NSComparisonResult) sortOrder;
 @end
 
 /************************************************/

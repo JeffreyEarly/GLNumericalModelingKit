@@ -1597,7 +1597,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 	return [self initWithLinearTransformation: linearTransform sort: NSOrderedDescending];
 }
 
-- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform sort: (NSComparisonResult) sortOrder;
+- (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform sort: (NSComparisonResult) sortOrder
 {
 	GLLinearTransform *A = (GLLinearTransform *) linearTransform;
     for (NSUInteger i=0; i<A.fromDimensions.count; i++) {
@@ -1805,6 +1805,11 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 
 - (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B
 {
+    	return [self initWithFirstOperand: A secondOperand: B sort: NSOrderedDescending];
+}
+
+- (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B sort: (NSComparisonResult) sortOrder
+{
 	for (NSUInteger i=0; i<A.fromDimensions.count; i++) {
 		if ( ![A.fromDimensions[i] isEqualToDimension: A.toDimensions[i]] ) {
 			[NSException raise: @"MatrixWrongFormat" format: @"By assumption, a linear transformation must be an endomorphism to compute the eigensystem."];
@@ -1888,17 +1893,23 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
     NSUInteger totalLoops = compute_total_matrix_vector_loops(operandDescription, resultMatrixDescription, denseIndex);
 	
 	// first two buffers will be used to store the transpose (which will be overwritten)
-	GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
-    GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
+	GLBuffer *buffer0 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
+    GLBuffer *buffer1 = [[GLBuffer alloc] initWithLength: operandDescription.nBytes];
 	// third buffer will store the 'alpha' part of the eigenvalues.
-    GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
+    GLBuffer *buffer2 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
     // third buffer will store the 'beta' part of the eigenvalues.
-    GLBuffer *buffer4 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
+    GLBuffer *buffer3 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nBytes];
 	// fourth buffer will store the annoyingly formatted output
-	GLBuffer *buffer5 = [[GLBuffer alloc] initWithLength: resultMatrixDescription.nBytes];
+	GLBuffer *buffer4 = [[GLBuffer alloc] initWithLength: resultMatrixDescription.nBytes];
 	// fifth buffer is the lapack work buffer
-	GLBuffer *buffer6 = [[GLBuffer alloc] initWithLength: totalLoops*lwork_size*sizeof(GLFloat)];
-	NSArray *buffers = @[buffer1, buffer2, buffer3, buffer4, buffer5, buffer6];
+	GLBuffer *buffer5 = [[GLBuffer alloc] initWithLength: totalLoops*lwork_size*sizeof(GLFloat)];
+    // this buffer will store the index
+	GLBuffer *buffer6 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nPoints*sizeof(vDSP_Length)];
+    // this buffer will store the reverse index
+	GLBuffer *buffer7 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nPoints*sizeof(vDSP_Length)];
+    // this buffer will store the magnitude of the eigenvalues
+	GLBuffer *buffer8 = [[GLBuffer alloc] initWithLength: resultVectorDescription.nPoints*sizeof(GLFloat)];
+	NSArray *buffers = @[buffer0, buffer1, buffer2, buffer3, buffer4, buffer5, buffer6, buffer7, buffer8];
 	
 	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 		apply_matrix_vector_loop(operandDescription, resultVectorDescription, denseIndex, globalQueue, ^(NSUInteger iteration, NSUInteger inEquationPos, NSUInteger outEquationPos) {
@@ -1942,6 +1953,30 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 			if (info != 0) {
 				printf("sggev failed with error code %d\n", (int)info);
 			}
+            
+            // We are warned NOT to do this, because beta may be zero.
+            vGL_vdiv(beta, 1, output_v.realp, 1, output_v.realp, 1, N);
+			vGL_vdiv(beta, 1, output_v.imagp, 1, output_v.imagp, 1, N);
+            
+            // First sort the eigenvalues
+            vDSP_Length *index_data = (vDSP_Length *) [bufferArray[6] bytes];
+			vDSP_Length *index = &(index_data[iteration*N]);
+            vDSP_Length *rvindex_data = (vDSP_Length *) [bufferArray[7] bytes];
+			vDSP_Length *rvindex = &(rvindex_data[iteration*N]);
+            for (NSUInteger i=0; i<N; i++) {
+                rvindex[i]=i;
+            }
+			if (sortOrder != NSOrderedSame)
+			{
+				// store the squared magnitude in B, since it's not being used anyway
+                GLFloat *mag_data = (GLFloat *) [bufferArray[8] bytes];
+				GLFloat *mag = &(mag_data[iteration*N]);
+				vGL_zvabs( &output_v, 1, mag, 1, N);
+				vGL_vsorti( mag, rvindex, NULL, N, sortOrder == NSOrderedAscending ? 1 : -1);
+			}
+            for (NSUInteger i=0; i<N; i++) {
+                index[rvindex[i]] = i;
+            }
 			
 			// Now we have to get the eigenvectors in the proper format.
 			// If the j-th eigenvalue is real, then v(j) = VR(:,j), the j-th column of VR.
@@ -1950,38 +1985,38 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 			// And, don't forget, we need to fix the transpose.
 			vGL_vclr( &(C.imagp[inEquationPos]), resultMatrixDescription.strides[denseIndex].stride,  resultMatrixDescription.strides[denseIndex].nPoints);
 			
-			NSUInteger stride = resultVectorDescription.strides[denseIndex].stride;
-            for( NSUInteger i = 0; i < N; i++ ) {
-                v.realp[outEquationPos+i*stride] = output_v.realp[i];
-                v.imagp[outEquationPos+i*stride] = output_v.imagp[i];
-            }
-			
-			// inEquationPos should have the correct offsets because the output matrix has the same form as the input matrix.
+			// Eigenvector stride
+            NSUInteger stride = resultVectorDescription.strides[denseIndex].stride;
+            // inEquationPos should have the correct offsets because the output matrix has the same form as the input matrix.
             NSUInteger rowStride = resultMatrixDescription.strides[denseIndex].rowStride;
 			NSUInteger colStride = resultMatrixDescription.strides[denseIndex].columnStride;
             NSUInteger j=0;
-			for( NSUInteger i = 0; i < N; i++ ) { // i indicates which eigenvector we're copying
-				if ( v.imagp[i] == (GLFloat)0.0 ) {
+			for( NSUInteger i = 0; i < N; i++ ) { // i indicates which eigenvector/eigenvalue we're copying
+				// First copy the eigenvalue to the right spot
+				v.realp[outEquationPos+index[i]*stride] = output_v.realp[i];
+                v.imagp[outEquationPos+index[i]*stride] = output_v.imagp[i];
+				
+				if ( output_v.imagp[i] == (GLFloat)0.0 ) {
 					for( NSUInteger k = 0; k < N; k++ ) { // k walks down the column
-						C.realp[inEquationPos+k*rowStride+i*colStride] = output[j*N+k];
+						C.realp[inEquationPos+k*rowStride+index[i]*colStride] = output[j*N+k];
 					}
 					j++;
 				} else {
 					for( NSUInteger k = 0; k < N; k++ ) {
-						C.realp[inEquationPos+k*rowStride+i*colStride] = output[j*N+k];
-						C.imagp[inEquationPos+k*rowStride+i*colStride] = output[(j+1)*N+k];
+						C.realp[inEquationPos+k*rowStride+index[i]*colStride] = output[j*N+k];
+						C.imagp[inEquationPos+k*rowStride+index[i]*colStride] = output[(j+1)*N+k];
 						
-						C.realp[inEquationPos+k*rowStride+(i+1)*colStride] = output[j*N+k];
-						C.imagp[inEquationPos+k*rowStride+(i+1)*colStride] = -output[(j+1)*N+k];
+						v.realp[outEquationPos+index[i+1]*stride] = output_v.realp[i+1];
+						v.imagp[outEquationPos+index[i+1]*stride] = output_v.imagp[i+1];
+						
+						C.realp[inEquationPos+k*rowStride+index[i+1]*colStride] = output[j*N+k];
+						C.imagp[inEquationPos+k*rowStride+index[i+1]*colStride] = -output[(j+1)*N+k];
 					}
 					j+=2;
 					i++;
 				}
 			}
 
-			
-			vGL_vdiv(beta, 1, &(v.realp[outEquationPos]), stride, &(v.realp[outEquationPos]), stride, N);
-			vGL_vdiv(beta, 1, &(v.imagp[outEquationPos]), stride, &(v.imagp[outEquationPos]), stride, N);
 		});
 	};
 	
