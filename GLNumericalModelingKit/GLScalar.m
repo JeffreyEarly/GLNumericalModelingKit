@@ -167,6 +167,11 @@
 	return NSLog(@"%6.2f", self.pointerValue[0]);
 }
 
+- (NSString *) description
+{
+	return [NSString stringWithFormat: @"%@ <0x%lx> %6.2f", NSStringFromClass([self class]), (NSUInteger) self, self.pointerValue[0]];
+}
+
 //- (NSString *) graphvisDescription
 //{
 //    return [NSString stringWithFormat: @"Uninitialized rank %lu tensor", self.rank];

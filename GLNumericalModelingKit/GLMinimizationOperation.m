@@ -218,7 +218,7 @@
                 }
 			}
 			
-			if (nFunctionEvaluations > 5000) {
+			if (nFunctionEvaluations > 15000) {
 				NSLog(@"Exceed the maximum number of function evaluations");
 				
 				free(vertices); free(y); free(psum); free(resultVertex);

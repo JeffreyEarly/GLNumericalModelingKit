@@ -1375,10 +1375,10 @@
 			graphvisDescription = [NSString stringWithFormat: @"division (complex scalar, complex function)"];
 		}
 	}
-	else if (op1.rank == 0 && op2.rank == 1)
+	else if (op1.rank == 1 && op2.rank == 0)
 	{	// C^i = A^i / b
 		// This is just multiplication by a scalar 1/b.
-		
+		[NSException raise: @"NotYetImplementedException" format: @"This case is not yet implement. But you can always multiply!"];
 	}
 	else if (op1.rank == 1 && op2.rank == 1)
 	{	// C^i = A^i / B^i
