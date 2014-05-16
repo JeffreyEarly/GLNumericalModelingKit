@@ -547,6 +547,20 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 	return operation.result[0];
 }
 
+- (GLFunction *) sinh
+{
+	GLHyperbolicSineOperation *operation = [[GLHyperbolicSineOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLFunction *) asinh
+{
+	GLInverseHyperbolicSineOperation *operation = [[GLInverseHyperbolicSineOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 - (GLFunction *) tanh
 {
 	GLHyperbolicTangentOperation *operation = [[GLHyperbolicTangentOperation alloc] initWithVariable: self];

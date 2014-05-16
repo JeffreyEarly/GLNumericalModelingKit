@@ -133,6 +133,20 @@
 	return operation.result[0];
 }
 
+- (GLScalar *) sinh
+{
+	GLHyperbolicSineOperation *operation = [[GLHyperbolicSineOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) asinh
+{
+	GLInverseHyperbolicSineOperation *operation = [[GLInverseHyperbolicSineOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 - (GLScalar *) sqrt
 {
 	GLSquareRootOperation *operation = [[GLSquareRootOperation alloc] initWithVariable: self];
@@ -164,12 +178,12 @@
 
 - (void) dumpToConsole
 {
-	return NSLog(@"%6.2f", self.pointerValue[0]);
+	return NSLog(@"%6.2g", self.pointerValue[0]);
 }
 
 - (NSString *) description
 {
-	return [NSString stringWithFormat: @"%@ <0x%lx> %6.2f", NSStringFromClass([self class]), (NSUInteger) self, self.pointerValue[0]];
+	return [NSString stringWithFormat: @"%@ <0x%lx> %6.2g", NSStringFromClass([self class]), (NSUInteger) self, self.pointerValue[0]];
 }
 
 //- (NSString *) graphvisDescription

@@ -147,6 +147,12 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 /// C = atan2(A, B)
 - (GLFunction *) atan2: (GLFunction *) x;
 
+/// C = sinh(A)
+- (GLFunction *) sinh;
+
+/// C = asinh(A)
+- (GLFunction *) asinh;
+
 /// C = tanh(A)
 - (GLFunction *) tanh;
 

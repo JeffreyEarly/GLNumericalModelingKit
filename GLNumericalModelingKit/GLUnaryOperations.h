@@ -61,9 +61,25 @@
 @end
 
 /************************************************/
+/*		GLHyperbolicSineOperation				*/
+/************************************************/
+// variable = sinh( variable )
+@interface GLHyperbolicSineOperation : GLVariableOperation
+- (GLHyperbolicSineOperation *) initWithVariable: (GLVariable *) variable;
+@end
+
+/************************************************/
+/*		GLInverseHyperbolicSineOperation		*/
+/************************************************/
+// variable = asinh( variable )
+@interface GLInverseHyperbolicSineOperation : GLVariableOperation
+- (GLInverseHyperbolicSineOperation *) initWithVariable: (GLVariable *) variable;
+@end
+
+/************************************************/
 /*		GLHyperbolicTangentOperation			*/
 /************************************************/
-// variable = sin( variable )
+// variable = tanh( variable )
 @interface GLHyperbolicTangentOperation : GLVariableOperation
 - (GLHyperbolicTangentOperation *) initWithVariable: (GLVariable *) variable;
 @end

@@ -42,6 +42,12 @@
 /// C = atan(A)
 - (GLScalar *) atan;
 
+/// C = sinh(A)
+- (GLScalar *) sinh;
+
+/// C = asinh(A)
+- (GLScalar *) asinh;
+
 /// C = sqrt(A)
 - (GLScalar *) sqrt;
 
