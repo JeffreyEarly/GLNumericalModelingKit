@@ -153,6 +153,12 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 /// C = asinh(A)
 - (GLFunction *) asinh;
 
+/// C = sinh(A)
+- (GLFunction *) cosh;
+
+/// C = asinh(A)
+- (GLFunction *) acosh;
+
 /// C = tanh(A)
 - (GLFunction *) tanh;
 

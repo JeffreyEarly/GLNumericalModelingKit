@@ -48,6 +48,12 @@
 /// C = asinh(A)
 - (GLScalar *) asinh;
 
+/// C = cosh(A)
+- (GLScalar *) cosh;
+
+/// C = acosh(A)
+- (GLScalar *) acosh;
+
 /// C = sqrt(A)
 - (GLScalar *) sqrt;
 

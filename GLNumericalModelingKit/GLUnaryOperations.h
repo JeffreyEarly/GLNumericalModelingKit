@@ -77,6 +77,22 @@
 @end
 
 /************************************************/
+/*		GLHyperbolicCosineOperation				*/
+/************************************************/
+// variable = cosh( variable )
+@interface GLHyperbolicCosineOperation : GLVariableOperation
+- (GLHyperbolicCosineOperation *) initWithVariable: (GLVariable *) variable;
+@end
+
+/************************************************/
+/*		GLInverseHyperbolicCosineOperation		*/
+/************************************************/
+// variable = asinh( variable )
+@interface GLInverseHyperbolicCosineOperation : GLVariableOperation
+- (GLInverseHyperbolicCosineOperation *) initWithVariable: (GLVariable *) variable;
+@end
+
+/************************************************/
 /*		GLHyperbolicTangentOperation			*/
 /************************************************/
 // variable = tanh( variable )

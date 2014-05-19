@@ -435,6 +435,104 @@
 @end
 
 /************************************************/
+/*		GLHyperbolicCosineOperation				*/
+/************************************************/
+
+@implementation GLHyperbolicCosineOperation
+
+- (GLHyperbolicCosineOperation *) initWithVariable: (GLVariable *) variable
+{
+    if (!variable.isPurelyReal) {
+        [NSException raise: @"NotYetImplemented" format: @"You can only take the hyperbolic cosine of real numbers."];
+    }
+    
+	GLVariable *resultVar;
+    
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        resultVar=[[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        resultVar=[[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        [NSException raise: @"BadMath" format: @"I don't know how to take the cosh of a linear transformation."];
+    }
+    
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ]))
+	{
+		GLFunction *resultVariable = self.result[0];
+		GLFunction *operandVariable = self.operand[0];
+		
+		const int numElements = (int) resultVariable.nDataElements;
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
+		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
+			vGL_vvcosh( result.mutableBytes, operand.bytes, &numElements );
+		};
+        self.graphvisDescription = @"cosh";
+	}
+	
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end
+
+/************************************************/
+/*		GLInverseHyperbolicCosineOperation		*/
+/************************************************/
+
+@implementation GLInverseHyperbolicCosineOperation
+
+- (GLInverseHyperbolicCosineOperation *) initWithVariable: (GLVariable *) variable
+{
+    if (!variable.isPurelyReal) {
+        [NSException raise: @"NotYetImplemented" format: @"You can only take the inverse hyperbolic cosine of real numbers."];
+    }
+    
+	GLVariable *resultVar;
+    
+    if (variable.rank == 0) {
+        GLScalar *scalar = (GLScalar *) variable;
+        resultVar=[[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+    } else if (variable.rank == 1) {
+        GLFunction *function = (GLFunction *) variable;
+        resultVar=[[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+    }  else if (variable.rank == 2) {
+        [NSException raise: @"BadMath" format: @"I don't know how to take the acosh of a linear transformation."];
+    }
+    
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ]))
+	{
+		GLFunction *resultVariable = self.result[0];
+		GLFunction *operandVariable = self.operand[0];
+		
+		const int numElements = (int) resultVariable.nDataElements;
+		resultVariable.isPurelyReal = operandVariable.isPurelyReal;
+		resultVariable.isPurelyImaginary = operandVariable.isPurelyImaginary;
+		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+			NSMutableData *result = resultArray[0];
+			NSMutableData *operand = operandArray[0];
+			vGL_vvacosh( result.mutableBytes, operand.bytes, &numElements );
+		};
+        self.graphvisDescription = @"acosh";
+	}
+	
+    return self;
+}
+
+- (BOOL) canOperateInPlace {
+	return YES;
+}
+
+@end
+
+/************************************************/
 /*		GLHyperbolicTangentOperation            */
 /************************************************/
 

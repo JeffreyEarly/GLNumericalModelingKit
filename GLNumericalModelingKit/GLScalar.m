@@ -147,6 +147,21 @@
 	return operation.result[0];
 }
 
+- (GLScalar *) cosh
+{
+	GLHyperbolicCosineOperation *operation = [[GLHyperbolicCosineOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+- (GLScalar *) acosh
+{
+	GLInverseHyperbolicCosineOperation *operation = [[GLInverseHyperbolicCosineOperation alloc] initWithVariable: self];
+    operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
+
 - (GLScalar *) sqrt
 {
 	GLSquareRootOperation *operation = [[GLSquareRootOperation alloc] initWithVariable: self];

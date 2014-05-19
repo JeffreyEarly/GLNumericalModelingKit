@@ -54,6 +54,8 @@ typedef	FFTSetupD	GLFFTSetup;
 #define vGL_vvtanh      vvtanh				// Hyperbolic tanget
 #define vGL_vvsinh      vvsinh				// Hyperbolic sine
 #define vGL_vvasinh     vvasinh				// Inverse hyperbolic sine
+#define vGL_vvcosh      vvcosh				// Hyperbolic cosine
+#define vGL_vvacosh     vvacosh				// Inverse hyperbolic cosine
 #define vGL_vvexp		vvexp               // Exponential
 #define vGL_vvlog       vvlog               // Natural logarithm
 #define vGL_vvlog10		vvlog10
@@ -140,6 +142,8 @@ typedef	FFTSetup	GLFFTSetup;
 #define vGL_vvtanh      vvtanhf				// Hyperbolic tanget
 #define vGL_vvsinh      vvsinhf				// Hyperbolic sine
 #define vGL_vvasinh     vvasinhf			// Inverse hyperbolic sine
+#define vGL_vvcosh      vvcoshf				// Hyperbolic cosine
+#define vGL_vvacosh     vvacoshf			// Inverse hyperbolic cosine
 #define vGL_vvexp		vvexpf              // Exponential
 #define vGL_vvlog       vvlogf              // Natural logarithm
 #define vGL_vvlog10		vvlog10f
