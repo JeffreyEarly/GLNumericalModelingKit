@@ -378,6 +378,52 @@ BOOL isOne( NSNumber *a )
 
 }
 
+- (NSArray *) integrateAlongDimension: (GLDimension *) tDim
+{
+	NSMutableArray *yout = [[NSMutableArray alloc] initWithCapacity: self.result.count];
+	for (GLVariable *variable in self.result) {
+		GLFunction *newFunction;
+		if (variable.rank == 0) {
+			GLScalar *scalar = (GLScalar *) variable;
+			newFunction = [GLFunction functionOfType: scalar.dataFormat withDimensions: @[tDim] forEquation: scalar.equation];
+			[yout addObject: newFunction];
+			GLScalar *initialY = self.currentY[[self.result indexOfObject: variable]];
+			[initialY solve];
+			memcpy(initialY.pointerValue, scalar.pointerValue, initialY.dataBytes);
+		} else if (variable.rank == 1) {
+			GLFunction *function = (GLFunction *) variable;
+			NSMutableArray *newDimensions = [NSMutableArray arrayWithObject: tDim];
+			[newDimensions addObjectsFromArray: function.dimensions];
+			newFunction = [[function class] functionOfType: function.dataFormat withDimensions: newDimensions forEquation: function.equation];
+			[yout addObject: newFunction];
+			GLFunction *initialY = self.currentY[[self.result indexOfObject: variable]];
+			[initialY solve];
+			memcpy(initialY.pointerValue, newFunction.pointerValue, initialY.dataBytes);
+		}  else if (variable.rank == 2) {
+			[NSException raise:@"BadFormat" format: @"Cannot add a time dimension to a linear transformation"];
+		}
+	}
+	
+	for (NSUInteger iPoint=1; iPoint<tDim.nPoints; iPoint++) {
+		NSArray *y = [self stepForwardToTime: [tDim valueAtIndex: iPoint]];
+		[y makeObjectsPerformSelector: @selector(solve)];
+		[[y[0] equation] solveForVariable: y[0] waitUntilFinished: YES];
+		for (GLVariable *variable in y) {
+			if (variable.rank == 0) {
+				GLScalar *scalar = (GLScalar *) variable;
+				GLFunction *newFunction = yout[[y indexOfObject: variable]];
+				memcpy((void *)newFunction.pointerValue + iPoint*scalar.dataBytes, scalar.pointerValue, scalar.dataBytes);
+			} else if (variable.rank == 1) {
+				GLFunction *function = (GLFunction *) variable;
+				GLFunction *newFunction = yout[[y indexOfObject: variable]];
+				memcpy((void *)newFunction.pointerValue + iPoint*function.dataBytes, function.pointerValue, function.dataBytes);
+			}
+		}
+	}
+	
+	return yout;
+}
+
 - (void) setCurrentY:(NSArray *)currentY {
 	_currentY = currentY;
 	self.stageIsPrepped = NO;

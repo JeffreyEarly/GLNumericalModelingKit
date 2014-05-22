@@ -34,9 +34,13 @@ typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
 // Steps forward one time-step and returns the new value of y at that point.
 - (NSArray *) stepForward;
 
-// Steps foward until time is reached or exceeded and returns the new value of y at that point.
+// Steps forward until time is reached or exceeded and returns the new value of y at that point.
 // No attempt is made to shorten the time step to hit the time exactly.
 - (NSArray *) stepForwardToTime: (GLFloat) time;
+
+// Integrates from the initial point to the end point of the dimension.
+// Note that this function forces variables to be solved. Very different than the usual paradigm.
+- (NSArray *) integrateAlongDimension: (GLDimension *) tDim;
 
 
 // The size of the input vector y.
