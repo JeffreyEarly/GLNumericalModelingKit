@@ -1926,6 +1926,30 @@
 	}
 }
 
+- (void) testRandomNumberGenerator
+{
+	srand( (unsigned int) 6515);
+	
+	GLEquation *equation = [[GLEquation alloc] init];
+	GLDimension *numberDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 10000 domainMin: 0 length: 1000-1];
+	GLFunction *randomNumbers = [GLFunction functionWithNormallyDistributedValueWithDimensions: @[numberDim] forEquation: equation];
+	GLScalar *mean = [randomNumbers mean];
+	[mean dumpToConsole];
+	
+	GLFloat expected = 0;
+	if ( !fequalprec(mean.pointerValue[0],expected, 1e-1) ) {
+		XCTFail(@"Expected %f, found %f.", expected, mean.pointerValue[0]);
+	}
+	
+	GLScalar *variance = [[randomNumbers times: randomNumbers] mean];
+	[variance dumpToConsole];
+	
+	expected = 1;
+	if ( !fequalprec(variance.pointerValue[0],expected, 1e-1) ) {
+		XCTFail(@"Expected %f, found %f.", expected, mean.pointerValue[0]);
+	}
+}
+
 @end
 
 
