@@ -405,18 +405,20 @@ BOOL isOne( NSNumber *a )
 	}
 	
 	for (NSUInteger iPoint=1; iPoint<tDim.nPoints; iPoint++) {
-		NSArray *y = [self stepForwardToTime: [tDim valueAtIndex: iPoint]];
-		[y makeObjectsPerformSelector: @selector(solve)];
-		[[y[0] equation] solveForVariable: y[0] waitUntilFinished: YES];
-		for (GLVariable *variable in y) {
-			if (variable.rank == 0) {
-				GLScalar *scalar = (GLScalar *) variable;
-				GLFunction *newFunction = yout[[y indexOfObject: variable]];
-				memcpy((void *)newFunction.pointerValue + iPoint*scalar.dataBytes, scalar.pointerValue, scalar.dataBytes);
-			} else if (variable.rank == 1) {
-				GLFunction *function = (GLFunction *) variable;
-				GLFunction *newFunction = yout[[y indexOfObject: variable]];
-				memcpy((void *)newFunction.pointerValue + iPoint*function.dataBytes, function.pointerValue, function.dataBytes);
+		@autoreleasepool {
+			NSArray *y = [self stepForwardToTime: [tDim valueAtIndex: iPoint]];
+			[y makeObjectsPerformSelector: @selector(solve)];
+			[[y[0] equation] solveForVariable: y[0] waitUntilFinished: YES];
+			for (GLVariable *variable in y) {
+				if (variable.rank == 0) {
+					GLScalar *scalar = (GLScalar *) variable;
+					GLFunction *newFunction = yout[[y indexOfObject: variable]];
+					memcpy((void *)newFunction.pointerValue + iPoint*scalar.dataBytes, scalar.pointerValue, scalar.dataBytes);
+				} else if (variable.rank == 1) {
+					GLFunction *function = (GLFunction *) variable;
+					GLFunction *newFunction = yout[[y indexOfObject: variable]];
+					memcpy((void *)newFunction.pointerValue + iPoint*function.dataBytes, function.pointerValue, function.dataBytes);
+				}
 			}
 		}
 	}
