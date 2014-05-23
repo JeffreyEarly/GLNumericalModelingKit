@@ -389,7 +389,7 @@ BOOL isOne( NSNumber *a )
 			[yout addObject: newFunction];
 			GLScalar *initialY = self.currentY[[self.result indexOfObject: variable]];
 			[initialY solve];
-			memcpy(initialY.pointerValue, scalar.pointerValue, initialY.dataBytes);
+			memcpy(newFunction.pointerValue, initialY.pointerValue, initialY.dataBytes);
 		} else if (variable.rank == 1) {
 			GLFunction *function = (GLFunction *) variable;
 			NSMutableArray *newDimensions = [NSMutableArray arrayWithObject: tDim];
@@ -398,7 +398,7 @@ BOOL isOne( NSNumber *a )
 			[yout addObject: newFunction];
 			GLFunction *initialY = self.currentY[[self.result indexOfObject: variable]];
 			[initialY solve];
-			memcpy(initialY.pointerValue, newFunction.pointerValue, initialY.dataBytes);
+			memcpy(newFunction.pointerValue, initialY.pointerValue, initialY.dataBytes);
 		}  else if (variable.rank == 2) {
 			[NSException raise:@"BadFormat" format: @"Cannot add a time dimension to a linear transformation"];
 		}
