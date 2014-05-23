@@ -119,6 +119,8 @@ BOOL isOne( NSNumber *a )
 @property(copy) stagePrepOperation prepStageOperation;
 @property(strong) NSMutableArray *prepStageDataBuffers;
 
+@property(strong) NSArray *initialY;
+
 @end
 
 @implementation GLRungeKuttaOperation
@@ -291,6 +293,7 @@ BOOL isOne( NSNumber *a )
 			[self.dataBuffers addObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: aBuffer.numBytes]];
 		}
         
+		self.initialY = y;
 		self.currentY = y;
 		self.stepSize = deltaT;
 		self.lastStepSize = deltaT;
@@ -380,6 +383,10 @@ BOOL isOne( NSNumber *a )
 
 - (NSArray *) integrateAlongDimension: (GLDimension *) tDim
 {
+	self.totalIterations = 0;
+	self.currentTime = 0;
+	self.currentY = self.initialY;
+	
 	NSMutableArray *yout = [[NSMutableArray alloc] initWithCapacity: self.result.count];
 	for (GLVariable *variable in self.result) {
 		GLFunction *newFunction;
