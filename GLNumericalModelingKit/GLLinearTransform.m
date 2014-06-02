@@ -723,7 +723,11 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
             GLFloat *kVal = (GLFloat *) k.data.bytes;
             return (GLFloatComplex) (  (col[0] >= row[0]+1 && (row[0]+col[0])%2==1)  ? 2.*kVal[col[0]] : 0.0);
         }];
-	} else {
+	} else if (k.basisFunction == kGLDeltaBasis)
+	{
+		diff = [GLLinearTransform finiteDifferenceOperatorWithDerivatives: numDerivs leftBC: kGLNeumannBoundaryCondition rightBC:kGLNeumannBoundaryCondition bandwidth: floor(numDerivs/2) + 1 fromDimension:k forEquation: equation];
+	}
+	else {
         [NSException raise: @"NotYetImplemented" format:@"Derivatives for that basis are not yet implemented"];
     }
     
