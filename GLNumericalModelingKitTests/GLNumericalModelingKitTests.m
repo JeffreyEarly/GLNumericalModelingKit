@@ -1777,6 +1777,90 @@
 	}
 }
 
+- (void) test1DFiniteDifferencing
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	NSUInteger N=8;
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: N domainMin: 0.0 length: N-1];
+    xDim.name = @"x";
+	
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation:equation];
+	
+	GLLinearTransform *diffX = [GLLinearTransform finiteDifferenceOperatorWithDerivatives: 1 leftBC: kGLNeumannBoundaryCondition rightBC:kGLNeumannBoundaryCondition bandwidth:1 fromDimension:xDim forEquation:equation];
+	
+	GLFunction *fdiff = [diffX transform: x];
+	GLFunction *fdiff_expected = [x setValue: 1.0 atIndices: @":"];
+	
+    GLFloat *output = fdiff.pointerValue;
+	GLFloat *expected = fdiff_expected.pointerValue;
+    
+	for (int i=0; i<N; i++) {
+		if ( !fequalprec(output[i], expected[i], 1e-5) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
+- (void) test2DFiniteDifferencing
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	NSUInteger N=8;
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 2*N domainMin: 0.0 length: 2*N-1]; xDim.name = @"x";
+	GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: N domainMin: 0.0 length: N-1]; yDim.name = @"y";
+    
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim,yDim] forEquation:equation];
+	GLFunction *y = [GLFunction functionOfRealTypeFromDimension: yDim withDimensions: @[xDim,yDim] forEquation:equation];
+	GLFunction *f = [x times: y];
+	
+	GLLinearTransform *diffX = [GLLinearTransform differentialOperatorWithDerivatives: @[@1, @0] fromDimensions: @[xDim,yDim] forEquation:equation];
+	[diffX dumpToConsole];
+	GLFunction *fdiff = [diffX transform: f];
+	
+	
+	fdiff = [f diff: @"x"];
+	GLFunction *fdiff_expected = y;
+	
+    GLFloat *output = fdiff.pointerValue;
+	GLFloat *expected = fdiff_expected.pointerValue;
+    
+	for (int i=0; i<fdiff.nDataPoints; i++) {
+		if ( !fequalprec(output[i], expected[i], 1e-5) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
+- (void) test3DFiniteDifferencing
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	NSUInteger N=2;
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 1*N domainMin: 0.0 length: N-1]; xDim.name = @"x";
+	GLDimension *yDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 2*N domainMin: 0.0 length: 2*N-1]; yDim.name = @"y";
+	GLDimension *zDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 2*N domainMin: 0.0 length: 2*N-1]; zDim.name = @"z";
+    
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim,yDim,zDim] forEquation:equation];
+	GLFunction *y = [GLFunction functionOfRealTypeFromDimension: yDim withDimensions: @[xDim,yDim,zDim] forEquation:equation];
+	GLFunction *z = [GLFunction functionOfRealTypeFromDimension: zDim withDimensions: @[xDim,yDim,zDim] forEquation:equation];
+	GLFunction *f = [[x times: y] times: z];
+	
+//	GLLinearTransform *diffX = [GLLinearTransform differentialOperatorWithDerivatives: @[@1, @0, @0] fromDimensions: @[xDim,yDim,zDim] forEquation:equation];
+//	[diffX dumpToConsole];
+	//GLFunction *fdiff = [diffX transform: f];
+	
+	GLFunction *fdiff = [f diff: @"x"];
+	GLFunction *fdiff_expected = [y times: z];
+	
+    GLFloat *output = fdiff.pointerValue;
+	GLFloat *expected = fdiff_expected.pointerValue;
+    
+	// Note the issue here is that the tensor product (?) is not producing the right differentiation matrix, and not necessarily that the tridiagonal operation is not working.
+	for (int i=0; i<fdiff.nDataPoints; i++) {
+		if ( !fequalprec(output[i], expected[i], 1e-5) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+}
+
 - (void) testFiniteDifferencing
 {
 	GLEquation *equation = [[GLEquation alloc] init];
