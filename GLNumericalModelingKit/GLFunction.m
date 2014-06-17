@@ -799,11 +799,11 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 	return operation.result[0];
 }
 
-- (id) scaleVariableBy: (GLFloat) varScale withUnits: (NSString *) varUnits dimensionsBy: (GLFloat) dimScale units: (NSString *) dimUnits
+- (GLFunction *) scaleVariableBy: (GLFloat) varScale withUnits: (NSString *) varUnits dimensionsBy: (GLFloat) dimScale units: (NSString *) dimUnits
 {
 	GLScaleOperation *operation = [[GLScaleOperation alloc] initWithOperand: self variableScale: varScale units: varUnits dimensionScale: dimScale translation: 0.0 units: dimUnits];
 	operation = [self replaceWithExistingOperation: operation];
-	return operation.result;
+	return operation.result[0];
 }
 
 - (id) projectOntoDimensions: (NSArray *) dims usingSpectralBasis: (NSArray *) basis
