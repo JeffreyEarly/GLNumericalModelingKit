@@ -802,7 +802,7 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
 	
 	GLDimension *aDim;
 	if (self.isEvenlySampled) {
-		aDim= [[GLDimension alloc] initDimensionWithGrid: self.gridType nPoints: range.length domainMin: minValue length: maxValue];
+		aDim= [[GLDimension alloc] initDimensionWithGrid: self.gridType nPoints: range.length domainMin: minValue length: maxValue-minValue];
 	} else {
 		aDim = [[GLDimension alloc] initWithPoints: [self.points objectsAtIndexes: [NSIndexSet indexSetWithIndexesInRange: range]]];
 	}
