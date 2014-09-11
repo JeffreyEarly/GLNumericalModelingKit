@@ -123,7 +123,7 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 12;
 		
 		NSFileManager *fileManager = [[NSFileManager alloc] init];
 		if ( shouldOverwrite || ![fileManager fileExistsAtPath: anURL.path] ) {
-			[self.file createAtURL: self.URL withOptions: 0];
+			[self.file createAtURL: self.URL withOptions: NC_NETCDF4];
 			[self setGlobalAttribute: [NSNumber numberWithInteger: GLCurrentNetCDFSchemaVersion] forKey: GLNetCDFSchemaVersionKey];
 		} else {
 			[self.file openAtURL: self.URL withOptions: 0];
@@ -586,7 +586,7 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 	[properties setObject: @(dimension.basisFunction) forKey: GLNetCDFSchemaBasisFunctionKey];
 	[properties setObject: @(dimension.gridType) forKey: GLNetCDFSchemaGridTypeKey];
 	
-	NSInteger variableID = [self.file addVariableOfType: type withName: dimension.name dimensions: [NSArray arrayWithObject: [NSNumber numberWithInt: dimensionID]] attributes: properties];
+	NSInteger variableID = [self.file addVariableOfType:type withName:dimension.name dimensions:@[@(dimensionID)] compressionLevel:self.variableCompressionLevel attributes:properties];
 	[self.dimensionVariableIDMapTable setObject: [NSNumber numberWithInteger: variableID] forKey: dimension];
 	NSArray *array = [NSArray arrayWithObject: [NSValue valueWithRange: NSMakeRange(0, dimension.nPoints)]];
 	if (sizeof(GLFloat)==sizeof(float)) {
@@ -649,7 +649,7 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 		[properties setObject: [NSNumber numberWithBool: NO] forKey: GLNetCDFSchemaIsImaginaryPartKey];
 		[properties setObject: variable.name forKey: GLNetCDFSchemaProperNameKey];
 	}
-	int variableID = [self.file addVariableOfType: type withName: name dimensions: dimensionIDs attributes: properties];
+	int variableID = [self.file addVariableOfType: type withName: name dimensions: dimensionIDs compressionLevel: self.variableCompressionLevel attributes:properties];
 	
 	// First we add the real part to the file.
 	[self.equation solveForVariable: variable];
@@ -674,7 +674,7 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 		name = [NSString stringWithFormat: @"%@_imagp", variable.name];
 		[properties setObject: [NSNumber numberWithBool: NO] forKey: GLNetCDFSchemaIsRealPartKey];
 		[properties setObject: [NSNumber numberWithBool: YES] forKey: GLNetCDFSchemaIsImaginaryPartKey];
-		imagpVariableID = [self.file addVariableOfType: type withName: name dimensions: dimensionIDs attributes: properties];
+		imagpVariableID = [self.file addVariableOfType: type withName: name dimensions: dimensionIDs compressionLevel: self.variableCompressionLevel attributes: properties];
 		
 		NSData *data = [NSData dataWithBytes: variable.splitComplex.imagp length: (variable.nDataPoints)*(sizeof(GLFloat))];
 		if (type == NC_FLOAT) {

@@ -77,6 +77,8 @@
 - (GLDimension *) dimensionWithName: (NSString *) name;
 - (GLNetCDFVariable *) variableWithName: (NSString *) name;
 
+// Defaults to 0 (no compression). Level 1 and 2 are usually sufficient, but will slow the write speed.
+@property(readwrite, assign) NSUInteger variableCompressionLevel;
 
 /************************************************/
 /*		Internal Representation					*/

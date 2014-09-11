@@ -96,7 +96,7 @@ NSString *GLVariableAttributesKey;
 // The name needs to be unique amongst variables.
 // The attributes dictionary should contain objects that NSStrings or NSNumbers.
 // Returns the ID of the new variable.
-- (int) addVariableOfType: (nc_type) type withName: (NSString *) aName dimensions: (NSArray *) dimArray attributes: (NSDictionary *) attributesDictionary;
+- (int) addVariableOfType: (nc_type) type withName: (NSString *) aName dimensions: (NSArray *) dimArray compressionLevel: (NSUInteger) compLevel attributes: (NSDictionary *) attributesDictionary;
 
 /************************************************/
 /*		Add Data								*/

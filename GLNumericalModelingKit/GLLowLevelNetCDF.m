@@ -244,7 +244,7 @@ NSString *GLVariableAttributesKey = @"GLVariableAttributesKey";
 	return dimID;
 }
 
-- (int) addVariableOfType: (nc_type) type withName: (NSString *) aName dimensions: (NSArray *) dimArray attributes: (NSDictionary *) attributesDictionary
+- (int) addVariableOfType: (nc_type) type withName: (NSString *) aName dimensions: (NSArray *) dimArray compressionLevel: (NSUInteger) compLevel attributes: (NSDictionary *) attributesDictionary;
 {
 	__block int varID;
 	dispatch_sync(self.readwriteQueue, ^{
@@ -260,6 +260,10 @@ NSString *GLVariableAttributesKey = @"GLVariableAttributesKey";
 		
 		if ((retval = nc_def_var(self.fileID, [aName cStringUsingEncoding: NSASCIIStringEncoding], type, (int) dimArray.count, dimensionIDs, &varID))) ERR(retval);
 		free(dimensionIDs);
+		
+		if (compLevel) {
+			if ((retval = nc_def_var_deflate(self.fileID, varID, 0, 1, (int) compLevel))) ERR(retval);
+		}
 		
 		[self setAttributes: attributesDictionary forVariableID: varID];
 		
