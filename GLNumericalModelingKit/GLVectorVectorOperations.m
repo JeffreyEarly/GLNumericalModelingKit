@@ -1361,8 +1361,15 @@
 		result.isPurelyReal = (op1.isPurelyReal && op2.isPurelyReal) || (op1.isPurelyImaginary && op2.isPurelyImaginary);
 		result.isPurelyImaginary = (op1.isPurelyReal && op2.isPurelyImaginary) || (op1.isPurelyImaginary && op2.isPurelyReal);
 		
+		NSUInteger nDataPoints = op2.nDataPoints;
 		if ( !op1.isComplex && !op2.isComplex) {
 			// C = a_real / B_real;
+			operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
+				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+				vGL_svdiv( A, B, 1, C, 1, nDataPoints);
+			};
 			graphvisDescription = [NSString stringWithFormat: @"division (real scalar, real function)"];
 		} else if ( !op1.isComplex && op2.isComplex) {
 			// C = a_real / B_complex;
