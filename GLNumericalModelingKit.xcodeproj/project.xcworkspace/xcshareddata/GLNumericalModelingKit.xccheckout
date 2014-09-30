@@ -10,29 +10,29 @@
 	<string>GLNumericalModelingKit</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
 	<dict>
-		<key>DDDD21C8-6E9D-47E3-9A2A-5D87217B38E2</key>
+		<key>13B78EA659372F5FA2535D85FF02546CFE6B6BF0</key>
 		<string>https://github.com/JeffreyEarly/GLNumericalModelingKit.git</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
 	<string>GLNumericalModelingKit.xcodeproj/project.xcworkspace</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
-		<key>DDDD21C8-6E9D-47E3-9A2A-5D87217B38E2</key>
+		<key>13B78EA659372F5FA2535D85FF02546CFE6B6BF0</key>
 		<string>../..</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
 	<string>https://github.com/JeffreyEarly/GLNumericalModelingKit.git</string>
 	<key>IDESourceControlProjectVersion</key>
-	<integer>110</integer>
+	<integer>111</integer>
 	<key>IDESourceControlProjectWCCIdentifier</key>
-	<string>DDDD21C8-6E9D-47E3-9A2A-5D87217B38E2</string>
+	<string>13B78EA659372F5FA2535D85FF02546CFE6B6BF0</string>
 	<key>IDESourceControlProjectWCConfigurations</key>
 	<array>
 		<dict>
 			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
 			<string>public.vcs.git</string>
 			<key>IDESourceControlWCCIdentifierKey</key>
-			<string>DDDD21C8-6E9D-47E3-9A2A-5D87217B38E2</string>
+			<string>13B78EA659372F5FA2535D85FF02546CFE6B6BF0</string>
 			<key>IDESourceControlWCCName</key>
 			<string>GLNumericalModelingKit</string>
 		</dict>
