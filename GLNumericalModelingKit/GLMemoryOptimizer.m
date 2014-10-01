@@ -8,6 +8,7 @@
 
 #import "GLMemoryOptimizer.h"
 #import "GLMemoryPool.h"
+#import "GLVariableOperations.h"
 
 @implementation GLMemoryOptimizer
 {

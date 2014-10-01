@@ -83,6 +83,82 @@
 		8157AE2E17FA12C2002A6ED6 /* libsz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2917FA12C2002A6ED6 /* libsz.a */; };
 		8157AE2F17FA12C2002A6ED6 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2A17FA12C2002A6ED6 /* libz.a */; };
 		8157AE3117FA12CE002A6ED6 /* libcurl.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE3017FA12CE002A6ED6 /* libcurl.dylib */; };
+		818772E419DB2FC4007E5DA3 /* GLEquation.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5217F9FC36002A6ED6 /* GLEquation.m */; };
+		818772E519DB2FC4007E5DA3 /* GLDimension.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5417F9FC36002A6ED6 /* GLDimension.m */; };
+		818772E619DB2FC4007E5DA3 /* GLVariable.m in Sources */ = {isa = PBXBuildFile; fileRef = 81CABBF718089D7C00758DF1 /* GLVariable.m */; };
+		818772E719DB2FC4007E5DA3 /* GLScalar.m in Sources */ = {isa = PBXBuildFile; fileRef = 81CABBFB1808A11800758DF1 /* GLScalar.m */; };
+		818772E819DB2FC4007E5DA3 /* GLFunction.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5617F9FC36002A6ED6 /* GLFunction.m */; };
+		818772E919DB2FC4007E5DA3 /* GLLinearTransform.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5817F9FC36002A6ED6 /* GLLinearTransform.m */; };
+		818772EA19DB2FC4007E5DA3 /* GLBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = 813629FB182AC8C1001A8E1D /* GLBuffer.m */; };
+		818772EB19DB2FC4007E5DA3 /* GLMatrixDescription.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AD5A17F9FC36002A6ED6 /* GLMatrixDescription.m */; };
+		818772EC19DB2FC4007E5DA3 /* GLVariableOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADA617F9FCDA002A6ED6 /* GLVariableOperations.m */; };
+		818772ED19DB2FC4007E5DA3 /* GLNullaryOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADAA17F9FCDA002A6ED6 /* GLNullaryOperations.m */; };
+		818772EE19DB2FC4007E5DA3 /* GLUnaryOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADA817F9FCDA002A6ED6 /* GLUnaryOperations.m */; };
+		818772EF19DB2FC4007E5DA3 /* GLVectorScalarOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADAC17F9FCDA002A6ED6 /* GLVectorScalarOperations.m */; };
+		818772F019DB2FC4007E5DA3 /* GLVectorVectorOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADAE17F9FCDA002A6ED6 /* GLVectorVectorOperations.m */; };
+		818772F119DB2FC4007E5DA3 /* GLBasisTransformationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB017F9FCDB002A6ED6 /* GLBasisTransformationOperations.m */; };
+		818772F219DB2FC4007E5DA3 /* GLLinearTransformationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB217F9FCDB002A6ED6 /* GLLinearTransformationOperations.m */; };
+		818772F319DB2FC4007E5DA3 /* GLSimpleInterpolationOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB617F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.m */; };
+		818772F419DB2FC4007E5DA3 /* GLDimensionalOperations.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADB817F9FCDB002A6ED6 /* GLDimensionalOperations.m */; };
+		818772F519DB2FC4007E5DA3 /* GLMinimizationOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 81945439183534DC000BD412 /* GLMinimizationOperation.m */; };
+		818772F619DB2FC4007E5DA3 /* GLRungeKuttaOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADBC17F9FCDB002A6ED6 /* GLRungeKuttaOperation.m */; };
+		818772F719DB2FC4007E5DA3 /* GLOperationOptimizer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADBE17F9FCDB002A6ED6 /* GLOperationOptimizer.m */; };
+		818772F819DB2FC4007E5DA3 /* GLOperationVisualizer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADC017F9FCDB002A6ED6 /* GLOperationVisualizer.m */; };
+		818772FA19DB2FC4007E5DA3 /* GLMemoryPool.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADE217F9FCE6002A6ED6 /* GLMemoryPool.m */; };
+		818772FB19DB2FC4007E5DA3 /* GLFourierTransformPool.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADE617F9FCED002A6ED6 /* GLFourierTransformPool.m */; };
+		818772FC19DB2FC4007E5DA3 /* GLFourierTransform.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADE817F9FCED002A6ED6 /* GLFourierTransform.m */; };
+		818772FD19DB2FC4007E5DA3 /* GLFFTWFourierTransform.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADEA17F9FCED002A6ED6 /* GLFFTWFourierTransform.m */; };
+		818772FE19DB2FC4007E5DA3 /* GLNetCDFFile.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AE0B17F9FDEB002A6ED6 /* GLNetCDFFile.m */; };
+		818772FF19DB2FC4007E5DA3 /* GLNetCDFVariable.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AE0D17F9FDEB002A6ED6 /* GLNetCDFVariable.m */; };
+		8187730019DB2FC4007E5DA3 /* GLNetCDFFetchDataOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AE0F17F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.m */; };
+		8187730119DB2FC4007E5DA3 /* GLNetCDFConcatenationOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AE1117F9FDEB002A6ED6 /* GLNetCDFConcatenationOperation.m */; };
+		8187730219DB2FC4007E5DA3 /* GLLowLevelNetCDF.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AE1317F9FDEB002A6ED6 /* GLLowLevelNetCDF.m */; };
+		8187730319DB2FD1007E5DA3 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2017F9FE76002A6ED6 /* Accelerate.framework */; };
+		8187730419DB2FD8007E5DA3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AD1317F9FB8D002A6ED6 /* Cocoa.framework */; };
+		8187730B19DB2FF8007E5DA3 /* libcurl.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE3017FA12CE002A6ED6 /* libcurl.dylib */; };
+		8187730C19DB2FF8007E5DA3 /* libhdf5_hl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2617FA12C2002A6ED6 /* libhdf5_hl.a */; };
+		8187730D19DB2FF8007E5DA3 /* libhdf5.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2717FA12C2002A6ED6 /* libhdf5.a */; };
+		8187730E19DB2FF8007E5DA3 /* libnetcdf.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2817FA12C2002A6ED6 /* libnetcdf.a */; };
+		8187730F19DB2FF8007E5DA3 /* libsz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2917FA12C2002A6ED6 /* libsz.a */; };
+		8187731019DB2FF8007E5DA3 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2A17FA12C2002A6ED6 /* libz.a */; };
+		8187731119DB303A007E5DA3 /* libfftw3f.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2417FA12A2002A6ED6 /* libfftw3f.a */; };
+		8187731219DB30C9007E5DA3 /* GLNumericalModelingKit.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5017F9FC36002A6ED6 /* GLNumericalModelingKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731319DB30C9007E5DA3 /* Precision.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE1E17F9FE01002A6ED6 /* Precision.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731419DB30C9007E5DA3 /* GLEquation.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5117F9FC36002A6ED6 /* GLEquation.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731519DB30C9007E5DA3 /* GLDimension.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5317F9FC36002A6ED6 /* GLDimension.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731619DB30C9007E5DA3 /* GLVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 81CABBF618089D7C00758DF1 /* GLVariable.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731719DB30C9007E5DA3 /* GLScalar.h in Headers */ = {isa = PBXBuildFile; fileRef = 81CABBFA1808A11800758DF1 /* GLScalar.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731819DB30C9007E5DA3 /* GLFunction.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5517F9FC36002A6ED6 /* GLFunction.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731919DB30C9007E5DA3 /* GLLinearTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5717F9FC36002A6ED6 /* GLLinearTransform.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731A19DB30C9007E5DA3 /* GLBuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 813629FA182AC8C1001A8E1D /* GLBuffer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731B19DB30C9007E5DA3 /* GLMatrixDescription.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AD5917F9FC36002A6ED6 /* GLMatrixDescription.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731C19DB30C9007E5DA3 /* GLVariableOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADA517F9FCDA002A6ED6 /* GLVariableOperations.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731D19DB30C9007E5DA3 /* GLBasisTransformationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADAF17F9FCDB002A6ED6 /* GLBasisTransformationOperations.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731E19DB30C9007E5DA3 /* GLLinearTransformationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB117F9FCDB002A6ED6 /* GLLinearTransformationOperations.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187731F19DB30C9007E5DA3 /* GLSimpleInterpolationOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB517F9FCDB002A6ED6 /* GLSimpleInterpolationOperations.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187732019DB30C9007E5DA3 /* GLMinimizationOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 81945438183534DC000BD412 /* GLMinimizationOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187732119DB30C9007E5DA3 /* GLRungeKuttaOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBB17F9FCDB002A6ED6 /* GLRungeKuttaOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187732219DB30C9007E5DA3 /* GLOperationOptimizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBD17F9FCDB002A6ED6 /* GLOperationOptimizer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187732319DB30CA007E5DA3 /* GLOperationVisualizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBF17F9FCDB002A6ED6 /* GLOperationVisualizer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187732419DB30CA007E5DA3 /* GLNetCDFFile.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE0A17F9FDEB002A6ED6 /* GLNetCDFFile.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187732519DB30CA007E5DA3 /* GLNetCDFVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE0C17F9FDEB002A6ED6 /* GLNetCDFVariable.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		8187732619DB3113007E5DA3 /* GLNullaryOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADA917F9FCDA002A6ED6 /* GLNullaryOperations.h */; };
+		8187732719DB3113007E5DA3 /* GLUnaryOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADA717F9FCDA002A6ED6 /* GLUnaryOperations.h */; };
+		8187732819DB3113007E5DA3 /* GLVectorScalarOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADAB17F9FCDA002A6ED6 /* GLVectorScalarOperations.h */; };
+		8187732919DB3113007E5DA3 /* GLVectorVectorOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADAD17F9FCDA002A6ED6 /* GLVectorVectorOperations.h */; };
+		8187732A19DB3113007E5DA3 /* GLDimensionalOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB717F9FCDB002A6ED6 /* GLDimensionalOperations.h */; };
+		8187732B19DB3113007E5DA3 /* GLMemoryPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE117F9FCE6002A6ED6 /* GLMemoryPool.h */; };
+		8187732C19DB3113007E5DA3 /* GLFourierTransformPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE517F9FCED002A6ED6 /* GLFourierTransformPool.h */; };
+		8187732D19DB3113007E5DA3 /* GLFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE717F9FCED002A6ED6 /* GLFourierTransform.h */; };
+		8187732E19DB3113007E5DA3 /* GLFFTWFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE917F9FCED002A6ED6 /* GLFFTWFourierTransform.h */; };
+		8187732F19DB3113007E5DA3 /* fftw3.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE2217FA1289002A6ED6 /* fftw3.h */; };
+		8187733019DB3113007E5DA3 /* GLNetCDFFetchDataOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE0E17F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.h */; };
+		8187733119DB3113007E5DA3 /* GLNetCDFConcatenationOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE1017F9FDEB002A6ED6 /* GLNetCDFConcatenationOperation.h */; };
+		8187733219DB3113007E5DA3 /* GLLowLevelNetCDF.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE1217F9FDEB002A6ED6 /* GLLowLevelNetCDF.h */; };
+		8187733319DB3195007E5DA3 /* GLOpenCLFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADFA17F9FD66002A6ED6 /* GLOpenCLFourierTransform.h */; };
+		8187733419DB319A007E5DA3 /* GLMatrixFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADF417F9FD5E002A6ED6 /* GLMatrixFourierTransform.h */; };
+		8187733519DB31B6007E5DA3 /* GLMemoryOptimizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADC117F9FCDB002A6ED6 /* GLMemoryOptimizer.h */; };
+		8187733619DB31C7007E5DA3 /* GLDSPFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADF817F9FD66002A6ED6 /* GLDSPFourierTransform.h */; };
 		8194543A183534DC000BD412 /* GLMinimizationOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 81945438183534DC000BD412 /* GLMinimizationOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8194543B183534DC000BD412 /* GLMinimizationOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 81945439183534DC000BD412 /* GLMinimizationOperation.m */; };
 		81CABBF818089D7C00758DF1 /* GLVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 81CABBF618089D7C00758DF1 /* GLVariable.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -187,6 +263,9 @@
 		8157AE2917FA12C2002A6ED6 /* libsz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libsz.a; path = ExternalLibraries/libsz.a; sourceTree = "<group>"; };
 		8157AE2A17FA12C2002A6ED6 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = ExternalLibraries/libz.a; sourceTree = "<group>"; };
 		8157AE3017FA12CE002A6ED6 /* libcurl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcurl.dylib; path = ../../../../../usr/lib/libcurl.dylib; sourceTree = "<group>"; };
+		818772CB19DB2E88007E5DA3 /* GLNumericalModelingKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = GLNumericalModelingKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		818772CE19DB2E88007E5DA3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		818772CF19DB2E88007E5DA3 /* GLNumericalModelingKitFramework.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GLNumericalModelingKitFramework.h; sourceTree = "<group>"; };
 		81945438183534DC000BD412 /* GLMinimizationOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLMinimizationOperation.h; sourceTree = "<group>"; };
 		81945439183534DC000BD412 /* GLMinimizationOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLMinimizationOperation.m; sourceTree = "<group>"; };
 		81CABBF618089D7C00758DF1 /* GLVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLVariable.h; sourceTree = "<group>"; };
@@ -225,6 +304,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		818772C719DB2E88007E5DA3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8187730419DB2FD8007E5DA3 /* Cocoa.framework in Frameworks */,
+				8187730319DB2FD1007E5DA3 /* Accelerate.framework in Frameworks */,
+				8187731119DB303A007E5DA3 /* libfftw3f.a in Frameworks */,
+				8187730B19DB2FF8007E5DA3 /* libcurl.dylib in Frameworks */,
+				8187730C19DB2FF8007E5DA3 /* libhdf5_hl.a in Frameworks */,
+				8187730D19DB2FF8007E5DA3 /* libhdf5.a in Frameworks */,
+				8187730E19DB2FF8007E5DA3 /* libnetcdf.a in Frameworks */,
+				8187730F19DB2FF8007E5DA3 /* libsz.a in Frameworks */,
+				8187731019DB2FF8007E5DA3 /* libz.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -233,6 +328,7 @@
 			children = (
 				8157AD1917F9FB8D002A6ED6 /* GLNumericalModelingKit */,
 				8157AD2A17F9FB8D002A6ED6 /* GLNumericalModelingKitTests */,
+				818772CC19DB2E88007E5DA3 /* GLNumericalModelingKitFramework */,
 				8157AD1217F9FB8D002A6ED6 /* Frameworks */,
 				8157AD1117F9FB8D002A6ED6 /* Products */,
 				81CCB0CB18049E9B0064471F /* Documentation */,
@@ -244,6 +340,7 @@
 			children = (
 				8157AD1017F9FB8D002A6ED6 /* GLNumericalModelingKit.dylib */,
 				8157AD2317F9FB8D002A6ED6 /* GLNumericalModelingKitTests.xctest */,
+				818772CB19DB2E88007E5DA3 /* GLNumericalModelingKit.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -438,6 +535,23 @@
 			name = NetCDF;
 			sourceTree = "<group>";
 		};
+		818772CC19DB2E88007E5DA3 /* GLNumericalModelingKitFramework */ = {
+			isa = PBXGroup;
+			children = (
+				818772CF19DB2E88007E5DA3 /* GLNumericalModelingKitFramework.h */,
+				818772CD19DB2E88007E5DA3 /* Supporting Files */,
+			);
+			path = GLNumericalModelingKitFramework;
+			sourceTree = "<group>";
+		};
+		818772CD19DB2E88007E5DA3 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				818772CE19DB2E88007E5DA3 /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
 		81CCB0CB18049E9B0064471F /* Documentation */ = {
 			isa = PBXGroup;
 			children = (
@@ -495,6 +609,50 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		818772C819DB2E88007E5DA3 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8187731219DB30C9007E5DA3 /* GLNumericalModelingKit.h in Headers */,
+				8187731319DB30C9007E5DA3 /* Precision.h in Headers */,
+				8187731419DB30C9007E5DA3 /* GLEquation.h in Headers */,
+				8187731519DB30C9007E5DA3 /* GLDimension.h in Headers */,
+				8187731619DB30C9007E5DA3 /* GLVariable.h in Headers */,
+				8187731719DB30C9007E5DA3 /* GLScalar.h in Headers */,
+				8187731819DB30C9007E5DA3 /* GLFunction.h in Headers */,
+				8187731919DB30C9007E5DA3 /* GLLinearTransform.h in Headers */,
+				8187731A19DB30C9007E5DA3 /* GLBuffer.h in Headers */,
+				8187731B19DB30C9007E5DA3 /* GLMatrixDescription.h in Headers */,
+				8187731C19DB30C9007E5DA3 /* GLVariableOperations.h in Headers */,
+				8187731D19DB30C9007E5DA3 /* GLBasisTransformationOperations.h in Headers */,
+				8187731E19DB30C9007E5DA3 /* GLLinearTransformationOperations.h in Headers */,
+				8187731F19DB30C9007E5DA3 /* GLSimpleInterpolationOperations.h in Headers */,
+				8187732019DB30C9007E5DA3 /* GLMinimizationOperation.h in Headers */,
+				8187732119DB30C9007E5DA3 /* GLRungeKuttaOperation.h in Headers */,
+				8187732219DB30C9007E5DA3 /* GLOperationOptimizer.h in Headers */,
+				8187732319DB30CA007E5DA3 /* GLOperationVisualizer.h in Headers */,
+				8187732419DB30CA007E5DA3 /* GLNetCDFFile.h in Headers */,
+				8187732519DB30CA007E5DA3 /* GLNetCDFVariable.h in Headers */,
+				8187732919DB3113007E5DA3 /* GLVectorVectorOperations.h in Headers */,
+				8187733219DB3113007E5DA3 /* GLLowLevelNetCDF.h in Headers */,
+				8187733019DB3113007E5DA3 /* GLNetCDFFetchDataOperation.h in Headers */,
+				8187732819DB3113007E5DA3 /* GLVectorScalarOperations.h in Headers */,
+				8187733319DB3195007E5DA3 /* GLOpenCLFourierTransform.h in Headers */,
+				8187733419DB319A007E5DA3 /* GLMatrixFourierTransform.h in Headers */,
+				8187733119DB3113007E5DA3 /* GLNetCDFConcatenationOperation.h in Headers */,
+				8187733519DB31B6007E5DA3 /* GLMemoryOptimizer.h in Headers */,
+				8187732E19DB3113007E5DA3 /* GLFFTWFourierTransform.h in Headers */,
+				8187732F19DB3113007E5DA3 /* fftw3.h in Headers */,
+				8187732A19DB3113007E5DA3 /* GLDimensionalOperations.h in Headers */,
+				8187733619DB31C7007E5DA3 /* GLDSPFourierTransform.h in Headers */,
+				8187732619DB3113007E5DA3 /* GLNullaryOperations.h in Headers */,
+				8187732B19DB3113007E5DA3 /* GLMemoryPool.h in Headers */,
+				8187732D19DB3113007E5DA3 /* GLFourierTransform.h in Headers */,
+				8187732719DB3113007E5DA3 /* GLUnaryOperations.h in Headers */,
+				8187732C19DB3113007E5DA3 /* GLFourierTransformPool.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
@@ -533,6 +691,24 @@
 			productReference = 8157AD2317F9FB8D002A6ED6 /* GLNumericalModelingKitTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		818772CA19DB2E88007E5DA3 /* GLNumericalModelingKitFramework */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 818772DE19DB2E88007E5DA3 /* Build configuration list for PBXNativeTarget "GLNumericalModelingKitFramework" */;
+			buildPhases = (
+				818772C619DB2E88007E5DA3 /* Sources */,
+				818772C719DB2E88007E5DA3 /* Frameworks */,
+				818772C819DB2E88007E5DA3 /* Headers */,
+				818772C919DB2E88007E5DA3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GLNumericalModelingKitFramework;
+			productName = GLNumericalModelingKitFramework;
+			productReference = 818772CB19DB2E88007E5DA3 /* GLNumericalModelingKit.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -544,6 +720,9 @@
 				TargetAttributes = {
 					8157AD2217F9FB8D002A6ED6 = {
 						TestTargetID = 8157AD0F17F9FB8D002A6ED6;
+					};
+					818772CA19DB2E88007E5DA3 = {
+						CreatedOnToolsVersion = 6.1;
 					};
 				};
 			};
@@ -561,6 +740,7 @@
 			targets = (
 				8157AD0F17F9FB8D002A6ED6 /* GLNumericalModelingKit */,
 				8157AD2217F9FB8D002A6ED6 /* GLNumericalModelingKitTests */,
+				818772CA19DB2E88007E5DA3 /* GLNumericalModelingKitFramework */,
 			);
 		};
 /* End PBXProject section */
@@ -571,6 +751,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				8157AD2F17F9FB8D002A6ED6 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		818772C919DB2E88007E5DA3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -620,6 +807,43 @@
 			buildActionMask = 2147483647;
 			files = (
 				8157AD3117F9FB8D002A6ED6 /* GLNumericalModelingKitTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		818772C619DB2E88007E5DA3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				818772E419DB2FC4007E5DA3 /* GLEquation.m in Sources */,
+				818772E519DB2FC4007E5DA3 /* GLDimension.m in Sources */,
+				818772E619DB2FC4007E5DA3 /* GLVariable.m in Sources */,
+				818772E719DB2FC4007E5DA3 /* GLScalar.m in Sources */,
+				818772E819DB2FC4007E5DA3 /* GLFunction.m in Sources */,
+				818772E919DB2FC4007E5DA3 /* GLLinearTransform.m in Sources */,
+				818772EA19DB2FC4007E5DA3 /* GLBuffer.m in Sources */,
+				818772EB19DB2FC4007E5DA3 /* GLMatrixDescription.m in Sources */,
+				818772EC19DB2FC4007E5DA3 /* GLVariableOperations.m in Sources */,
+				818772ED19DB2FC4007E5DA3 /* GLNullaryOperations.m in Sources */,
+				818772EE19DB2FC4007E5DA3 /* GLUnaryOperations.m in Sources */,
+				818772EF19DB2FC4007E5DA3 /* GLVectorScalarOperations.m in Sources */,
+				818772F019DB2FC4007E5DA3 /* GLVectorVectorOperations.m in Sources */,
+				818772F119DB2FC4007E5DA3 /* GLBasisTransformationOperations.m in Sources */,
+				818772F219DB2FC4007E5DA3 /* GLLinearTransformationOperations.m in Sources */,
+				818772F319DB2FC4007E5DA3 /* GLSimpleInterpolationOperations.m in Sources */,
+				818772F419DB2FC4007E5DA3 /* GLDimensionalOperations.m in Sources */,
+				818772F519DB2FC4007E5DA3 /* GLMinimizationOperation.m in Sources */,
+				818772F619DB2FC4007E5DA3 /* GLRungeKuttaOperation.m in Sources */,
+				818772F719DB2FC4007E5DA3 /* GLOperationOptimizer.m in Sources */,
+				818772F819DB2FC4007E5DA3 /* GLOperationVisualizer.m in Sources */,
+				818772FA19DB2FC4007E5DA3 /* GLMemoryPool.m in Sources */,
+				818772FB19DB2FC4007E5DA3 /* GLFourierTransformPool.m in Sources */,
+				818772FC19DB2FC4007E5DA3 /* GLFourierTransform.m in Sources */,
+				818772FD19DB2FC4007E5DA3 /* GLFFTWFourierTransform.m in Sources */,
+				818772FE19DB2FC4007E5DA3 /* GLNetCDFFile.m in Sources */,
+				818772FF19DB2FC4007E5DA3 /* GLNetCDFVariable.m in Sources */,
+				8187730019DB2FC4007E5DA3 /* GLNetCDFFetchDataOperation.m in Sources */,
+				8187730119DB2FC4007E5DA3 /* GLNetCDFConcatenationOperation.m in Sources */,
+				8187730219DB2FC4007E5DA3 /* GLLowLevelNetCDF.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -719,6 +943,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = "";
@@ -727,7 +952,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
-					"\"$(SRCROOT)/ExternalLibraries/netcdf-4.1.2/include\"",
+					"$(SRCROOT)/ExternalLibraries/netcdf-4.1.2/include",
 					"$(SRCROOT)",
 				);
 				LIBRARY_SEARCH_PATHS = (
@@ -735,6 +960,7 @@
 					"$(SRCROOT)/ExternalLibraries/fftw/single-precision",
 					"$(SRCROOT)/ExternalLibraries",
 				);
+				MODULEMAP_FILE = GLNumericalModelingKit.modulemap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PUBLIC_HEADERS_FOLDER_PATH = /usr/local/include/GLNumericalModelingKit;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
@@ -747,6 +973,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = "";
@@ -755,7 +982,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
-					"\"$(SRCROOT)/ExternalLibraries/netcdf-4.1.2/include\"",
+					"$(SRCROOT)/ExternalLibraries/netcdf-4.1.2/include",
 					"$(SRCROOT)",
 				);
 				LIBRARY_SEARCH_PATHS = (
@@ -763,6 +990,7 @@
 					"$(SRCROOT)/ExternalLibraries/fftw/single-precision",
 					"$(SRCROOT)/ExternalLibraries",
 				);
+				MODULEMAP_FILE = GLNumericalModelingKit.modulemap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PUBLIC_HEADERS_FOLDER_PATH = /usr/local/include/GLNumericalModelingKit;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
@@ -809,6 +1037,84 @@
 			};
 			name = Release;
 		};
+		818772DF19DB2E88007E5DA3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_VERSION = A;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Applications/Xcode\\ 6.1b3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include",
+					"$(SRCROOT)/ExternalLibraries/netcdf-4.1.2/include",
+					"$(SRCROOT)",
+				);
+				INFOPLIST_FILE = GLNumericalModelingKitFramework/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ExternalLibraries",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRODUCT_NAME = GLNumericalModelingKit;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		818772E019DB2E88007E5DA3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_VERSION = A;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Applications/Xcode\\ 6.1b3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include",
+					"$(SRCROOT)/ExternalLibraries/netcdf-4.1.2/include",
+					"$(SRCROOT)",
+				);
+				INFOPLIST_FILE = GLNumericalModelingKitFramework/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ExternalLibraries",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = GLNumericalModelingKit;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -838,6 +1144,14 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
+		};
+		818772DE19DB2E88007E5DA3 /* Build configuration list for PBXNativeTarget "GLNumericalModelingKitFramework" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				818772DF19DB2E88007E5DA3 /* Debug */,
+				818772E019DB2E88007E5DA3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
 		};
 /* End XCConfigurationList section */
 	};
