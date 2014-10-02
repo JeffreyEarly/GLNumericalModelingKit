@@ -14,7 +14,7 @@
 		<string>https://github.com/JeffreyEarly/GLNumericalModelingKit.git</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
-	<string>GLNumericalModelingKit.xcodeproj/project.xcworkspace</string>
+	<string>GLNumericalModelingKit.xcodeproj</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
 		<key>13B78EA659372F5FA2535D85FF02546CFE6B6BF0</key>
