@@ -666,6 +666,7 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
         _isEvenlySampled = existingDim.isEvenlySampled;
         _basisFunction = existingDim.basisFunction;
         _isStrictlyPositive = existingDim.isStrictlyPositive;
+        _differentiationBasis = existingDim.differentiationBasis;
         
         _dataBytes = self.nPoints*sizeof(GLFloat);
 		_data =[NSMutableData dataWithLength: _dataBytes];
