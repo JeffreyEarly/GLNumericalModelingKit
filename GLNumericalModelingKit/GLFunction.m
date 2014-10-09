@@ -806,10 +806,10 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 	return operation.result[0];
 }
 
-- (id) projectOntoDimensions: (NSArray *) dims usingSpectralBasis: (NSArray *) basis
+- (GLFunction *) projectOntoDimensions: (NSArray *) dims usingSpectralBasis: (NSArray *) basis
 {
     GLZeroPadOperation *operation = [[GLZeroPadOperation alloc] initWithOperand: self newDimensions: dims basis: basis];
-    return operation.result;
+    return operation.result[0];
 }
 
 /************************************************/
