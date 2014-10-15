@@ -288,7 +288,8 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
 		_domainLength = theLength;
 		_basisFunction = kGLDeltaBasis;
 		_isMutable = NO;
-		
+        _isStrictlyPositive = ( _domainMin >= 0 );
+
 		_dataBytes = _nPoints*sizeof(GLFloat);
 		_data =[NSMutableData dataWithLength: _dataBytes];
 		
