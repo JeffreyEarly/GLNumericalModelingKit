@@ -61,6 +61,6 @@
 // The (n-1) dimensions of the two variables must have the same number of points.
 // If the mutableDimension is evenly spaced, then it will be extended to length pointIndex+1, if necessary.
 // If the mutableDimension is not evenly spaced, then it must already have the correct value.
-- (void) concatenateWithLowerDimensionalVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
+- (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
 
 @end

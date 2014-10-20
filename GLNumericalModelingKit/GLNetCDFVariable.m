@@ -30,7 +30,7 @@
 #pragma mark Class Methods
 #pragma mark
 
-+ (id) functionOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (instancetype) functionOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 {
 	BOOL isMutable = NO;
 	for (GLDimension *dimension in theDimensions) {
@@ -42,7 +42,7 @@
 	return [[GLVariableClass alloc] initVariableOfType: dataFormat withDimensions: theDimensions forEquation: equation];
 }
 
-+ (id) variableWithVariable: (GLFunction *) existing
++ (instancetype) variableWithVariable: (GLFunction *) existing
 {
 	GLNetCDFVariable *variable = [self functionOfType: existing.isComplex withDimensions: existing.dimensions forEquation: existing.equation];
 	variable.name = existing.name;
@@ -205,7 +205,7 @@
 	[self.equation solveForVariable: self waitUntilFinished: YES];
 }
 
-- (void) concatenateWithLowerDimensionalVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
+- (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
 {
 	GLVariableOperation *operation = [[GLNetCDFConcatenationOperation alloc] initWithFirstOperand: self lowerDimensionalSecondOperand: otherVariable alongDimensionAtIndex:mutableDimensionIndex index:pointIndex];
 	[self addOperation: operation];

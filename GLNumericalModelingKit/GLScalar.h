@@ -57,4 +57,7 @@
 /// C = sqrt(A)
 - (GLScalar *) sqrt;
 
+/// C = A*scale
+- (GLScalar *) scaleBy: (GLFloat) scale withUnits: (NSString *) varUnits;
+
 @end

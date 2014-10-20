@@ -19,7 +19,7 @@ GLSplitComplex splitComplexFromData( NSData *data );
  @param anotherVariable Another variable.
  @returns A new variable of the same type, and in the same format as another variable, but no data or dependencies.
  */
-+ (GLVariable *) variableWithPrototype: (GLVariable *) anotherVariable;
++ (instancetype) variableWithPrototype: (GLVariable *) anotherVariable;
 
 // Not to be called directly. Only to be used by the subclasses.
 /** Initializer only to be called by the subclasses.
@@ -27,7 +27,7 @@ GLSplitComplex splitComplexFromData( NSData *data );
  @param theEquation  The GLEquation object being used.
  @returns A newly initialized variable.
  */
-- (id) initWithType: (GLDataFormat) dataFormat withEquation: (GLEquation *) theEquation;
+- (instancetype) initWithType: (GLDataFormat) dataFormat withEquation: (GLEquation *) theEquation;
 
 /************************************************/
 /*		Properties								*/

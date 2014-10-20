@@ -82,7 +82,7 @@
     return self;
 }
 
-- (id) initWithFirstOperand: (GLMutableNetCDFVariable *) fOperand lowerDimensionalSecondOperand: (GLFunction *) sOperand alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex index: (NSUInteger) pointIndex
+- (id) initWithFirstOperand: (GLMutableNetCDFVariable *) fOperand lowerDimensionalSecondOperand: (GLVariable *) sOperand alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex index: (NSUInteger) pointIndex
 {
 	// The mutable dimension had better be a dimension of the first operand.
 	if (mutableDimensionIndex >= fOperand.dimensions.count) {
@@ -103,10 +103,21 @@
 	}
 	
 	// By assumption the second operand has one less dimension
-	if ( fOperand.dimensions.count != sOperand.dimensions.count+1) {
-		[NSException raise: @"DimensionsException" format: @"Incompatible number of dimensions for concatenation."];
-		return nil;
-	}
+    if ([[sOperand class] isSubclassOfClass: [GLFunction class]]) {
+        GLFunction *sFunction = (GLFunction *) sOperand;
+        if ( fOperand.dimensions.count != sFunction.dimensions.count+1) {
+            [NSException raise: @"DimensionsException" format: @"Incompatible number of dimensions for concatenation."];
+            return nil;
+        }
+    } else if ([[sOperand class] isSubclassOfClass: [GLScalar class]]) {
+        if ( fOperand.dimensions.count != 1) {
+            [NSException raise: @"DimensionsException" format: @"Incompatible number of dimensions for concatenation."];
+            return nil;
+        }
+    } else {
+        [NSException raise: @"DimensionsException" format: @"Cannot concatenate a linear transform."];
+        return nil;
+    }
 	
 	// We *may* need to increase the number of points, but then again, maybe not.
 	NSUInteger nPointsAfterMutation = pointIndex+1>mutableDimension.nPoints ? pointIndex+1:mutableDimension.nPoints;
@@ -121,18 +132,21 @@
 	[reducedDimensions removeObjectAtIndex: mutableDimensionIndex];
 	
 	self.indexRanges = [NSMutableArray array];
-	for (NSUInteger i=0; i<reducedDimensions.count; i++)
-	{
-		GLDimension *leftDim = [reducedDimensions objectAtIndex: i];
-		GLDimension *rightDim = [sOperand.dimensions objectAtIndex: i];
-		
-		// We only require the number of points match.
-		if (leftDim.nPoints != rightDim.nPoints) {
-			[NSException raise: @"DimensionsException" format: @"The dimensional lengths do not match."];
-			return nil;
-		}
-		[self.indexRanges addObject: [NSValue valueWithRange: NSMakeRange(0, rightDim.nPoints)]];
-	}
+    if ([[sOperand class] isSubclassOfClass: [GLFunction class]]) {
+        GLFunction *sFunction = (GLFunction *) sOperand;
+        for (NSUInteger i=0; i<reducedDimensions.count; i++)
+        {
+            GLDimension *leftDim = [reducedDimensions objectAtIndex: i];
+            GLDimension *rightDim = [sFunction.dimensions objectAtIndex: i];
+            
+            // We only require the number of points match.
+            if (leftDim.nPoints != rightDim.nPoints) {
+                [NSException raise: @"DimensionsException" format: @"The dimensional lengths do not match."];
+                return nil;
+            }
+            [self.indexRanges addObject: [NSValue valueWithRange: NSMakeRange(0, rightDim.nPoints)]];
+        }
+    }
 	
 	[self.indexRanges insertObject:[NSValue valueWithRange: NSMakeRange(pointIndex, 1)] atIndex:mutableDimensionIndex];
 	

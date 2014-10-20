@@ -516,6 +516,7 @@
 	}
 	GLFunction *result = [[vOperand class] functionOfType: vOperand.dataFormat withDimensions: newDims forEquation: vOperand.equation];
 	result.units = varUnits;
+    
 	if (( self = [super initWithResult: @[result] operand: @[vOperand]] ))
 	{
 		GLFunction *resultVariable = self.result[0];

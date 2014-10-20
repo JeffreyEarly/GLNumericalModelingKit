@@ -671,7 +671,15 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
         
         _dataBytes = self.nPoints*sizeof(GLFloat);
 		_data =[NSMutableData dataWithLength: _dataBytes];
-		[self populateEvenlySampledValues];
+        if (self.isEvenlySampled) {
+            [self populateEvenlySampledValues];
+        } else {
+            GLFloat *f = self.data.mutableBytes;
+            GLFloat *g = existingDim.data.mutableBytes;
+            for (NSUInteger i=0; i<self.nPoints; i++) {
+                f[i] = scale*g[i];
+            }
+        }
         
         self.name = existingDim.name;
         self.units = existingDim.units;

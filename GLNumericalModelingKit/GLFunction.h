@@ -33,19 +33,19 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 #pragma mark
 
 // Returns a variable built from the given dimension, either a GLVariable or a GLMutableVariable.
-+ (GLFunction *) functionOfRealTypeFromDimension: (GLDimension *) aDim withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
-+ (GLFunction *) functionOfComplexTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (instancetype) functionOfRealTypeFromDimension: (GLDimension *) aDim withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (instancetype) functionOfComplexTypeFromDimension: (GLDimension *) aDimension withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 
-+ (GLFunction *) functionWithRandomValuesBetween: (GLFloat) min and: (GLFloat) max withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
-+ (GLFunction *) functionWithNormallyDistributedValueWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (instancetype) functionWithRandomValuesBetween: (GLFloat) min and: (GLFloat) max withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (instancetype) functionWithNormallyDistributedValueWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 
 // Returns an empty variable (no value) from the given dimensions.
-+ (GLFunction *) functionOfRealTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
-+ (GLFunction *) functionOfComplexTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
-+ (GLFunction *) functionOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (instancetype) functionOfRealTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (instancetype) functionOfComplexTypeWithDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
++ (instancetype) functionOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) equation;
 
 // Copies the data from the other variable (now!) not a delayed operation.
-+ (GLFunction *) functionFromFunction: (GLFunction *) otherVariable;
++ (instancetype) functionFromFunction: (GLFunction *) otherVariable;
 
 
 /************************************************/
@@ -348,7 +348,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 // The (n-1) dimensions of the two variables must have the same number of points.
 // If the mutableDimension is evenly spaced, then it will be extended to length pointIndex+1, if necessary.
 // If the mutableDimension is not evenly spaced, then it must already have the correct value.
-- (void) concatenateWithLowerDimensionalVariable: (GLFunction *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
+- (void) concatenateWithLowerDimensionalVariable: (GLVariable *) otherVariable alongDimensionAtIndex: (NSUInteger) mutableDimensionIndex toIndex: (NSUInteger) pointIndex;
 @end
 
 // These are thrown in here to surpress compiler warnings these (and higher order derivatives)

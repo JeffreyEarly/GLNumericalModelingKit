@@ -287,7 +287,7 @@ NSInteger indexBelow2( GLFloat *monotonicallyIncreasingValues, GLFloat value, NS
 // The first operand is the function we're approximating, the second function is the (fractional) indices that we're approximating it at.
 - (id) initWithFunction:(GLFunction *)fOperand lowerIndices: (GLFunction *) lIndices upperIndices: (GLFunction *) uIndices fraction: (GLFunction *) frac
 {
-	GLFunction *resultVariable = [GLVariable variableWithPrototype: frac];
+	GLFunction *resultVariable = [GLFunction variableWithPrototype: frac];
 	if (( self = [super initWithResult: @[resultVariable] operand: @[fOperand, lIndices, uIndices, frac]] )) {
 		
         NSUInteger numInterpPoints = frac.nDataPoints;

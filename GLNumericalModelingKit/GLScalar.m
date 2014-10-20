@@ -183,6 +183,13 @@
 	return operation.result[0];
 }
 
+- (GLScalar *) scaleBy: (GLFloat) scale withUnits: (NSString *) varUnits
+{
+    GLScalar *result = [self times: @(scale)];
+    result.units = varUnits;
+    return result;
+}
+
 /************************************************/
 /*		Reading & Writing						*/
 /************************************************/
