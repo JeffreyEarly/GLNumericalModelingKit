@@ -961,8 +961,9 @@ BOOL isOne( NSNumber *a )
 		// We are very careful not to copy self or other unnecessary objects with the block we create,
 		// hence the extra boilerplate here.
 		NSUInteger num = y.count;
-		GLFloat safety = 0.8;
-		GLFloat errcon = pow(5./safety, -(order+1.));
+		GLFloat safety = 0.5;
+		GLFloat grow = 3.5;
+		GLFloat errcon = pow(grow/safety, -(order+1.));
 		NSMutableArray *operandBuffer = [[NSMutableArray alloc] init];
 		NSMutableArray *resultBuffer = [[NSMutableArray alloc] init];
 		NSMutableData *timeData = self.currentTimeData;
@@ -1037,7 +1038,7 @@ BOOL isOne( NSNumber *a )
 			if ( error > errcon) {
 				(*step) = safety*(*step)*pow(error, -1./(order+1));
 			} else {
-				(*step) = 5.0 * (*step);
+				(*step) = grow * (*step);
 			}
 			
 			[operandBuffer removeAllObjects];
