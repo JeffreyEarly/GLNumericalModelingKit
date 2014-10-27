@@ -739,7 +739,7 @@ BOOL isOne( NSNumber *a )
 // coefficients b -- scale f at each stage
 // coefficients c -- combine all stages to get the highest order solution
 // coefficients d -- combine all stages to get the highest order-1 solution
-- (id) initMethodWithCoefficientsA: (NSArray *) a b: (NSArray *) b c: (NSArray *) c d: (NSArray *) d y: (NSArray *) y stepSize: (GLFloat) deltaT fsal: (BOOL) isFSAL retainPreviousY: (BOOL) shouldRetainPreviousY order: (NSUInteger) order fFromTY: (FfromTYVector) fFromY
+- (instancetype) initMethodWithCoefficientsA: (NSArray *) a b: (NSArray *) b c: (NSArray *) c d: (NSArray *) d y: (NSArray *) y stepSize: (GLFloat) deltaT fsal: (BOOL) isFSAL retainPreviousY: (BOOL) shouldRetainPreviousY order: (NSUInteger) order fFromTY: (FfromTYVector) fFromY
 {
 	NSUInteger numStages = a.count;
 	
@@ -748,7 +748,7 @@ BOOL isOne( NSNumber *a )
 	
 	NSMutableArray *t = [NSMutableArray arrayWithCapacity: numStages];
 	for (NSUInteger i=0; i<a.count; i++) {
-		t[i] = [time plus: [timeStep times: a[0]]];
+		t[i] = [time plus: [timeStep times: a[i]]];
 	}
 	
 	// Store the value at each stage point

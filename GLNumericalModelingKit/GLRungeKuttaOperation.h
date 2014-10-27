@@ -25,10 +25,10 @@ typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
 @interface GLRungeKuttaOperation : GLVariableOperation
 
 // Classical 4th order Runge-Kutta time stepping with fixed time step.
-+ (id) rungeKutta4AdvanceY: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) aBlock;
++ (instancetype) rungeKutta4AdvanceY: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) aBlock;
 
 // Cash-Karp 5th order Runge-Kutta time stepping with fixed time step.
-+ (id) rungeKutta5AdvanceY: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) aBlock;
++ (instancetype) rungeKutta5AdvanceY: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) aBlock;
 
 
 // Steps forward one time-step and returns the new value of y at that point.
@@ -37,6 +37,10 @@ typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
 // Steps forward until time is reached or exceeded and returns the new value of y at that point.
 // No attempt is made to shorten the time step to hit the time exactly.
 - (NSArray *) stepForwardToTime: (GLFloat) time;
+
+// Creates an operation dependent on time, that returns the integrated value.
+// What happens when we request something too far back in time? This will happen if this is embedded in an another RK iterator.
+- (NSArray *) integrateToTime: (GLScalar *) time;
 
 // Integrates from the initial point to the end point of the dimension.
 // Note that this function forces variables to be solved. Very different than the usual paradigm.
@@ -85,10 +89,10 @@ typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
 @interface GLAdaptiveRungeKuttaOperation : GLRungeKuttaOperation
 
 
-+ (id) rungeKutta23AdvanceY: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) fFromY;
++ (instancetype) rungeKutta23AdvanceY: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) fFromY;
 
 // Cash-Karp 4th order Runge-Kutta time stepping with *adaptive* time step.
-+ (id) rungeKutta45AdvanceY: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) fFromY;
++ (instancetype) rungeKutta45AdvanceY: (NSArray *) y stepSize: (GLFloat) deltaT fFromTY: (FfromTYVector) fFromY;
 
 // The integrator will attempt to satisfy,
 // |y_err|/max( relTolerance*|y|, absoluteTolerance ) <= 1
