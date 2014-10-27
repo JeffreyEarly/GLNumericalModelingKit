@@ -231,7 +231,7 @@ BOOL isOne( NSNumber *a )
 	GLScalar *time = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [y[0] equation]];
 	NSMutableArray *t = [NSMutableArray arrayWithCapacity: numStages];
 	for (NSUInteger i=0; i<a.count; i++) {
-		t[i] = [time plus: @([a[0] doubleValue]*deltaT)];
+		t[i] = [time plus: @([a[i] doubleValue]*deltaT)];
 	}
 	
 	// Store the value at each stage point
