@@ -40,7 +40,7 @@ typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
 
 // Creates an operation dependent on time, that returns the integrated value.
 // What happens when we request something too far back in time? This will happen if this is embedded in an another RK iterator.
-- (NSArray *) integrateToTime: (GLScalar *) time;
+- (NSArray *) valueAtTime: (GLScalar *) time;
 
 // Integrates from the initial point to the end point of the dimension.
 // Note that this function forces variables to be solved. Very different than the usual paradigm.
