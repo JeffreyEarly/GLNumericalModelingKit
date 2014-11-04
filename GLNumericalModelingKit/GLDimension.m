@@ -835,7 +835,7 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
 		_scaledDimensionMapTable = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
 	}
 	
-	NSArray *keys = @[@(scale),@(delta), theUnits];
+    NSArray *keys = @[@(scale),@(delta), theUnits ?: @"unitless"];
 	[_scaledDimensionMapTable setObject: dim forKey: keys];
 }
 
@@ -846,7 +846,7 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
 	}
 	
 	for (NSArray *keys in _scaledDimensionMapTable) {
-		if ([keys[0] floatValue] == scale && [keys[1] floatValue] == delta && [keys[2] isEqualToString: theUnits]) {
+        if ([keys[0] floatValue] == scale && [keys[1] floatValue] == delta && [keys[2] isEqual: theUnits?:@"unitless"]) {
 			return [_scaledDimensionMapTable objectForKey: keys];
 		}
 	}
@@ -859,6 +859,7 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
 	if (!transformedDim) {
 		transformedDim = [[GLDimension alloc] initWithDimension: self scaledBy:scale translatedBy:delta withUnits:newUnits];
 		[self setDimension: transformedDim forScale:scale translation:delta units: newUnits];
+        [transformedDim setDimension: self forScale:1/scale translation:-delta units: self.units];
 	}
 	return transformedDim;
 }

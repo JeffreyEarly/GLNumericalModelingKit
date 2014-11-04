@@ -216,7 +216,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 
 // Performs a fourier transform if necessary, otherwise returns self.
 - (id) frequencyDomain;
-- (id) spatialDomain;
+- (GLFunction *) spatialDomain;
 
 // Returns a variable with the real and imaginary part swapped.
 - (GLFunction *) swapComplex;
