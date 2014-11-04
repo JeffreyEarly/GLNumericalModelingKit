@@ -314,23 +314,31 @@ BOOL isOne( NSNumber *a )
 	return [self stepForwardToTime: self.stepSize * (( (GLFloat) self.totalIterations ) + 0.5) + self.initialTime];
 }
 
-- (NSArray *) valueAtTime: (GLScalar *) time
-{
-    // integrator objects keeps track of the last X (4?) requests for values.
-    // The integrator stores the y values that span all 4 of those points. That's a minimum of 2, maybe lots more
-    // This needs to be an operation that depends on the time scalar, and returns the result array.
-    // This operation doesn't depend on the RK operation (in that we don't add it as a parent), but it does hold onto it.
-    NSMutableArray *yout = [[NSMutableArray alloc] initWithCapacity: self.result.count];
-    for (GLVariable *variable in self.result) {
-        [yout addObject: [GLVariable variableWithPrototype: variable]];
-    }
-    
-    GLVariableOperation *op = [[GLVariableOperation alloc] initWithResult: yout operand: @[time]];
-    op.operation = ^(NSArray *result, NSArray *operand, NSArray *bufferArray) {
-        
-    };
-    return op.result;
-}
+//- (void) addRequestedTime: (NSData *) newTimeData
+//{
+//    
+//}
+//
+//- (NSArray *) valueAtTime: (GLScalar *) time
+//{
+//    // integrator objects keeps track of the last X (4?) requests for values.
+//    // The integrator stores the y values that span all 4 of those points. That's a minimum of 2, maybe lots more
+//    // This needs to be an operation that depends on the time scalar, and returns the result array.
+//    // This operation doesn't depend on the RK operation (in that we don't add it as a parent), but it does hold onto it.
+//    NSMutableArray *yout = [[NSMutableArray alloc] initWithCapacity: self.result.count];
+//    for (GLVariable *variable in self.result) {
+//        [yout addObject: [GLVariable variableWithPrototype: variable]];
+//    }
+//    
+//    GLVariableOperation *op = [[GLVariableOperation alloc] initWithResult: yout operand: @[time]];
+//    op.operation = ^(NSArray *result, NSArray *operand, NSArray *bufferArray) {
+//        [self addRequestedTime: operand[0]];
+//        NSArray *precedingResult = [self storedResultPrecedingTime: operand[0]];
+//        NSArray *followingResult = [self storedResultFollowingTime: operand[0]];
+//        
+//    };
+//    return op.result;
+//}
 
 - (NSArray *) stepForwardToTime: (GLFloat) time
 {
