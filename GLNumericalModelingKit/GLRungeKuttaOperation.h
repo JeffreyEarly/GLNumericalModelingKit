@@ -8,11 +8,14 @@
 
 #import <GLNumericalModelingKit/GLVariableOperations.h>
 #import <GLNumericalModelingKit/GLScalar.h>
+#import <GLNumericalModelingKit/GLNetCDFFile.h>
 
 // You are computing dy/dt=f(t,y). This block is how you specify f, given the current time (t)
 // and the current point (y).
 // Here the first argument is *scalar* variable t (time).
 typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
+
+typedef NSDictionary * (^OutputFromInputVector)(GLScalar *, NSArray *);
 
 /************************************************/
 /*		GLRungeKuttaOperation					*/
@@ -46,6 +49,8 @@ typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
 // Note that this function forces variables to be solved. Very different than the usual paradigm.
 - (NSArray *) integrateAlongDimension: (GLDimension *) tDim;
 
+// Returns the value at the last time point after it's finished integrating and writing ot file.
+- (void) integrateAlongDimension: (GLDimension *) tDim0 toFile: (GLNetCDFFile *) file withTimeScale: (GLFloat) timeScale variables: (OutputFromInputVector) aBlock;
 
 // The size of the input vector y.
 @property(readonly)	NSUInteger nInputs;

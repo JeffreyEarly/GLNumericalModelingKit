@@ -459,6 +459,56 @@ BOOL isOne( NSNumber *a )
 	return yout;
 }
 
+- (void) integrateAlongDimension: (GLDimension *) tDim0 toFile: (GLNetCDFFile *) file withTimeScale: (GLFloat) timeScale variables: (OutputFromInputVector) aBlock
+{
+	GLEquation *equation = [self.currentY.lastObject equation];
+	
+	GLMutableDimension *tDim = [[GLMutableDimension alloc] initWithPoints: @[@([tDim0 valueAtIndex: 0])]];
+	
+	// Write the initial values to file
+	GLScalar *t0 = [GLScalar scalarWithValue: [tDim valueAtIndex: 0] forEquation: equation];
+	NSDictionary *initialY_scaled = aBlock( t0, self.currentY );
+	NSMutableDictionary *variableHistories = [NSMutableDictionary dictionary];
+	for (NSString *key in initialY_scaled) {
+		GLVariable *variable = initialY_scaled[key];
+		GLMutableVariable *variableHistory;
+		if (variable.rank == 0) {
+			GLScalar *scalar = (GLScalar *) variable;
+			GLFunction *newFunction = [GLFunction functionOfType: scalar.dataFormat withDimensions: @[] forEquation: scalar.equation];
+			newFunction.name = 
+			variableHistory = [newFunction variableByAddingDimension: tDim];
+		} else if (variable.rank == 1) {
+			GLFunction *function = (GLFunction *) variable;
+			variableHistory = [function variableByAddingDimension: tDim];
+		} else if (variable.rank == 2) {
+			[NSException raise:@"BadFormat" format: @"Cannot add a time dimension to a linear transformation"];
+		}
+		variableHistory.name = key;
+		variableHistory.units = variable.units;
+		variableHistory = [file addVariable: variableHistory];
+		variableHistories[key] = variableHistory;
+	}
+	
+	for (NSUInteger iPoint=1; iPoint<tDim.nPoints; iPoint++) {
+		@autoreleasepool {
+			GLFloat time = [tDim valueAtIndex: iPoint];
+			NSArray *y = [self stepForwardToTime: time];
+			GLScalar *tn = [GLScalar scalarWithValue: time forEquation: equation];
+			NSDictionary *y_scaled =aBlock( tn, y );
+			
+			[tDim addPoint: @(time*timeScale)];
+			
+			for (NSString *key in y_scaled) {
+				GLVariable *variable = y_scaled[key];
+				GLMutableVariable *variableHistory = variableHistories[key];
+				[variableHistory concatenateWithLowerDimensionalVariable: variable alongDimensionAtIndex:0 toIndex: (tDim.nPoints-1)];
+			}
+			
+			[file waitUntilAllOperationsAreFinished];
+		}
+	}	
+}
+
 - (void) setCurrentY:(NSArray *)currentY {
 	_currentY = currentY;
 	self.stageIsPrepped = NO;
