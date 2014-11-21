@@ -15,7 +15,8 @@
 // Here the first argument is *scalar* variable t (time).
 typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
 
-typedef NSDictionary * (^OutputFromInputVector)(GLScalar *, NSArray *);
+@class GLRungeKuttaOperation;
+typedef NSDictionary * (^OutputFromInputVector)(GLScalar *, NSArray *, GLRungeKuttaOperation* rkint);
 
 /************************************************/
 /*		GLRungeKuttaOperation					*/
