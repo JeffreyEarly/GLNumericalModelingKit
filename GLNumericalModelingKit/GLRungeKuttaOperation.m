@@ -463,7 +463,11 @@ BOOL isOne( NSNumber *a )
 {
 	GLEquation *equation = [self.currentY.lastObject equation];
 	
+    if (!tDim0.name) {
+        [NSException raise:@"BadFormat" format: @"tDim must have a name because it will be saved to file."];
+    }
 	GLMutableDimension *tDim = [[GLMutableDimension alloc] initWithPoints: @[@([tDim0 valueAtIndex: 0])]];
+    tDim.name = tDim0.name;
 	
 	// Write the initial values to file
 	GLScalar *t0 = [GLScalar scalarWithValue: [tDim valueAtIndex: 0] forEquation: equation];
@@ -475,7 +479,8 @@ BOOL isOne( NSNumber *a )
 		if (variable.rank == 0) {
 			GLScalar *scalar = (GLScalar *) variable;
 			GLFunction *newFunction = [GLFunction functionOfType: scalar.dataFormat withDimensions: @[] forEquation: scalar.equation];
-			newFunction.name = 
+//            newFunction.name = key;
+//            newFunction.units = variable.units;
 			variableHistory = [newFunction variableByAddingDimension: tDim];
 		} else if (variable.rank == 1) {
 			GLFunction *function = (GLFunction *) variable;
@@ -489,9 +494,9 @@ BOOL isOne( NSNumber *a )
 		variableHistories[key] = variableHistory;
 	}
 	
-	for (NSUInteger iPoint=1; iPoint<tDim.nPoints; iPoint++) {
+	for (NSUInteger iPoint=1; iPoint<tDim0.nPoints; iPoint++) {
 		@autoreleasepool {
-			GLFloat time = [tDim valueAtIndex: iPoint];
+			GLFloat time = [tDim0 valueAtIndex: iPoint];
 			NSArray *y = [self stepForwardToTime: time];
 			GLScalar *tn = [GLScalar scalarWithValue: time forEquation: equation];
 			NSDictionary *y_scaled =aBlock( tn, y );
