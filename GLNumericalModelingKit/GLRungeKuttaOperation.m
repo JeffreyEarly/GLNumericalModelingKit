@@ -471,7 +471,7 @@ BOOL isOne( NSNumber *a )
 	
 	// Write the initial values to file
 	GLScalar *t0 = [GLScalar scalarWithValue: [tDim valueAtIndex: 0] forEquation: equation];
-	NSDictionary *initialY_scaled = aBlock( t0, self.currentY, self );
+	NSDictionary *initialY_scaled = aBlock( t0, self.currentY );
 	NSMutableDictionary *variableHistories = [NSMutableDictionary dictionary];
 	for (NSString *key in initialY_scaled) {
 		GLVariable *variable = initialY_scaled[key];
@@ -493,13 +493,22 @@ BOOL isOne( NSNumber *a )
 		variableHistory = [file addVariable: variableHistory];
 		variableHistories[key] = variableHistory;
 	}
+    
+    if (self.shouldDisplayProgress) {
+        NSLog(@"Logging at time: %f, step size: %f.", timeScale*self.currentTime, self.lastStepSize*timeScale);
+    }
 	
 	for (NSUInteger iPoint=1; iPoint<tDim0.nPoints; iPoint++) {
 		@autoreleasepool {
 			GLFloat time = [tDim0 valueAtIndex: iPoint];
 			NSArray *y = [self stepForwardToTime: time];
+            
+            if (self.shouldDisplayProgress) {
+                NSLog(@"Logging at time: %f, step size: %f.", timeScale*self.currentTime, self.lastStepSize*timeScale);
+            }
+            
 			GLScalar *tn = [GLScalar scalarWithValue: time forEquation: equation];
-			NSDictionary *y_scaled =aBlock( tn, y, self );
+			NSDictionary *y_scaled =aBlock( tn, y );
 			
 			[tDim addPoint: @(time*timeScale)];
 			

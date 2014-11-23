@@ -16,7 +16,7 @@
 typedef NSArray * (^FfromTYVector)(GLScalar *, NSArray *);
 
 @class GLRungeKuttaOperation;
-typedef NSDictionary * (^OutputFromInputVector)(GLScalar *, NSArray *, GLRungeKuttaOperation* rkint);
+typedef NSDictionary * (^OutputFromInputVector)(GLScalar *, NSArray *);
 
 /************************************************/
 /*		GLRungeKuttaOperation					*/
@@ -73,6 +73,8 @@ typedef NSDictionary * (^OutputFromInputVector)(GLScalar *, NSArray *, GLRungeKu
 
 // If yes, the simulation will stop iterating if the max value is NaN.
 @property(nonatomic) BOOL exitOnBlowUp;
+
+@property(nonatomic) BOOL shouldDisplayProgress;
 
 // If you set this value only if you've modified y in some way.
 @property(strong, nonatomic) NSArray *currentY;

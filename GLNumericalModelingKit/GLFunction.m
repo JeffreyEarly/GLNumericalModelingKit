@@ -294,7 +294,7 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 - (id) initVariableOfType: (GLDataFormat) dataFormat withDimensions: (NSArray *) theDimensions forEquation: (GLEquation *) theEquation
 {
 	if (!theDimensions) {
-		NSLog(@"Attempted to initialize GLVariable without an equation or dimensions!!!");
+        [NSException raise:@"InvalidInitialization" format:@"Attempted to initialize GLVariable without an equation or dimensions!!!"];
 		return nil;
 	}
 	
