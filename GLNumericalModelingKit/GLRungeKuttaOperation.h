@@ -51,7 +51,7 @@ typedef NSDictionary * (^OutputFromInputVector)(GLScalar *, NSArray *);
 - (NSArray *) integrateAlongDimension: (GLDimension *) tDim;
 
 // Returns the value at the last time point after it's finished integrating and writing ot file.
-- (void) integrateAlongDimension: (GLDimension *) tDim0 toFile: (GLNetCDFFile *) file withTimeScale: (GLFloat) timeScale variables: (OutputFromInputVector) aBlock;
+- (void) integrateAlongDimension: (GLDimension *) tDim0 withTimeScale: (GLFloat) timeScale file: (GLNetCDFFile *) file output: (OutputFromInputVector) aBlock;
 
 // The size of the input vector y.
 @property(readonly)	NSUInteger nInputs;

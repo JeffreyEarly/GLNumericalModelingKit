@@ -459,7 +459,7 @@ BOOL isOne( NSNumber *a )
 	return yout;
 }
 
-- (void) integrateAlongDimension: (GLDimension *) tDim0 toFile: (GLNetCDFFile *) file withTimeScale: (GLFloat) timeScale variables: (OutputFromInputVector) aBlock
+- (void) integrateAlongDimension: (GLDimension *) tDim0 withTimeScale: (GLFloat) timeScale file: (GLNetCDFFile *) file output: (OutputFromInputVector) aBlock;
 {
 	GLEquation *equation = [self.currentY.lastObject equation];
 	
