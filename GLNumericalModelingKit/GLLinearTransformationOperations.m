@@ -414,10 +414,10 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 					NSMutableData *transform = operandArray[0];
 					GLSplitComplex function = splitComplexFromData( operandArray[1] );
 					
-					vGL_vmul( transform.bytes+totalShiftBytes, 1, function.realp, 1, result.realp+totalShiftBytes, 1, nDataPoints);
+					vGL_vmul( transform.bytes+totalShiftBytes, 1, function.realp, 1, (void *)result.realp+totalShiftBytes, 1, nDataPoints);
 					vGL_vclr( result.realp, 1, totalShift );
 					
-					vGL_vmul( transform.bytes+totalShiftBytes, 1, function.imagp, 1, result.imagp+totalShiftBytes, 1, nDataPoints);
+					vGL_vmul( transform.bytes+totalShiftBytes, 1, function.imagp, 1, (void *)result.imagp+totalShiftBytes, 1, nDataPoints);
 					vGL_vclr( result.realp, 1, totalShift );
 				};
 			} else {
@@ -426,11 +426,11 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 					NSMutableData *transform = operandArray[0];
 					GLSplitComplex function = splitComplexFromData( operandArray[1] );
 					
-					vGL_vmul( transform.bytes, 1, function.realp+totalShiftBytes, 1, result.realp, 1, nDataPoints);
-					vGL_vclr( result.realp+totalEndShiftBytes, 1, totalShift );
+					vGL_vmul( transform.bytes, 1, (void *)function.realp+totalShiftBytes, 1, result.realp, 1, nDataPoints);
+					vGL_vclr( (void *)result.realp+totalEndShiftBytes, 1, totalShift );
 					
-					vGL_vmul( transform.bytes, 1, function.imagp+totalShiftBytes, 1, result.imagp, 1, nDataPoints);
-					vGL_vclr( result.realp+totalEndShiftBytes, 1, totalShift );
+					vGL_vmul( transform.bytes, 1, (void *)function.imagp+totalShiftBytes, 1, result.imagp, 1, nDataPoints);
+					vGL_vclr( (void *)result.imagp+totalEndShiftBytes, 1, totalShift );
 				};
 			}
 		} else {
