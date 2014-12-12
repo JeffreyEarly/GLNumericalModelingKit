@@ -468,6 +468,9 @@ BOOL isOne( NSNumber *a )
     }
 	GLMutableDimension *tDim = [[GLMutableDimension alloc] initWithPoints: @[@([tDim0 valueAtIndex: 0])]];
     tDim.name = tDim0.name;
+    
+    self.totalIterations = 0;
+    self.currentTime = [tDim0 valueAtIndex: 0];
 	
 	// Write the initial values to file
 	GLScalar *t0 = [GLScalar scalarWithValue: [tDim valueAtIndex: 0] forEquation: equation];
@@ -504,7 +507,7 @@ BOOL isOne( NSNumber *a )
 			NSArray *y = [self stepForwardToTime: time];
             
             if (self.shouldDisplayProgress) {
-                NSLog(@"Logging at time: %f, step size: %f.", timeScale*self.currentTime, self.lastStepSize*timeScale);
+                NSLog(@"Logging at time: %f. Integrator at time: %f, with step size: %f.",time*timeScale, timeScale*self.currentTime, self.lastStepSize*timeScale);
             }
             
 			GLScalar *tn = [GLScalar scalarWithValue: time forEquation: equation];
