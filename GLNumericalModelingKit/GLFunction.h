@@ -185,7 +185,7 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 // Set each element to a random number between min and max.
 //- (id) randomMin: (GLFloat) min max: (GLFloat) max;
 
-- (id) pow: (GLFloat) aScalar;
+- (GLFunction *) pow: (GLFloat) aScalar;
 
 // Returns a scalar GLVariable.
 - (GLScalar *) max;
