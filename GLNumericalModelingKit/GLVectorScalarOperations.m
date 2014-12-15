@@ -243,22 +243,22 @@
 		const int nDataElements = (int) resultVariable.nDataElements;
 		
 		GLFloat localScalar = self.scalarOperand;
-//		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-//			GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-//			GLFloat *B = (GLFloat *) [resultArray[0] bytes];
-//			
-//            for (NSUInteger i=0; i<nDataElements; i++) {
-//                B[i] = pow( A[i], localScalar );
-//            }
-//		};
 		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 			GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 			GLFloat *B = (GLFloat *) [resultArray[0] bytes];
 			
-			vGL_vvlog(B, A, &nDataElements);
-			vGL_vsmul(B, 1, &localScalar, B, 1, nDataElements);
-			vGL_vvexp(B, B, &nDataElements);
+            for (NSUInteger i=0; i<nDataElements; i++) {
+                B[i] = pow( A[i], localScalar );
+            }
 		};
+//		self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+//			GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+//			GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+//			
+//			vGL_vvlog(B, A, &nDataElements);
+//			vGL_vsmul(B, 1, &localScalar, B, 1, nDataElements);
+//			vGL_vvexp(B, B, &nDataElements);
+//		};
 		self.graphvisDescription = [NSString stringWithFormat: @"power %+1.1g", sOperand];
 		
 	}
