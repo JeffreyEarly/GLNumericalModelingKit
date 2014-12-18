@@ -587,10 +587,10 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
         {   // This is the DCT---discrete cosine transform
             GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
             GLLinearTransform *dct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
-                GLFloat *kVal = (GLFloat *) k.data.bytes;
-                GLFloat *xVal = (GLFloat *) x.data.bytes;
-                
-                GLFloatComplex value = cos(2*M_PI*kVal[row[0]]*xVal[col[0]])/x.nPoints ;
+				GLFloat k = row[0];
+				GLFloat n = col[0];
+				
+                GLFloatComplex value = cos(M_PI*(n+0.5)*k/x.nPoints)/x.nPoints ;
                 
                 return value;
             }];
@@ -631,10 +631,10 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
         else if (k.basisFunction == kGLCosineBasis)
         {   // This is the IDCT---inverse discrete cosine transform
             GLLinearTransform *idct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
-                GLFloat *kVal = (GLFloat *) k.data.bytes;
-                GLFloat *xVal = (GLFloat *) x.data.bytes;
+                GLFloat k = col[0];
+                GLFloat n = row[0];
                 
-                GLFloatComplex value = col[0]==0 ? 1.0 : 2.0*cos(2*M_PI*kVal[col[0]]*xVal[row[0]]);
+                GLFloatComplex value = col[0]==0 ? 1.0 : 2.0*cos(M_PI*(n+0.5)*k/x.nPoints);
                 
                 return value;
             }];
