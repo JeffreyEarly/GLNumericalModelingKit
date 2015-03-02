@@ -1244,6 +1244,43 @@
 	}
 }
 
+- (void) test1DDiscreteChebyshevTransform
+{
+	GLEquation *equation = [[GLEquation alloc] init];
+	
+	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLChebyshevEndpointGrid nPoints: 8 domainMin: -1.0 length: 2.0];
+	
+	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	[x dumpToConsole];
+	GLFunction *f = [[[x times: x] times: @(2.0)] plus: @(-1.0)];
+	GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLChebyshevBasis forEquation:equation];
+	[matrix dumpToConsole];
+	GLFunction *f_tilde = [matrix transform: f];
+	[f_tilde solve];
+	GLFloat *output = f_tilde.pointerValue;
+	
+	GLFloat expected[8] = {0., 0., 0.5, 0., 0., 0., 0., 0.};
+	
+	for (int i=0; i<8; i++) {
+		if ( !fequal(output[i], expected[i]) ) {
+			XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+		}
+	}
+	
+	GLLinearTransform *invMatrix = [GLLinearTransform discreteTransformFromDimension: f_tilde.dimensions[0] toBasis: kGLDeltaBasis forEquation:equation];
+	GLFunction *f_tilde_tilde = [invMatrix transform: f_tilde];
+	[f_tilde_tilde solve];
+	
+	// Check that the inverse transformation works as expected.
+	GLFloat *input = f.pointerValue;
+	output = f_tilde_tilde.pointerValue;
+	for (int i=0; i<8; i++) {
+		if ( !fequal(input[i], output[i]) ) {
+			XCTFail(@"Expected %f, found %f.", input[i], output[i]);
+		}
+	}
+}
+
 /************************************************/
 /*		Linear Algebra							*/
 /************************************************/

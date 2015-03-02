@@ -586,14 +586,29 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
         else if (aBasis == kGLCosineBasis)
         {   // This is the DCT---discrete cosine transform
             GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
-            GLLinearTransform *dct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
-				GLFloat k = row[0];
-				GLFloat n = col[0];
-				
-                GLFloatComplex value = cos(M_PI*(n+0.5)*k/x.nPoints)/x.nPoints ;
-                
-                return value;
-            }];
+			transformMatrix matrix;
+			
+			if (aDimension.isEvenlySampled) { // This creates a much more accurate matrix when we're evenly sampled.
+				matrix = ^( NSUInteger *row, NSUInteger *col ) {
+					GLFloat k = row[0];
+					GLFloat n = col[0];
+					
+					GLFloatComplex value = cos(M_PI*(n+0.5)*k/x.nPoints)/x.nPoints ;
+					
+					return value;
+				};
+			} else {
+				matrix = ^( NSUInteger *row, NSUInteger *col ) {
+					GLFloat *kVal = (GLFloat *) k.data.bytes;
+					GLFloat *xVal = (GLFloat *) x.data.bytes;
+					
+					GLFloatComplex value = cos(2*M_PI*kVal[row[0]]*xVal[col[0]])/x.nPoints ;
+					
+					return value;
+				};
+			}
+			
+            GLLinearTransform *dct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: matrix];
             
             return dct;
         }
@@ -611,6 +626,32 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
             
             return dst;
         }
+		else if (aBasis == kGLChebyshevBasis)
+		{   // This is the DCT---discrete cosine transform
+			GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: NO];
+			transformMatrix matrix;
+			
+			if (aDimension.gridType == kGLChebyshevEndpointGrid) { // This creates a much more accurate matrix when we're evenly sampled.
+				matrix = ^( NSUInteger *row, NSUInteger *col ) {
+					GLFloat k = row[0];
+					GLFloat n = col[0];
+					
+					GLFloatComplex value = (1./(x.nPoints-1.))*cos(M_PI*n*k/(x.nPoints-1.0));
+					if ( (row[0]==0 && (col[0] == 0 || col[0] == x.nPoints-1)) || (row[0]==x.nPoints-1 && (col[0] == 0 || col[0] == x.nPoints-1))) {
+						return (GLFloatComplex) (value/4.0);
+					} else if (row[0] == 0 || row[0] == x.nPoints-1 ||col[0] == 0 || col[0] == x.nPoints-1) {
+						return (GLFloatComplex) (value/2.0);
+					}
+					return value;
+				};
+			} else {
+				[NSException raise: @"BadFormat" format:@"Unable to create a Chebyshev matrix for the grid type you requested."];
+			}
+			
+			GLLinearTransform *dct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: matrix];
+			
+			return dct;
+		}
     }
     else {
         GLDimension *k=aDimension;
@@ -630,14 +671,29 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
         }
         else if (k.basisFunction == kGLCosineBasis)
         {   // This is the IDCT---inverse discrete cosine transform
-            GLLinearTransform *idct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
-                GLFloat k = col[0];
-                GLFloat n = row[0];
-                
-                GLFloatComplex value = col[0]==0 ? 1.0 : 2.0*cos(M_PI*(n+0.5)*k/x.nPoints);
-                
-                return value;
-            }];
+			transformMatrix matrix;
+			
+			if (x.isEvenlySampled) { // This creates a much more accurate matrix when we're evenly sampled.
+				matrix = ^( NSUInteger *row, NSUInteger *col ) {
+					GLFloat k = col[0];
+					GLFloat n = row[0];
+					
+					GLFloatComplex value = col[0]==0 ? 1.0 : 2.0*cos(M_PI*(n+0.5)*k/x.nPoints);
+					
+					return value;
+				};
+			} else {
+				matrix = ^( NSUInteger *row, NSUInteger *col ) {
+					GLFloat *kVal = (GLFloat *) k.data.bytes;
+					GLFloat *xVal = (GLFloat *) x.data.bytes;
+					
+					GLFloatComplex value = col[0]==0 ? 1.0 : 2.0*cos(2*M_PI*kVal[col[0]]*xVal[row[0]]);
+					
+					return value;
+				};
+			}
+			
+            GLLinearTransform *idct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: matrix];
             
             return idct;
         }
@@ -654,8 +710,35 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
             
             return idst;
         }
+		else if (k.basisFunction == kGLChebyshevBasis)
+		{   // This is the IDCT---inverse discrete chebyshev transform
+			transformMatrix matrix;
+			
+			if (x.gridType == kGLChebyshevEndpointGrid) {
+				matrix = ^( NSUInteger *row, NSUInteger *col ) {
+					GLFloat k = col[0];
+					GLFloat n = row[0];
+					
+					GLFloatComplex value = 2*cos(M_PI*n*k/(x.nPoints-1.0));
+					
+					return value;
+				};
+			} else {
+				matrix = ^( NSUInteger *row, NSUInteger *col ) {
+					GLFloat *xVal = (GLFloat *) x.data.bytes;
+					
+					GLFloatComplex value = cos(col[0]*acos((2./x.domainLength)*(xVal[row[0]]-x.domainMin)-1.0));
+					
+					return value;
+				};
+			}
+			
+			GLLinearTransform *idct = [self transformOfType: kGLRealDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: matrix];
+			
+			return idct;
+		}
     }
-    
+	
     [NSException exceptionWithName: @"BadDimension" reason:@"I don't understand the words that are coming out of your mouth." userInfo:nil];
     
     return nil;
