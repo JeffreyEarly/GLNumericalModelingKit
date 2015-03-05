@@ -636,7 +636,7 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
 					GLFloat k = row[0];
 					GLFloat n = col[0];
 					
-					GLFloatComplex value = (1./(x.nPoints-1.))*cos(M_PI*n*k/(x.nPoints-1.0));
+					GLFloatComplex value = (2./(x.nPoints-1.))*cos(M_PI*n*k/(x.nPoints-1.0));
 					if ( (row[0]==0 && (col[0] == 0 || col[0] == x.nPoints-1)) || (row[0]==x.nPoints-1 && (col[0] == 0 || col[0] == x.nPoints-1))) {
 						return (GLFloatComplex) (value/4.0);
 					} else if (row[0] == 0 || row[0] == x.nPoints-1 ||col[0] == 0 || col[0] == x.nPoints-1) {
@@ -719,7 +719,7 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
 					GLFloat k = col[0];
 					GLFloat n = row[0];
 					
-					GLFloatComplex value = 2*cos(M_PI*n*k/(x.nPoints-1.0));
+					GLFloatComplex value = cos(M_PI*n*k/(x.nPoints-1.0));
 					
 					return value;
 				};

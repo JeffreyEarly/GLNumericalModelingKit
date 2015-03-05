@@ -631,7 +631,7 @@ static BOOL _shouldAntiAlias = NO;
                     scaleFactor *= 0.5 / ( (GLFloat) alldims[i].n );
                 } else if (fromBasis == kGLDeltaBasis && toBasis == kGLChebyshevBasis) {
                     (transformKind)[iDims] = FFTW_REDFT00;
-                    scaleFactor *= 0.5 / ( (GLFloat) alldims[i].n - 1 );
+                    scaleFactor *= 1.0 / ( (GLFloat) alldims[i].n - 1 );
                 }  else if (fromBasis == kGLExponentialBasis && toBasis == kGLDeltaBasis) {
                     (transformKind)[iDims] = FFTW_HC2R;
                 } else if (fromBasis == kGLDiscreteCosineTransformIBasis && toBasis == kGLDeltaBasis) {
@@ -644,6 +644,7 @@ static BOOL _shouldAntiAlias = NO;
                     (transformKind)[iDims] = FFTW_RODFT01;
                 } else if (fromBasis == kGLChebyshevBasis && toBasis == kGLDeltaBasis) {
                     (transformKind)[iDims] = FFTW_REDFT00;
+					scaleFactor *= 0.5;
                 }
                 
                 iDims++;

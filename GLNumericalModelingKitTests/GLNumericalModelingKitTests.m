@@ -1218,12 +1218,14 @@
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLChebyshevEndpointGrid nPoints: 8 domainMin: -1.0 length: 2.0];
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
+	//GLFunction *f = [x setValue: 1.0 atIndices: @":"];
 	GLFunction *f = [[[x times: x] times: @(2.0)] plus: @(-1.0)];
 	GLFunction *f_tilde = [f transformToBasis:@[@(kGLChebyshevBasis)]];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	
-	GLFloat expected[8] = {0., 0., 0.5, 0., 0., 0., 0., 0.};
+	//GLFloat expected[8] = {2.0, 0., 0., 0., 0., 0., 0., 0.};
+	GLFloat expected[8] = {0., 0., 1.0, 0., 0., 0., 0., 0.};
 	
 	for (int i=0; i<8; i++) {
 		if ( !fequal(output[i], expected[i]) ) {
@@ -1251,15 +1253,15 @@
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLChebyshevEndpointGrid nPoints: 8 domainMin: -1.0 length: 2.0];
 	
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension: xDim withDimensions: @[xDim] forEquation: equation];
-	[x dumpToConsole];
+//	GLFunction *f = [x setValue: 1.0 atIndices: @":"];
 	GLFunction *f = [[[x times: x] times: @(2.0)] plus: @(-1.0)];
 	GLLinearTransform *matrix = [GLLinearTransform discreteTransformFromDimension: f.dimensions[0] toBasis: kGLChebyshevBasis forEquation:equation];
-	[matrix dumpToConsole];
 	GLFunction *f_tilde = [matrix transform: f];
 	[f_tilde solve];
 	GLFloat *output = f_tilde.pointerValue;
 	
-	GLFloat expected[8] = {0., 0., 0.5, 0., 0., 0., 0., 0.};
+//	GLFloat expected[8] = {1.0, 0., 0., 0., 0., 0., 0., 0.};
+	GLFloat expected[8] = {0., 0., 1.0, 0., 0., 0., 0., 0.};
 	
 	for (int i=0; i<8; i++) {
 		if ( !fequal(output[i], expected[i]) ) {
