@@ -1496,7 +1496,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
                     // Multiply by the normalization function.
                     vGL_vmul( Bsplit.realp, vectorElementStride, f, 1, Bsplit.realp, vectorElementStride, vectorLength );
                     
-                    // sum it. sum = 1/(2*h) * (f_0 + 2*f_1 + 2*f_2 + ... + 2*f_{N-1} + 2*f_N
+                    // sum it. sum = 1/(2*h) * (f_0 + 2*f_1 + 2*f_2 + ... + 2*f_{N-1} + f_N)
                     GLFloat sum = 0.0;
                     vGL_sve(Bsplit.realp, vectorElementStride, &sum, vectorLength);
                     sum = deltaX * (sum - Bsplit.realp[0]/2.0 - Bsplit.realp[0+vectorElementStride*(vectorLength-1)]/2.0);
@@ -1508,6 +1508,57 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
             };
         } else {
             [NSException raise: @"NotYetImplemented" format: @"This case is not yet implemented."];
+			
+			GLDimension *dimension = A.toDimensions[index];
+			NSData *dimData = dimension.data;
+			
+			// Int f(x) \approx 1/2 \sum ( x{i+1}-x{i} )*( f(x{i+1}) + f(x{i}) )
+			NSMutableData *dimDiffData = [[GLMemoryPool sharedMemoryPool] dataWithLength: dimData.length];
+			const GLFloat *a = dimData.bytes;
+			GLFloat *b = dimDiffData.mutableBytes;
+			for (NSUInteger i=0; i<dimension.nPoints-1; i++) {
+				b[i] = (a[i+1]-a[i])/2;
+			}
+			
+			op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				dispatch_apply(totalVectors, queue, ^(size_t iteration) {
+					
+					NSUInteger bigSkip = (iteration/nVectorsPerIndex)*nVectorsPerIndex*vectorLength;
+					NSUInteger inEquationPos = bigSkip + (iteration%nVectorsPerIndex)*vectorStride;
+					
+					GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+					GLSplitComplex Asplit;
+					Asplit.realp = &(A[inEquationPos]);
+					Asplit.imagp = &(A[inEquationPos+complexStride]);
+					
+					GLFloat *f = (GLFloat *) [operandArray[1] bytes];
+					
+					GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+					GLSplitComplex Bsplit;
+					Bsplit.realp = &(B[inEquationPos]);
+					Bsplit.imagp = &(B[inEquationPos+complexStride]);
+					
+					// square it
+					vGL_zvmags(&Asplit, vectorElementStride, Bsplit.realp, vectorElementStride, vectorLength);
+					
+					// Multiply by the normalization function.
+					vGL_vmul( Bsplit.realp, vectorElementStride, f, 1, Bsplit.realp, vectorElementStride, vectorLength );
+					
+					// f(x{i+1}) + f(x{i})
+					vGL_vadd( &(Bsplit.realp[vectorElementStride]), vectorElementStride, Bsplit.realp, vectorElementStride, Bsplit.realp, vectorElementStride, vectorLength-1);
+					
+					vGL_vmul( Bsplit.realp, vectorElementStride, dimDiffData.mutableBytes, 1, Bsplit.realp, vectorElementStride, vectorLength-1 );
+					
+					// sum it.
+					GLFloat sum = 0.0;
+					vGL_sve(Bsplit.realp, vectorElementStride, &sum, vectorLength-1);
+					
+					GLFloat norm = 1/sqrt(fabs(sum));
+					vGL_vsmul(Asplit.realp, vectorElementStride, &norm, Bsplit.realp, vectorElementStride, vectorLength);
+					vGL_vsmul(Asplit.imagp, vectorElementStride, &norm, Bsplit.imagp, vectorElementStride, vectorLength);
+				});
+			};
+			
         }
 	} else {
         if (isEvenlySampled) {
@@ -1516,7 +1567,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
                     GLFloat *A = (GLFloat *) [operandArray[0] bytes];
                     GLFloat *f = (GLFloat *) [operandArray[1] bytes];
                     GLFloat *B = (GLFloat *) [resultArray[0] bytes];
-                    
+					
                     NSUInteger bigSkip = (iteration/nVectorsPerIndex)*nVectorsPerIndex*vectorLength;
                     NSUInteger inEquationPos = bigSkip + (iteration%nVectorsPerIndex)*vectorStride;
                     
@@ -1810,9 +1861,13 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 
 - (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B sort: (NSComparisonResult) sortOrder
 {
+	if (A.fromDimensions.count != B.fromDimensions.count || A.toDimensions.count != B.toDimensions.count) {
+		[NSException raise: @"MatrixWrongFormat" format: @"Both matrices must have the same number of dimensions."];
+	}
+	
 	for (NSUInteger i=0; i<A.fromDimensions.count; i++) {
-		if ( ![A.fromDimensions[i] isEqualToDimension: A.toDimensions[i]] ) {
-			[NSException raise: @"MatrixWrongFormat" format: @"By assumption, a linear transformation must be an endomorphism to compute the eigensystem."];
+		if ( ![A.fromDimensions[i] isEqualToDimension: B.fromDimensions[i]] || ![A.toDimensions[i] isEqualToDimension: B.toDimensions[i]] ) {
+			[NSException raise: @"MatrixWrongFormat" format: @"Both matrices must have the same dimensions."];
 		}
 	}
 	
@@ -1859,6 +1914,10 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 	GLMatrixDescription *operandDescription = A.matrixDescription;
 	
     NSUInteger denseIndex = candidateIndex;
+	
+	if ( [A.toDimensions[denseIndex] nPoints] != [A.fromDimensions[denseIndex] nPoints]) {
+		[NSException raise: @"NonSquareMatrix" format: @"The diagonalizable index must have square dimensions."];
+	}
 	
 	// We need to construct a *new* eigenbasis.
 	// I'm not quite sure the right definitions to use.
