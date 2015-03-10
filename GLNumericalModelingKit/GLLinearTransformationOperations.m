@@ -1940,7 +1940,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 	
 	// Should check whether or not the matrix is symmetric.
 	GLVariable *eigenvalues = [GLFunction functionOfComplexTypeWithDimensions: eigenbasis forEquation: A.equation];
-	GLLinearTransform *eigentransform = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: eigenbasis toDimensions:A.toDimensions inFormat:A.matrixFormats forEquation:A.equation matrix: nil];
+	GLLinearTransform *eigentransform = [GLLinearTransform transformOfType: kGLSplitComplexDataFormat withFromDimensions: eigenbasis toDimensions:A.fromDimensions inFormat:A.matrixFormats forEquation:A.equation matrix: nil];
 	GLMatrixDescription *resultMatrixDescription = eigentransform.matrixDescription;
     GLMatrixDescription *resultVectorDescription = eigenvalues.matrixDescription;
     NSArray *results = @[eigenvalues, eigentransform];
