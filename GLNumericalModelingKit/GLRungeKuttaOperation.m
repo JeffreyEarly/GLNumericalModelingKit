@@ -643,6 +643,8 @@ BOOL isOne( NSNumber *a )
 @property BOOL stageIsPrepped;
 @property(copy) stagePrepOperation prepStageOperation;
 
+@property(strong) NSArray *initialY;
+
 @end
 
 @implementation GLAdaptiveRungeKuttaOperation
@@ -989,6 +991,7 @@ BOOL isOne( NSNumber *a )
 		for (GLBuffer *aBuffer in optimizer.internalDataBuffers) {
 			[self.dataBuffers addObject: [[GLMemoryPool sharedMemoryPool] dataWithLength: aBuffer.numBytes]];
 		}
+		self.initialY = y;
 		self.currentY = y;
 		self.stepSize = deltaT;
 		self.isFSAL = isFSAL;

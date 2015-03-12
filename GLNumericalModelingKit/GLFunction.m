@@ -310,7 +310,7 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 		self.realSymmetry = [NSMutableArray array];
 		self.imaginarySymmetry = [NSMutableArray array];
 		for ( GLDimension *aDim in theDimensions ) {
-            NSUInteger idx = [theDimensions indexOfObject: aDim];
+            //NSUInteger idx = [theDimensions indexOfObject: aDim];
             
             self.nDataElements *= aDim.nPoints;
             self.nDataPoints *= aDim.nPoints;
