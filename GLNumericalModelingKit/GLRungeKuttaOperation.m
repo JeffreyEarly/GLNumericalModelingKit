@@ -208,6 +208,8 @@ BOOL isOne( NSNumber *a )
 		self.lastStepSizeData = self.lastStepSizeVariable.data;
 		self.requestedTimeData = self.requestedTimeVariable.data;
 		
+		self.currentTime = 0.0;
+		
 		self.nInputs = operand.count;
 		
 		self.exitOnBlowUp = YES;
@@ -386,7 +388,7 @@ BOOL isOne( NSNumber *a )
             [youtOut addObject: newVar];
             [resultBufferOut addObject: newVar.data];
         }
-        
+		
         while ( self.currentTime < time )
         {
             self.operation( resultBufferOut, resultBuffer, self.dataBuffers );
@@ -1130,6 +1132,8 @@ BOOL isOne( NSNumber *a )
 			}
 			
 			(*lastStep) = (*step);
+			
+//			NSLog(@"Current time: %f", self.currentTime);
 			
 			if ( error > errcon) {
 				(*step) = safety*(*step)*pow(error, -1./(order+1));
