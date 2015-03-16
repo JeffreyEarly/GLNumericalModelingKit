@@ -331,6 +331,8 @@ or, if we use $\hat{h}_k$ instead,
 u_n = \hat{h}_0 + (-1)^{n} \hat{h}_{N-1} + 2 \sum_{k=1}^{N-2} \hat{h}_k \cos \frac{\pi n k}{N-1}.
 \end{equation}
 
+In the current implementation (as of March 5th, 2015) both the fast transform and discrete transform return the same normalization, except for the $T_0$. The fast transform is a factor of two larger.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Fast Transforms
