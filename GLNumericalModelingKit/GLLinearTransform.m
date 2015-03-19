@@ -567,10 +567,45 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
 {
     if (aDimension.basisFunction == kGLDeltaBasis) {
         GLDimension *x=aDimension;
-   
+        GLDimension *k;
+        
         if (aBasis == kGLExponentialBasis)
         {   // This is the DFT---discrete Fourier transform
-            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: NO];
+            k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: NO];
+        }
+        else if (aBasis == kGLCosineBasis)
+        {   // This is the DCT---discrete cosine transform
+            k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
+        }
+        else if (aBasis == kGLSineBasis)
+        {   // This is the DST---discrete sine transform
+            k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
+        }
+        else if (aBasis == kGLChebyshevBasis)
+        {   // This is the DCT---discrete cosine transform
+            k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: NO];
+        }
+        
+        return [GLLinearTransform discreteTransformFromDimension: x toDimension: k forEquation: equation];
+    }
+    else {
+        GLDimension *k = aDimension;
+        GLDimension *x = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLDeltaBasis strictlyPositive: NO];
+        
+        return [GLLinearTransform discreteTransformFromDimension: k toDimension: x forEquation: equation];
+    }
+    
+    return nil;
+}
+
++ (GLLinearTransform *) discreteTransformFromDimension: (GLDimension *) fromDimension toDimension: (GLDimension *) toDimension forEquation: (GLEquation *) equation
+{
+    if (fromDimension.basisFunction == kGLDeltaBasis) {
+        GLDimension *x=fromDimension;
+        GLDimension *k=toDimension;
+        
+        if (toDimension.basisFunction == kGLExponentialBasis)
+        {   // This is the DFT---discrete Fourier transform
             GLLinearTransform *dft = [self transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
                 GLFloat *xVal = (GLFloat *) x.data.bytes;
@@ -583,12 +618,11 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
             
             return dft;
         }
-        else if (aBasis == kGLCosineBasis)
+        else if (toDimension.basisFunction == kGLCosineBasis)
         {   // This is the DCT---discrete cosine transform
-            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
 			transformMatrix matrix;
 			
-			if (aDimension.isEvenlySampled) { // This creates a much more accurate matrix when we're evenly sampled.
+			if (x.isEvenlySampled) { // This creates a much more accurate matrix when we're evenly sampled.
 				matrix = ^( NSUInteger *row, NSUInteger *col ) {
 					GLFloat k = row[0];
 					GLFloat n = col[0];
@@ -612,9 +646,8 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
             
             return dct;
         }
-        else if (aBasis == kGLSineBasis)
+        else if (toDimension.basisFunction == kGLSineBasis)
         {   // This is the DST---discrete sine transform
-            GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: YES];
             GLLinearTransform *dst = [self transformOfType: kGLRealDataFormat withFromDimensions: @[x] toDimensions: @[k] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
                 GLFloat *kVal = (GLFloat *) k.data.bytes;
                 GLFloat *xVal = (GLFloat *) x.data.bytes;
@@ -626,12 +659,11 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
             
             return dst;
         }
-		else if (aBasis == kGLChebyshevBasis)
-		{   // This is the DCT---discrete cosine transform
-			GLDimension *k = [[GLDimension alloc] initAsDimension: x transformedToBasis: aBasis strictlyPositive: NO];
+		else if (toDimension.basisFunction == kGLChebyshevBasis)
+		{
 			transformMatrix matrix;
 			
-			if (aDimension.gridType == kGLChebyshevEndpointGrid) { // This creates a much more accurate matrix when we're evenly sampled.
+			if (x.gridType == kGLChebyshevEndpointGrid) { // This creates a much more accurate matrix when we're evenly sampled.
 				matrix = ^( NSUInteger *row, NSUInteger *col ) {
 					GLFloat k = row[0];
 					GLFloat n = col[0];
@@ -660,8 +692,8 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
 		}
     }
     else {
-        GLDimension *k=aDimension;
-        GLDimension *x = [[GLDimension alloc] initAsDimension: k transformedToBasis: kGLDeltaBasis strictlyPositive: NO];
+        GLDimension *k = fromDimension;
+        GLDimension *x = toDimension;
         if (k.basisFunction == kGLExponentialBasis)
         {   // This is the IDFT---inverse discrete Fourier transform
             GLLinearTransform *idft = [self transformOfType: kGLSplitComplexDataFormat withFromDimensions: @[k] toDimensions: @[x] inFormat: @[@(kGLDenseMatrixFormat)] forEquation: equation matrix: ^( NSUInteger *row, NSUInteger *col ) {
@@ -740,6 +772,11 @@ static NSString *GLLinearTransformFromDimensionsKey = @"GLLinearTransformFromDim
 					
 					GLFloatComplex value = cos(col[0]*acos((2./x.domainLength)*(xVal[row[0]]-x.domainMin)-1.0));
 					
+                    // Factor of 2 in order to match the fast transform implementation
+                    if (col[0] == 0) {
+                        value = value/2.0;
+                    }
+                    
 					return value;
 				};
 			}

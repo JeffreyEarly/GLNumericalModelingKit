@@ -568,7 +568,7 @@ void createMatrixDescriptionStringRecursion( GLMatrixDescription *matrixDescript
 			
             for (NSUInteger iDiagonal=0; iDiagonal<matrixDescription.strides[iDim].nDiagonals; iDiagonal++) {
                 if (iDim == lastNonTrivialDimension) {
-                    if (!is) [descrip appendFormat: @"%6.2f\t", a[iDiagonal*ds+i*es]/divisor];
+                    if (!is) [descrip appendFormat: @"%6.6f\t", a[iDiagonal*ds+i*es]/divisor];
                     else [descrip appendFormat: @"%6.2f + %6.2fi\t", a[iDiagonal*ds+i*es]/divisor, a[iDiagonal*ds+i*es+is]/divisor];
                 } else {
                     [descrip appendFormat: @"\n"];

@@ -1023,7 +1023,9 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
 	}
 	else if (self.basisFunction == kGLSineBasis) {
 		basis = @"sine half-shift";
-	}
+    } else if (self.basisFunction == kGLChebyshevBasis) {
+        basis = @"chebyshev";
+    }
 	return [NSString stringWithFormat: @"%@ <0x%lx> (%@: %lu points, %@ basis)", NSStringFromClass([self class]), (NSUInteger)self, self.name, self.nPoints, basis];
 }
 

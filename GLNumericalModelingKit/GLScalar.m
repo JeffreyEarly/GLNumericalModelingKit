@@ -200,12 +200,12 @@
 
 - (void) dumpToConsole
 {
-	return NSLog(@"%6.2g", self.pointerValue[0]);
+	return NSLog(@"%6.6g", self.pointerValue[0]);
 }
 
 - (NSString *) description
 {
-	return [NSString stringWithFormat: @"%@ <0x%lx> %6.2g", NSStringFromClass([self class]), (NSUInteger) self, self.pointerValue[0]];
+	return [NSString stringWithFormat: @"%@ <0x%lx> %6.6g", NSStringFromClass([self class]), (NSUInteger) self, self.pointerValue[0]];
 }
 
 //- (NSString *) graphvisDescription

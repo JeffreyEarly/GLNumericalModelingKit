@@ -153,6 +153,14 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
  */
 + (GLLinearTransform *) discreteTransformFromDimension: (GLDimension *) aDimension toBasis: (GLBasisFunction) aBasis forEquation: (GLEquation *) equation;
 
+/** Create a discrete transform that can act on 1-dimensional functions in the given dimension and transform them to the new dimension.
+ @param fromDimension The dimension (and therefore basis) that we are transforming from.
+ @param toDimension The dimension (and therefore basis) that we are transforming to.
+ @param equation The GLEquation object being used.
+ @returns A GLLinearTransform with fromDimensions that match aDimension, and toDimensions in the new basis.
+ */
++ (GLLinearTransform *) discreteTransformFromDimension: (GLDimension *) fromDimension toDimension: (GLDimension *) toDimension forEquation: (GLEquation *) equation;
+
 /** Create a finite differecing differential operator of arbitrary order that can act on 1-dimensional functions in the given dimension.
  @discussion This does not create fully generalized differentiation matrices, but creates matrices with a specific number of off-diagonal points.
  @discussion The bandwidth must be at least ceil(numDerivs/2).
