@@ -213,7 +213,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 - (id) initWithFunction: (GLFunction *) function
 {
     NSMutableArray *matrixFormats = [NSMutableArray array];
-    for (GLDimension *aDim in function.dimensions) {
+	for (NSUInteger i=0; i<function.dimensions.count;i++) {
         [matrixFormats addObject: @(kGLDiagonalMatrixFormat)];
     }
 	GLLinearTransform *result = [[GLLinearTransform alloc] initTransformOfType: function.dataFormat withFromDimensions: function.dimensions toDimensions:function.dimensions inFormat:matrixFormats forEquation:function.equation matrix:nil];
@@ -703,7 +703,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
 				GLFloat *C = (GLFloat *) [resultArray[0] bytes];
-				vDSP_mmul( A, 1, B, 1, C, 1, M, N, K);
+				vGL_mmul( A, 1, B, 1, C, 1, M, N, K);
 			};
 		}
 		else if ( A.isComplex && !B.isComplex)
@@ -713,8 +713,8 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
+				vGL_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
+				vGL_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
 			};
 		}
 		else if ( !A.isComplex && B.isComplex)
@@ -724,8 +724,8 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLSplitComplex B = splitComplexFromData( operandArray[1] );
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
+				vGL_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
+				vGL_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
 			};
 		}
 		else if ( A.isComplex && B.isComplex)
@@ -735,7 +735,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLSplitComplex B = splitComplexFromData(operandArray[1]);
 				GLSplitComplex C = splitComplexFromData(resultArray[0]);
 				
-				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
+				vGL_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
 			};
 		}
 		
@@ -808,7 +808,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 					GLFloat *A = (GLFloat *) [operandArray[0] bytes];
 					GLFloat *B = (GLFloat *) [operandArray[1] bytes];
 					GLFloat *C = (GLFloat *) [resultArray[0] bytes];
-					vDSP_mmul( &(A[matrixAPosition]), matrixA.strides[denseIndex].stride, &(B[matrixBPosition]), matrixB.strides[denseIndex].stride, &(C[matrixCPosition]), matrixC.strides[denseIndex].stride, M, N, K);
+					vGL_mmul( &(A[matrixAPosition]), matrixA.strides[denseIndex].stride, &(B[matrixBPosition]), matrixB.strides[denseIndex].stride, &(C[matrixCPosition]), matrixC.strides[denseIndex].stride, M, N, K);
 				});
 			};
 		}
@@ -819,8 +819,8 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLFloat *B = (GLFloat *) [operandArray[1] bytes];
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
+				vGL_mmul( A.realp, 1, B, 1, C.realp, 1, M, N, K);
+				vGL_mmul( A.imagp, 1, B, 1, C.imagp, 1, M, N, K);
                 NSLog(@"Warning, vector loop not implemeneted");
 			};
 		}
@@ -831,8 +831,8 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLSplitComplex B = splitComplexFromData( operandArray[1] );
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
-				vDSP_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
-				vDSP_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
+				vGL_mmul( A, 1, B.realp, 1, C.realp, 1, M, N, K);
+				vGL_mmul( A, 1, B.imagp, 1, C.imagp, 1, M, N, K);
                 NSLog(@"Warning, vector loop not implemeneted");
 			};
 		}
@@ -843,7 +843,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 				GLSplitComplex B = splitComplexFromData(operandArray[1]);
 				GLSplitComplex C = splitComplexFromData(resultArray[0]);
 				
-				vDSP_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
+				vGL_zmmul( &A, 1, &B, 1, &C, 1, M, N, K);
                 NSLog(@"Warning, vector loop not implemeneted");
 			};
 		}
@@ -1154,7 +1154,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
                 memcpy( x, b, n*n*sizeof(GLFloat));
             }
             
-            sgesv_( &n, &nrhs, M, &n, ipiv, x, &n, (__CLPK_integer *) &info );
+            vGL_gesv( &n, &nrhs, M, &n, ipiv, x, &n, (__CLPK_integer *) &info );
             
             if (info != 0) {
                 printf("sgesv failed with error code %d\n", (int)info);
@@ -1264,14 +1264,14 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 			__CLPK_integer n = (__CLPK_integer) N;
 			__CLPK_integer info;
 			memcpy( C, A, n*n*sizeof(GLFloat));
-			sgetrf_(&n, &n, C, &n, ipiv.mutableBytes, (__CLPK_integer *)&info);
+			vGL_getrf(&n, &n, C, &n, ipiv.mutableBytes, (__CLPK_integer *)&info);
 			
 			if (info != 0) {
 				printf("sgetrf failed with error code %d\n", (int)info);
 			}
 			
 			__CLPK_integer lwork = n*n;
-			sgetri_(&n, C, &n, ipiv.mutableBytes, work.mutableBytes, &lwork, (__CLPK_integer *)&info);
+			vGL_getri(&n, C, &n, ipiv.mutableBytes, work.mutableBytes, &lwork, (__CLPK_integer *)&info);
 			
 			if (info != 0) {
 				printf("sgetri failed with error code %d\n", (int)info);
@@ -1768,7 +1768,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 			__CLPK_integer lwork = 8*n;
 			__CLPK_integer info;
 			
-			sgeev_(&JOBVL, &JOBVR, &n, B, &n, output_v.realp, output_v.imagp, NULL, &n, output, &n, work, &lwork, (__CLPK_integer *)&info);
+			vGL_geev(&JOBVL, &JOBVR, &n, B, &n, output_v.realp, output_v.imagp, NULL, &n, output, &n, work, &lwork, (__CLPK_integer *)&info);
      
 			if (info != 0) {
 				printf("sgeev failed with error code %d\n", (int)info);
@@ -2007,7 +2007,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 			__CLPK_integer lwork = 8*n;
 			__CLPK_integer info;
 			
-			sggev_(&JOBVL, &JOBVR, &n, A_col, &n, B_col, &n, output_v.realp, output_v.imagp, beta, NULL, &n, output, &n, work, &lwork, &info);
+			vGL_ggev(&JOBVL, &JOBVR, &n, A_col, &n, B_col, &n, output_v.realp, output_v.imagp, beta, NULL, &n, output, &n, work, &lwork, &info);
 			
 			if (info != 0) {
 				printf("sggev failed with error code %d\n", (int)info);

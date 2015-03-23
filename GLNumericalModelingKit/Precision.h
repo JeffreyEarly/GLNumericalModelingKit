@@ -17,6 +17,7 @@
 #import <complex.h>
 #include <Accelerate/Accelerate.h>
 #include <CoreFoundation/CoreFoundation.h>
+#import "fftw3.h"
 //#include <libMatrixFFT/fftUtils.h>
 //#include <libMatrixFFT/MatrixFFT.h>
 //#include <libMatrixFFT/vdspUtils.h>
@@ -26,7 +27,7 @@
 #define _GLPRECISION_
 
 // Must also change this in MatrixFFTConfig.h, line 71.
-//#define DOUBLE_PREC
+#define DOUBLE_PREC
 
 #ifdef DOUBLE_PREC
 
@@ -116,6 +117,34 @@ typedef	FFTSetupD	GLFFTSetup;
 #define vGL_mmul		vDSP_mmulD			// Real matrix multiplication
 #define vGL_zmmul		vDSP_zmmulD			// Complex matrix multiplication
 
+#define vGL_ggev		dggev_
+#define vGL_geev		dgeev_
+#define vGL_gesv		dgesv_
+#define vGL_getrf		dgetrf_
+#define vGL_getri		dgetri_
+
+#define vGL_fftw_plan							fftw_plan
+#define vGL_fftw_plan_with_nthreads				fftw_plan_with_nthreads
+#define vGL_fftw_import_wisdom_from_filename	fftw_import_wisdom_from_filename
+#define vGL_fftw_export_wisdom_to_filename		fftw_export_wisdom_to_filename
+#define vGL_fftw_destroy_plan					fftw_destroy_plan
+
+#define vGL_fftw_iodim							fftw_iodim
+#define vGL_fftw_r2r_kind						fftw_r2r_kind
+
+#define vGL_fftw_plan_guru_split_dft			fftw_plan_guru_split_dft
+#define vGL_fftw_plan_guru_r2r					fftw_plan_guru_r2r
+#define vGL_fftw_plan_guru_split_dft_r2c		fftw_plan_guru_split_dft_r2c
+#define vGL_fftw_plan_guru_split_dft_c2r		fftw_plan_guru_split_dft_c2r
+
+#define vGL_fftw_execute						fftw_execute
+#define vGL_fftw_execute_split_dft				fftw_execute_split_dft
+#define vGL_fftw_execute_r2r					fftw_execute_r2r
+#define vGL_fftw_execute_split_dft_r2c			fftw_execute_split_dft_r2c
+#define vGL_fftw_execute_split_dft_c2r			fftw_execute_split_dft_c2r
+
+#define vGL_fftw_init_threads					fftw_init_threads
+
 #else
 
 typedef float complex GLFloatComplex;
@@ -204,6 +233,12 @@ typedef	FFTSetup	GLFFTSetup;
 
 #define vGL_mmul		vDSP_mmul			// Real matrix multiplication
 #define vGL_zmmul		vDSP_zmmul			// Complex matrix multiplication
+
+#define vGL_ggev		sggev_
+#define vGL_geev		sgeev_
+#define vGL_gesv		sgesv_
+#define vGL_getrf		sgetrf_
+#define vGL_getri		sgetri_
 
 #endif
 

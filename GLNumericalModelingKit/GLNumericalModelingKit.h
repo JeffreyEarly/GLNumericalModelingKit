@@ -27,3 +27,7 @@
 
 #import <GLNumericalModelingKit/GLNetCDFFile.h>
 #import <GLNumericalModelingKit/GLOperationVisualizer.h>
+
+#import <GLNumericalModelingKit/GLLinearTransformationOperations.h>
+#import <GLNumericalModelingKit/GLOperationOptimizer.h>
+#import <GLNumericalModelingKit/GLMemoryPool.h>

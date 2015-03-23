@@ -74,9 +74,9 @@
 	split.imagp = self.zerosBuffer.mutableBytes;
 	vGL_vclr( split.imagp, 1, self.dataPoints );
 	
-	fftwf_plan plan = fftwf_plan_guru_split_dft((int)self.dimensions.count, self.iodims, 0, NULL, split.realp, split.imagp, fbar->realp, fbar->imagp, FFTW_ESTIMATE);
-	fftwf_execute(plan);
-	fftwf_destroy_plan(plan);
+	vGL_fftw_plan plan = vGL_fftw_plan_guru_split_dft((int)self.dimensions.count, self.iodims, 0, NULL, split.realp, split.imagp, fbar->realp, fbar->imagp, FFTW_ESTIMATE);
+	vGL_fftw_execute(plan);
+	vGL_fftw_destroy_plan(plan);
 		
 	// Fix the forward transformation scaling factor
 	// Yes, the *forward*, not the inverse. If we don't fix it here, then the fourier transform
@@ -92,9 +92,9 @@
 	split.realp = f;
 	split.imagp = self.zerosBuffer.mutableBytes;
 	
-	fftwf_plan plan = fftwf_plan_guru_split_dft((int)self.dimensions.count, self.iodims, 0, NULL, split.imagp, split.realp, fbar->imagp, fbar->realp, FFTW_ESTIMATE);
-	fftwf_execute(plan);
-	fftwf_destroy_plan(plan);	
+	vGL_fftw_plan plan = vGL_fftw_plan_guru_split_dft((int)self.dimensions.count, self.iodims, 0, NULL, split.imagp, split.realp, fbar->imagp, fbar->realp, FFTW_ESTIMATE);
+	vGL_fftw_execute(plan);
+	vGL_fftw_destroy_plan(plan);	
 }
 
 - (void) dealloc

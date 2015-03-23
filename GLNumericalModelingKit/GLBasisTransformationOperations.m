@@ -53,7 +53,7 @@ static BOOL _shouldAntiAlias = NO;
 {
     NSUInteger cores = [[NSProcessInfo processInfo] activeProcessorCount]/2;
     if (cores < 1) cores=1;
-    fftwf_plan_with_nthreads( (int) cores);
+    vGL_fftw_plan_with_nthreads( (int) cores);
     
     NSString *path = [self wisdomFilePath];
     
@@ -61,7 +61,7 @@ static BOOL _shouldAntiAlias = NO;
     if ([fileManager fileExistsAtPath: path])
     {
         if (path) {
-            fftwf_import_wisdom_from_filename( [path cStringUsingEncoding: NSASCIIStringEncoding] );
+            vGL_fftw_import_wisdom_from_filename( [path cStringUsingEncoding: NSASCIIStringEncoding] );
         }
     }
 }
@@ -70,7 +70,7 @@ static BOOL _shouldAntiAlias = NO;
 {
     NSString *path = [self wisdomFilePath];
     if (path) {
-        if (!fftwf_export_wisdom_to_filename( [path cStringUsingEncoding: NSASCIIStringEncoding] )) {
+        if (!vGL_fftw_export_wisdom_to_filename( [path cStringUsingEncoding: NSASCIIStringEncoding] )) {
             NSLog(@"Failed to save wisdom");
         }
     }
@@ -561,7 +561,7 @@ static BOOL _shouldAntiAlias = NO;
         int howmany_rank = 0;
         
         // First compute the strides between dimensions
-        fftw_iodim *alldims = malloc(finalDimensions.count*sizeof(fftw_iodim));
+        vGL_fftw_iodim *alldims = malloc(finalDimensions.count*sizeof(vGL_fftw_iodim));
         for (NSInteger i=finalDimensions.count-1; i >= 0; i--)
         {
             GLDimension *aDim = [finalDimensions objectAtIndex: i];
@@ -584,9 +584,9 @@ static BOOL _shouldAntiAlias = NO;
         }
         
         // Now sort them into transformed and untransformed dimensions
-        fftw_r2r_kind *transformKind = malloc(rank*sizeof(fftw_r2r_kind));
-        fftw_iodim *dims = malloc(rank*sizeof(fftw_iodim));
-        fftw_iodim *howmany_dims = malloc(howmany_rank*sizeof(fftw_iodim));
+        vGL_fftw_r2r_kind *transformKind = malloc(rank*sizeof(vGL_fftw_r2r_kind));
+        vGL_fftw_iodim *dims = malloc(rank*sizeof(vGL_fftw_iodim));
+        vGL_fftw_iodim *howmany_dims = malloc(howmany_rank*sizeof(vGL_fftw_iodim));
         
         NSUInteger dataPoints = 1;
         NSUInteger transformedDataPoints = 1;
@@ -659,7 +659,7 @@ static BOOL _shouldAntiAlias = NO;
 //        fftwf_plan plan = fftwf_plan_guru_r2r(rank, dims, howmany_rank, howmany_dims, tempf.mutableBytes, tempfbar.mutableBytes, transformKind, FFTW_PATIENT);
         
         [GLBasisTransformOperation readWisdom];
-        fftwf_plan plan = fftwf_plan_guru_r2r(rank, dims, howmany_rank, howmany_dims, tempf.mutableBytes, tempfbar.mutableBytes, transformKind, FFTW_PATIENT);
+        vGL_fftw_plan plan = vGL_fftw_plan_guru_r2r(rank, dims, howmany_rank, howmany_dims, tempf.mutableBytes, tempfbar.mutableBytes, transformKind, FFTW_PATIENT);
         [GLBasisTransformOperation saveWisdom];
         
         // Clean-up
@@ -679,7 +679,7 @@ static BOOL _shouldAntiAlias = NO;
                 GLFloat *f = (void *) operand.bytes;
                 GLFloat *fbar = (void *) result.mutableBytes;
                 
-                fftwf_execute_r2r( plan, f, fbar );		
+                vGL_fftw_execute_r2r( plan, f, fbar );
             };
         } else {
 			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
@@ -689,7 +689,7 @@ static BOOL _shouldAntiAlias = NO;
                 GLFloat *f = (void *) operand.bytes;
                 GLFloat *fbar = (void *) result.mutableBytes;
                 
-                fftwf_execute_r2r( plan, f, fbar );
+                vGL_fftw_execute_r2r( plan, f, fbar );
                 
                 GLFloat inversesize = scaleFactor;
                 vGL_vsmul( fbar, 1, &inversesize, fbar, 1, dataPoints );			
@@ -800,7 +800,7 @@ static BOOL _shouldAntiAlias = NO;
         
         // First compute the strides between dimensions
         // It's important to use the operand's dimensions to get the strides correct.
-        fftw_iodim *alldims = malloc(variable.dimensions.count*sizeof(fftw_iodim));
+        vGL_fftw_iodim *alldims = malloc(variable.dimensions.count*sizeof(vGL_fftw_iodim));
         NSArray *indim = variable.dimensions;
         NSArray *outdim = resultVariable.dimensions;
         for (NSInteger i=variable.dimensions.count-1; i >= 0; i--)
@@ -826,8 +826,8 @@ static BOOL _shouldAntiAlias = NO;
         }
         
         // Now sort them into transformed and untransformed dimensions
-        fftw_iodim *dims = malloc(rank*sizeof(fftw_iodim));
-        fftw_iodim *howmany_dims = malloc(howmany_rank*sizeof(fftw_iodim));
+        vGL_fftw_iodim *dims = malloc(rank*sizeof(vGL_fftw_iodim));
+        vGL_fftw_iodim *howmany_dims = malloc(howmany_rank*sizeof(vGL_fftw_iodim));
         
         // From the FFTW manual:
         // The last dimension of dims is interpreted specially: that dimension of the real array has size dims[rank-1].n, but that dimension of the complex array has size dims[rank-1].n/2+1 (division rounded down). The strides, on the other hand, are taken to be exactly as specified.
@@ -875,7 +875,7 @@ static BOOL _shouldAntiAlias = NO;
         if (forwardRank)
         {
             GLSplitComplex split = splitComplexFromData(tempfbar);
-            fftwf_plan plan = fftwf_plan_guru_split_dft_r2c(rank, dims, howmany_rank, howmany_dims, tempf.mutableBytes, split.realp, split.imagp, FFTW_PATIENT);
+            vGL_fftw_plan plan = vGL_fftw_plan_guru_split_dft_r2c(rank, dims, howmany_rank, howmany_dims, tempf.mutableBytes, split.realp, split.imagp, FFTW_PATIENT);
             
             // Note that we leak the plan.
             NSUInteger dataPoints = resultVariable.nDataPoints;
@@ -886,7 +886,7 @@ static BOOL _shouldAntiAlias = NO;
                 GLFloat *f = (void *) operand.bytes;
                 GLSplitComplex fbar = splitComplexFromData(result);
                 
-                fftwf_execute_split_dft_r2c( plan, f, fbar.realp, fbar.imagp );
+                vGL_fftw_execute_split_dft_r2c( plan, f, fbar.realp, fbar.imagp );
                 
                 GLFloat inversesize = scaleFactor;
                 vGL_vsmul( fbar.realp, 1, &inversesize, fbar.realp, 1, dataPoints );
@@ -896,7 +896,7 @@ static BOOL _shouldAntiAlias = NO;
         else
         {
             GLSplitComplex split = splitComplexFromData(tempf);
-            fftwf_plan plan = fftwf_plan_guru_split_dft_c2r(rank, dims, howmany_rank, howmany_dims, split.realp, split.imagp, tempfbar.mutableBytes, FFTW_PATIENT);
+            vGL_fftw_plan plan = vGL_fftw_plan_guru_split_dft_c2r(rank, dims, howmany_rank, howmany_dims, split.realp, split.imagp, tempfbar.mutableBytes, FFTW_PATIENT);
 
             // Note that we leak the plan.
 //			self.blockOperation = ^(NSMutableData *result, NSData *operand) {
@@ -918,7 +918,7 @@ static BOOL _shouldAntiAlias = NO;
 				memcpy(buffer.mutableBytes, operand.bytes, numBytes);
                 GLSplitComplex fbar = splitComplexFromData(buffer);
                 
-                fftwf_execute_split_dft_c2r( plan, fbar.realp, fbar.imagp, f );
+                vGL_fftw_execute_split_dft_c2r( plan, fbar.realp, fbar.imagp, f );
             };
         }
         
@@ -1005,7 +1005,7 @@ static BOOL _shouldAntiAlias = NO;
         int howmany_rank = 0;
         
         // First compute the strides between dimensions
-        fftw_iodim *alldims = malloc(finalDimensions.count*sizeof(fftw_iodim));
+        vGL_fftw_iodim *alldims = malloc(finalDimensions.count*sizeof(vGL_fftw_iodim));
         for (NSInteger i=finalDimensions.count-1; i >= 0; i--)
         {
             GLDimension *aDim = [finalDimensions objectAtIndex: i];
@@ -1028,8 +1028,8 @@ static BOOL _shouldAntiAlias = NO;
         }
         
         // Now sort them into transformed and untransformed dimensions
-        fftw_iodim *dims = malloc(rank*sizeof(fftw_iodim));
-        fftw_iodim *howmany_dims = malloc(howmany_rank*sizeof(fftw_iodim));
+        vGL_fftw_iodim *dims = malloc(rank*sizeof(vGL_fftw_iodim));
+        vGL_fftw_iodim *howmany_dims = malloc(howmany_rank*sizeof(vGL_fftw_iodim));
         
         NSUInteger dataPoints = 1;
         NSUInteger transformedDataPoints = 1;
@@ -1063,7 +1063,7 @@ static BOOL _shouldAntiAlias = NO;
         GLSplitComplex split = splitComplexFromData(tempf);
         GLSplitComplex splitbar = splitComplexFromData(tempfbar);
         [GLBasisTransformOperation readWisdom];
-        fftwf_plan plan = fftwf_plan_guru_split_dft(rank, dims, howmany_rank, howmany_dims, split.realp, split.imagp, splitbar.realp, splitbar.imagp, FFTW_PATIENT);
+        vGL_fftw_plan plan = vGL_fftw_plan_guru_split_dft(rank, dims, howmany_rank, howmany_dims, split.realp, split.imagp, splitbar.realp, splitbar.imagp, FFTW_PATIENT);
         [GLBasisTransformOperation saveWisdom];
         [[GLMemoryPool sharedMemoryPool] returnData: tempf];
         [[GLMemoryPool sharedMemoryPool] returnData: tempfbar];
@@ -1092,7 +1092,7 @@ static BOOL _shouldAntiAlias = NO;
                 GLSplitComplex f = splitComplexFromData(operand);
                 GLSplitComplex fbar = splitComplexFromData(result);
                 
-                fftwf_execute_split_dft( plan, f.realp, f.imagp, fbar.realp, fbar.imagp );
+                vGL_fftw_execute_split_dft( plan, f.realp, f.imagp, fbar.realp, fbar.imagp );
                 
                 GLFloat inversesize = scaleFactor;
                 vGL_vsmul( fbar.realp, 1, &inversesize, fbar.realp, 1, dataPoints );
@@ -1110,7 +1110,7 @@ static BOOL _shouldAntiAlias = NO;
                 GLSplitComplex f = splitComplexFromData(result);
                 
                 // Swap the real and imaginary parts for an inverse transform
-                fftwf_execute_split_dft( plan, fbar.imagp, fbar.realp, f.imagp, f.realp );
+                vGL_fftw_execute_split_dft( plan, fbar.imagp, fbar.realp, f.imagp, f.realp );
             };
         }
         // Clean-up

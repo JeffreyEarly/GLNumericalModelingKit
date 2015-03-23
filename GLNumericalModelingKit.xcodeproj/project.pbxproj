@@ -51,7 +51,7 @@
 		8157ADDD17F9FCDB002A6ED6 /* GLOperationVisualizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADBF17F9FCDB002A6ED6 /* GLOperationVisualizer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADDE17F9FCDB002A6ED6 /* GLOperationVisualizer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADC017F9FCDB002A6ED6 /* GLOperationVisualizer.m */; };
 		8157ADDF17F9FCDB002A6ED6 /* GLMemoryOptimizer.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADC117F9FCDB002A6ED6 /* GLMemoryOptimizer.h */; };
-		8157ADE317F9FCE6002A6ED6 /* GLMemoryPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE117F9FCE6002A6ED6 /* GLMemoryPool.h */; };
+		8157ADE317F9FCE6002A6ED6 /* GLMemoryPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE117F9FCE6002A6ED6 /* GLMemoryPool.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157ADE417F9FCE6002A6ED6 /* GLMemoryPool.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADE217F9FCE6002A6ED6 /* GLMemoryPool.m */; };
 		8157ADEB17F9FCED002A6ED6 /* GLFourierTransformPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE517F9FCED002A6ED6 /* GLFourierTransformPool.h */; };
 		8157ADEC17F9FCED002A6ED6 /* GLFourierTransformPool.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157ADE617F9FCED002A6ED6 /* GLFourierTransformPool.m */; };
@@ -147,7 +147,7 @@
 		8187732819DB3113007E5DA3 /* GLVectorScalarOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADAB17F9FCDA002A6ED6 /* GLVectorScalarOperations.h */; };
 		8187732919DB3113007E5DA3 /* GLVectorVectorOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADAD17F9FCDA002A6ED6 /* GLVectorVectorOperations.h */; };
 		8187732A19DB3113007E5DA3 /* GLDimensionalOperations.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADB717F9FCDB002A6ED6 /* GLDimensionalOperations.h */; };
-		8187732B19DB3113007E5DA3 /* GLMemoryPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE117F9FCE6002A6ED6 /* GLMemoryPool.h */; };
+		8187732B19DB3113007E5DA3 /* GLMemoryPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE117F9FCE6002A6ED6 /* GLMemoryPool.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8187732C19DB3113007E5DA3 /* GLFourierTransformPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE517F9FCED002A6ED6 /* GLFourierTransformPool.h */; };
 		8187732D19DB3113007E5DA3 /* GLFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE717F9FCED002A6ED6 /* GLFourierTransform.h */; };
 		8187732E19DB3113007E5DA3 /* GLFFTWFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE917F9FCED002A6ED6 /* GLFFTWFourierTransform.h */; };
@@ -161,6 +161,12 @@
 		8187733619DB31C7007E5DA3 /* GLDSPFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADF817F9FD66002A6ED6 /* GLDSPFourierTransform.h */; };
 		8194543A183534DC000BD412 /* GLMinimizationOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 81945438183534DC000BD412 /* GLMinimizationOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8194543B183534DC000BD412 /* GLMinimizationOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 81945439183534DC000BD412 /* GLMinimizationOperation.m */; };
+		81B6B58B1AC0B14C0026F28E /* libfftw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 81B6B58A1AC0B14C0026F28E /* libfftw3.a */; };
+		81B6B58C1AC0B14C0026F28E /* libfftw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 81B6B58A1AC0B14C0026F28E /* libfftw3.a */; };
+		81B6B58E1AC0BA210026F28E /* libfftw3_threads.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 81B6B58D1AC0BA210026F28E /* libfftw3_threads.a */; };
+		81B6B58F1AC0BA210026F28E /* libfftw3_threads.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 81B6B58D1AC0BA210026F28E /* libfftw3_threads.a */; };
+		81B6B5911AC0BA580026F28E /* libfftw3f_threads.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 81B6B5901AC0BA580026F28E /* libfftw3f_threads.a */; };
+		81B6B5921AC0BA580026F28E /* libfftw3f_threads.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 81B6B5901AC0BA580026F28E /* libfftw3f_threads.a */; };
 		81CABBF818089D7C00758DF1 /* GLVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 81CABBF618089D7C00758DF1 /* GLVariable.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		81CABBF918089D7C00758DF1 /* GLVariable.m in Sources */ = {isa = PBXBuildFile; fileRef = 81CABBF718089D7C00758DF1 /* GLVariable.m */; };
 		81CABBFC1808A11800758DF1 /* GLScalar.h in Headers */ = {isa = PBXBuildFile; fileRef = 81CABBFA1808A11800758DF1 /* GLScalar.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -268,6 +274,9 @@
 		818772CF19DB2E88007E5DA3 /* GLNumericalModelingKitFramework.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GLNumericalModelingKitFramework.h; sourceTree = "<group>"; };
 		81945438183534DC000BD412 /* GLMinimizationOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLMinimizationOperation.h; sourceTree = "<group>"; };
 		81945439183534DC000BD412 /* GLMinimizationOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLMinimizationOperation.m; sourceTree = "<group>"; };
+		81B6B58A1AC0B14C0026F28E /* libfftw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfftw3.a; path = "ExternalLibraries/fftw/double-precision/libfftw3.a"; sourceTree = SOURCE_ROOT; };
+		81B6B58D1AC0BA210026F28E /* libfftw3_threads.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfftw3_threads.a; path = "ExternalLibraries/fftw/double-precision/libfftw3_threads.a"; sourceTree = SOURCE_ROOT; };
+		81B6B5901AC0BA580026F28E /* libfftw3f_threads.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfftw3f_threads.a; path = "ExternalLibraries/fftw/single-precision/libfftw3f_threads.a"; sourceTree = SOURCE_ROOT; };
 		81CABBF618089D7C00758DF1 /* GLVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLVariable.h; sourceTree = "<group>"; };
 		81CABBF718089D7C00758DF1 /* GLVariable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLVariable.m; sourceTree = "<group>"; };
 		81CABBFA1808A11800758DF1 /* GLScalar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLScalar.h; sourceTree = "<group>"; };
@@ -288,7 +297,10 @@
 				8157AE2B17FA12C2002A6ED6 /* libhdf5_hl.a in Frameworks */,
 				8157AE2C17FA12C2002A6ED6 /* libhdf5.a in Frameworks */,
 				8157AE2D17FA12C2002A6ED6 /* libnetcdf.a in Frameworks */,
+				81B6B58B1AC0B14C0026F28E /* libfftw3.a in Frameworks */,
+				81B6B5911AC0BA580026F28E /* libfftw3f_threads.a in Frameworks */,
 				8157AE2E17FA12C2002A6ED6 /* libsz.a in Frameworks */,
+				81B6B58E1AC0BA210026F28E /* libfftw3_threads.a in Frameworks */,
 				8157AE2F17FA12C2002A6ED6 /* libz.a in Frameworks */,
 				8157AE3117FA12CE002A6ED6 /* libcurl.dylib in Frameworks */,
 			);
@@ -314,7 +326,10 @@
 				8187730B19DB2FF8007E5DA3 /* libcurl.dylib in Frameworks */,
 				8187730C19DB2FF8007E5DA3 /* libhdf5_hl.a in Frameworks */,
 				8187730D19DB2FF8007E5DA3 /* libhdf5.a in Frameworks */,
+				81B6B58C1AC0B14C0026F28E /* libfftw3.a in Frameworks */,
+				81B6B5921AC0BA580026F28E /* libfftw3f_threads.a in Frameworks */,
 				8187730E19DB2FF8007E5DA3 /* libnetcdf.a in Frameworks */,
+				81B6B58F1AC0BA210026F28E /* libfftw3_threads.a in Frameworks */,
 				8187730F19DB2FF8007E5DA3 /* libsz.a in Frameworks */,
 				8187731019DB2FF8007E5DA3 /* libz.a in Frameworks */,
 			);
@@ -500,6 +515,9 @@
 			children = (
 				8157AE2217FA1289002A6ED6 /* fftw3.h */,
 				8157AE2417FA12A2002A6ED6 /* libfftw3f.a */,
+				81B6B58A1AC0B14C0026F28E /* libfftw3.a */,
+				81B6B58D1AC0BA210026F28E /* libfftw3_threads.a */,
+				81B6B5901AC0BA580026F28E /* libfftw3f_threads.a */,
 			);
 			name = FFTW;
 			sourceTree = "<group>";
@@ -589,6 +607,7 @@
 				813629FC182AC8C1001A8E1D /* GLBuffer.h in Headers */,
 				8194543A183534DC000BD412 /* GLMinimizationOperation.h in Headers */,
 				8157ADCF17F9FCDB002A6ED6 /* GLLinearTransformationOperations.h in Headers */,
+				8157ADE317F9FCE6002A6ED6 /* GLMemoryPool.h in Headers */,
 				8157ADCB17F9FCDB002A6ED6 /* GLVectorVectorOperations.h in Headers */,
 				8157AE1C17F9FDEB002A6ED6 /* GLLowLevelNetCDF.h in Headers */,
 				8157AE1817F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.h in Headers */,
@@ -602,7 +621,6 @@
 				8157ADD517F9FCDB002A6ED6 /* GLDimensionalOperations.h in Headers */,
 				8157ADFC17F9FD66002A6ED6 /* GLDSPFourierTransform.h in Headers */,
 				8157ADC717F9FCDB002A6ED6 /* GLNullaryOperations.h in Headers */,
-				8157ADE317F9FCE6002A6ED6 /* GLMemoryPool.h in Headers */,
 				8157ADED17F9FCED002A6ED6 /* GLFourierTransform.h in Headers */,
 				8157ADC517F9FCDB002A6ED6 /* GLUnaryOperations.h in Headers */,
 				8157ADEB17F9FCED002A6ED6 /* GLFourierTransformPool.h in Headers */,
@@ -633,6 +651,7 @@
 				8187732319DB30CA007E5DA3 /* GLOperationVisualizer.h in Headers */,
 				8187732419DB30CA007E5DA3 /* GLNetCDFFile.h in Headers */,
 				8187732519DB30CA007E5DA3 /* GLNetCDFVariable.h in Headers */,
+				8187732B19DB3113007E5DA3 /* GLMemoryPool.h in Headers */,
 				8187732919DB3113007E5DA3 /* GLVectorVectorOperations.h in Headers */,
 				8187733219DB3113007E5DA3 /* GLLowLevelNetCDF.h in Headers */,
 				8187733019DB3113007E5DA3 /* GLNetCDFFetchDataOperation.h in Headers */,
@@ -646,7 +665,6 @@
 				8187732A19DB3113007E5DA3 /* GLDimensionalOperations.h in Headers */,
 				8187733619DB31C7007E5DA3 /* GLDSPFourierTransform.h in Headers */,
 				8187732619DB3113007E5DA3 /* GLNullaryOperations.h in Headers */,
-				8187732B19DB3113007E5DA3 /* GLMemoryPool.h in Headers */,
 				8187732D19DB3113007E5DA3 /* GLFourierTransform.h in Headers */,
 				8187732719DB3113007E5DA3 /* GLUnaryOperations.h in Headers */,
 				8187732C19DB3113007E5DA3 /* GLFourierTransformPool.h in Headers */,
@@ -961,6 +979,8 @@
 					"$(inherited)",
 					"$(SRCROOT)/ExternalLibraries/fftw/single-precision",
 					"$(SRCROOT)/ExternalLibraries",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/double-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
 				);
 				MODULEMAP_FILE = GLNumericalModelingKit.modulemap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -993,6 +1013,8 @@
 					"$(inherited)",
 					"$(SRCROOT)/ExternalLibraries/fftw/single-precision",
 					"$(SRCROOT)/ExternalLibraries",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/double-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
 				);
 				MODULEMAP_FILE = GLNumericalModelingKit.modulemap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1073,6 +1095,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/ExternalLibraries",
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/double-precision",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -1111,6 +1134,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/ExternalLibraries",
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/double-precision",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = NO;

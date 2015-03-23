@@ -54,7 +54,7 @@ static NSString *GLEquationDimensionOperatorPoolMapTableKey = @"GLEquationDimens
 - (id)initWithCoder:(NSCoder *)decoder
 {
     if ((self=[super init])) {
-        fftwf_init_threads();
+        vGL_fftw_init_threads();
 		operationQueue = [[NSOperationQueue alloc] init];
 		serialDispatchQueue = dispatch_queue_create( "com.EarlyInnovations.SerialEquationQueue", NULL );
         self.dimensionOperatorPoolMapTable = [decoder decodeObjectForKey: GLEquationDimensionOperatorPoolMapTableKey];
@@ -66,7 +66,7 @@ static NSString *GLEquationDimensionOperatorPoolMapTableKey = @"GLEquationDimens
 - (id) init
 {
 	if ((self = [super init])) {
-        fftwf_init_threads();
+        vGL_fftw_init_threads();
 		operationQueue = [[NSOperationQueue alloc] init];
 		serialDispatchQueue = dispatch_queue_create( "com.EarlyInnovations.SerialEquationQueue", NULL );
 		self.dimensionOperatorPoolMapTable = [NSMapTable mapTableWithKeyOptions: (NSMapTableCopyIn | NSMapTableStrongMemory) valueOptions:(NSMapTableObjectPointerPersonality | NSMapTableStrongMemory)];
