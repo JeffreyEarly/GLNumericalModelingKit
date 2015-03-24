@@ -29,6 +29,16 @@
 @end
 
 /************************************************/
+/*		GLRealPartOperation               */
+/************************************************/
+
+// Returns the real part of the variable.
+
+@interface GLRealPartOperation : GLVariableOperation
+- (GLRealPartOperation *) initWithVariable: (GLVariable *) variable;
+@end
+
+/************************************************/
 /*		GLExponentialOperation					*/
 /************************************************/
 // variable = exponential( variable )

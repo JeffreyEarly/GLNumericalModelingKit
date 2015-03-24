@@ -383,6 +383,17 @@ static NSString *GLVariableMatrixDescriptionKey = @"GLVariableMatrixDescriptionK
 	return nil;
 }
 
+- (instancetype) realPart
+{
+	if (!self.isComplex) {
+		return self;
+	}
+	
+	GLVariableOperation *operation = [[GLRealPartOperation alloc] initWithVariable: self];
+	operation = [self replaceWithExistingOperation: operation];
+	return operation.result[0];
+}
+
 - (instancetype) makeRealIfPossible
 {
     if (!self.isComplex) {

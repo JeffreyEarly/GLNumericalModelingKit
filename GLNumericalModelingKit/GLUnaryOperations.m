@@ -108,6 +108,61 @@
 @end
 
 /************************************************/
+/*		GLRealPartOperation						*/
+/************************************************/
+
+@implementation GLRealPartOperation
+
+#warning this still needs to test for the obvious case (that the variable is already real).
+- (GLRealPartOperation *) initWithVariable: (GLVariable *) variable
+{
+	GLVariable *resultVar;
+	
+	// We have to override the initializer in this case because the result *will* be real.
+	if (variable.rank == 0) {
+		GLScalar *scalar = (GLScalar *) variable;
+		resultVar=[[GLScalar alloc] initWithType: kGLRealDataFormat forEquation:scalar.equation];
+	} else if (variable.rank == 1) {
+		GLFunction *function = (GLFunction *) variable;
+		resultVar=[[function class] functionOfType: kGLRealDataFormat withDimensions: function.dimensions forEquation: function.equation];
+	}  else if (variable.rank == 2) {
+		GLLinearTransform *matrix = (GLLinearTransform *) variable;
+		resultVar=[GLLinearTransform transformOfType: kGLRealDataFormat withFromDimensions: matrix.fromDimensions toDimensions: matrix.toDimensions inFormat: matrix.matrixFormats forEquation:matrix.equation matrix:nil];
+	} else {
+		return nil;
+	}
+	
+	if (( self = [super initWithResult: @[resultVar] operand: @[variable] ] ))
+	{
+		GLFunction *resultVariable = self.result[0];
+		GLFunction *operandVariable = self.operand[0];
+		
+		resultVariable.isPurelyReal = YES;
+		
+		if (operandVariable.isComplex) {
+			NSUInteger numPoints = resultVariable.nDataPoints;
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				GLSplitComplex fromSplit = splitComplexFromData(operandArray[0]);
+				memcpy( result.mutableBytes, fromSplit.realp,  numPoints*sizeof(GLFloat));
+			};
+			self.graphvisDescription = @"real (complex)";
+		} else {
+			NSUInteger numElements = resultVariable.nDataElements;
+			self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+				NSMutableData *result = resultArray[0];
+				NSMutableData *operand = operandArray[0];
+				memcpy( result.mutableBytes, operand.mutableBytes,  numElements*sizeof(GLFloat));
+			};
+			self.graphvisDescription = @"real (real)";
+		}
+	}
+	
+	return self;
+}
+@end
+
+/************************************************/
 /*		GLExponentialOperation                  */
 /************************************************/
 

@@ -149,6 +149,8 @@ GLSplitComplex splitComplexFromData( NSData *data );
  */
 - (instancetype) times: (id) otherVariableOrScalar;
 
+- (instancetype) realPart;
+
 // This operation is not delayed.
 - (instancetype) makeRealIfPossible;
 
