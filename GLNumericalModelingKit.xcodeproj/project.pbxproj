@@ -7,6 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		812B3A6F1AC0CE4E002A251A /* libfftw3_threads.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 812B3A6D1AC0CE4E002A251A /* libfftw3_threads.a */; };
+		812B3A701AC0CE4E002A251A /* libfftw3_threads.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 812B3A6D1AC0CE4E002A251A /* libfftw3_threads.a */; };
+		812B3A711AC0CE4E002A251A /* libfftw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 812B3A6E1AC0CE4E002A251A /* libfftw3.a */; };
+		812B3A721AC0CE4E002A251A /* libfftw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 812B3A6E1AC0CE4E002A251A /* libfftw3.a */; };
+		812B3A751AC0CE57002A251A /* libfftw3f_threads.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 812B3A731AC0CE57002A251A /* libfftw3f_threads.a */; };
+		812B3A761AC0CE57002A251A /* libfftw3f_threads.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 812B3A731AC0CE57002A251A /* libfftw3f_threads.a */; };
+		812B3A771AC0CE57002A251A /* libfftw3f.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 812B3A741AC0CE57002A251A /* libfftw3f.a */; };
+		812B3A781AC0CE57002A251A /* libfftw3f.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 812B3A741AC0CE57002A251A /* libfftw3f.a */; };
 		813629FC182AC8C1001A8E1D /* GLBuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 813629FA182AC8C1001A8E1D /* GLBuffer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		813629FD182AC8C1001A8E1D /* GLBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = 813629FB182AC8C1001A8E1D /* GLBuffer.m */; };
 		8157AD1417F9FB8D002A6ED6 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AD1317F9FB8D002A6ED6 /* Cocoa.framework */; };
@@ -75,7 +83,7 @@
 		8157AE1D17F9FDEB002A6ED6 /* GLLowLevelNetCDF.m in Sources */ = {isa = PBXBuildFile; fileRef = 8157AE1317F9FDEB002A6ED6 /* GLLowLevelNetCDF.m */; };
 		8157AE1F17F9FE01002A6ED6 /* Precision.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE1E17F9FE01002A6ED6 /* Precision.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157AE2117F9FE76002A6ED6 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2017F9FE76002A6ED6 /* Accelerate.framework */; };
-		8157AE2317FA1289002A6ED6 /* fftw3.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE2217FA1289002A6ED6 /* fftw3.h */; };
+		8157AE2317FA1289002A6ED6 /* fftw3.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE2217FA1289002A6ED6 /* fftw3.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8157AE2517FA12A2002A6ED6 /* libfftw3f.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2417FA12A2002A6ED6 /* libfftw3f.a */; };
 		8157AE2B17FA12C2002A6ED6 /* libhdf5_hl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2617FA12C2002A6ED6 /* libhdf5_hl.a */; };
 		8157AE2C17FA12C2002A6ED6 /* libhdf5.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8157AE2717FA12C2002A6ED6 /* libhdf5.a */; };
@@ -151,7 +159,7 @@
 		8187732C19DB3113007E5DA3 /* GLFourierTransformPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE517F9FCED002A6ED6 /* GLFourierTransformPool.h */; };
 		8187732D19DB3113007E5DA3 /* GLFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE717F9FCED002A6ED6 /* GLFourierTransform.h */; };
 		8187732E19DB3113007E5DA3 /* GLFFTWFourierTransform.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157ADE917F9FCED002A6ED6 /* GLFFTWFourierTransform.h */; };
-		8187732F19DB3113007E5DA3 /* fftw3.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE2217FA1289002A6ED6 /* fftw3.h */; };
+		8187732F19DB3113007E5DA3 /* fftw3.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE2217FA1289002A6ED6 /* fftw3.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8187733019DB3113007E5DA3 /* GLNetCDFFetchDataOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE0E17F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.h */; };
 		8187733119DB3113007E5DA3 /* GLNetCDFConcatenationOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE1017F9FDEB002A6ED6 /* GLNetCDFConcatenationOperation.h */; };
 		8187733219DB3113007E5DA3 /* GLLowLevelNetCDF.h in Headers */ = {isa = PBXBuildFile; fileRef = 8157AE1217F9FDEB002A6ED6 /* GLLowLevelNetCDF.h */; };
@@ -185,6 +193,10 @@
 
 /* Begin PBXFileReference section */
 		81271F2518B1DF65001057FE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		812B3A6D1AC0CE4E002A251A /* libfftw3_threads.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfftw3_threads.a; path = "ExternalLibraries/fftw/static/double-precision/libfftw3_threads.a"; sourceTree = SOURCE_ROOT; };
+		812B3A6E1AC0CE4E002A251A /* libfftw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfftw3.a; path = "ExternalLibraries/fftw/static/double-precision/libfftw3.a"; sourceTree = SOURCE_ROOT; };
+		812B3A731AC0CE57002A251A /* libfftw3f_threads.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfftw3f_threads.a; path = "ExternalLibraries/fftw/static/single-precision/libfftw3f_threads.a"; sourceTree = SOURCE_ROOT; };
+		812B3A741AC0CE57002A251A /* libfftw3f.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfftw3f.a; path = "ExternalLibraries/fftw/static/single-precision/libfftw3f.a"; sourceTree = SOURCE_ROOT; };
 		813629FA182AC8C1001A8E1D /* GLBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLBuffer.h; sourceTree = "<group>"; };
 		813629FB182AC8C1001A8E1D /* GLBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GLBuffer.m; sourceTree = "<group>"; };
 		8157AD1017F9FB8D002A6ED6 /* GLNumericalModelingKit.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = GLNumericalModelingKit.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -292,10 +304,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				8157AD1417F9FB8D002A6ED6 /* Cocoa.framework in Frameworks */,
+				812B3A771AC0CE57002A251A /* libfftw3f.a in Frameworks */,
+				812B3A751AC0CE57002A251A /* libfftw3f_threads.a in Frameworks */,
 				8157AE2117F9FE76002A6ED6 /* Accelerate.framework in Frameworks */,
 				8157AE2517FA12A2002A6ED6 /* libfftw3f.a in Frameworks */,
+				812B3A6F1AC0CE4E002A251A /* libfftw3_threads.a in Frameworks */,
 				8157AE2B17FA12C2002A6ED6 /* libhdf5_hl.a in Frameworks */,
 				8157AE2C17FA12C2002A6ED6 /* libhdf5.a in Frameworks */,
+				812B3A711AC0CE4E002A251A /* libfftw3.a in Frameworks */,
 				8157AE2D17FA12C2002A6ED6 /* libnetcdf.a in Frameworks */,
 				81B6B58B1AC0B14C0026F28E /* libfftw3.a in Frameworks */,
 				81B6B5911AC0BA580026F28E /* libfftw3f_threads.a in Frameworks */,
@@ -321,10 +337,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				8187730419DB2FD8007E5DA3 /* Cocoa.framework in Frameworks */,
+				812B3A781AC0CE57002A251A /* libfftw3f.a in Frameworks */,
+				812B3A761AC0CE57002A251A /* libfftw3f_threads.a in Frameworks */,
 				8187730319DB2FD1007E5DA3 /* Accelerate.framework in Frameworks */,
 				8187731119DB303A007E5DA3 /* libfftw3f.a in Frameworks */,
+				812B3A701AC0CE4E002A251A /* libfftw3_threads.a in Frameworks */,
 				8187730B19DB2FF8007E5DA3 /* libcurl.dylib in Frameworks */,
 				8187730C19DB2FF8007E5DA3 /* libhdf5_hl.a in Frameworks */,
+				812B3A721AC0CE4E002A251A /* libfftw3.a in Frameworks */,
 				8187730D19DB2FF8007E5DA3 /* libhdf5.a in Frameworks */,
 				81B6B58C1AC0B14C0026F28E /* libfftw3.a in Frameworks */,
 				81B6B5921AC0BA580026F28E /* libfftw3f_threads.a in Frameworks */,
@@ -518,6 +538,10 @@
 				81B6B58A1AC0B14C0026F28E /* libfftw3.a */,
 				81B6B58D1AC0BA210026F28E /* libfftw3_threads.a */,
 				81B6B5901AC0BA580026F28E /* libfftw3f_threads.a */,
+				812B3A6D1AC0CE4E002A251A /* libfftw3_threads.a */,
+				812B3A6E1AC0CE4E002A251A /* libfftw3.a */,
+				812B3A731AC0CE57002A251A /* libfftw3f_threads.a */,
+				812B3A741AC0CE57002A251A /* libfftw3f.a */,
 			);
 			name = FFTW;
 			sourceTree = "<group>";
@@ -608,6 +632,7 @@
 				8194543A183534DC000BD412 /* GLMinimizationOperation.h in Headers */,
 				8157ADCF17F9FCDB002A6ED6 /* GLLinearTransformationOperations.h in Headers */,
 				8157ADE317F9FCE6002A6ED6 /* GLMemoryPool.h in Headers */,
+				8157AE2317FA1289002A6ED6 /* fftw3.h in Headers */,
 				8157ADCB17F9FCDB002A6ED6 /* GLVectorVectorOperations.h in Headers */,
 				8157AE1C17F9FDEB002A6ED6 /* GLLowLevelNetCDF.h in Headers */,
 				8157AE1817F9FDEB002A6ED6 /* GLNetCDFFetchDataOperation.h in Headers */,
@@ -617,7 +642,6 @@
 				8157AE1A17F9FDEB002A6ED6 /* GLNetCDFConcatenationOperation.h in Headers */,
 				8157ADDF17F9FCDB002A6ED6 /* GLMemoryOptimizer.h in Headers */,
 				8157ADEF17F9FCED002A6ED6 /* GLFFTWFourierTransform.h in Headers */,
-				8157AE2317FA1289002A6ED6 /* fftw3.h in Headers */,
 				8157ADD517F9FCDB002A6ED6 /* GLDimensionalOperations.h in Headers */,
 				8157ADFC17F9FD66002A6ED6 /* GLDSPFourierTransform.h in Headers */,
 				8157ADC717F9FCDB002A6ED6 /* GLNullaryOperations.h in Headers */,
@@ -652,6 +676,7 @@
 				8187732419DB30CA007E5DA3 /* GLNetCDFFile.h in Headers */,
 				8187732519DB30CA007E5DA3 /* GLNetCDFVariable.h in Headers */,
 				8187732B19DB3113007E5DA3 /* GLMemoryPool.h in Headers */,
+				8187732F19DB3113007E5DA3 /* fftw3.h in Headers */,
 				8187732919DB3113007E5DA3 /* GLVectorVectorOperations.h in Headers */,
 				8187733219DB3113007E5DA3 /* GLLowLevelNetCDF.h in Headers */,
 				8187733019DB3113007E5DA3 /* GLNetCDFFetchDataOperation.h in Headers */,
@@ -661,7 +686,6 @@
 				8187733119DB3113007E5DA3 /* GLNetCDFConcatenationOperation.h in Headers */,
 				8187733519DB31B6007E5DA3 /* GLMemoryOptimizer.h in Headers */,
 				8187732E19DB3113007E5DA3 /* GLFFTWFourierTransform.h in Headers */,
-				8187732F19DB3113007E5DA3 /* fftw3.h in Headers */,
 				8187732A19DB3113007E5DA3 /* GLDimensionalOperations.h in Headers */,
 				8187733619DB31C7007E5DA3 /* GLDSPFourierTransform.h in Headers */,
 				8187732619DB3113007E5DA3 /* GLNullaryOperations.h in Headers */,
@@ -981,6 +1005,8 @@
 					"$(SRCROOT)/ExternalLibraries",
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/double-precision",
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/double-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/single-precision",
 				);
 				MODULEMAP_FILE = GLNumericalModelingKit.modulemap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1015,6 +1041,8 @@
 					"$(SRCROOT)/ExternalLibraries",
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/double-precision",
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/double-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/single-precision",
 				);
 				MODULEMAP_FILE = GLNumericalModelingKit.modulemap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1087,6 +1115,7 @@
 					"/Applications/Xcode\\ 6.1b3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include",
 					"$(SRCROOT)/ExternalLibraries/netcdf-4.1.2/include",
 					"$(SRCROOT)",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw",
 				);
 				INFOPLIST_FILE = GLNumericalModelingKitFramework/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -1094,8 +1123,8 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/ExternalLibraries",
-					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
-					"$(PROJECT_DIR)/ExternalLibraries/fftw/double-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/double-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/single-precision",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -1126,6 +1155,7 @@
 					"/Applications/Xcode\\ 6.1b3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include",
 					"$(SRCROOT)/ExternalLibraries/netcdf-4.1.2/include",
 					"$(SRCROOT)",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw",
 				);
 				INFOPLIST_FILE = GLNumericalModelingKitFramework/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -1133,8 +1163,8 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/ExternalLibraries",
-					"$(PROJECT_DIR)/ExternalLibraries/fftw/single-precision",
-					"$(PROJECT_DIR)/ExternalLibraries/fftw/double-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/double-precision",
+					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/single-precision",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = NO;

@@ -905,7 +905,9 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
         }
     }
     
-	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[denseDiagonalIndex].nColumns;
+    // Taking a dense matrix times a diagonal matrix.
+    // To be efficient we multiply each column by the scalar at each diagonal.
+	NSUInteger totalVectors = operandDescription.nPoints / operandDescription.strides[denseDiagonalIndex].nRows;
 	NSUInteger vectorStride = lastNonTrivialIndex > denseDiagonalIndex ? operandDescription.strides[lastNonTrivialIndex].stride : operandDescription.strides[denseDiagonalIndex].columnStride;
     NSUInteger nVectorsPerIndex = lastNonTrivialIndex > denseDiagonalIndex ? totalVectors : operandDescription.strides[denseDiagonalIndex].nColumns;
 	NSUInteger vectorLength = operandDescription.strides[denseDiagonalIndex].nRows;
@@ -914,7 +916,7 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 	dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
 	variableOperation op;
 	if (A.isComplex) {
-
+        [NSException raise: @"NotYetImplemented" format: @"Not yet implemented"];
 	} else {
 		op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 			dispatch_apply(totalVectors, queue, ^(size_t iteration) {
@@ -925,8 +927,8 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
                 NSUInteger bigSkip = (iteration/nVectorsPerIndex)*nVectorsPerIndex*vectorLength;
 				NSUInteger inEquationPos = bigSkip + (iteration%nVectorsPerIndex)*vectorStride;
                 
-                NSUInteger bigSkip2 = (iteration/nVectorsPerIndex)*nVectorsPerIndex;
-				NSUInteger inEquationPos2 = bigSkip2 + (iteration%nVectorsPerIndex)*vectorStride;
+//                NSUInteger bigSkip2 = (iteration/nVectorsPerIndex)*nVectorsPerIndex;
+//				NSUInteger inEquationPos2 = bigSkip2 + (iteration%nVectorsPerIndex)*vectorStride;
                 
 				vGL_vsmul(&(A[inEquationPos]), vectorElementStride, &(B[iteration]), &(C[inEquationPos]), vectorElementStride, vectorLength);
 			});

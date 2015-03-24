@@ -240,6 +240,28 @@ typedef	FFTSetup	GLFFTSetup;
 #define vGL_getrf		sgetrf_
 #define vGL_getri		sgetri_
 
+#define vGL_fftw_plan							fftwf_plan
+#define vGL_fftw_plan_with_nthreads				fftwf_plan_with_nthreads
+#define vGL_fftw_import_wisdom_from_filename	fftwf_import_wisdom_from_filename
+#define vGL_fftw_export_wisdom_to_filename		fftwf_export_wisdom_to_filename
+#define vGL_fftw_destroy_plan					fftwf_destroy_plan
+
+#define vGL_fftw_iodim							fftwf_iodim
+#define vGL_fftw_r2r_kind						fftwf_r2r_kind
+
+#define vGL_fftw_plan_guru_split_dft			fftwf_plan_guru_split_dft
+#define vGL_fftw_plan_guru_r2r					fftwf_plan_guru_r2r
+#define vGL_fftw_plan_guru_split_dft_r2c		fftwf_plan_guru_split_dft_r2c
+#define vGL_fftw_plan_guru_split_dft_c2r		fftwf_plan_guru_split_dft_c2r
+
+#define vGL_fftw_execute						fftwf_execute
+#define vGL_fftw_execute_split_dft				fftwf_execute_split_dft
+#define vGL_fftw_execute_r2r					fftwf_execute_r2r
+#define vGL_fftw_execute_split_dft_r2c			fftwf_execute_split_dft_r2c
+#define vGL_fftw_execute_split_dft_c2r			fftwf_execute_split_dft_c2r
+
+#define vGL_fftw_init_threads					fftwf_init_threads
+
 #endif
 
 #endif
