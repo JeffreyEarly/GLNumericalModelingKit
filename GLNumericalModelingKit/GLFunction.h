@@ -201,7 +201,9 @@ typedef NS_ENUM(NSUInteger, GLVariableSymmetry) {
 - (id) sum: (NSUInteger) index;
 - (GLScalar *) sum;
 
-- (GLScalar *) integrate;
+- (GLScalar *) integrateToLimits;
+
+- (GLFunction *) integrate;
 
 - (GLFunction *) makeHermitian;
 

@@ -1277,15 +1277,15 @@
 @end
 
 /************************************************/
-/*		GLIntegrationOperation					*/
+/*		GLIntegrationToLimitsOperation			*/
 /************************************************/
 
-@implementation GLIntegrationOperation
+@implementation GLIntegrationToLimitsOperation
 
-- (GLIntegrationOperation *) initWithFunction: (GLFunction *) variable
+- (GLIntegrationToLimitsOperation *) initWithFunction: (GLFunction *) variable
 {
-	if (variable.dataFormat != kGLRealDataFormat && variable.dimensions.count != 1) {
-        [NSException raise: @"BadFormat" format: @"This operation can only take variables one-dimensional real variables."];
+	if (variable.dataFormat != kGLRealDataFormat || variable.dimensions.count != 1 || ![variable.dimensions[0] isEvenlySampled]) {
+        [NSException raise: @"BadFormat" format: @"This operation can only take evenly sampled one-dimensional real variables."];
     }
 
 	GLScalar *result = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: variable.equation];
@@ -1302,6 +1302,59 @@
 	
 	
 	if (( self = [super initWithResult: @[result] operand: @[variable] buffers: @[] operation: op] )) {
+        
+    }
+    return self;
+}
+
+@end
+
+/************************************************/
+/*		GLIntegrationOperation		*/
+/************************************************/
+
+@implementation GLIntegrationOperation
+
+- (GLIntegrationOperation *) initWithFunction: (GLFunction *) variable
+{
+    if (variable.dataFormat != kGLRealDataFormat || variable.dimensions.count != 1 ) {
+        [NSException raise: @"BadFormat" format: @"This operation can only take one-dimensional real variables."];
+    }
+    
+    GLFunction *result = (GLFunction *) [GLVariable variableWithPrototype: variable];
+    GLDimension *dim = variable.dimensions[0];
+    
+    variableOperation op;
+    if ([variable.dimensions[0] isEvenlySampled]) {
+        NSUInteger N = variable.nDataElements;
+        GLFloat deltaX = [variable.dimensions[0] sampleInterval];
+        op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+            GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+            GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+            vGL_vtrapz( A, 1, &deltaX, B, 1, N);
+        };
+    } else {
+        NSUInteger nPointsMinusOne = dim.nPoints-1;
+        NSUInteger nPoints = dim.nPoints;
+        NSData *dimensionData = dim.data;
+        NSData *dimensionDiffData = [[GLMemoryPool sharedMemoryPool] dataWithLength: dimensionData.length];
+        GLFloat *dimPoints = (GLFloat *) dimensionData.bytes;
+        GLFloat *dimDiffPoints = (GLFloat *) dimensionDiffData.bytes;
+        vGL_vsub(&(dimPoints[0]), 1, &(dimPoints[1]), 1, dimDiffPoints, 1, nPointsMinusOne); // vsub does C = B - A
+        
+        op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+            GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+            GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+            GLFloat *dimDiff = (GLFloat *) dimensionDiffData.bytes;
+            GLFloat half = 0.5;
+            
+            vGL_vadd(A, 1, &(A[1]), 1, &(B[1]), 1, nPointsMinusOne);
+            vGL_vmul(&(B[1]), 1, dimDiff, 1, &(B[1]), 1, nPointsMinusOne);
+            vGL_vrsum(&(B[0]), 1, &half, &(B[0]), 1, nPoints);
+        };
+    }
+    
+    if (( self = [super initWithResult: @[result] operand: @[variable] buffers: @[] operation: op] )) {
         
     }
     return self;

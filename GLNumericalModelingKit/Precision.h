@@ -78,7 +78,7 @@ typedef	FFTSetupD	GLFFTSetup;
 #define	vGL_vsmsa		vDSP_vsmsaD
 #define	vGL_vsq			vDSP_vsqD			// Square a real vector
 #define vGL_zvmags		vDSP_zvmagsD		// Square a complex vector
-#define	vGL_sve			vDSP_sveD
+#define	vGL_sve			vDSP_sveD           // Sum a vector
 #define	vGL_vsadd		vDSP_vsaddD
 #define	vGL_vmul		vDSP_vmulD
 #define vGL_zvmul		vDSP_zvmulD			// Complex vector multiply by complex vector
@@ -111,6 +111,7 @@ typedef	FFTSetupD	GLFFTSetup;
 #define	vGL_ctoz        vDSP_ctozD          // Interleaved Complex->Split Complex
 #define	vGL_ztoc        vDSP_ztocD          // Split Complex->Interleaved Complex
 
+#define vGL_vrsum       vDSP_vrsumD         // Vector running sum (first element is ignored)
 #define vGL_vtrapz		vDSP_vtrapzD		// Trapezoidal integration
 #define	vGL_vsimps		vDSP_vsimpsD		// Simpson integration
 
@@ -228,6 +229,7 @@ typedef	FFTSetup	GLFFTSetup;
 #define	vGL_ctoz        vDSP_ctoz			// Interleaved Complex->Split Complex
 #define	vGL_ztoc        vDSP_ztoc			// Split Complex->Interleaved Complex
 
+#define vGL_vrsum       vDSP_vrsum          // Vector running sum (first element is ignored)
 #define vGL_vtrapz		vDSP_vtrapz			// Trapezoidal integration
 #define	vGL_vsimps		vDSP_vsimps			// Simpson integration
 

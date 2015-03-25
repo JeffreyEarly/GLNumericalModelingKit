@@ -190,6 +190,14 @@
 @end
 
 /************************************************/
+/*		GLIntegrationToLimitsOperation		*/
+/************************************************/
+
+@interface GLIntegrationToLimitsOperation : GLVariableOperation
+- (GLIntegrationToLimitsOperation *) initWithFunction: (GLFunction *) variable;
+@end
+
+/************************************************/
 /*		GLIntegrationOperation					*/
 /************************************************/
 

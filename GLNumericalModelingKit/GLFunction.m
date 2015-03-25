@@ -715,11 +715,18 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 	return operation.result[0];
 }
 
-- (GLScalar *) integrate
+- (GLScalar *) integrateToLimits
 {
-	GLIntegrationOperation *operation = [[GLIntegrationOperation alloc] initWithFunction: self];
+	GLIntegrationToLimitsOperation *operation = [[GLIntegrationToLimitsOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
+}
+
+- (GLFunction *) integrate
+{
+    GLIntegrationOperation *operation = [[GLIntegrationOperation alloc] initWithFunction: self];
+    operation = [self replaceWithExistingOperation: operation];
+    return operation.result[0];
 }
 
 - (id) setValue: (GLFloat) aScalar atIndices: (NSString *) string
