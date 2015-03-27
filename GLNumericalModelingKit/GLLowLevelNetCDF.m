@@ -350,6 +350,13 @@ NSString *GLVariableAttributesKey = @"GLVariableAttributesKey";
 		if ((retval = nc_sync( fileID )) ) ERR(retval);
 		
 		free(count); free(start);
+		
+//		NSMutableString *desc = [NSMutableString stringWithString: @"Added data at "];
+//		for (NSValue *value in ranges) {
+//			NSRange range = [value rangeValue];
+//			[desc appendFormat: @"(%lu, %lu) ", range.location, range.length];
+//		}
+//		NSLog(@"%@", desc);
 	});
 }
 
