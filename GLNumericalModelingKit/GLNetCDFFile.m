@@ -592,7 +592,7 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 	if (sizeof(GLFloat)==sizeof(float)) {
 		[self.file writeFloatData: dimension.data toVariableWithID: (int) variableID atIndexRange: array];
 	} else {
-		[self.file writeDoubleData: dimension.data toVariableWithID: variableID atIndexRange: array];
+		[self.file writeDoubleData: dimension.data toVariableWithID: (int) variableID atIndexRange: array];
 	}
 	
 	[_dimensions addObject: dimension];

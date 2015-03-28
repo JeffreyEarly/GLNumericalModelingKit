@@ -1543,7 +1543,9 @@
 			});
         };
 		graphvisDescription = @"data transpose (split complex)";
-	}
+    } else {
+        [NSException raise: @"InvalidFormat" format: @"NotImplemented"];
+    }
 	
 	if (( self = [super initWithResult: @[result] operand: @[transform] ] ))
 	{
@@ -1707,6 +1709,8 @@
             }
         };
         graphvisDescription = [NSString stringWithFormat: @"make hermitian (3D)"];
+    } else {
+        [NSException raise: @"CannotMakeHermitian" format:@"Invalid case"];
     }
     
 	if (( self = [super initWithResult: @[resultVariable] operand: @[variable] buffers: @[] operation: op ]))
