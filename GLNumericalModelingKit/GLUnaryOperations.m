@@ -1632,6 +1632,9 @@
 
 - (GLMakeHermitianOperation *) initWithFunction: (GLFunction *) variable
 {
+	if (!variable.isComplex) {
+		[NSException raise: @"StupidImplementationException" format: @"Can't deal with real variables"];
+	}
     GLFunction *resultVariable = (GLFunction *) [GLVariable variableWithPrototype: variable];
     
     NSUInteger nDataElements = resultVariable.nDataElements;

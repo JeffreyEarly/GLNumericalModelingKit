@@ -710,6 +710,7 @@ static NSString *GLFunctionIsFrequencyDomainKey = @"GLFunctionIsFrequencyDomainK
 
 - (GLFunction *) makeHermitian
 {
+	if (!self.isComplex) return self;
 	GLMakeHermitianOperation *operation = [[GLMakeHermitianOperation alloc] initWithFunction: self];
     operation = [self replaceWithExistingOperation: operation];
 	return operation.result[0];
