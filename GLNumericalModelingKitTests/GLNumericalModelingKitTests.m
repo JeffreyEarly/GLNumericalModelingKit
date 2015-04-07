@@ -512,9 +512,9 @@
 	GLDimension *zDim = [[GLDimension alloc] initWithPoints: @[ @(0), @(3), @(4), @(7), @(10) ]];
     GLFunction *z = [GLFunction functionOfRealTypeFromDimension: zDim withDimensions: @[zDim,xDim,yDim] forEquation: equation];
     
-    GLFunction *meanValue = [z mean: 0 range: NSMakeRange(1, 2)];
+    GLFunction *meanValue = [z mean: 0 range: NSMakeRange(1, 3)];
     GLFunction *expectedResult = [GLFunction functionOfRealTypeWithDimensions: @[xDim,yDim] forEquation: equation];
-    expectedResult = [expectedResult setValue: 3.5 atIndices: @":,:"];
+    expectedResult = [expectedResult setValue: 5 atIndices: @":,:"];
     
     GLFloat *output = meanValue.pointerValue;
     GLFloat *expected = expectedResult.pointerValue;
