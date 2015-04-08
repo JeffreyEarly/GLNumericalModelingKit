@@ -840,7 +840,7 @@ BOOL isOne( NSNumber *a )
 {
 	NSUInteger numStages = a.count;
 	
-	GLScalar *timeStep = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [y[0] equation]]; timeStep.name = @"time_step";
+	GLScalar *timeStep = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [y[0] equation]]; timeStep.name = @"time_step"; timeStep.pointerValue[0] = deltaT;
 	GLScalar *time = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: [y[0] equation]]; time.name = @"time";
 	
 	NSMutableArray *t = [NSMutableArray arrayWithCapacity: numStages];
@@ -1059,8 +1059,8 @@ BOOL isOne( NSNumber *a )
 		// We are very careful not to copy self or other unnecessary objects with the block we create,
 		// hence the extra boilerplate here.
 		NSUInteger num = y.count;
-		GLFloat safety = 0.5;
-		GLFloat grow = 3.5;
+		GLFloat safety = 0.8;
+		GLFloat grow = 5.0;
 		GLFloat errcon = pow(grow/safety, -(order+1.));
 		NSMutableArray *operandBuffer = [[NSMutableArray alloc] init];
 		NSMutableArray *resultBuffer = [[NSMutableArray alloc] init];
@@ -1251,6 +1251,9 @@ BOOL isOne( NSNumber *a )
 
 - (void) setRelativeTolerance: (NSArray *) relativeTolerance
 {
+	if (relativeTolerance.count != self.relativeToleranceData.count) {
+		[NSException raise: @"InvalidNumberOfTolerances" format: @"You must set one tolerance per variable to be integrated."];
+	}
 	for (NSUInteger i=0; i<relativeTolerance.count; i++) {
 		NSMutableData *data = [self.relativeToleranceData objectAtIndex: i];
 		GLFloat *a = (GLFloat *) data.mutableBytes;
@@ -1272,6 +1275,9 @@ BOOL isOne( NSNumber *a )
 
 - (void) setAbsoluteTolerance: (NSArray *) absoluteTolerance
 {
+	if (absoluteTolerance.count != self.absoluteToleranceData.count) {
+		[NSException raise: @"InvalidNumberOfTolerances" format: @"You must set one tolerance per variable to be integrated."];
+	}
 	for (NSUInteger i=0; i<absoluteTolerance.count; i++) {
 		NSMutableData *data = [self.absoluteToleranceData objectAtIndex: i];
 		GLFloat *a = (GLFloat *) data.mutableBytes;
