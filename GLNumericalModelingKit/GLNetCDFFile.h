@@ -37,6 +37,9 @@
 // Clear the variables, close down the file, and be done.
 - (void) close;
 
+// Defaults to YES, in order to save space.
+@property BOOL shouldAlwaysWriteSinglePrecision;
+
 /************************************************/
 /*		Dimensions, Variables & Attributes		*/
 /************************************************/

@@ -114,6 +114,8 @@ static NSInteger GLCurrentNetCDFSchemaVersion = 12;
 		
 		_globalAttributes = [NSMutableDictionary dictionary];
 		
+		_shouldAlwaysWriteSinglePrecision = YES;
+		
 		// We strongly hold on to the dimensions, but only do pointer comparisons, not isEqual.
 		NSPointerFunctionsOptions options = NSPointerFunctionsStrongMemory | NSPointerFunctionsObjectPointerPersonality;
 		self.dimensionDimensionIDMapTable = [NSMapTable mapTableWithKeyOptions:options valueOptions:options];
@@ -570,7 +572,8 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 	int dimensionID = [self.file addDimensionWithName: dimension.name length: dimension.isMutable ? NC_UNLIMITED : (int) dimension.nPoints];
 	[self.dimensionDimensionIDMapTable setObject: [NSNumber numberWithInt: dimensionID] forKey: dimension];
 	
-	nc_type type = (sizeof(GLFloat) == 4) ? NC_FLOAT : NC_DOUBLE;
+	nc_type type = self.shouldAlwaysWriteSinglePrecision ? NC_FLOAT : ((sizeof(GLFloat) == 4) ? NC_FLOAT : NC_DOUBLE);
+	
 	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
 	[properties setObject: [NSNumber numberWithInteger: GLCurrentNetCDFSchemaVersion] forKey: GLNetCDFSchemaVersionKey];
 	[properties setObject: [NSNumber numberWithInt: dimensionID] forKey: GLNetCDFSchemaDimensionIDKey];
@@ -631,7 +634,7 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 		}
 	}
 	
-	nc_type type = (sizeof(GLFloat) == 4) ? NC_FLOAT : NC_DOUBLE;
+	nc_type type = self.shouldAlwaysWriteSinglePrecision ? NC_FLOAT : ((sizeof(GLFloat) == 4) ? NC_FLOAT : NC_DOUBLE);
 	
 	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
 	[properties addEntriesFromDictionary: variable.metadata];
@@ -661,7 +664,7 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 		} else {
 			data = variable.data;
 		}
-		if (type == NC_FLOAT) {
+		if (sizeof(GLFloat) == 4) {
 			[self.file setFloatData: data forVariableWithID: variableID];
 		} else {
 			[self.file setDoubleData: data forVariableWithID: variableID];
@@ -677,7 +680,7 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 		imagpVariableID = [self.file addVariableOfType: type withName: name dimensions: dimensionIDs compressionLevel: self.variableCompressionLevel attributes: properties];
 		
 		NSData *data = [NSData dataWithBytes: variable.splitComplex.imagp length: (variable.nDataPoints)*(sizeof(GLFloat))];
-		if (type == NC_FLOAT) {
+		if (sizeof(GLFloat) == 4) {
 			[self.file setFloatData: data forVariableWithID: imagpVariableID];
 		} else {
 			[self.file setDoubleData: data forVariableWithID: imagpVariableID];
