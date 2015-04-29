@@ -58,6 +58,10 @@
 	
 	//NSLog(@"Total memory buffers allocated: %lu", self.totalMemoryBuffersAllocated);
 	
+//    self.operationSerialBlockCountMap = nil;
+//    self.operationParallelBlockCountMap = nil;
+//    self.operationParallelGroupCountMap = nil;
+    
 	if ( self.bottomVariables.count && self.topVariables.count )
 	{
 		NSMutableArray *groups = [self groupResponsibilitiesForOperation: (GLVariableOperation *) self];
@@ -135,17 +139,17 @@
         self.internalBufferBufferMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		self.internalBufferArray = [NSMutableArray array];
 		
-		self.operationSerialBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
-		self.operationParallelBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
-		self.operationParallelGroupCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationSerialBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationParallelBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationParallelGroupCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		self.finishedMappingOperations = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
 		
 		self.hasDataBuffer = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
 		
 		self.finishedOperations = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
-		self.operationSerialDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
-		self.operationParallelDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
-		self.operationGroupArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationSerialDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationParallelDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationGroupArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		        
         [self createOptimizedOperation];
 	}
