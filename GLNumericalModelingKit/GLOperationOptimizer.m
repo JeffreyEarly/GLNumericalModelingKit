@@ -27,7 +27,6 @@
 	NSMutableArray *_internalVariablesAndBuffers;
 	NSMutableArray *_allVariablesAndBuffers;
     NSHashTable *_hasDataBuffer;
-    dispatch_queue_t _childrenQueue;
 }
 
 @synthesize topVariables = _topVariables;
@@ -36,7 +35,6 @@
 @synthesize internalVariablesAndBuffers=_internalVariablesAndBuffers;
 @synthesize allVariablesAndBuffers=_allVariablesAndBuffers;
 @synthesize alreadyInitialized;
-@synthesize childrenQueue=_childrenQueue;
 
 /************************************************/
 /*		Convenience Methods						*/
@@ -132,25 +130,23 @@
 		
 		self.topVariables = topVariables;
 		self.bottomVariables = bottomVariables;
-		self.precomputedVariableDataMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
-		self.internalVariableBufferMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
-        self.internalBufferBufferMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
+		self.precomputedVariableDataMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.internalVariableBufferMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+        self.internalBufferBufferMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		self.internalBufferArray = [NSMutableArray array];
 		
-		self.operationSerialBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
-		self.operationParallelBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
-		self.operationParallelGroupCountMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
+		self.operationSerialBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationParallelBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationParallelGroupCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		self.finishedMappingOperations = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
 		
 		self.hasDataBuffer = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
 		
 		self.finishedOperations = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
-		self.operationSerialDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
-		self.operationParallelDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
-		self.operationGroupArrayMap = [NSMapTable mapTableWithKeyOptions: NSMapTableObjectPointerPersonality valueOptions:NSMapTableObjectPointerPersonality];
-		
-        self.childrenQueue = dispatch_queue_create("com.earlyinnovations.operationOptimizer.childrenQueue", 0);
-        
+		self.operationSerialDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationParallelDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationGroupArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		        
         [self createOptimizedOperation];
 	}
 	return self;
@@ -631,7 +627,7 @@
 {
 	NSMapTable *mapTable = [self.operationParallelDependencyBlockArrayMap objectForKey: operation];
 	if (!mapTable) {
-		mapTable = [NSMapTable strongToStrongObjectsMapTable];
+		mapTable = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		[self.operationParallelDependencyBlockArrayMap setObject: mapTable forKey: operation];
 	}
 	
@@ -642,7 +638,8 @@
 {
 	NSMapTable *mapTable = [self.operationParallelDependencyBlockArrayMap objectForKey: operation];
 	if (!mapTable) {
-		mapTable = [NSMapTable strongToStrongObjectsMapTable];
+		mapTable = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+        [self.operationParallelDependencyBlockArrayMap setObject: mapTable forKey: operation];
 	}
 	
 	return mapTable;
@@ -710,7 +707,6 @@
 		{
 			[self.finishedOperations addObject: operation];
 			dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-			dispatch_queue_t childrenQueue = self.childrenQueue;
             
 			// The childrenBlock is responsible for sending off the children to perform their duties.
 			executionBlock childrenBlock = ^( NSArray *dataBuffers ) {
@@ -722,19 +718,17 @@
 				}
 				
 				// b. parallel executions second
-                dispatch_async(childrenQueue, ^{
-                    for ( executionBlock anExecutionBlock in parallelExecutionBlocks ) {
-                        dispatch_group_t group = [parallelExecutionBlocks objectForKey: anExecutionBlock];
-                        dispatch_group_notify( group, globalQueue, ^{
-                            anExecutionBlock( dataBuffers );
-                        });
-                    }
-                    
-                    // c. Allow any thread joins/pending binary operations to get going.
-                    for (dispatch_group_t group in groups) {
-                        dispatch_group_leave(group);
-                    }
-                });
+                for ( executionBlock anExecutionBlock in parallelExecutionBlocks ) {
+                    dispatch_group_t group = [parallelExecutionBlocks objectForKey: anExecutionBlock];
+                    dispatch_group_notify( group, globalQueue, ^{
+                        anExecutionBlock( dataBuffers );
+                    });
+                }
+                
+                // c. Allow any thread joins/pending binary operations to get going.
+                for (dispatch_group_t group in groups) {
+                    dispatch_group_leave(group);
+                }
 			};
 			
 			// Figure out the indices
