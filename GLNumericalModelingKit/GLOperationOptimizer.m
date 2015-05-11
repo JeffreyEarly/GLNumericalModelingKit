@@ -590,7 +590,8 @@
 {
 	NSMutableArray *array = [self.operationGroupArrayMap objectForKey: operation];
 	if (!array) {
-		return [NSMutableArray array];
+        array = [NSMutableArray array];
+        [self.operationGroupArrayMap setObject: array forKey: operation];
 	}
 	
 	return array;
@@ -621,7 +622,8 @@
 {
 	NSMutableArray *array = [self.operationSerialDependencyBlockArrayMap objectForKey: operation];
 	if (!array) {
-		return [NSMutableArray array];
+        array = [NSMutableArray array];
+        [self.operationSerialDependencyBlockArrayMap setObject: array forKey: operation];
 	}
 	
 	return array;

@@ -132,8 +132,6 @@ typedef void (^executionBlock)(NSArray *);
 // bottomVariables, topVariables, precomputedVariables, internalVariables and buffers;
 @property(strong) NSMutableArray *allVariablesAndBuffers;
 
-@property dispatch_queue_t childrenQueue;
-
 @property NSUInteger totalTopVariablesCreated;
 
 /// Array of all internal buffers the operations depend on.
