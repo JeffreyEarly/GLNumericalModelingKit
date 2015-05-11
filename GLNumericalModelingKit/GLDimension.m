@@ -760,7 +760,7 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
 	if (index < self.nPoints) {
 		return f[index];
 	} else {
-		NSLog(@"GLDimension requested index out of bounds!");
+		[NSException raise: @"IndexOutOfBounds" format: @"GLDimension requested index out of bounds!"];
 	}
     return 0.0;
 }
