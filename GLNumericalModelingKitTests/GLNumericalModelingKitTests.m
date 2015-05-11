@@ -2037,7 +2037,7 @@
 	
 	GLFloat *output = a.pointerValue;
 	GLFloat expected = 2.0;
-	if ( !fequalprec(output[0], expected, 1e-5) ) {
+	if ( !fequalprec(output[100], expected, 1e-5) ) {
 		XCTFail(@"Expected %f, found %f.", expected, output[0]);
 	}
 }

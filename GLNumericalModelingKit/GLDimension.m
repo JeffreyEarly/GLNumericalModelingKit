@@ -839,6 +839,8 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
 	[_scaledDimensionMapTable setObject: dim forKey: keys];
 }
 
+#define fequalprec(a,b,prec) ((fabs((a) - (b)) < prec) || (fabs(((a) - (b))/a) < prec))
+
 - (GLDimension *) dimensionForScale: (GLFloat) scale translation: (GLFloat) delta units: (NSString *) theUnits
 {
 	if (!_scaledDimensionMapTable) {
@@ -846,7 +848,7 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
 	}
 	
 	for (NSArray *keys in _scaledDimensionMapTable) {
-        if ([keys[0] floatValue] == scale && [keys[1] floatValue] == delta && [keys[2] isEqual: theUnits?:@"unitless"]) {
+        if ( fequalprec([keys[0] floatValue],scale,1e-3) && [keys[1] floatValue] == delta && [keys[2] isEqual: theUnits?:@"unitless"]) {
 			return [_scaledDimensionMapTable objectForKey: keys];
 		}
 	}
@@ -995,8 +997,8 @@ static NSString *GLDimensionSpatialDimensionKey = @"GLDimensionSpatialDimensionK
     hash += self.name.hash;
     hash += self.units.hash;
 	
-	hash += 11 * abs(self.domainMin*100); 
-	hash += 23 * abs(self.domainLength*100); 
+	hash += 11 * abs((int)self.domainMin*100);
+	hash += 23 * abs((int)self.domainLength*100);
 	hash += 31 * abs( 31 - __builtin_clz( (unsigned int) self.nPoints ));
 	
 	hash += 41 * self.isFrequencyDomain ? 1231:1237;
