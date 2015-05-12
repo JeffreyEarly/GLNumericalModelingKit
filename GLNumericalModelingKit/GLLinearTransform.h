@@ -273,9 +273,6 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
 #pragma mark Data
 #pragma mark
 
-/// The end-all-be-all description of how this matrix is stored in memory.
-@property(readwrite, strong) GLMatrixDescription *matrixDescription;
-
 /// Indicates whether this particular instance is in row-major or column-major order
 @property(readwrite) GLMatrixOrder matrixOrder;
 

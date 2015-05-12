@@ -30,18 +30,12 @@
 #define MatrixFFT 0
 
 /************************************************/
-/*		GLVariable								*/
+/*		GLFunction								*/
 /************************************************/
 
 #pragma mark -
-#pragma mark GLVariable
+#pragma mark GLFunction
 #pragma mark
-
-@interface GLFunction ()
-@property(readwrite, assign, nonatomic) NSUInteger nDataPoints;
-@property(readwrite, assign, nonatomic) NSUInteger nDataElements;
-@property(readwrite, assign, nonatomic) NSUInteger dataBytes;
-@end
 
 @implementation GLFunction
 
