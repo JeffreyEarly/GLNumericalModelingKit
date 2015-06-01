@@ -568,6 +568,12 @@ const static NSString *MutableDimensionContext = @"com.EarlyInnovations.MutableD
 		NSLog(@"GLNetCDFFile.m: attempting to add a dimension without a name!");
 		return;
 	}
+	
+	for (GLDimension *existingDimension in self.dimensionDimensionIDMapTable) {
+		if ([dimension.name isEqualToString: existingDimension.name]) {
+			[NSException raise:@"DimensionAlreadyExists" format:@"A dimension of this same name has already been written to the NetCDF file. The name must be unique."];
+		}
+	}
 		
 	int dimensionID = [self.file addDimensionWithName: dimension.name length: dimension.isMutable ? NC_UNLIMITED : (int) dimension.nPoints];
 	[self.dimensionDimensionIDMapTable setObject: [NSNumber numberWithInt: dimensionID] forKey: dimension];
