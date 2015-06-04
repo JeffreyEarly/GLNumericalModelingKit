@@ -17,6 +17,7 @@
 @property(strong) NSArray *topVariables;
 @property(strong) NSArray *bottomVariables;
 @property BOOL alreadyInitialized;
+@property(strong) dispatch_queue_t queue;
 @end
 
 @implementation GLOperationOptimizer
@@ -74,7 +75,7 @@
 		}
 		
 		// All five of these objects will be copied/referenced by the block.
-		dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+		dispatch_queue_t globalQueue = self.queue;
 		NSMutableArray *serialExecutionBlocks = [self serialResponsibilitiesForOperation: (GLVariableOperation *) self];
 		dispatch_group_t bottomGroup = self.bottomVariableGroup;
 		NSMutableArray *allGroups = [self allGroups];
@@ -150,7 +151,9 @@
 		self.operationSerialDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		self.operationParallelDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		self.operationGroupArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
-		        
+		
+		self.queue = dispatch_queue_create("com.earlyinnovations.OperationOptimizer", DISPATCH_QUEUE_CONCURRENT);
+		
         [self createOptimizedOperation];
 	}
 	return self;
@@ -712,7 +715,7 @@
 		if (canCreate)
 		{
 			[self.finishedOperations addObject: operation];
-			dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+			dispatch_queue_t globalQueue = self.queue;
             
 			// The childrenBlock is responsible for sending off the children to perform their duties.
 			executionBlock childrenBlock = ^( NSArray *dataBuffers ) {
