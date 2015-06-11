@@ -766,23 +766,30 @@
 				}
 			}
 			
-			NSMutableArray *result = [[NSMutableArray alloc] init];
-			NSMutableArray *operand = [[NSMutableArray alloc] init];
-			NSMutableArray *buffer = [[NSMutableArray alloc] init];
+
 			
 			variableOperation operationBlock = operation.operation;            
 			executionBlock theExecutionBlock = ^( NSArray *dataBuffers ) {
+                // Initializing these arrays and adding objects at each time is VERY inefficient. It's the largest source of delay in the code currently.
+                NSMutableArray *result = [[NSMutableArray alloc] init];
+                NSMutableArray *operand = [[NSMutableArray alloc] init];
+                NSMutableArray *buffer = [[NSMutableArray alloc] init];
+                
 				// Note that we do not call -objectsAtIndexes because order is important.
 				for (NSNumber *anIndex in resultIndices) {
-					[result addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
+                    NSUInteger intValue = anIndex.unsignedIntegerValue;
+                    NSData * dataObject = [dataBuffers objectAtIndex: intValue];
+					[result addObject: dataObject];
 				}
 				
 				for (NSNumber *anIndex in operandIndices) {
-					[operand addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
+                    NSUInteger intValue = anIndex.unsignedIntegerValue;
+					[operand addObject: [dataBuffers objectAtIndex: intValue]];
 				}
 				
 				for (NSNumber *anIndex in bufferIndices) {
-					[buffer addObject: [dataBuffers objectAtIndex: anIndex.unsignedIntegerValue]];
+                    NSUInteger intValue = anIndex.unsignedIntegerValue;
+					[buffer addObject: [dataBuffers objectAtIndex: intValue]];
 				}
 				
 				// 1. Compute our own operation
@@ -791,9 +798,9 @@
 				// 2. Send off the children
 				childrenBlock( dataBuffers );
 				
-				[result removeAllObjects];
-				[operand removeAllObjects];
-				[buffer removeAllObjects];
+//				[result removeAllObjects];
+//				[operand removeAllObjects];
+//				[buffer removeAllObjects];
 			};
 			
 			if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
