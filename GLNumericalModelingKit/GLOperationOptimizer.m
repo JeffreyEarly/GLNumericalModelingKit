@@ -140,17 +140,17 @@
         self.internalBufferBufferMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		self.internalBufferArray = [NSMutableArray array];
 		
-		self.operationSerialBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
-		self.operationParallelBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
-		self.operationParallelGroupCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationSerialBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationParallelBlockCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationParallelGroupCountMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		self.finishedMappingOperations = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
 		
 		self.hasDataBuffer = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
 		
 		self.finishedOperations = [NSHashTable hashTableWithOptions: NSHashTableObjectPointerPersonality];
-		self.operationSerialDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
-		self.operationParallelDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
-		self.operationGroupArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality|NSPointerFunctionsOpaqueMemory valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationSerialDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationParallelDependencyBlockArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
+		self.operationGroupArrayMap = [NSMapTable mapTableWithKeyOptions: NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsObjectPointerPersonality];
 		
 		self.queue = dispatch_queue_create("com.earlyinnovations.OperationOptimizer", DISPATCH_QUEUE_CONCURRENT);
 		
@@ -618,7 +618,7 @@
 		[self.operationSerialDependencyBlockArrayMap setObject: array forKey: operation];
 	}
 	
-	[array addObject: [aBlock copy]];
+	[array addObject: aBlock];
 }
 
 - (NSMutableArray *) serialResponsibilitiesForOperation: (GLVariableOperation *) operation
@@ -640,7 +640,7 @@
 		[self.operationParallelDependencyBlockArrayMap setObject: mapTable forKey: operation];
 	}
 	
-	[mapTable setObject: group forKey: [aBlock copy]];
+	[mapTable setObject: group forKey: aBlock];
 }
 
 - (NSMapTable *) parallelResponsibilitiesForOperation: (GLVariableOperation *) operation;
@@ -652,6 +652,36 @@
 	}
 	
 	return mapTable;
+}
+
+- (void) sanityCheck
+{
+    NSMutableSet *executionBlockSet = [[NSMutableSet alloc] init];
+    for (GLVariableOperation *operation in self.operationSerialDependencyBlockArrayMap) {
+        NSArray *serialBlocks = [self.operationSerialDependencyBlockArrayMap objectForKey: operation];
+        for (executionBlock aBlock in serialBlocks) {
+            if ([executionBlockSet containsObject: aBlock]) {
+                [NSException raise:@"NotGood" format:@"VeryBad"];
+            } else {
+                [executionBlockSet addObject: aBlock];
+            }
+        }
+    }
+    
+    for (GLVariableOperation *operation  in self.operationParallelDependencyBlockArrayMap) {
+        NSMapTable *mapTable = [self.operationParallelDependencyBlockArrayMap objectForKey: operation];
+        for (executionBlock aBlock in mapTable) {
+            if ([executionBlockSet containsObject: aBlock]) {
+                [NSException raise:@"NotGood" format:@"VeryBad"];
+            } else {
+                [executionBlockSet addObject: aBlock];
+            }
+        }
+    }
+    
+    NSLog(@"total dependencies: %lu, total blocks: %lu, finished operations: %lu", self.totalDependencies, executionBlockSet.count, self.finishedOperations.count);
+    
+    
 }
 
 - (BOOL) isTopOperationReady {
@@ -769,14 +799,16 @@
 				}
 			}
 			
-
+            NSMutableArray *result = [[NSMutableArray alloc] init];
+            NSMutableArray *operand = [[NSMutableArray alloc] init];
+            NSMutableArray *buffer = [[NSMutableArray alloc] init];
 			
 			variableOperation operationBlock = operation.operation;            
 			executionBlock theExecutionBlock = ^( NSArray *dataBuffers ) {
                 // Initializing these arrays and adding objects at each time is VERY inefficient. It's the largest source of delay in the code currently.
-                NSMutableArray *result = [[NSMutableArray alloc] init];
-                NSMutableArray *operand = [[NSMutableArray alloc] init];
-                NSMutableArray *buffer = [[NSMutableArray alloc] init];
+//                NSMutableArray *result = [[NSMutableArray alloc] init];
+//                NSMutableArray *operand = [[NSMutableArray alloc] init];
+//                NSMutableArray *buffer = [[NSMutableArray alloc] init];
                 
 				// Note that we do not call -objectsAtIndexes because order is important.
 				for (NSNumber *anIndex in resultIndices) {
@@ -801,9 +833,9 @@
 				// 2. Send off the children
 				childrenBlock( dataBuffers );
 				
-//				[result removeAllObjects];
-//				[operand removeAllObjects];
-//				[buffer removeAllObjects];
+				[result removeAllObjects];
+				[operand removeAllObjects];
+				[buffer removeAllObjects];
 			};
 			
 			if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
