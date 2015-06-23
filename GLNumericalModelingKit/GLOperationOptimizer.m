@@ -830,12 +830,12 @@
 				// 1. Compute our own operation
 				operationBlock( result, operand, buffer );
 				
+                [result removeAllObjects];
+                [operand removeAllObjects];
+                [buffer removeAllObjects];
+                
 				// 2. Send off the children
 				childrenBlock( dataBuffers );
-				
-				[result removeAllObjects];
-				[operand removeAllObjects];
-				[buffer removeAllObjects];
 			};
 			
 			if ( precomputedVariableOperands.count && !topVariableOperands.count && !otherVariableOperandOperations.count ) {
