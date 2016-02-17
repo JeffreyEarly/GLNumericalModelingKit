@@ -984,6 +984,7 @@
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/double-precision",
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/single-precision",
 				);
+				MACH_O_TYPE = mh_dylib;
 				MODULEMAP_FILE = GLNumericalModelingKit.modulemap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PUBLIC_HEADERS_FOLDER_PATH = /usr/local/include/GLNumericalModelingKit;
@@ -1020,6 +1021,7 @@
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/double-precision",
 					"$(PROJECT_DIR)/ExternalLibraries/fftw/static/single-precision",
 				);
+				MACH_O_TYPE = mh_dylib;
 				MODULEMAP_FILE = GLNumericalModelingKit.modulemap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PUBLIC_HEADERS_FOLDER_PATH = /usr/local/include/GLNumericalModelingKit;
