@@ -16,6 +16,11 @@
 	GLOperationOptimizer *functionOptimizer = [[GLOperationOptimizer alloc] initWithTopVariables: startingPoints bottomVariables: @[functionBlock(startingPoints)]];
 	variableOperation functionOperation = functionOptimizer.operationBlock;
 	
+    if (startingPoints.count == 0) {
+        [NSException raise: @"InvalidFormat" format: @"Must include starting points."];
+        return nil;
+    }
+    
 	NSUInteger nDims = startingPoints.count;
 	NSUInteger nVertices = nDims+1;
 	GLFloat ftol = 1e-5;
@@ -49,6 +54,11 @@
 		
 		// This comes from Numerical Recipes, Third Edition, page 505-507.
         
+        if (nDims < 1 || nVertices < 2)  {
+            [NSException raise: @"BadAssumption" format: @"This should never happen, but we included this to appease the static analyzer."];
+            return;
+        }
+        
 		NSMutableArray *functionOperationBuffers = [NSMutableArray array];
 		for (NSUInteger i=(nDims+1)*nVertices; i<bufferArray.count; i++) {
 			[functionOperationBuffers addObject: bufferArray[i]];
@@ -70,10 +80,10 @@
 			vertexBuffers[iVertex] = pointBuffers;
 			if (iVertex != 0) {
 				GLFloat *delta = (GLFloat *) [operandArray[nDims + iVertex-1] bytes];
-				vertices[iVertex*nDims + (iVertex-1)][0] += *delta;
+                    vertices[iVertex*nDims + (iVertex-1)][0] += *delta;
 			}
 		}
-		
+        
 		// yBuffers indexes the data object that contains the y value at the vertex
 		// y points to the data in that buffer
 		GLFloat **y = malloc(nDims*nVertices*sizeof(GLFloat*));
@@ -226,11 +236,11 @@
 			}
 			nFunctionEvaluations+=2;
 			
-			// Begin a new iteration. First extrapolate by a factor -1 through the face of the sinplex across from the high point, i.e., reflect the simplex from the high point.
+			// Begin a new iteration. First extrapolate by a factor -1 through the face of the simplex across from the high point, i.e., reflect the simplex from the high point.
 			GLFloat ytry = amotry( ihi, -1.0);
 			if (ytry <= y[ilo][0]) {
 				// Gives a result better than the best point, so try an additional extrapolation by a factor of 2.
-				ytry = amotry( ihi, 2.0);
+				amotry( ihi, 2.0);
 			} else if (ytry >= y[inhi][0]) {
 				// the reflected point is worse than the second-highest, so look for an intermediate lower point, i.e., do a one-dimensional contraction
 				GLFloat ysave = y[ihi][0];
