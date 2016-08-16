@@ -2201,21 +2201,47 @@
 	GLDimension *numberDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 10000 domainMin: 0 length: 1000-1];
 	GLFunction *randomNumbers = [GLFunction functionWithNormallyDistributedValueWithDimensions: @[numberDim] forEquation: equation];
 	GLScalar *mean = [randomNumbers mean];
-	[mean dumpToConsole];
 	
 	GLFloat expected = 0;
 	if ( !fequalprec(mean.pointerValue[0],expected, 1e-1) ) {
 		XCTFail(@"Expected %f, found %f.", expected, mean.pointerValue[0]);
 	}
 	
-	GLScalar *variance = [[randomNumbers times: randomNumbers] mean];
-	[variance dumpToConsole];
+	GLScalar *variance = [[[randomNumbers abs] pow: 2.0] mean];
 	
 	expected = 1;
 	if ( !fequalprec(variance.pointerValue[0],expected, 1e-1) ) {
-		XCTFail(@"Expected %f, found %f.", expected, mean.pointerValue[0]);
+		XCTFail(@"Expected %f, found %f.", expected, variance.pointerValue[0]);
 	}
 }
+
+- (void) testComplexRandomNumberGenerator
+{
+    srand( (unsigned int) 6515);
+    
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *numberDim = [[GLDimension alloc] initDimensionWithGrid: kGLPeriodicGrid nPoints: 10000 domainMin: 0 length: 1000-1];
+    GLDimension *numberExpDim = [[GLDimension alloc] initAsFourierTransformOfDimension: numberDim];
+    GLFunction *randomNumbers = [GLFunction functionWithNormallyDistributedValueWithDimensions: @[numberExpDim] forEquation: equation];
+    GLScalar *mean = [randomNumbers mean];
+    
+    GLFloat expected = 0;
+    if ( !fequalprec(mean.pointerValue[0],expected, 1e-1) ) {
+        XCTFail(@"Expected %f, found %f.", expected, mean.pointerValue[0]);
+    }
+    
+    GLScalar *variance = [[[randomNumbers abs] pow: 2.0] mean];
+    
+    expected = 1;
+    if ( !fequalprec(variance.pointerValue[0],expected, 1e-1) ) {
+        XCTFail(@"Expected %f, found %f.", expected, variance.pointerValue[0]);
+    }
+}
+
+//GLFunction *G_minus = [GLFunction functionWithNormallyDistributedValueWithDimensions: self.spectralDimensions forEquation: self.equation];
+//[G_plus solve];
+//
+//GLFunction *G_sum = [[[[[G_minus abs] pow: 2.0] mean: 2] mean: 1] mean: 0];
 
 @end
 

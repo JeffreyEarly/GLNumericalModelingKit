@@ -80,7 +80,6 @@
 /************************************************/
 /*		GLNormalDistributionOperation			*/
 /************************************************/
-// variable = clip(operand, min, max)
 @implementation GLNormalDistributionOperation
 
 
@@ -102,6 +101,7 @@
         BOOL halfComplex3D = resultVariable.dimensions.count == 3 && [resultVariable.dimensions[0] basisFunction] == kGLDeltaBasis && [resultVariable.dimensions[1] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[2] basisFunction] == kGLExponentialBasis && [resultVariable.dimensions[2] isStrictlyPositive];
         if (nDataElements % 2 == 1) [NSException raise: @"StupidImplementationException" format: @"Can't deal with odd numbers"];
 		
+        BOOL isComplex = resultVariable.isComplex;
         
 		variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 			const int halfTheElements = (int) nDataElements/2;
@@ -135,6 +135,11 @@
 			// Now we multiply
 			vGL_vmul( B2, 1, A, 1, A, 1, halfTheElements);
 			vGL_vmul( B2, 1, A2, 1, A2, 1, halfTheElements);
+            
+            if (isComplex) { // Complex numbers need to be scaled by sqrt 2 for the variance to be 1.
+                GLFloat sqrt2 = 1/sqrt(2);
+                vGL_vsmul( A, 1, &sqrt2, A, 1, nDataElements);
+            }
 		};
 		
         if (halfComplex2D)
@@ -144,6 +149,7 @@
             self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				
 				op(resultArray, operandArray, bufferArray);
+                
 				
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
@@ -179,6 +185,11 @@
 				
 				op(resultArray, operandArray, bufferArray);
 				
+                // Complex numbers need to be scaled by sqrt 2 for the variance to be 1.
+                GLFloat *A = (GLFloat *) [resultArray[0] bytes];
+                GLFloat sqrt2 = 1/sqrt(2);
+                vGL_vsmul( A, 1, &sqrt2, A, 1, nDataElements);
+                
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
                 // index=i*ny*nz+j*nz+k
