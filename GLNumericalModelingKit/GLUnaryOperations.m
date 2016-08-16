@@ -1366,6 +1366,7 @@
         GLFloat *dimPoints = (GLFloat *) dimensionData.bytes;
         GLFloat *dimDiffPoints = (GLFloat *) dimensionDiffData.bytes;
         vGL_vsub(&(dimPoints[0]), 1, &(dimPoints[1]), 1, dimDiffPoints, 1, nPointsMinusOne); // vsub does C = B - A
+        BOOL reversedGrid = (dim.gridType == kGLChebyshevEndpointGrid || dim.gridType == kGLChebyshevInteriorGrid) ? 1 : 0;
         
         op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
             GLFloat *A = (GLFloat *) [operandArray[0] bytes];
@@ -1376,6 +1377,10 @@
             vGL_vadd(A, 1, &(A[1]), 1, &(B[1]), 1, nPointsMinusOne);
             vGL_vmul(&(B[1]), 1, dimDiff, 1, &(B[1]), 1, nPointsMinusOne);
             vGL_vrsum(&(B[0]), 1, &half, &(B[0]), 1, nPoints);
+            if (reversedGrid) {
+                GLFloat constantOfIntegration = -B[nPoints-1];
+                vGL_vsadd(B,1,&constantOfIntegration,B,1,nPoints);
+            }
         };
     }
     

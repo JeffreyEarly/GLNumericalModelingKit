@@ -2034,12 +2034,31 @@
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension:xDim withDimensions:@[xDim] forEquation:equation];
 	
 	GLFunction *a = [x integrate];
-	
+    GLFunction *b = [[x times: x] times: @(0.5)];
+    
 	GLFloat *output = a.pointerValue;
-	GLFloat expected = 2.0;
-	if ( !fequalprec(output[100], expected, 1e-5) ) {
-		XCTFail(@"Expected %f, found %f.", expected, output[100]);
+	GLFloat *expected = b.pointerValue;
+	if ( !fequalprec(output[100], expected[100], 1e-5) ) {
+		XCTFail(@"Expected %f, found %f.", expected[100], output[100]);
 	}
+}
+
+- (void) test1DRealIntegrationOnChebyshevGrid
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLChebyshevEndpointGrid nPoints: 101 domainMin: 0.0 length: 2.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension:xDim withDimensions:@[xDim] forEquation:equation];
+    
+    GLFunction *a = [x integrate];
+    GLFunction *b = [[x times: x] times: @(0.5)];
+    
+    GLFloat *output = a.pointerValue;
+    GLFloat *expected = b.pointerValue;
+    for (NSUInteger i=0; i<101; i+=10) {
+        if ( !fequalprec(output[i], expected[i], 1e-5) ) {
+            XCTFail(@"Expected %f, found %f.", expected[i], output[i]);
+        }
+    }
 }
 
 - (void) test1DRealIntegrationToLimits
