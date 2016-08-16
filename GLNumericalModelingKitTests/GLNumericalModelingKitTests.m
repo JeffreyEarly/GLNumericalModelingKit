@@ -2033,13 +2033,43 @@
 	GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 101 domainMin: 0.0 length: 2.0];
 	GLFunction *x = [GLFunction functionOfRealTypeFromDimension:xDim withDimensions:@[xDim] forEquation:equation];
 	
-	GLScalar *a = [x integrate];
+	GLFunction *a = [x integrate];
 	
 	GLFloat *output = a.pointerValue;
 	GLFloat expected = 2.0;
 	if ( !fequalprec(output[100], expected, 1e-5) ) {
-		XCTFail(@"Expected %f, found %f.", expected, output[0]);
+		XCTFail(@"Expected %f, found %f.", expected, output[100]);
 	}
+}
+
+- (void) test1DRealIntegrationToLimits
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLEndpointGrid nPoints: 101 domainMin: 0.0 length: 2.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension:xDim withDimensions:@[xDim] forEquation:equation];
+    
+    GLScalar *a = [x integrateToLimits];
+    
+    GLFloat *output = a.pointerValue;
+    GLFloat expected = 2.0;
+    if ( !fequalprec(output[0], expected, 1e-5) ) {
+        XCTFail(@"Expected %f, found %f.", expected, output[0]);
+    }
+}
+
+- (void) test1DRealIntegrationToLimitsOnChebyshevGrid
+{
+    GLEquation *equation = [[GLEquation alloc] init];
+    GLDimension *xDim = [[GLDimension alloc] initDimensionWithGrid: kGLChebyshevEndpointGrid nPoints: 101 domainMin: 0.0 length: 2.0];
+    GLFunction *x = [GLFunction functionOfRealTypeFromDimension:xDim withDimensions:@[xDim] forEquation:equation];
+    
+    GLScalar *a = [x integrateToLimits];
+    
+    GLFloat *output = a.pointerValue;
+    GLFloat expected = 2.0;
+    if ( !fequalprec(output[0], expected, 1e-5) ) {
+        XCTFail(@"Expected %f, found %f.", expected, output[0]);
+    }
 }
 
 /************************************************/

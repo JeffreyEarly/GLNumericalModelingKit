@@ -1284,24 +1284,49 @@
 
 - (GLIntegrationToLimitsOperation *) initWithFunction: (GLFunction *) variable
 {
-	if (variable.dataFormat != kGLRealDataFormat || variable.dimensions.count != 1 || ![variable.dimensions[0] isEvenlySampled]) {
-        [NSException raise: @"BadFormat" format: @"This operation can only take evenly sampled one-dimensional real variables."];
+	if (variable.dataFormat != kGLRealDataFormat || variable.dimensions.count != 1) {
+        [NSException raise: @"BadFormat" format: @"This operation can only take one-dimensional real variables."];
     }
 
 	GLScalar *result = [[GLScalar alloc] initWithType: kGLRealDataFormat forEquation: variable.equation];
-	NSUInteger N = variable.nDataElements;
-	GLFloat deltaX = [variable.dimensions[0] sampleInterval];
-	variableOperation op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
-		GLFloat *A = (GLFloat *) [operandArray[0] bytes];
-		GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+    GLDimension *dim = variable.dimensions[0];
+    NSArray *bufferArray = @[];
+    
+    variableOperation op;
+    if (dim.isEvenlySampled) {
+        NSUInteger N = variable.nDataElements;
+        GLFloat deltaX = [variable.dimensions[0] sampleInterval];
+        op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+            GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+            GLFloat *B = (GLFloat *) [resultArray[0] bytes];
+        
+            // sum it. sum = 1/(2*h) * (f_0 + 2*f_1 + 2*f_2 + ... + 2*f_{N-1} + 2*f_N
+            vGL_sve(A, 1, B, N);
+            *B = deltaX*(*B - A[0]/2.0 - A[N-1]/2.0);
+        };
+    } else {
+        NSUInteger nPointsMinusOne = dim.nPoints-1;
+        NSData *dimensionData = dim.data;
+        NSData *dimensionDiffData = [[GLMemoryPool sharedMemoryPool] dataWithLength: dimensionData.length];
+        GLFloat *dimPoints = (GLFloat *) dimensionData.bytes;
+        GLFloat *dimDiffPoints = (GLFloat *) dimensionDiffData.bytes;
+        vGL_vsub(&(dimPoints[0]), 1, &(dimPoints[1]), 1, dimDiffPoints, 1, nPointsMinusOne); // vsub does C = B - A
+        bufferArray = @[[[GLBuffer alloc] initWithLength: variable.nDataElements*sizeof(GLFloat)]];
+        GLFloat sign = (dim.gridType == kGLChebyshevEndpointGrid || dim.gridType == kGLChebyshevInteriorGrid) ? -1 : 1;
+        
+        op = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
+            GLFloat *A = (GLFloat *) [operandArray[0] bytes];
+            GLFloat *B = (GLFloat *) [bufferArray[0] bytes];
+            GLFloat *C = (GLFloat *) [resultArray[0] bytes];
+            GLFloat *dimDiff = (GLFloat *) dimensionDiffData.bytes;
+            
+            vGL_vam(A, 1, &(A[1]), 1, dimDiff, 1, B, 1, nPointsMinusOne); // B = (A[0] + A[1])*dimDiff
+            vGL_sve(B, 1, C, nPointsMinusOne);
+            *C = sign * 0.5 * (*C);
+        };
+    }
 	
-		// sum it. sum = 1/(2*h) * (f_0 + 2*f_1 + 2*f_2 + ... + 2*f_{N-1} + 2*f_N
-		vGL_sve(A, 1, B, N);
-		*B = deltaX*(*B - A[0]/2.0 - A[N-1]/2.0);
-	};
-	
-	
-	if (( self = [super initWithResult: @[result] operand: @[variable] buffers: @[] operation: op] )) {
+	if (( self = [super initWithResult: @[result] operand: @[variable] buffers: bufferArray operation: op] )) {
         
     }
     return self;
