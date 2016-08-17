@@ -150,7 +150,6 @@
 				
 				op(resultArray, operandArray, bufferArray);
                 
-				
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
 				// Hermitian conjugates
@@ -184,11 +183,6 @@
             self.operation = ^(NSArray *resultArray, NSArray *operandArray, NSArray *bufferArray) {
 				
 				op(resultArray, operandArray, bufferArray);
-				
-                // Complex numbers need to be scaled by sqrt 2 for the variance to be 1.
-                GLFloat *A = (GLFloat *) [resultArray[0] bytes];
-                GLFloat sqrt2 = 1/sqrt(2);
-                vGL_vsmul( A, 1, &sqrt2, A, 1, nDataElements);
                 
 				GLSplitComplex C = splitComplexFromData( resultArray[0] );
 				
