@@ -35,11 +35,11 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /*		GLDiagonalTransformCreationOperation	*/
 /************************************************/
 
+@interface GLDiagonalTransformCreationOperation : GLVariableOperation
 /** Places the values of the function along the diagonal of matrix
  @param function The function to be placed along the diagonal.
  @returns The transformed function with fromDimensions and toDimensions matching the dimension of the function.
  */
-@interface GLDiagonalTransformCreationOperation : GLVariableOperation
 - (id) initWithFunction: (GLFunction *) function;
 @end
 
@@ -47,13 +47,13 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /*		GLExpandMatrixDimensionsOperation		*/
 /************************************************/
 
+@interface GLExpandMatrixDimensionsOperation : GLVariableOperation
 /** Add new dimension to a transformation, by assuming the identity transform for the new dimensions.
  @param linearTransform Existing linear transformation.
  @param fromDims New fromDimensions
  @param toDims New toDimensions
  @returns The more-or-less the same linear transformation, but with new fromDimensions and toDimensions.
  */
-@interface GLExpandMatrixDimensionsOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform fromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims;
 @end
 
@@ -61,14 +61,13 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /*		GLReduceMatrixDimensionsOperation		*/
 /************************************************/
 
+@interface GLReduceMatrixDimensionsOperation : GLVariableOperation
 /** Reduce the dimensions of the linear transformation.
  @param linearTransform Existing linear transformation.
  @param fromString A string, in matlab format, describing the subset of indices requested.
  @param toString A string, in matlab format, describing the subset of indices requested.
  @returns The more-or-less the same linear transformation, but with new fromDimensions and toDimensions.
  */
-
-@interface GLReduceMatrixDimensionsOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform fromDimensionsIndexString: (NSString *) fromString toDimensionsIndexString: (NSString *) toString;
 @end
 
@@ -88,12 +87,12 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /*		GLSingleDiagonalTransformOperation		*/
 /************************************************/
 
+@interface GLSingleDiagonalTransformOperation : GLVariableOperation
 /** Find b in A x = b for matrices A that have exactly one diagonal in each dimension, be it a proper-, super-, or sub-diagonal.
  @param linearTransform The linear transform representing matrix A.
  @param function The function representing vector x.
  @returns The transformed function, b.
  */
-@interface GLSingleDiagonalTransformOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
@@ -101,26 +100,27 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /*		GLTriadiagonalTransformOperation		*/
 /************************************************/
 
+@interface GLTriadiagonalTransformOperation : GLVariableOperation
 /** Find b in A x = b for matrices A that are in tridiagonal format.
  @discussion The matrices must have exactly one tridiagonal dimension. The remaining dimensions can be diagonal or identity.
  @param linearTransform The linear transform representing matrix A.
  @param function The function representing vector x.
  @returns The solution function, b.
  */
-@interface GLTriadiagonalTransformOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
 /************************************************/
 /*		GLDenseMatrixTransformOperation         */
 /************************************************/
+
+@interface GLDenseMatrixTransformOperation : GLVariableOperation
 /** Find b in A x = b for matrices A that are in dense format.
-  @discussion The matrices must have exactly one dense dimension. The remaining dimensions can be diagonal or identity.
+ @discussion The matrices must have exactly one dense dimension. The remaining dimensions can be diagonal or identity.
  @param linearTransform The linear transform representing matrix A.
  @param function The function representing vector x.
  @returns The solution function, b.
  */
-@interface GLDenseMatrixTransformOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
@@ -177,12 +177,13 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /************************************************/
 /*		GLTriadiagonalSolverOperation			*/
 /************************************************/
+
+@interface GLTriadiagonalSolverOperation : GLVariableOperation
 /** Find x in A x = b for matrices A that are in tridiagonal format. In particular, this solve a_i x_{i-1} + b_i x_{i} + c_i x_{i+1} = d_i for x_i. Input a tridiagonal matrix (essentially a,b,c) and a vector (d), the function returns x.
  @param linearTransform The linear transform representing matrix A.
  @param function The function representing vector b.
  @returns The solution function, x.
  */
-@interface GLTriadiagonalSolverOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
@@ -190,12 +191,13 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /************************************************/
 /*		GLDenseMatrixSolver						*/
 /************************************************/
+
+@interface GLDenseMatrixSolver : GLVariableOperation
 /** Find x in A x = b for matrices A that are in dense format.
  @param linearTransform The linear transform representing matrix A.
  @param function The function representing vector b.
  @returns The solution function, x.
  */
-@interface GLDenseMatrixSolver : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform function: (GLFunction *) function;
 @end
 
@@ -249,13 +251,14 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /************************************************/
 /*		GLMatrixEigensystemOperation             */
 /************************************************/
+
+@interface GLMatrixEigensystemOperation : GLVariableOperation
 /** Finds the eigenvectors and eigenvalues of the matrix A.
  @discussion The eigenvalues are returned as the linear transformation S which takes vectors from the eigenbasis to the original basis.
  @discussion The matrix A must be an endomorphism, meaning that its fromBasis must be the same as its toBasis.
  @param linearTransform The linear transform representing matrix A.
  @returns An NSArray containing the function v of the eigenvalues and the linear transformation S.
  */
-@interface GLMatrixEigensystemOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform;
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform sort: (NSComparisonResult) sortOrder;
 @end
@@ -263,6 +266,8 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /************************************************/
 /*		GLGeneralizedMatrixEigensystemOperation */
 /************************************************/
+
+@interface GLGeneralizedMatrixEigensystemOperation : GLVariableOperation
 /** Finds the eigenvectors and eigenvalues of the matrices A and B.
  @discussion The eigenvalues are returned as the linear transformation S which takes vectors from the eigenbasis to the original basis.
  @discussion The matrices A and B must be an endomorphism, meaning that its fromBasis must be the same as its toBasis.
@@ -270,7 +275,6 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
  @param B The linear transform representing matrix B.
  @returns An NSArray containing the function v of the eigenvalues and the linear transformation S.
  */
-@interface GLGeneralizedMatrixEigensystemOperation : GLVariableOperation
 - (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B;
 - (id) initWithFirstOperand: (GLLinearTransform *) A secondOperand: (GLLinearTransform *) B sort: (NSComparisonResult) sortOrder;
 @end
@@ -278,26 +282,28 @@ void apply_matrix_matrix_loop( GLMatrixDescription *matrixA, GLMatrixDescription
 /************************************************/
 /*		GLTensorProductOperation				*/
 /************************************************/
+
+@interface GLTensorProductOperation : GLVariableOperation
 /** Takes the tensor product (outer product) of an array linear transformations.
  @param linearTransformations An array of linear transformations.
  @returns A linear transformation with fromDimensions and toDimensions of all the linear transformations in the array.
  */
-@interface GLTensorProductOperation : GLVariableOperation
 - (id) initWithLinearTransformations: (NSArray *) linearTransformations;
 @end
 
 /************************************************/
 /*		GLFormatShiftOperation				*/
 /************************************************/
+
+@interface GLFormatShiftOperation : GLVariableOperation
 /** Copy the linear transformation with the data formatted according to new parameters.
  @discussion This is not implemented for speed (and therefore shouldn't be used in a loop where speed is needed), but it should be able to convert to any format.
- @param linearTransformation A linear transformation
+ @param linearTransform A linear transformation
  @param dataFormat Specify the desired data format.
  @param matrixFormats An array of GLMatrixFormat types specifying the necessary storage requires that should be allocated for a particular dimension pair.
  @param ordering Whether the dense matrix indices should be column and row-major ordered.
  @returns A new created GLLinearTransform instance in the requested format..
  */
-@interface GLFormatShiftOperation : GLVariableOperation
 - (id) initWithLinearTransformation: (GLLinearTransform *) linearTransform dataType: (GLDataFormat) dataFormat matrixFormat: (NSArray *) matrixFormats ordering: (GLMatrixOrder) ordering;
 @end
 

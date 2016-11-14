@@ -108,7 +108,7 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
  @param matrix A transformMatrix block capable of populating the complete matrix.
  @returns A new created GLLinearTransform instance.
 */
-- (GLLinearTransform *) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) theEquation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
+- (GLLinearTransform *) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats forEquation: (GLEquation *) equation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
 
 /** Create a new, full specified, GLLinearTransform.
  @param dataFormat Specify whether or not the transformation is real or complex.
@@ -120,7 +120,7 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
  @param matrix A transformMatrix block capable of populating the complete matrix.
  @returns A new created GLLinearTransform instance.
  */
-- (GLLinearTransform *) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats withOrdering: (GLMatrixOrder) ordering forEquation: (GLEquation *) theEquation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
+- (GLLinearTransform *) initTransformOfType: (GLDataFormat) dataFormat withFromDimensions: (NSArray *) fromDims toDimensions: (NSArray *) toDims inFormat: (NSArray *) matrixFormats withOrdering: (GLMatrixOrder) ordering forEquation: (GLEquation *) equation matrix:(GLFloatComplex (^)(NSUInteger *, NSUInteger *)) matrix;
 
 /************************************************/
 /*		Pre-defined transformations             */
@@ -170,7 +170,7 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
  @param leftBC The left boundary condition.
  @param rightBC The right boundary condition.
  @param bandwidth The number of off-diagonals, e.g., a bandwidth of 1 will create a tridiagonal matrix.
- @param aDimension The dimension (and therefore basis) which should be used to take the derivative.
+ @param x The dimension (and therefore basis) which should be used to take the derivative.
  @param equation The GLEquation object being used.
  @returns A GLLinearTransform with fromDimensions and toDimensions that match aDimension.
  */
@@ -315,7 +315,7 @@ typedef NS_ENUM(NSInteger, GLBoundaryCondition) {
 - (GLFunction *) transform: (GLFunction *) x;
 
 /** Returns x in the equation A x = b, where A is this linear transformation
- @param x A function with dimensions matching the toDimensions of this linear transformation
+ @param b A function with dimensions matching the toDimensions of this linear transformation
  @returns A solution function with dimensions matching the fromDimensions of this linear transformation
  */
 - (GLFunction *) solve: (GLFunction *) b;

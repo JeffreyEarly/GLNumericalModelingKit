@@ -89,6 +89,7 @@ typedef	FFTSetupD	GLFFTSetup;
 #define vGL_vdiv		vDSP_vdivD			// Vector divide
 #define vGL_zvdiv		vDSP_zvdivD			// Complex vector divide
 #define	vGL_vma			vDSP_vmaD
+#define	vGL_vam			vDSP_vamD           // Vector add and multiply
 #define	vGL_vsma		vDSP_vsmaD
 #define	vGL_vfrac		vDSP_vfracD
 #define	vGL_vsub		vDSP_vsubD
@@ -206,6 +207,7 @@ typedef	FFTSetup	GLFFTSetup;
 #define vGL_vdiv		vDSP_vdiv			// Vector divide
 #define vGL_zvdiv		vDSP_zvdiv			// Complex vector divide
 #define	vGL_vma			vDSP_vma
+#define	vGL_vam			vDSP_vam            // Vector add and multiply
 #define	vGL_vsma		vDSP_vsma
 
 #define	vGL_vfrac		vDSP_vfrac
