@@ -38,8 +38,8 @@ end
 
 try
     f0 = feval(odefun,tspan(1),y0,varargin{:});
-catch
-    msg = ['Unable to evaluate the ODEFUN at t0,y0. ',lasterr];
+catch theError
+    msg = ['Unable to evaluate the ODEFUN at t0,y0. ',theError];
     error(msg);
 end
 
