@@ -12,8 +12,8 @@ while (cutoff == n && m <= m_max)
     n = 2^m + 1;
     
     zLobatto = (Lz/2)*( cos(((0:n-1)')*pi/(n-1)) + 1) + zMin;
-    f_cheb = InternalModesSpectral.fct(f(zLobatto));
-    cutoff = InternalModesSpectral.standardChop(f_cheb, tol);
+    f_cheb = fct(f(zLobatto));
+    cutoff = standardChop(f_cheb, tol);
 end
 
 if cutoff < n
