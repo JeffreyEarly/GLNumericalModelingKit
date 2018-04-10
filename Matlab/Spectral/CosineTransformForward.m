@@ -1,5 +1,5 @@
-function [f, xbar] = SineTransformForward( tn, x )
-% SineTransformForward  Fast Discrete Sine Transform (DST-I)
+function [f, xbar] = CosineTransformForward( tn, x )
+% CosineTransformForward  Fast Discrete Cosine Transform (DST-I)
 % 
 % xbar is returned in the same units as x. This is the finite length
 % definition of a Fourier transform.
@@ -7,7 +7,7 @@ function [f, xbar] = SineTransformForward( tn, x )
 % f is returned in units of cycles.
 %
 % The following relationship is satisfied:
-%   [f, xbar] = SineTransformForward(t,x);
+%   [f, xbar] = CosineTransformForward(t,x);
 %   S = T*(xbar .* conj(xbar));
 %   x_sum = (1/T)*sum(x.*x)*dt;
 %   S_sum = sum(S)*df;
@@ -20,10 +20,10 @@ function [f, xbar] = SineTransformForward( tn, x )
 
 N = length(tn);
 
-dstScratch = ifft(cat(1,x,-x(N-1:-1:2)),2*N-2,1);
-xbar = 2*imag(dstScratch(2:N,:,:));
+dctScratch = ifft(cat(1,x,x(N-1:-1:1)),2*N,1);
+xbar = 2*real(dctScratch(2:N+1,:,:));
 
-df = 1/(2*(N-1)*(tn(2)-tn(1)));
-f = ((1:N-1)*df)';
+df = 1/(2*N*(tn(2)-tn(1)));
+f = ((1:N)*df)';
 
 end
