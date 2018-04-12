@@ -56,6 +56,8 @@ S = T*(xbar .* conj(xbar));
 
 df = f(2)-f(1);
 
+% The sum in x is sloppy--we integrating beyond the end point, but since
+% the function is zero at the end points, we end up okay.
 x_sum = (1/T)*sum(x.*x)*dt;
 S_sum = sum(S)*df;
 
@@ -81,7 +83,7 @@ fprintf('Testing cosine transform:\n')
 
 % Create a simple function, x = sin(pi*t) + 3*sin(4*pi*t);
 % The lowest resolved frequency is *half* a cycle per unit time
-x =  1 + 0*cos(pi*t/T) + 0*cos(16*(2*pi)*t/T);
+x =  1 + 2*cos(pi*t/T) + 3*cos(16*(2*pi)*t/T);
 
 [xbar, f] = CosineTransformForward(t,x);
 
@@ -91,7 +93,7 @@ df = f(2)-f(1);
 
 % The end points only have half an increment.
 x_sum = (1/T)*(sum(x(2:end-1).*x(2:end-1))*dt+x(1)*x(1)*dt/2 + x(end)*x(end)*dt/2);
-S_sum = (2*S(1) + sum(S(2:end-1)) + 2*S(end))*df;
+S_sum = ( S(1)/2 + sum(S(2:end-1)) + 2*S(end))*df;
 
 if abs(x_sum - S_sum) < 1e-7
    fprintf('\tPower matches\n')
