@@ -1,4 +1,4 @@
-function [f, xbar] = CosineTransformForward( tn, x )
+function [xbar, f] = CosineTransformForward( t, x )
 % CosineTransformForward  Fast Discrete Cosine Transform (DST-I)
 % 
 % xbar is returned in the same units as x. This is the finite length
@@ -18,12 +18,15 @@ function [f, xbar] = CosineTransformForward( tn, x )
 %   T=1.0; % total time length
 %   t=T*(0:(N-1))'/N;
 
-N = length(tn);
+N = length(t);
 
-dctScratch = ifft(cat(1,x,x(N-1:-1:1)),2*N,1);
-xbar = 2*real(dctScratch(2:N+1,:,:));
+dctScratch = ifft(cat(1,x,x(N-1:-1:1)),2*N-2,1);
+xbar = 2*real(dctScratch(1:N,:,:));
 
-df = 1/(2*N*(tn(2)-tn(1)));
-f = ((1:N)*df)';
+xbar(1) = xbar(1)/2;
+xbar(end) = xbar(end)/2;
+
+df = 1/(2*(N-1)*(t(2)-t(1)));
+f = df*(0:(N-1))';
 
 end
