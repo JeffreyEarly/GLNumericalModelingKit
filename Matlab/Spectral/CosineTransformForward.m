@@ -21,7 +21,7 @@ N = length(t);
 
 dctScratch = cat(1,x,x(N-1:-1:2));
 dctScratch = ifft(dctScratch,2*N-2,1);
-xbar = 2*real(dctScratch(1:N,:,:));
+xbar = 2*real(dctScratch(1:N));
 
 xbar(end) = xbar(end)/2;
 
