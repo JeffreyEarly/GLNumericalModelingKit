@@ -56,4 +56,10 @@ x^{(j)}(t) =& \sum_{m=1}^{K-j} \xi_{j+1}^m X^{K-j}_m(t) \\
 =&  \sum_{m=1}^{K-j} \xi_{j+1}^m \left[ \frac{t - t_m}{t_{m+K-1} - t_m} X^{K-j-1}_m(t) + \frac{t_{m+K}-t}{t_{m+K} - t_{m+1}} X^{K-j-1}_{m+1}(t) \right] \\
 =& \sum_{m=1}^{K-j} \xi_{j+1}^m \left[ \frac{t - t_m}{t_{m+K-1} - t_m} X^{K-j-1}_m(t) \right] +  \sum_{m=0}^{K-j-1} \xi_{j+1}^{m-1} \left[ \frac{t_{m+K-1}-t}{t_{m+K-1} - t_{m}} X^{K-j-1}_{m}(t) \right] 
 \end{align}
+One needs to think of the sum as going from $m=m_i$ to $m=m_i + K-j$ where $m_i$ is the lowest non-zero spline at that point. Thus, there is no reason one can't add a few other splines that are zero at that point. So, it's perfectly reasonable to rewrite the sum as,
+\begin{align}
+x^{(j)}(t) =& \sum_{m=m_i-1}^{m_i+K-1-j}  \left[ \frac{\xi_{j+1}^m(t - t_m) + \xi_{j+1}^{m-1} (t_{m+K-1}-t)  }{t_{m+K-1} - t_m} \right]  X^{K-j-1}_m(t)
+\end{align}
+So we just expressed the value of $x^{(j)}(t)$ as a sum of lower order splines (one order less).
+
 \end{document}  
