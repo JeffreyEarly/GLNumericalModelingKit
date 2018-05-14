@@ -1,0 +1,59 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for rotated page geometry
+\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+\usepackage{amsmath}
+
+%SetFonts
+
+%SetFonts
+
+
+\title{Notes on implementing b-splines}
+\author{Jeffrey J. Early}
+%\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+%\section{}
+%\subsection{}
+
+This is an attempt to clean-up the notation in Carl de Boor's b-spline notes,
+The $m$-th B-spline of order $K=1$ is defined as,
+\begin{equation}
+X^1_m(t) \equiv \begin{cases}
+1      & \text{if $ \tau_m \leq t < \tau_{m+1}$}, \\
+0     & \text{otherwise}.
+\end{cases}
+\end{equation}
+
+All higher order B-splines are defined by recursion,
+\begin{equation}
+X^K_m(t) \equiv \frac{t - t_m}{t_{m+K-1} - t_m} X^{K-1}_m(t) + \frac{t_{m+K}-t}{t_{m+K} - t_{m+1}} X^{K-1}_{m+1}(t).
+\end{equation}
+and a path is represented as $x(t) \equiv  X^K_m(t) \xi^m$ where $\xi^m$ are the coefficients.
+
+The $j$-th derivative of this path is,
+\begin{equation}
+\left(\frac{d}{dt}\right)^j \left(X^K_m(t) \xi^m\right) = \xi_{j+1}^m X^{K-j}_m(t)
+\end{equation}
+where 
+\begin{equation}
+\xi_{j+1}^m \equiv \begin{cases}
+\xi^m      & \text{for $j=0$}, \\
+\frac{\xi_j^m - \xi_j^{m-1}}{ (t_{m+K-j} - t_m)/(K-j) }    & \text{otherwise}.
+\end{cases}
+\end{equation}
+So you compute the coefficients of the higher order derivatives, by differencing the coefficients.
+
+So, de Boor's algorithm is the following sum over $K-j$ non-zero splines for position $t$,
+\begin{align}
+x^{(j)}(t) =& \sum_{m=1}^{K-j} \xi_{j+1}^m X^{K-j}_m(t) \\
+=&  \sum_{m=1}^{K-j} \xi_{j+1}^m \left[ \frac{t - t_m}{t_{m+K-1} - t_m} X^{K-j-1}_m(t) + \frac{t_{m+K}-t}{t_{m+K} - t_{m+1}} X^{K-j-1}_{m+1}(t) \right] \\
+=& \sum_{m=1}^{K-j} \xi_{j+1}^m \left[ \frac{t - t_m}{t_{m+K-1} - t_m} X^{K-j-1}_m(t) \right] +  \sum_{m=0}^{K-j-1} \xi_{j+1}^{m-1} \left[ \frac{t_{m+K-1}-t}{t_{m+K-1} - t_{m}} X^{K-j-1}_{m}(t) \right] 
+\end{align}
+\end{document}  
