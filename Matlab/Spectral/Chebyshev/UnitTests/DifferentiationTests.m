@@ -13,11 +13,24 @@ f_cheb = fct(f(xLobatto));
 fx_cheb = DifferentiateChebyshevVector(f_cheb);
 
 F_x = ifct(fx_cheb);
-figure, plot(xLobatto,F_x), hold on
+Dx = ChebyshevInterpolationDerivative(n);
+
+figure
+subplot(3,1,1)
+plot(xLobatto,F_x), hold on
 scatter(xLobatto,f_x(xLobatto))
+title('fct,diff, ifct')
+subplot(3,1,2)
+plot(xLobatto,Dx*f(xLobatto)), hold on
+scatter(xLobatto,Dx*f(xLobatto))
+title('diff')
 
 fx_int_cheb = IntegrateChebyshevVector(fx_cheb);
 F = ifct(fx_int_cheb(1:n));
 
-figure, plot(xLobatto,F), hold on
+subplot(3,1,3)
+plot(xLobatto,F), hold on
 scatter(xLobatto,f(xLobatto)+2)
+title('int')
+
+
