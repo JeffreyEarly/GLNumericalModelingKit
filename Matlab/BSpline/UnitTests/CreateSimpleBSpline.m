@@ -1,9 +1,14 @@
-K = 3;
-t = (0:10)';
-t_knot = BSpline.NaturalKnotsForSpline(t,K);
+K = 4; % order of spline
+D = 1; % number of derivates to return
+t = (0:10)'; % observation points
+t_knot = BSpline.KnotPointsForPoints(t,K);
 
-tq = linspace(min(t),max(t),1000)';
+tq = linspace(min(t),max(t),10000)';
 
-B = BSpline.SplineParallel( tq, t_knot, K );
+B = BSpline.Spline( tq, t_knot, K, D );
 
-figure, plot(tq,B)
+figure
+for iPlot = 1:size(B,3)
+   subplot(size(B,3),1,iPlot)
+   plot(tq,squeeze(B(:,:,iPlot)))
+end

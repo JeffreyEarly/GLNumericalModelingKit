@@ -88,15 +88,20 @@ classdef BSpline
            end
         end
         
-        function [t_knot] = NaturalKnotsForSpline( t, K, DF )
-            %% NaturalKnotsForSpline
+        function t_knot = KnotPointsForPoints( t, K, DF )
+            %% KnotPointsForPoints
             %
-            % Returns the natural knot points for splines of order K. It defaults to 1
-            % degree of freedom, but you can override this by setting DF to some
-            % nonnegative integer value.
+            % Returns the natural knot points for splines of order K for
+            % observations at time points t. These knot points are place so
+            % that each spline has exactly enough support for a fully
+            % constrained system.
+            %
+            % It defaults to 1 degree of freedom, but you can override this
+            % by setting DF to some nonnegative integer value.
             %
             % This matches the definitions in interpolation with tension
-            % splines paper
+            % splines paper.
+            
             if nargin < 3
                 DF = 1;
             end
@@ -138,26 +143,25 @@ classdef BSpline
             t_knot = [repmat(t_knot(1),K-1,1); t_knot; repmat(t_knot(end),K-1,1)];
         end
         
-        function B = Spline( t, t_knot, K, Kout )
-            %% BSpline
+        function B = Spline( t, t_knot, K, D )
+            %% Spline
             %
             % Returns the basis splines of order K evaluated at point t,
-            % given knot points t_knot. If you optionally provide Kout,
-            % only the Kout derivatives will be returned.
+            % given knot points t_knot. If you optionally provide D,
+            % then D derivatives will be returned.
+            %
+            % size(B) = [length(t) M D] where M=length(t_knot)-K is the
+            % number of splines
             
             if any(diff(t_knot)<0)
-                error('t_knot must be non-decreasing');
+                error('t_knot must be non-decreasing.');
             end
             
             if nargin < 4
-              Kout = 1;  
-            elseif Kout > K
-                Kout = K;
+                D = 0;
+            elseif D > K-1
+                D = K-1;
             end
-            
-            S = K-1;
-
-            t_knot2 = t_knot + [diff(t_knot); 0];
             
             % numer of knots
             M = length(t_knot);
@@ -170,217 +174,85 @@ classdef BSpline
             % number of collocation points
             N = length(t);
             
-            % Rows are the N collocation points
-            % Columns are the M splines
-            B = zeros(N,N_splines,K); % This will contain all splines and their derivatives
-            XB = zeros(N,N_splines,Kout); % This will contain all splines through order K
-            for t_i=1:N % loop through all N collocation points
-                i = find( t_knot <= t(t_i) & t(t_i) < t_knot2, 1, 'last' );
-                if isempty(i)
-                    if t(t_i) < t_knot(1)
-                        %             i = find( t_knot == t_knot(1), 1, 'last');
-                        continue; %This continue means we don't need to set b(1) = 0; or check indices on the delta_r line
-                    elseif t(t_i) == t_knot(end)
-                        i = find( t_knot < t(t_i), 1, 'last');
-                    else
-                        %             i = find( t_knot < t_knot(end), 1, 'last');
-                        continue; %b(1) = 0;
-                    end
-                end
-                
-                delta_r = zeros(K,1);
-                delta_l = zeros(K,1);
-                
-                XB(t_i,i,1) = 1;
-                
-                b = zeros(K,1); b(1) = 1;
-                for j=1:(K-1) % loop through splines of increasing order
-                    delta_r(j) = t_knot(i+j) - t(t_i);
-                    delta_l(j) = t(t_i) - t_knot(i+1-j);
-                    
-                    saved = 0;
-                    for r=1:j % loop through the nonzero splines
-                        term = b(r)/(delta_r(r) + delta_l(j+1-r));
-                        b(r) = saved + delta_r(r)*term;
-                        saved = delta_l(j+1-r)*term;
-                    end
-                    b(j+1) = saved;
-                    
-                    indices = max(1,i-j):i;
-                    XB(t_i,indices,j+1) = b(1:length(indices));
-                end
-                
-                indices = max(1,i-K+1):i;
-                B(t_i,indices,1) = b(1:length(indices));
-                
-            end
-            
-            diff_coeff = @(a,r,m) (K-m)*(a(2)-a(1))/(t_knot(r+K-m) - t_knot(r));
-            
-            for r=1:N_splines
-                % alpha mimics equation X.16 in deBoor's PGS, but localized to avoid
-                % the zero elements.
-                alpha = zeros(S+2,S+2); % row is the coefficient, column is the derivative (1=0 derivatives)
-                alpha(2,1) = 1;
-                for m=1:(Kout-1) % loop over derivatives
-                    for i=1:(m+1) % loop over coefficients
-                        a = alpha(:,m);
-                        alpha(i+1,m+1) = diff_coeff(a(i:end),r+i-1,m);
-                        if isinf(alpha(i+1,m+1)) || isnan(alpha(i+1,m+1))
-                            alpha(i+1,m+1) = 0;
-                        end
-                        if r+i-1>N_splines
-                            B0 = zeros(N,1);
-                        else
-                            B0 = XB(:,r+i-1,K-m);
-                        end
-                        B(:,r,m+1) = B(:,r,m+1) + alpha(i+1,m+1)*B0;
-                    end
-                end
-            end
-            
-            B = B(:,:,1:Kout);
-        end
-        
-        function B = SplineParallel( t, t_knot, K, Kout )
-            %% BSpline
-            %
-            % Returns the basis splines of order K evaluated at point t,
-            % given knot points t_knot. If you optionally provide Kout,
-            % only the Kout derivatives will be returned.
-            
-            if any(diff(t_knot)<0)
-                error('t_knot must be non-decreasing');
-            end
-            
-            if nargin < 4
-              Kout = 1;  
-            elseif Kout > K
-                Kout = K;
-            end
-            
-            S = K-1;
-
-            t_knot2 = t_knot + [diff(t_knot); 0];
-            
-            % numer of knots
-            M = length(t_knot);
-            
-            % This is true assuming the original t_knot was strictly monotonically
-            % increasing (no repeat knots) and we added repeat knots at the beginning
-            % and end of the sequences.
-            N_splines = M - K;
-            
-            % number of collocation points
-            N = length(t);
-            
-            % Rows are the N collocation points
-            % Columns are the M splines
-            B = zeros(N,N_splines,K); % This will contain all splines and their derivatives
-            XB = zeros(N,N_splines,Kout); % This will contain all splines through order K
-            bins_manual = nan(N,1);
-            for t_i=1:N % loop through all N collocation points
-                i = find( t_knot <= t(t_i) & t(t_i) < t_knot2, 1, 'last' );
-                
-                if isempty(i)
-                    if t(t_i) < t_knot(1)
-                        %             i = find( t_knot == t_knot(1), 1, 'last');
-                        continue; %This continue means we don't need to set b(1) = 0; or check indices on the delta_r line
-                    elseif t(t_i) == t_knot(end)
-                        i = find( t_knot < t(t_i), 1, 'last');
-                    else
-                        %             i = find( t_knot < t_knot(end), 1, 'last');
-                        continue; %b(1) = 0;
-                    end
-                end
-                bins_manual(t_i) = i;
-                
-                delta_r = zeros(K,1);
-                delta_l = zeros(K,1);
-                
-                XB(t_i,i,1) = 1;
-                
-                b = zeros(K,1); b(1) = 1;
-                for j=1:(K-1) % loop through splines of increasing order
-                    delta_r(j) = t_knot(i+j) - t(t_i);
-                    delta_l(j) = t(t_i) - t_knot(i+1-j);
-                    
-                    saved = 0;
-                    for r=1:j % loop through the nonzero splines
-                        term = b(r)/(delta_r(r) + delta_l(j+1-r));
-                        b(r) = saved + delta_r(r)*term;
-                        saved = delta_l(j+1-r)*term;
-                    end
-                    b(j+1) = saved;
-                    
-                    indices = max(1,i-j):i;
-                    XB(t_i,indices,j+1) = b(1:length(indices));
-                end
-                
-                indices = max(1,i-K+1):i;
-                B(t_i,indices,1) = b(1:length(indices));
-                
-            end
-            
-            B = zeros(N,N_splines,K); % This will contain all splines and their derivatives
-            XB = zeros(N,N_splines,Kout); % This will contain all splines through order K
-            knot_indices = discretize(t,t_knot(1:(M-K+1)));
+            % 1st index is the N collocation points
+            % 2nd index is the the M splines
+            B = zeros(N,N_splines,D+1); % This will contain all splines and their derivatives
             delta_r = zeros(N,K);
             delta_l = zeros(N,K);
+            knot_indices = discretize(t,t_knot(1:(M-K+1)));
             
-            XB(:,knot_indices,1) = 1;
+            % XB will contain all splines from (K-D) through order (K-1).
+            % These are needed to compute the derivatives of the spline, if
+            % requested by the user.
+            %
+            % The indexing is such that the spline of order m, is located
+            % at index m-(K-D)+1
+            if D > 0
+                XB = zeros(N,N_splines,D);
+                if D + 1 == K % if we go tho the max derivative, we need to manually create the 0th order spline.
+                    to_indices = ((1:N)' + size(XB,1)*( (knot_indices-1) + size(XB,2)*(1-1)));
+                    XB(to_indices) = 1;
+                end
+            end
+            
             b = zeros(N,K);
             b(:,1) = 1;
-            for j=1:(K-1) % loop through splines of increasing order
+            for j=1:(K-1) % loop through splines of increasing order: j+1
                 delta_r(:,j) = t_knot(knot_indices+j) - t;
                 delta_l(:,j) = t - t_knot(knot_indices+1-j);
                 
                 saved = zeros(N,1);
                 for r=1:j % loop through the nonzero splines
-                   term = b(:,r)./(delta_r(:,r)+delta_l(:,j+1-r));
-                   b(:,r) = saved + delta_r(:,r).*term;
-                   saved = delta_l(:,j+1-r).*term;
+                    term = b(:,r)./(delta_r(:,r)+delta_l(:,j+1-r));
+                    b(:,r) = saved + delta_r(:,r).*term;
+                    saved = delta_l(:,j+1-r).*term;
                 end
                 b(:,j+1) = saved;
                 
-                % save this info for later use in computing the derivatives
+                % Save this info for later use in computing the derivatives
                 % have to loop through one index.
-                for r = 1:(j+1)
-                    indices = knot_indices-(r-1);
-                    XB(:,indices,j+1) = b(:,r);
-                end
-            end
-            
-            for r = 1:(j+1)
-                indices = knot_indices-(r-1);
-                B(:,indices,1) = b(:,r);
-            end
-            
-            diff_coeff = @(a,r,m) (K-m)*(a(2)-a(1))/(t_knot(r+K-m) - t_knot(r));
-            
-            for r=1:N_splines
-                % alpha mimics equation X.16 in deBoor's PGS, but localized to avoid
-                % the zero elements.
-                alpha = zeros(S+2,S+2); % row is the coefficient, column is the derivative (1=0 derivatives)
-                alpha(2,1) = 1;
-                for m=1:(Kout-1) % loop over derivatives
-                    for i=1:(m+1) % loop over coefficients
-                        a = alpha(:,m);
-                        alpha(i+1,m+1) = diff_coeff(a(i:end),r+i-1,m);
-                        if isinf(alpha(i+1,m+1)) || isnan(alpha(i+1,m+1))
-                            alpha(i+1,m+1) = 0;
-                        end
-                        if r+i-1>N_splines
-                            B0 = zeros(N,1);
-                        else
-                            B0 = XB(:,r+i-1,K-m);
-                        end
-                        B(:,r,m+1) = B(:,r,m+1) + alpha(i+1,m+1)*B0;
+                if j+1 >= K-D && j+1 <= K-1 % if K-j == 1, we're at the end, j+1 is the spline order, which goes into slot j+1-(K-1-D). Thus, if j+1=K, and D=1, this goes in slot 2
+                    for r = 1:(j+1)
+                        % (i,j,k) = (1,knot_indices-j+(r-1),j+1) --- converted to linear indices
+                        to_indices = ((1:N)' + size(XB,1)*( (knot_indices-j+(r-1)-1) + size(XB,2)*(j+1-(K-1-D)-1)));
+                        from_indices = (1:N)' + size(b,1) * (r-1);
+                        XB(to_indices) = b(from_indices);
                     end
                 end
             end
             
-            B = B(:,:,1:Kout);
+            for r = 1:K
+                to_indices = ((1:N)' + size(B,1) * ( (knot_indices-(K-1) + (r-1)-1) + size(B,2)*(1-1) ));
+                from_indices = (1:N)' + size(b,1) * (r-1);
+                B(to_indices) = b(from_indices);
+            end
+            
+            diff_coeff = @(a,r,m) (K-m)*(a(2)-a(1))/(t_knot(r+K-m) - t_knot(r));
+            
+            if D > 0
+                for r=1:N_splines
+                    % alpha mimics equation X.16 in deBoor's PGS, but localized to avoid
+                    % the zero elements.
+                    alpha = zeros(K+1,K+1); % row is the coefficient, column is the derivative (1=0 derivatives)
+                    alpha(2,1) = 1;
+                    for m=1:D % loop over derivatives
+                        for i=1:(m+1) % loop over coefficients
+                            a = alpha(:,m);
+                            alpha(i+1,m+1) = diff_coeff(a(i:end),r+i-1,m);
+                            if isinf(alpha(i+1,m+1)) || isnan(alpha(i+1,m+1))
+                                alpha(i+1,m+1) = 0;
+                            end
+                            if r+i-1>N_splines
+                                B0 = zeros(N,1);
+                            else
+                                B0 = XB(:,r+i-1,D+1-m); % want the K-m order spline, in position D+1-m
+                            end
+                            B(:,r,m+1) = B(:,r,m+1) + alpha(i+1,m+1)*B0;
+                        end
+                    end
+                end
+            end
+            
         end
         
     end
