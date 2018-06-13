@@ -2,11 +2,72 @@ classdef BSpline
     %BSPLINE Summary of this class goes here
     %   Detailed explanation goes here
     
-    properties
-        Property1
+    properties (Access = public)
+        K       % order of polynomial
+        
+        m       % spline coefficients
+        t_knot  % spline knot points
+        
+        C       % piecewise polynomial coefficients
+        t_pp    % pp break points
     end
     
     methods
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Initialization
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        function self = BSpline(t,f,varargin)
+            nargs = length(varargin);
+            
+            if nargs == 0
+                self.K = 4;
+            elseif nargs >= 1
+                self.K = varargin{1};
+            end
+            
+            self.t_knot = BSpline.KnotPointsForPoints(t,self.K);
+            B = BSpline.Spline( t, self.t_knot, self.K, 0 );
+            self.m = B\f;
+            [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
+            
+        end
+        
+        function varargout = subsref(self, index)
+            %% Subscript overload
+            %
+            % The forces subscript notation to behave as if it is
+            % evaluating a function.
+            idx = index(1).subs;
+            switch index(1).type
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% FEVAL / COMPOSE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                case '()'
+                    if length(idx) >= 1
+                        t = idx{1};
+                    end
+                    
+                    if length(idx) >= 2
+                        D = idx{2};
+                    else
+                        D = 0;
+                    end
+                    
+                    varargout{1} = BSpline.EvaluateFromPPCoefficients(t,self.C,self.t_pp,D);
+                    
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GET %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                case '.'       
+                    [varargout{1:nargout}] = builtin('subsref',self,index);
+                    
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RESTRICT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                case '{}'           
+                    error('The BSpline class does not know what to do with {}.');
+                otherwise
+                    error('Unexpected syntax');
+            end
+            
+        end
+        
         function obj = untitled2(inputArg1,inputArg2)
             %UNTITLED2 Construct an instance of this class
             %   Detailed explanation goes here
@@ -22,71 +83,6 @@ classdef BSpline
     
     
     methods (Static)
-
-        function x = EvaluateSplineAtPoints(t, m, t_knot, K, j)
-           %% Evaluate the spline at given points
-           %
-           % Returns the value x at points t for a spline of order K with
-           % coefficient m. The knot points for the spline are t_knot. This
-           % will return the j-th derivative (which can be zero).
-           %
-           % This is the function bvalue.f from PGS.
-           % http://pages.cs.wisc.edu/~deboor/pgs/bvalue.f
-           
-           if j>K
-               error('The derivative requested is higher than the spline order');
-           end
-           
-           if issorted(t,'descend')
-               t = flip(t);
-               didFlip = 1;
-           elseif issorted(t,'ascend')
-               didFlip = 0;
-           else
-               error('The requested points are not sorted in ascending order');
-           end
-           
-           % number of collocation points
-           N = length(t);
-           M = length(t_knot);
-           N_splines = M - K;
-           iSpline = discretize(t_knot(K:(N-K+1)));
-           x = zeros(size(t));
-           indices = iSpline(~isnan(iSpline));
-           
-           
-           delta_r = zeros(N,K);
-           delta_l = zeros(N,K);
-           b = zeros(N,K); b(:,1) = 1;
-           
-           for j=1:(K-1) % loop through splines of increasing order
-               delta_r(indices,j) = t_knot(indices+j) - t(indices);
-               delta_l(indices,j) = t(indices) - t_knot(indices+1-j);
-               
-               saved = zeros(N,1);
-               for r=1:j % loop through the nonzero splines
-                   term = b(indices,r)/(delta_r(indices,r) + delta_l(indices,j+1-r));
-                   b(indices,r) = saved + delta_r(indices,r)*term;
-                   saved = delta_l(indices,j+1-r)*term;
-               end
-               b(indices,j+1) = saved;
-               
-               indices = max(1,i-j):i;
-               XB(t_i,indices,j+1) = b(1:length(indices));
-           end
-           
-           for m = (j+1):(K-1) % coefficient loop
-               ilo = K-j;
-               for jj=1:(K-j)
-                  A(jj) = (A(jj+1)*delta_l(ilo) + A(jj)*delta_r(jj))/(delta_l(ilo)+delta_r(jj));
-                  ilo = ilo - 1;
-               end
-           end
-           
-           if didFlip == 1
-               x = flip(x);
-           end
-        end
         
         function t_knot = KnotPointsForPoints( t, K, DF )
             %% KnotPointsForPoints
@@ -141,6 +137,82 @@ classdef BSpline
             % the end of the interval so that the splines do not extend past the end
             % points.
             t_knot = [repmat(t_knot(1),K-1,1); t_knot; repmat(t_knot(end),K-1,1)];
+        end
+        
+        function [C,t_pp] = PPCoefficientsFromSplineCoefficients( m, t_knot, K )
+            %% PPCoefficientsFromSplineCoefficients
+            % Returns the piecewise polynomial coefficients in matrix C
+            % from spline coefficients in vector m.
+            %
+            % size(t_pp) = length(t_knot) - 2*K + 1
+            % size(C) = [length(t_pp)-1, K]
+            
+            Nk = length(t_knot);
+            t_pp = t_knot(K:(Nk-K));
+            B = BSpline.Spline( t_pp, t_knot, K, K-1 );
+            
+            % Build an array of coefficients for polyval, highest order first.
+            C = zeros(length(t_pp),K);
+            for i=1:K
+                C(:,K-i+1) = B(:,:,i)*m;
+            end
+            
+            t_pp = t_knot(K:(Nk-K+1));
+        end
+        
+        function f = EvaluateFromPPCoefficients(t,C,t_pp, D)
+            %% EvaluateFromPPCoefficients
+            %
+            % Returns the value of the function with derivative D
+            % represented by PP coefficients C at locations t. t_pp
+            % contains the intervals.
+            %
+            % The returned array f is the same size as t.
+            %
+            %
+            if issorted(t,'ascend')
+                didFlip = 0;
+            elseif issorted(t,'descend')
+                t = flip(t);
+                didFlip = 1;
+            else
+                error('Not sorted')
+                [t,I] = sort(t);
+                d = 1:length(t);
+                returnIndices = d(I);
+                didFlip = 2;
+            end
+            
+            K = size(C,2);
+            f = zeros(size(t));
+            
+            if nargin < 4
+                D = 0;
+            elseif D > K-1
+                % By construction the splines are zero for K or more derivs
+                return;
+            end
+            
+            scale = factorial((K-1-D):-1:0);
+            indices = 1:(K-D);
+            
+            startIndex = 1;
+            for i=2:length(t_pp)
+                endIndex = find(t <= t_pp(i),1,'last');
+                f(startIndex:endIndex) = polyval(C(i-1,indices)./scale,t(startIndex:endIndex)-t_pp(i-1));
+                startIndex = endIndex+1;
+            end
+            
+            % include an extrapolated points past the end.
+            f(startIndex:end) = polyval(C(i-1,indices)./scale,t(startIndex:end)-t_pp(i-1));
+            
+            if didFlip == 0
+                return;
+            elseif didFlip == 1
+                f = flip(f);
+            else
+                f = f(returnIndices);
+            end
         end
         
         function B = Spline( t, t_knot, K, D )
@@ -257,4 +329,5 @@ classdef BSpline
         
     end
 end
+
 

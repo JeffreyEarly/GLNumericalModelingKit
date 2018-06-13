@@ -1,5 +1,5 @@
-K = 4; % order of spline
-D = 1; % number of derivates to return
+K = 3; % order of spline
+D = K-1; % number of derivates to return
 t = (0:10)'; % observation points
 t_knot = BSpline.KnotPointsForPoints(t,K);
 
