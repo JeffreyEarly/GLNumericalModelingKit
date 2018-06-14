@@ -21,15 +21,25 @@ classdef BSpline
         function self = BSpline(t,f,varargin)
             nargs = length(varargin);
             
-            if nargs == 0
-                self.K = 4;
-            elseif nargs >= 1
+            if nargs >= 1
                 self.K = varargin{1};
+            else
+                self.K = 4;
             end
             
-            self.t_knot = BSpline.KnotPointsForPoints(t,self.K);
-            B = BSpline.Spline( t, self.t_knot, self.K, 0 );
-            self.m = B\f;
+            if nargs >= 2
+                self.t_knot = varargin{2};
+            else
+                self.t_knot = BSpline.KnotPointsForPoints(t,self.K);
+            end 
+            
+            if nargs >= 3
+                self.m = varargin{3};
+            else
+                B = BSpline.Spline( t, self.t_knot, self.K, 0 );
+                self.m = B\f;
+            end 
+            
             [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
             
         end
@@ -68,17 +78,6 @@ classdef BSpline
             
         end
         
-        function obj = untitled2(inputArg1,inputArg2)
-            %UNTITLED2 Construct an instance of this class
-            %   Detailed explanation goes here
-            obj.Property1 = inputArg1 + inputArg2;
-        end
-        
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
-        end
     end
     
     
@@ -106,6 +105,8 @@ classdef BSpline
                 disp('DF must be a non-negative integer');
                 return;
             end
+            
+            t = sort(t);
             
             t = [t(1); t(1+DF:DF:end-DF); t(end)];
             
@@ -137,6 +138,22 @@ classdef BSpline
             % the end of the interval so that the splines do not extend past the end
             % points.
             t_knot = [repmat(t_knot(1),K-1,1); t_knot; repmat(t_knot(end),K-1,1)];
+        end
+        
+        function t_knot = KnotPointsForSplines( t, K, N_splines )
+            %% KnotPointsForSplines
+            %
+            % Creates knot points for the data such that there will be
+            % N_splines, each of which have approximately the same number
+            % of observation points in support.
+            %
+            % Very crude, quick way of doing this.
+            
+            if N_splines < K
+                N_splines = K;
+            end
+            
+            t_knot = BSpline.KnotPointsForPoints(t, K, ceil(length(t)/N_splines));
         end
         
         function [C,t_pp] = PPCoefficientsFromSplineCoefficients( m, t_knot, K )
