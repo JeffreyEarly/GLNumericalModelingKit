@@ -64,8 +64,8 @@ for iPlot = 1:D
     plot(tq,f_spline(tq,iPlot))
 end
 
-% profile on
-% for i=1:10000
-%     f = BSpline.EvaluateFromPPCoefficients(tq,C,t_pp);
-% end
-% profile viewer
+profile on
+for i=1:10000
+    f = BSpline.EvaluateFromPPCoefficients(tq,C,t_pp);
+end
+profile viewer

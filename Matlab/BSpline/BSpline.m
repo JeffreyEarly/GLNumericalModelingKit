@@ -213,15 +213,30 @@ classdef BSpline
             scale = factorial((K-1-D):-1:0);
             indices = 1:(K-D);
             
+            % startIndex and endIndex are indices into t/f
+%             startIndex = 1;
+%             for i=2:length(t_pp)
+%                 endIndex = find(t <= t_pp(i),1,'last');
+%                 f(startIndex:endIndex) = polyval(C(i-1,indices)./scale,t(startIndex:endIndex)-t_pp(i-1));
+%                 startIndex = endIndex+1;
+%             end
+%             f(startIndex:end) = polyval(C(i-1,indices)./scale,t(startIndex:end)-t_pp(i-1));
+            
+% The above implementation is faster, but doesn't actually work in some
+% cases, like evaluating a single point. The discretize function is slow.
+            t_pp_bin = discretize(t,[-Inf; t_pp(2:end-1); Inf]);
             startIndex = 1;
-            for i=2:length(t_pp)
-                endIndex = find(t <= t_pp(i),1,'last');
-                f(startIndex:endIndex) = polyval(C(i-1,indices)./scale,t(startIndex:endIndex)-t_pp(i-1));
+            while startIndex <= length(t)
+                iBin = t_pp_bin(startIndex);
+                endIndex = find( t_pp_bin == iBin, 1, 'last');
+                f(startIndex:endIndex) = polyval(C(iBin,indices)./scale,t(startIndex:endIndex)-t_pp(iBin));
                 startIndex = endIndex+1;
             end
             
             % include an extrapolated points past the end.
-            f(startIndex:end) = polyval(C(i-1,indices)./scale,t(startIndex:end)-t_pp(i-1));
+            if startIndex <= length(t)
+                f(startIndex:end) = polyval(C(iBin,indices)./scale,t(startIndex:end)-t_pp(iBin));
+            end
             
             if didFlip == 0
                 return;
