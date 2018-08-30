@@ -1,6 +1,27 @@
 classdef BSpline
     %BSPLINE Summary of this class goes here
-    %   Detailed explanation goes here
+    %   2 argument initialization
+    %       f = BSpline(t,y);
+    %   where
+    %       t       array of values for the independent axis
+    %       y       array of values for the dependent axis 
+    %       f       cubic spline interpolant
+    % 
+    %   3 argument initialization
+    %       f = BSpline(t,y,K);
+    %   where
+    %       K       order of the spline
+    %
+    %   4 argument initialization
+    %       f = BSpline(t,y,K,t_knot);
+    %   where
+    %       t_knot       knot points
+    %
+    %   5 argument initialization
+    %       f = BSpline(t,y,K,t_knot,m);
+    %   where
+    %       m            coefficients for the splines
+    
     
     properties (Access = public)
         K       % order of polynomial
