@@ -32,6 +32,8 @@ classdef BSpline
         
         t_pp    % pp break points. size(t_pp) = length(t_knot) - 2*K + 1
         C       % piecewise polynomial coefficients. size(C) = [length(t_pp)-1, K]
+        
+
     end
     
     methods
@@ -82,6 +84,7 @@ classdef BSpline
             for i=1:self.D
                 [self.C(:,:,i),self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m(:,i), self.t_knot, self.K );
             end
+            
         end
         
         function varargout = subsref(self, index)

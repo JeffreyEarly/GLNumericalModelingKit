@@ -3,9 +3,18 @@ classdef TensionSpline < BSpline
     %   Detailed explanation goes here
     
     properties
+        T           % degree at which tension is applied
         lambda      % tension parameter
         mu          % mean value of tension
         w           % weight function
+        Cm          % error in coefficients, MxMxD
+        
+        X
+        V
+        
+        x
+        t
+        sigma
     end
     
     methods
@@ -41,6 +50,8 @@ classdef TensionSpline < BSpline
                     K = varargin{k+1};
                 elseif strcmp(varargin{k}, 'S')
                     K = varargin{k+1}+1;
+                elseif strcmp(varargin{k}, 'T')
+                    T = varargin{k+1};
                 elseif strcmp(varargin{k}, 'sigma')
                     sigma = varargin{k+1};
                 elseif strcmp(varargin{k}, 'mu')
@@ -64,26 +75,62 @@ classdef TensionSpline < BSpline
             % Now compute the coefficients
             M = size(X,2);
             m = zeros(M,D);
+            Cm = zeros(M,M,D);
             for i=1:D
                 if didSetWeightFunction == 1
-                    m(:,i) = TensionSpline.TensionSolution(X,V,sigma,lambda,x(:,i),mu,w);
+                    [m(:,i),Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x(:,i),mu,w);
                 else
-                    m(:,i) = TensionSpline.TensionSolution(X,V,sigma,lambda,x(:,i),mu);
+                    [m(:,i),Cm(:,:,i)] = TensionSpline.TensionSolution(X,V,sigma,lambda,x(:,i),mu);
                 end
             end
             
             self@BSpline(t,x,K,t_knot,m);
             self.lambda = lambda;
             self.mu = mu;
+            self.T = T;
+            self.Cm = Cm;
+            self.X = X;
+            self.V = V;
+            self.t = t;
+            self.x = x;
+            self.sigma = sigma;
             if didSetWeightFunction == 1
                 self.w = w;
+            end
+            
+        end
+        
+        function B = Splines(self,t,varargin)
+            % return the splines being used (evaluated at points t)
+            if isempty(varargin) || (length(varargin) == 1 && varargin{1} == 0)
+                B = BSpline.Spline( t, self.t_knot, self.K, 0 );
+            else
+                B = BSpline.Spline( t, self.t_knot, self.K, varargin{1} );
+                B = B(:,:,varargin{1});
+            end
+        end
+        
+        function self = set.lambda(self,newlambda)
+            if self.lambda ~= newlambda
+                self.lambda = newlambda;
+                self.tensionParameterDidChange();
+            end
+        end
+        
+        function self.tensionParameterDidChange(self)
+            for i=1:self.D
+                if ~isempty(self.w)
+                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu,self.w);
+                else
+                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu);
+                end
             end
         end
         
     end
     
     methods (Static)
-        function m = TensionSolution(X,V,sigma,lambda,x,mu)
+        function [m, Cm] = TensionSolution(X,V,sigma,lambda,x,mu)
             % N     # of observations
             % M     # of splines
             % Q     # of points in quadrature grid
@@ -98,6 +145,7 @@ classdef TensionSpline < BSpline
             %
             % output:
             % m         coefficients of the splines, Mx1
+            % Cm        covariance of coefficients, MxM
             N = length(x);
             Q = size(V,1);
             
@@ -123,16 +171,20 @@ classdef TensionSpline < BSpline
             
             % Now s
             m = E_x\B;
+            
+            if nargout == 2
+                Cm = inv(E_x);
+            end
         end
         
-        function m = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w)
+        function [m,Cm] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w)
             if length(sigma) == 1
                 sigma = ones(size(x))*sigma;
             end
             Wx = diag(1./(sigma.^2));
             m = TensionSpline.TensionSolution(X,V,Wx,lambda,x,mu);
             
-            error_x_previous = sigma;
+            error_x_previous = sigma*sigma;
             rel_error = 1.0;
             repeats = 1;
             while (rel_error > 0.01)
@@ -150,6 +202,11 @@ classdef TensionSpline < BSpline
                     disp('Failed to converge after 100 iterations.');
                     break;
                 end
+            end
+            
+            
+            if nargout == 2
+                Cm = inv(X'*Wx*X + (lambda*N/Q)*(V'*V));
             end
         end
     end
