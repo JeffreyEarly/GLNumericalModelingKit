@@ -1,36 +1,37 @@
 classdef BSpline
     %BSPLINE Summary of this class goes here
     %   2 argument initialization
-    %       f = BSpline(t,y);
+    %       f = BSpline(t,x);
     %   where
     %       t       array of values for the independent axis
-    %       y       array of values for the dependent axis 
+    %       x       array of values for the dependent axis 
     %       f       cubic spline interpolant
     % 
     %   3 argument initialization
-    %       f = BSpline(t,y,K);
+    %       f = BSpline(t,x,K);
     %   where
     %       K       order of the spline
     %
     %   4 argument initialization
-    %       f = BSpline(t,y,K,t_knot);
+    %       f = BSpline(t,x,K,t_knot);
     %   where
     %       t_knot       knot points
     %
     %   5 argument initialization
-    %       f = BSpline(t,y,K,t_knot,m);
+    %       f = BSpline(t,x,K,t_knot,m);
     %   where
     %       m            coefficients for the splines
     
     
     properties (Access = public)
         K       % order of polynomial
+        D       % number of dimensions
         
-        m       % spline coefficients
+        m       % spline coefficients (MxD)
         t_knot  % spline knot points
         
-        C       % piecewise polynomial coefficients
-        t_pp    % pp break points
+        t_pp    % pp break points. size(t_pp) = length(t_knot) - 2*K + 1
+        C       % piecewise polynomial coefficients. size(C) = [length(t_pp)-1, K]
     end
     
     methods
@@ -39,7 +40,18 @@ classdef BSpline
         % Initialization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function self = BSpline(t,f,varargin)
+        function self = BSpline(t,x,varargin)
+            t = reshape(t,[],1);
+            N = length(t);
+            
+            if size(x,2) == N
+                x = x.';
+            end
+            if size(x,1) ~= N
+                error('x and t must have the same length.');
+            end
+            self.D = size(x,2);
+            
             nargs = length(varargin);
             
             if nargs >= 1
@@ -57,12 +69,19 @@ classdef BSpline
             if nargs >= 3
                 self.m = varargin{3};
             else
-                B = BSpline.Spline( t, self.t_knot, self.K, 0 );
-                self.m = B\f;
+                X = BSpline.Spline( t, self.t_knot, self.K, 0 );
+                M = size(X,2);
+                self.m = zeros(M,self.D);
+                
+                for i=1:self.D
+                    self.m(:,i) = X\x(:,i);
+                end
             end 
-            
-            [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
-            
+            PP = length(self.t_knot) - 2*self.K + 1;
+            self.C = zeros(PP,self.K,self.D);
+            for i=1:self.D
+                [self.C(:,:,i),self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m(:,i), self.t_knot, self.K );
+            end
         end
         
         function varargout = subsref(self, index)
@@ -79,12 +98,16 @@ classdef BSpline
                     end
                     
                     if length(idx) >= 2
-                        D = idx{2};
+                        NumDerivatives = idx{2};
                     else
-                        D = 0;
+                        NumDerivatives = 0;
                     end
                     
-                    varargout{1} = BSpline.EvaluateFromPPCoefficients(t,self.C,self.t_pp,D);
+                    x_out = zeros(length(t),self.D);
+                    for i=1:self.D
+                        x_out(:,i) = BSpline.EvaluateFromPPCoefficients(t,self.C(:,:,i),self.t_pp,NumDerivatives);
+                    end
+                    varargout{1} = x_out;
                     
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GET %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 case '.'       
