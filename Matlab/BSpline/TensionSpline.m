@@ -15,6 +15,7 @@ classdef TensionSpline < BSpline
         x
         t
         sigma
+        isIsotropic
     end
     
     methods
@@ -23,8 +24,8 @@ classdef TensionSpline < BSpline
         % Initialization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function self = TensionSpline(t,x,lambda,varargin)
-            N = length(t);      
+        function self = TensionSpline(t,x,sigma,varargin)
+            N = length(t);
             t = reshape(t,[],1); % Nx1
             if size(x,2) == N
                 x = x.';
@@ -41,9 +42,9 @@ classdef TensionSpline < BSpline
             
             K = 4; % default spline order (cubic spline)
             T = 2; % default tension *degree* (order-1)
-            sigma = 1; % default position error
             mu = 0;
             didSetWeightFunction = 0;
+            isIsotropic = 0;
             
             for k = 1:2:length(varargin)
                 if strcmp(varargin{k}, 'K')
@@ -52,14 +53,37 @@ classdef TensionSpline < BSpline
                     K = varargin{k+1}+1;
                 elseif strcmp(varargin{k}, 'T')
                     T = varargin{k+1};
-                elseif strcmp(varargin{k}, 'sigma')
-                    sigma = varargin{k+1};
+                elseif strcmp(varargin{k}, 'lambda')
+                    lambda = varargin{k+1};
                 elseif strcmp(varargin{k}, 'mu')
                     mu = varargin{k+1};
-                elseif strcmp(varargin{k}, 'weight_function')
+                elseif strcmp(varargin{k}, 'weightFunction')
                     w = varargin{k+1};
                     didSetWeightFunction = 1;
+                elseif strcmp(varargin{k}, 'isIsotropic')
+                    isIsotropic = varargin{k+1};
                 end
+            end
+            
+            shouldSetLambdaFromInitialDOF = 0;
+            shouldSetLambdaFromIteratedDOF = 0;
+            if ~exist('lambda','var')
+                shouldSetLambdaFromInitialDOF = 1;
+            elseif ischar(lambda)
+                if strcmp(lambda,'initial_dof')
+                    shouldSetLambdaFromInitialDOF = 1;
+                elseif strcmp(lambda,'iterated_dof')
+                    shouldSetLambdaFromInitialDOF = 1;
+                    shouldSetLambdaFromIteratedDOF = 1;
+                else
+                    error('Invalid choice for lambda. Lambda must be either a scalar (or vector if multidimensional) or the string values of initial_dof or iterated_dof. ');
+                end
+            elseif ~isscalar(lambda) && ~isvector(lambda)
+                error('Invalid choice for lambda. Lambda must be either a scalar (or vector if multidimensional) or the string values of initial_dof or iterated_dof. ');
+            end
+                
+            if shouldSetLambdaFromInitialDOF == 1
+               lambda = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic);
             end
             
             % Compute the spline values at the observation points
@@ -77,14 +101,21 @@ classdef TensionSpline < BSpline
             m = zeros(M,D);
             Cm = zeros(M,M,D);
             for i=1:D
-                if didSetWeightFunction == 1
-                    [m(:,i),Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x(:,i),mu,w);
+                if length(lambda) > 1
+                    lambda_i = lambda(D);
                 else
-                    [m(:,i),Cm(:,:,i)] = TensionSpline.TensionSolution(X,V,sigma,lambda,x(:,i),mu);
+                    lambda_i = lambda;
+                end
+                
+                if didSetWeightFunction == 1
+                    [m(:,i),Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda_i,x(:,i),mu,w);
+                else
+                    [m(:,i),Cm(:,:,i)] = TensionSpline.TensionSolution(X,V,sigma,lambda_i,x(:,i),mu);
                 end
             end
             
             self@BSpline(t,x,K,t_knot,m);
+            self.isIsotropic = isIsotropic;
             self.lambda = lambda;
             self.mu = mu;
             self.T = T;
@@ -99,6 +130,13 @@ classdef TensionSpline < BSpline
             end
             
         end
+   
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Stuff
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function B = Splines(self,t,varargin)
             % return the splines being used (evaluated at points t)
@@ -111,20 +149,68 @@ classdef TensionSpline < BSpline
         end
         
         function self = set.lambda(self,newlambda)
-            if self.lambda ~= newlambda
+            if isempty(self.lambda) 
+                self.lambda = newlambda;
+            elseif self.lambda ~= newlambda
                 self.lambda = newlambda;
                 self.tensionParameterDidChange();
             end
         end
         
-        function self.tensionParameterDidChange(self)
+        function self = tensionParameterDidChange(self)
             for i=1:self.D
                 if ~isempty(self.w)
                     [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu,self.w);
                 else
                     [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu);
                 end
+                [self.C(:,:,i),self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m(:,i), self.t_knot, self.K );
             end
+        end
+        
+        function dof = DOF(self)
+            dof = zeros(1,self.D);
+            for iDim = 1:self.D
+                dof(iDim) = self.sigma*self.sigma / mean((diag(self.X*squeeze(self.Cm(:,:,iDim))*self.X.')));
+            end
+        end
+        
+        function dof = IsotropicDOF(self)
+            meanOfTrace = zeros(1,self.D);
+            for iDim = 1:self.D
+                meanOfTrace(iDim) = mean((diag(self.X*squeeze(self.Cm(:,:,iDim))*self.X.')));
+            end
+            dof = self.sigma*self.sigma / mean(meanOfTrace);
+        end
+        
+        
+        
+        
+        
+        
+        
+        function u_rms = DerivativeRMSFromSpectrum(self,D)
+            u_rms = zeros(1,self.D);
+            for iDim = 1:self.D
+                u_rms(iDim) = TensionSpline.EstimateRMSDerivativeFromSpectrum(self.t,self.x(:,iDim),self.sigma,D);
+            end
+        end
+        
+        function u_rms = VelocityRMSFromSpectrum(self)
+           u_rms = self.DerivativeRMSFromSpectrum(1); 
+        end
+        
+        function a_rms = AccelerationRMSFromSpectrum(self)
+           a_rms = self.DerivativeRMSFromSpectrum(2); 
+        end
+        
+        function dof = ExpectedDOFFromVelocity(self)
+            dof = 1 + 3*self.sigma./(self.VelocityRMSFromSpectrum()*dt);
+        end
+        
+        function lambda = ExpectedLambdaInitial(self)
+            dof = self.ExpectedDOFFromVelocity();
+            lambda = (dof-1)./(dof .* self.DerivativeRMSFromSpectrum(self.T).^2);
         end
         
     end
@@ -178,6 +264,8 @@ classdef TensionSpline < BSpline
         end
         
         function [m,Cm] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w)
+            % Same calling sequence as the TensionSolution function, but
+            % also includes the weight factor, w
             if length(sigma) == 1
                 sigma = ones(size(x))*sigma;
             end
@@ -209,7 +297,503 @@ classdef TensionSpline < BSpline
                 Cm = inv(X'*Wx*X + (lambda*N/Q)*(V'*V));
             end
         end
+        
+        function [lambda, dof] = ExpectedInitialTension(t,x,sigma,T,isIsotropic)
+            %ExpectedInitialTension returns the expected initial tension.
+            % t             time, Nx1
+            % x             data series NxD
+            % sigma         position error, scalar
+            % T             tension degree, derivative at which tension
+            %               should be applied.
+            % isIsotropic   whether or not multidimensions should be
+            %               treated isotropically.
+            
+            D = size(x,2);
+            u_rms = zeros(1,D);
+            a_rms = zeros(1,D);
+            for iDim = 1:D
+                u_rms(iDim) = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x(:,iDim),sigma,1);
+                a_rms(iDim) = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x(:,iDim),sigma,T);
+            end
+            
+            dt = median(diff(t));
+            if D == 1 || isIsotropic == 1
+                dof = 1 + 3*sigma/( sqrt(mean(u_rms.^2))*dt );
+                lambda = (dof-1)/(dof*mean(a_rms.^2));
+            else
+                dof = 1 + 3*sigma./( u_rms*dt );
+                lambda = (dof-1)./(dof.*a_rms.^2);
+            end
+        end
+        
+        function lambda = MatchedDOFSolution(aTensionSpline, expectedDOF)
+            errorFunction = @(log10lambda) TensionSpline.ErrorWithTension(aTensionSpline,log10lambda,expectedDOF);
+            optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 1., 'TolFun', 0.01) );
+            lambda = 10^optimalLog10lambda;
+        end
+        
+        function error = ErrorWithTension(aTensionSpline,log10lambda, expectedDOF)
+            % Given a TensionSpline object, this sets a new lambda, and
+            % then computes the error on the actual DOF to the expected
+            % DOF.
+            aTensionSpline.lambda = 10^log10lambda;
+            IsotropicDOF = aTensionSpline.IsotropicDOF;
+            error = abs(IsotropicDOF-expectedDOF);
+            
+            fprintf('\t(lambda, dof) = (%g, %f)\n', aTensionSpline.lambda, IsotropicDOF);
+        end
+        
+        function [a_rms, a_std, a_mean] = EstimateRMSDerivativeFromSpectrum( t, x, sigma, D, shouldPlotSpectra)
+            % EstimateRMSDerivativeFromSpectrum Given some signal (t,x)
+            % contaminated by noise sigma, this uses the spectrum to
+            % estimate u_rms.
+            %
+            % D = 1 is velocity, D=2 is acceleration
+            
+            xin = x;
+            tin = t;
+            
+            if length(unique(diff(t))) > 1
+                %    fprintf('interpolating...\n');
+                dt = round(median(diff(t)));
+                N = ceil((t(end)-t(1))/dt);
+                t2 = dt*((0:(N-1))') + t(1);
+                x = interp1(t,x,t2);
+                t = t2;
+            end
+            
+            [p,~,mu]=polyfit(t,x,D);
+            a_mean = factorial(D)*p(1)/mu(2)^D;
+            
+            % now remove the trend
+            x = x-polyval(p,t,[],mu);
+            
+            dt = t(2) - t(1);
+            T = t(end)-t(1);
+            N = length(t);
+            
+            df = 1/T;
+            f = ([0:ceil(N/2)-1 -floor(N/2):-1]*df)';
+            
+            ubar = fft(x);
+            s_signal = (ubar.*conj(ubar)) .* (2*pi*f).^(2*D) * (dt/N);
+            
+            s_noise = sigma*sigma*dt*(2*pi*f).^(2*D);
+            
+            % The factor of 10 is consitent with 80% confidence.
+            % 95% confidence (actually, 97.5% ?) is 39.5
+            alpha = 0.10;
+            cutoff = 2/TensionSpline.chi2inv(alpha/2,2);
+            
+            u2 = sum((s_signal > cutoff*s_noise) .* s_signal)*df;
+            a_std = sqrt(u2);
+            a_rms = sqrt( u2 + a_mean^2 );
+            
+            if nargin > 4 && shouldPlotSpectra == 1
+                f = fftshift(f);
+                s_signal = fftshift(s_signal);
+                s_noise = fftshift(s_noise);
+                
+                figure
+                plot(f,s_signal)
+                hold on
+                plot(f,cutoff*s_noise), ylog
+                
+                figure
+                plot(tin,xin), hold on, plot(tin,polyval(p,tin,[],mu))
+            end
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Optimizing the parameter when the true value is known
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function lambda = OptimalTensionSolution(aTensionSpline, t_true, x_true)
+            errorFunction = @(log10lambda) TensionSpline.TrueRMSError(aTensionSpline,log10lambda,t_true, x_true);
+            optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 1., 'TolFun', 0.001) );
+            lambda = 10^optimalLog10lambda;
+        end
+        
+        function error = TrueRMSError(aTensionSpline,log10lambda,t_true, x_true)
+            % Given a TensionSpline object, this sets a new lambda, and
+            % then computes the error on the actual DOF to the expected
+            % DOF.
+            aTensionSpline.lambda = 10^log10lambda;
+            
+            error = sqrt(mean(mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2,1)));
+            
+            fprintf('\t(lambda, dof, error) = (%g, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.IsotropicDOF, error);
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Supporting functions for chi2inv
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        
+        function x = chi2inv(p,v)
+            %CHI2INV Inverse of the chi-square cumulative distribution function (cdf).
+            %   X = CHI2INV(P,V)  returns the inverse of the chi-square cdf with V
+            %   degrees of freedom at the values in P. The chi-square cdf with V
+            %   degrees of freedom, is the gamma cdf with parameters V/2 and 2.
+            %
+            %   The size of X is the common size of P and V. A scalar input
+            %   functions as a constant matrix of the same size as the other input.
+            %
+            %   See also CHI2CDF, CHI2PDF, CHI2RND, CHI2STAT, ICDF.
+            
+            %   References:
+            %      [1]  M. Abramowitz and I. A. Stegun, "Handbook of Mathematical
+            %      Functions", Government Printing Office, 1964, 26.4.
+            %      [2] E. Kreyszig, "Introductory Mathematical Statistics",
+            %      John Wiley, 1970, section 10.2 (page 144)
+            
+            %   Copyright 1993-2004 The MathWorks, Inc.
+            %   $Revision: 2.10.2.2 $  $Date: 2004/07/05 17:02:22 $
+            
+            % Call the gamma inverse function.
+            x = TensionSpline.gaminv(p,v/2,2);
+            
+            % Return NaN if the degrees of freedom is not positive.
+            k = (v <= 0);
+            if any(k(:))
+                x(k) = NaN;
+            end
+        end
+        
+        function [x,xlo,xup] = gaminv(p,a,b,pcov,alpha)
+            %GAMINV Inverse of the gamma cumulative distribution function (cdf).
+            %   X = GAMINV(P,A,B) returns the inverse cdf for the gamma distribution
+            %   with shape A and scale B, evaluated at the values in P.  The size of X
+            %   is the common size of the input arguments.  A scalar input functions as
+            %   a constant matrix of the same size as the other inputs.
+            %
+            %   [X,XLO,XUP] = GAMINV(P,A,B,PCOV,ALPHA) produces confidence bounds for
+            %   X when the input parameters A and B are estimates. PCOV is a 2-by-2
+            %   matrix containing the covariance matrix of the estimated parameters.
+            %   ALPHA has a default value of 0.05, and specifies 100*(1-ALPHA)%
+            %   confidence bounds.  XLO and XUP are arrays of the same size as X
+            %   containing the lower and upper confidence bounds.
+            %
+            %   See also GAMCDF, GAMFIT, GAMLIKE, GAMPDF, GAMRND, GAMSTAT.
+            
+            %   GAMINV uses Newton's method to find roots of GAMCDF(X,A,B) = P.
+            
+            %   References:
+            %      [1] Abramowitz, M. and Stegun, I.A. (1964) Handbook of Mathematical
+            %          Functions, Dover, New York, section 26.1.
+            %      [2] Evans, M., Hastings, N., and Peacock, B. (1993) Statistical
+            %          Distributions, 2nd ed., Wiley.
+            
+            %   Copyright 1993-2004 The MathWorks, Inc.
+            %   $Revision: 2.10.2.8 $  $Date: 2004/07/28 04:38:22 $
+            
+            if nargin < 2
+                error('stats:gaminv:TooFewInputs',...
+                    'Requires at least two input arguments.');
+            elseif nargin < 3
+                b = 1;
+            end
+            
+            % More checking if we need to compute confidence bounds.
+            if nargout > 2
+                if nargin < 4
+                    error('stats:gaminv:TooFewInputs',...
+                        'Must provide covariance matrix to compute confidence bounds.');
+                end
+                if ~isequal(size(pcov),[2 2])
+                    error('stats:gaminv:BadCovariance',...
+                        'Covariance matrix must have 2 rows and columns.');
+                end
+                if nargin < 5
+                    alpha = 0.05;
+                elseif ~isnumeric(alpha) || numel(alpha) ~= 1 || alpha <= 0 || alpha >= 1
+                    error('stats:gaminv:BadAlpha',...
+                        'ALPHA must be a scalar between 0 and 1.');
+                end
+            end
+            
+            % Weed out any out of range parameters or edge/bad probabilities.
+            try
+                okAB = (0 < a) & (0 < b);
+                k = (okAB & (0 < p & p < 1));
+            catch
+                error('stats:gaminv:InputSizeMismatch',...
+                    'Non-scalar arguments must match in size.');
+            end
+            allOK = all(k(:));
+            
+            % Fill in NaNs for out of range cases, fill in edges cases when P is 0 or 1.
+            if ~allOK
+                x = repmat(NaN, size(k));
+                x(okAB & p == 0) = 0;
+                x(okAB & p == 1) = Inf;
+                
+                
+                if nargout > 1
+                    xlo = x; % NaNs or zeros or Infs
+                    xup = x; % NaNs or zeros or Infs
+                end
+                
+                % Remove the bad/edge cases, leaving the easy cases.  If there's
+                % nothing remaining, return.
+                if any(k(:))
+                    if numel(p) > 1, p = p(k); end
+                    if numel(a) > 1, a = a(k); end
+                    if numel(b) > 1, b = b(k); end
+                else
+                    return;
+                end
+            end
+            
+            % ==== Newton's Method to find a root of GAMCDF(X,A,B) = P ====
+            
+            % Limit this to maxiter iterations.
+            maxiter = 500;
+            iter = 0;
+            
+            % Choose a starting guess for q.  Use quantiles from a lognormal
+            % distribution with the same mean (==a) and variance (==a) as G(a,1).
+            loga = log(a);
+            sigsq = log(1+a) - loga;
+            mu = loga - 0.5 .* sigsq;
+            q = exp(mu - sqrt(2.*sigsq).*erfcinv(2*p));
+            
+            h = ones(size(p));
+            
+            % Break out of the iteration loop when the relative size of the last step
+            % is small for all elements of q.
+            reltol = eps(class(p)).^(3/4);
+            dF = zeros(size(p));
+            while any(abs(h(:)) > reltol*q(:))
+                iter = iter + 1;
+                if iter > maxiter
+                    % Too many iterations.  This should not happen.
+                    break
+                end
+                
+                F = TensionSpline.gamcdf(q,a,1);
+                f = max(TensionSpline.gampdf(q,a,1), realmin(class(p)));
+                dF = F-p;
+                h = dF ./ f;
+                qnew = q - h;
+                % Make sure that the current iterates stay positive.  When Newton's
+                % Method suggests steps that lead to negative values, take a step
+                % 9/10ths of the way to zero instead.
+                ksmall = find(qnew <= 0);
+                if ~isempty(ksmall)
+                    qnew(ksmall) = q(ksmall) / 10;
+                    h = q - qnew;
+                end
+                q = qnew;
+            end
+            
+            badcdf = (isfinite(a(:)) & abs(dF(:))>sqrt(eps));
+            if iter>maxiter || any(badcdf)   % too many iterations or cdf is too far off
+                didnt = find(abs(h)>reltol*q | badcdf);
+                didnt = didnt(1);
+                if numel(a) == 1, abad = a; else abad = a(didnt); end
+                if numel(b) == 1, bbad = b; else bbad = b(didnt); end
+                if numel(p) == 1, pbad = p; else pbad = p(didnt); end
+                warning('stats:gaminv:NoConvergence',...
+                    'GAMINV did not converge for a = %g, b = %g, p = %g.',...
+                    abad,bbad,pbad);
+            end
+            
+            % Add in the scale factor, and broadcast the values to the correct place if
+            % need be.
+            if allOK
+                x = q .* b;
+            else
+                x(k) = q .* b;
+            end
+            
+            % Compute confidence bounds if requested.
+            if nargout >= 2
+                logq = log(q);
+                dqda = -dgammainc(q,a) ./ exp((a-1).*logq - q - gammaln(a));
+                
+                % Approximate the variance of x=q*b on the log scale.
+                %    dlogx/da = dlogx/dq * dqda = dqda/q
+                %    dlogx/db = 1/b
+                logx = logq + log(b);
+                varlogx = pcov(1,1).*(dqda./q).^2 + 2.*pcov(1,2).*dqda./(b.*q) + pcov(2,2)./(b.^2);
+                if any(varlogx(:) < 0)
+                    error('stats:gaminv:BadCovariance',...
+                        'PCOV must be a positive semi-definite matrix.');
+                end
+                z = -norminv(alpha/2);
+                halfwidth = z * sqrt(varlogx);
+                
+                % Convert back to original scale
+                if allOK
+                    xlo = exp(logx - halfwidth);
+                    xup = exp(logx + halfwidth);
+                else
+                    xlo(k) = exp(logx - halfwidth);
+                    xup(k) = exp(logx + halfwidth);
+                end
+            end
+        end
+        
+        function [p,plo,pup] = gamcdf(x,a,b,pcov,alpha)
+            %GAMCDF Gamma cumulative distribution function.
+            %   P = GAMCDF(X,A,B) returns the gamma cumulative distribution function
+            %   with shape and scale parameters A and B, respectively, at the values in
+            %   X.  The size of P is the common size of the input arguments.  A scalar
+            %   input functions as a constant matrix of the same size as the other
+            %   inputs.
+            %
+            %   Some references refer to the gamma distribution with a single
+            %   parameter.  This corresponds to the default of B = 1.
+            %
+            %   [P,PLO,PUP] = GAMCDF(X,A,B,PCOV,ALPHA) produces confidence bounds for
+            %   P when the input parameters A and B are estimates.  PCOV is a 2-by-2
+            %   matrix containing the covariance matrix of the estimated parameters.
+            %   ALPHA has a default value of 0.05, and specifies 100*(1-ALPHA)%
+            %   confidence bounds.  PLO and PUP are arrays of the same size as P
+            %   containing the lower and upper confidence bounds.
+            %
+            %   See also GAMFIT, GAMINV, GAMLIKE, GAMPDF, GAMRND, GAMSTAT.
+            
+            %   GAMMAINC does computational work.
+            
+            %   References:
+            %      [1] Abramowitz, M. and Stegun, I.A. (1964) Handbook of Mathematical
+            %          Functions, Dover, New York, section 26.1.
+            %      [2] Evans, M., Hastings, N., and Peacock, B. (1993) Statistical
+            %          Distributions, 2nd ed., Wiley.
+            
+            %   Copyright 1993-2004 The MathWorks, Inc.
+            %   $Revision: 2.12.2.3 $  $Date: 2004/01/24 09:33:52 $
+            
+            if nargin < 2
+                error('stats:gamcdf:TooFewInputs',...
+                    'Requires at least two input arguments.');
+            elseif nargin < 3
+                b = 1;
+            end
+            
+            % More checking if we need to compute confidence bounds.
+            if nargout > 1
+                if nargin < 4
+                    error('stats:gamcdf:TooFewInputs',...
+                        'Must provide covariance matrix to compute confidence bounds.');
+                end
+                if ~isequal(size(pcov),[2 2])
+                    error('stats:gamcdf:BadCovariance',...
+                        'Covariance matrix must have 2 rows and columns.');
+                end
+                if nargin < 5
+                    alpha = 0.05;
+                elseif ~isnumeric(alpha) || numel(alpha) ~= 1 || alpha <= 0 || alpha >= 1
+                    error('stats:gamcdf:BadAlpha',...
+                        'ALPHA must be a scalar between 0 and 1.');
+                end
+            end
+            
+            % Return NaN for out of range parameters.
+            a(a <= 0) = NaN;
+            b(b <= 0) = NaN;
+            x(x < 0) = 0;
+            
+            try
+                z = x ./ b;
+                p = gammainc(z, a);
+            catch
+                error('stats:gamcdf:InputSizeMismatch',...
+                    'Non-scalar arguments must match in size.');
+            end
+            p(z == Inf) = 1;
+            
+            % Compute confidence bounds if requested.
+            if nargout >= 2
+                % Approximate the variance of p on the logit scale
+                logitp = log(p./(1-p));
+                dp = 1 ./ (p.*(1-p)); % derivative of logit(p) w.r.t. p
+                da = dgammainc(z,a) .* dp; % dlogitp/da = dp/da * dlogitp/dp
+                db = -exp(a.*log(z)-z-gammaln(a)-log(b)) .* dp; % dlogitp/db = dp/db * dlogitp/dp
+                varLogitp = pcov(1,1).*da.^2 + 2.*pcov(1,2).*da.*db + pcov(2,2).*db.^2;
+                if any(varLogitp(:) < 0)
+                    error('stats:gamcdf:BadCovariance',...
+                        'PCOV must be a positive semi-definite matrix.');
+                end
+                
+                % Use a normal approximation on the logit scale, then transform back to
+                % the original CDF scale
+                halfwidth = -norminv(alpha/2) * sqrt(varLogitp);
+                explogitplo = exp(logitp - halfwidth);
+                explogitpup = exp(logitp + halfwidth);
+                plo = explogitplo ./ (1 + explogitplo);
+                pup = explogitpup ./ (1 + explogitpup);
+            end
+        end
+        
+        function y = gampdf(x,a,b)
+            %GAMPDF Gamma probability density function.
+            %   Y = GAMPDF(X,A,B) returns the gamma probability density function with
+            %   shape and scale parameters A and B, respectively, at the values in X.
+            %   The size of Y is the common size of the input arguments. A scalar input
+            %   functions as a constant matrix of the same size as the other inputs.
+            %
+            %   Some references refer to the gamma distribution with a single
+            %   parameter.  This corresponds to the default of B = 1.
+            %
+            %   See also GAMCDF, GAMFIT, GAMINV, GAMLIKE, GAMRND, GAMSTAT.
+            
+            %   References:
+            %      [1] Abramowitz, M. and Stegun, I.A. (1964) Handbook of Mathematical
+            %          Functions, Dover, New York, section 26.1.
+            %      [2] Evans, M., Hastings, N., and Peacock, B. (1993) Statistical
+            %          Distributions, 2nd ed., Wiley.
+            
+            %   Copyright 1993-2004 The MathWorks, Inc.
+            %   $Revision: 2.10.2.5 $  $Date: 2004/01/24 09:33:56 $
+            
+            if nargin < 2
+                error('stats:gampdf:TooFewInputs','Requires at least two input arguments');
+            elseif nargin < 3
+                b = 1;
+            end
+            
+            % Return NaN for out of range parameters.
+            a(a <= 0) = NaN;
+            b(b <= 0) = NaN;
+            
+            try
+                z = x ./ b;
+                
+                % Negative data would create complex values, potentially creating
+                % spurious NaNi's in other elements of y.  Map them to the far right
+                % tail, which will be forced to zero.
+                z(z < 0) = Inf;
+                
+                % Prevent LogOfZero warnings.
+                warn = warning('off','MATLAB:log:logOfZero');
+                u = (a - 1) .* log(z) - z - gammaln(a);
+                warning(warn);
+            catch
+                if exist('warn','var'), warning(warn); end
+                error('stats:gampdf:InputSizeMismatch',...
+                    'Non-scalar arguments must match in size.');
+            end
+            
+            % Get the correct limit for z == 0.
+            u(z == 0 & a == 1) = 0;
+            % These two cases work automatically
+            %  u(z == 0 & a < 1) = Inf;
+            %  u(z == 0 & a > 1) = -Inf;
+            
+            % Force a 0 for extreme right tail, instead of getting exp(Inf-Inf)==NaN
+            u(z == Inf & isfinite(a)) = -Inf;
+            % Force a 0 when a is infinite, instead of getting exp(Inf-Inf)==NaN
+            u(z < Inf & a == Inf) = -Inf;
+            
+            y = exp(u) ./ b;
+        end
+        
     end
-    
 end
-

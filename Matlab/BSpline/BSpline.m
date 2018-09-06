@@ -1,4 +1,4 @@
-classdef BSpline
+classdef BSpline < handle
     %BSPLINE Summary of this class goes here
     %   2 argument initialization
     %       f = BSpline(t,x);
@@ -125,6 +125,13 @@ classdef BSpline
             
         end
         
+        
+        function x_out = ValueAtPoints( self, t)
+            x_out = zeros(length(t),self.D);
+            for i=1:self.D
+                x_out(:,i) = BSpline.EvaluateFromPPCoefficients(t,self.C(:,:,i),self.t_pp,0);
+            end
+        end
     end
     
     
