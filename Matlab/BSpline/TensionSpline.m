@@ -11,6 +11,7 @@ classdef TensionSpline < BSpline
         
         X
         V
+        XWX,XWx,VV
         
         x
         t
@@ -96,6 +97,9 @@ classdef TensionSpline < BSpline
             B = BSpline.Spline( tq, t_knot, K, T );
             V = squeeze(B(:,:,T+1)); % QxM
             
+            % Precompute some matrices that might be used again later,
+            [XWX,XWx,VV] = TensionSpline.PrecomputeTensionSolutionMatrices(X,V,sigma,x);
+            
             % Now compute the coefficients
             M = size(X,2);
             m = zeros(M,D);
@@ -108,9 +112,9 @@ classdef TensionSpline < BSpline
                 end
                 
                 if didSetWeightFunction == 1
-                    [m(:,i),Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda_i,x(:,i),mu,w);
+                    [m(:,i),Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda_i,x(:,i),mu,w,XWX,XWx(:,i),VV);
                 else
-                    [m(:,i),Cm(:,:,i)] = TensionSpline.TensionSolution(X,V,sigma,lambda_i,x(:,i),mu);
+                    [m(:,i),Cm(:,:,i)] = TensionSpline.TensionSolution(X,V,sigma,lambda_i,x(:,i),mu,XWX,XWx(:,i),VV);
                 end
             end
             
@@ -122,6 +126,9 @@ classdef TensionSpline < BSpline
             self.Cm = Cm;
             self.X = X;
             self.V = V;
+            self.XWX=XWX;
+            self.XWx=XWx;
+            self.VV=VV;
             self.t = t;
             self.x = x;
             self.sigma = sigma;
@@ -160,9 +167,9 @@ classdef TensionSpline < BSpline
         function self = tensionParameterDidChange(self)
             for i=1:self.D
                 if ~isempty(self.w)
-                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu,self.w);
+                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu,self.w,self.XWX,self.XWx(:,i),self.VV);
                 else
-                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu);
+                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu,self.XWX,self.XWx(:,i),self.VV);
                 end
                 [self.C(:,:,i),self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m(:,i), self.t_knot, self.K );
             end
@@ -216,7 +223,24 @@ classdef TensionSpline < BSpline
     end
     
     methods (Static)
-        function [m, Cm] = TensionSolution(X,V,sigma,lambda,x,mu)
+        function [XWX,XWx,VV] = PrecomputeTensionSolutionMatrices(X,V,sigma,x)
+            N = length(x);
+            if size(sigma,1) == N && size(sigma,2) == N
+                XWX = X'*sigma*X;
+                XWx = X'*sigma*x;
+            elseif length(sigma) == 1
+                XWX = X'*X/(sigma*sigma);
+                XWx = X'*x/(sigma*sigma);
+            elseif length(sigma) == N
+                XWX = X'*diag(1./(sigma.^2))*X; % MxM
+                XWx = X'*diag(1./(sigma.^2))*x; % (MxN * NxN * Nx1) = Mx1
+            else
+                error('sigma must have the same length as x and t.');
+            end
+            VV = V'*V;
+        end
+        
+        function [m, Cm] = TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV)
             % N     # of observations
             % M     # of splines
             % Q     # of points in quadrature grid
@@ -228,6 +252,9 @@ classdef TensionSpline < BSpline
             % lambda    tension parameter
             % x         observations (Nx1)
             % mu        mean tension
+            % XWX       (optional) precomputed matrix X'*Wx*X
+            % XWx       (optional) precomputed matrix X'*Wx*x
+            % VV       (optional) precomputed matrix V'*V
             %
             % output:
             % m         coefficients of the splines, Mx1
@@ -235,27 +262,44 @@ classdef TensionSpline < BSpline
             N = length(x);
             Q = size(V,1);
             
-            if size(sigma,1) == N && size(sigma,2) == N
-                Wx = sigma;
-                E_x = X'*Wx*X + (lambda*N/Q)*(V'*V); % MxM
-                B = X'*Wx*x; % (MxN * NxN * Nx1) = Mx1
-            elseif length(sigma) == 1
-                E_x = X'*X/(sigma*sigma) + (lambda*N/Q)*(V'*V);  % MxM
-                B = X'*x/(sigma*sigma);
-            elseif length(sigma) == N
-                Wx = diag(1./(sigma.^2));
-                E_x = X'*Wx*X + (lambda*N/Q)*(V'*V); % MxM
-                B = X'*Wx*x; % (MxN * NxN * Nx1) = Mx1
-            else
-                error('sigma must have the same length as x and t.');
+            if ~exist('XWX','var')
+                if size(sigma,1) == N && size(sigma,2) == N
+                    XWX = X'*sigma*X;
+                elseif length(sigma) == 1
+                    XWX = X'*X/(sigma*sigma);
+                elseif length(sigma) == N
+                    XWX = X'*diag(1./(sigma.^2))*X; % MxM
+                else
+                    error('sigma must have the same length as x and t.');
+                end
             end
             
+            if ~exist('XWx','var')
+                if size(sigma,1) == N && size(sigma,2) == N
+                    XWx = X'*sigma*x;
+                elseif length(sigma) == 1
+                    XWx = X'*x/(sigma*sigma);
+                elseif length(sigma) == N
+                    XWx = X'*diag(1./(sigma.^2))*x; % (MxN * NxN * Nx1) = Mx1
+                else
+                    error('sigma must have the same length as x and t.');
+                end
+            end
+            
+            if ~exist('VV','var')
+                VV = V'*V;
+            end
+            
+            E_x = XWX + (lambda*N/Q)*(VV);
+                        
             % add the mean tension value
             if mu ~= 0.0
-                B = B + (lambda*N/Q)*mu*transpose(sum( V,1));
+                B = XWx + (lambda*N/Q)*mu*transpose(sum( V,1));
+            else
+                B = XWx;
             end
             
-            % Now s
+            % Now solve
             m = E_x\B;
             
             if nargout == 2
@@ -263,14 +307,14 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function [m,Cm] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w)
+        function [m,Cm] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV)
             % Same calling sequence as the TensionSolution function, but
             % also includes the weight factor, w
             if length(sigma) == 1
                 sigma = ones(size(x))*sigma;
             end
             Wx = diag(1./(sigma.^2));
-            m = TensionSpline.TensionSolution(X,V,Wx,lambda,x,mu);
+            m = TensionSpline.TensionSolution(X,V,Wx,lambda,x,mu,XWX,XWx,VV);
             
             error_x_previous = sigma*sigma;
             rel_error = 1.0;
@@ -280,7 +324,7 @@ classdef TensionSpline < BSpline
                 
                 Wx = diag(1./(dx2));
                 
-                m = TensionSpline.TensionSolution(X,V,Wx,lambda,x,mu);
+                m = TensionSpline.TensionSolution(X,V,Wx,lambda,x,mu,XWX,XWx,VV);
                 
                 rel_error = max( (dx2-error_x_previous)./dx2 );
                 error_x_previous=dx2;
@@ -368,19 +412,32 @@ classdef TensionSpline < BSpline
             % now remove the trend
             x = x-polyval(p,t,[],mu);
             
-            dt = t(2) - t(1);
-            T = t(end)-t(1);
-            N = length(t);
-            
-            df = 1/T;
-            f = ([0:ceil(N/2)-1 -floor(N/2):-1]*df)';
-            
-            ubar = fft(x);
-            s_signal = (ubar.*conj(ubar)) .* (2*pi*f).^(2*D) * (dt/N);
-            
+            if 1 == 0
+                dt = t(2) - t(1);
+                T = t(end)-t(1);
+                N = length(t);
+                
+                df = 1/T;
+                f = ([0:ceil(N/2)-1 -floor(N/2):-1]*df)';
+                
+                ubar = fft(x);
+                s_signal = (ubar.*conj(ubar)) .* (2*pi*f).^(2*D) * (dt/N);
+            else
+                [DiffMatrix,t_u] = TensionSpline.FiniteDifferenceMatrixNoBoundary(D,t,1);
+                
+                dt = t_u(2)-t_u(1);
+                T = t_u(end)-t_u(1);
+                N = length(t_u);
+                
+                df = 1/T;
+                f = ([0:ceil(N/2)-1 -floor(N/2):-1]*df)';
+                
+                ubar = fft(DiffMatrix*x);
+                s_signal = (ubar .* conj(ubar)) * (dt/N);
+            end
             s_noise = sigma*sigma*dt*(2*pi*f).^(2*D);
             
-            % The factor of 10 is consitent with 80% confidence.
+            % The factor of 10 is consistent with 80% confidence.
             % 95% confidence (actually, 97.5% ?) is 39.5
             alpha = 0.10;
             cutoff = 2/TensionSpline.chi2inv(alpha/2,2);
@@ -425,6 +482,90 @@ classdef TensionSpline < BSpline
             error = sqrt(mean(mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2,1)));
             
             fprintf('\t(lambda, dof, error) = (%g, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.IsotropicDOF, error);
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Supporting finite difference routines
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
+        function [D,z,width] = FiniteDifferenceMatrixNoBoundary(numDerivs, x, order)
+            % Creates a finite difference matrix of aribtrary accuracy, on an arbitrary
+            % grid. It does not implement boundary conditions (check my other routine
+            % for that), because it seeks to make all rows linearly independent.
+            %
+            %
+            % numDerivs ? the number of derivatives
+            % x ? the grid
+            % z location where approximations are to be accurate,
+            % orderOfAccuracy ? minimum order of accuracy required
+            % width ? the distance between the first and last point used in the
+            % approximation.
+            %
+            % Jeffrey J. Early, 2015
+            
+            n = length(x);
+            m = n - numDerivs;
+            D = zeros(m,n);
+            width = zeros(m,1);
+            
+            % order != accurracy.
+            nPoints = (numDerivs+1) + 2*(order-1);
+            
+            if mod(numDerivs,2) == 0
+                half = numDerivs/2;
+                z = x((1+half):(n-half));
+            else
+                mids = x(1:(n-1)) + diff(x)/2;
+                half = floor(numDerivs/2);
+                z = mids((1+half):(end-half));
+            end
+            
+            % do we want to find the n closest points?
+            for i=1:m
+                
+                range_left = find( x <= z(i), ceil(nPoints/2), 'last');
+                range_right = find( x > z(i), nPoints - length(range_left), 'first');
+                range = union(range_left,range_right);
+                
+                if length(range)<nPoints
+                    range_right = find( x >= z(i), ceil(nPoints/2), 'first');
+                    range_left = find( x < z(i), nPoints - length(range_right), 'last');
+                    range = union(range_left,range_right);
+                end
+                
+                c = TensionSpline.weights( z(i), x(range), numDerivs );
+                D(i,range) = c(numDerivs+1,:);
+                width(i) = max(x(range))-min(x(range));
+            end
+            
+        end
+        
+        function c = weights(z,x,m)
+            % Calculates FD weights. The parameters are:
+            %  z   location where approximations are to be accurate,
+            %  x   vector with x-coordinates for grid points,
+            %  m   highest derivative that we want to find weights for
+            %  c   array size m+1,lentgh(x) containing (as output) in
+            %      successive rows the weights for derivatives 0,1,...,m.
+            %
+            % Taken from Bengt Fornberg
+            %
+            n=length(x); c=zeros(m+1,n); c1=1; c4=x(1)-z; c(1,1)=1;
+            for i=2:n
+                mn=min(i,m+1); c2=1; c5=c4; c4=x(i)-z;
+                for j=1:i-1
+                    c3=x(i)-x(j);  c2=c2*c3;
+                    if j==i-1
+                        c(2:mn,i)=c1*((1:mn-1)'.*c(1:mn-1,i-1)-c5*c(2:mn,i-1))/c2;
+                        c(1,i)=-c1*c5*c(1,i-1)/c2;
+                    end
+                    c(2:mn,j)=(c4*c(2:mn,j)-(1:mn-1)'.*c(1:mn-1,j))/c3;
+                    c(1,j)=c4*c(1,j)/c3;
+                end
+                c1=c2;
+            end
+            
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
