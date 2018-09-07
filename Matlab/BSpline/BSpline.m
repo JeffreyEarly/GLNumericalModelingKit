@@ -1,26 +1,11 @@
 classdef BSpline < handle
     %BSPLINE Summary of this class goes here
-    %   2 argument initialization
-    %       f = BSpline(t,x);
-    %   where
-    %       t       array of values for the independent axis
-    %       x       array of values for the dependent axis 
-    %       f       cubic spline interpolant
-    % 
     %   3 argument initialization
-    %       f = BSpline(t,x,K);
+    %       f = BSpline(K,t_knot,m);
     %   where
-    %       K       order of the spline
-    %
-    %   4 argument initialization
-    %       f = BSpline(t,x,K,t_knot);
-    %   where
-    %       t_knot       knot points
-    %
-    %   5 argument initialization
-    %       f = BSpline(t,x,K,t_knot,m);
-    %   where
-    %       m            coefficients for the splines
+    %       K           order of the spline
+    %       t_knot      knot points
+    %       m           coefficients for the splines
     
     
     properties (Access = public)
@@ -32,8 +17,6 @@ classdef BSpline < handle
         
         t_pp    % pp break points. size(t_pp) = length(t_knot) - 2*K + 1
         C       % piecewise polynomial coefficients. size(C) = [length(t_pp)-1, K]
-        
-
     end
     
     methods
@@ -42,49 +25,18 @@ classdef BSpline < handle
         % Initialization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function self = BSpline(t,x,varargin)
-            t = reshape(t,[],1);
-            N = length(t);
+        function self = BSpline(K,t_knot,m)
+            self.K = K;
+            self.D = size(m,2);
             
-            if size(x,2) == N
-                x = x.';
-            end
-            if size(x,1) ~= N
-                error('x and t must have the same length.');
-            end
-            self.D = size(x,2);
+            self.t_knot = t_knot;
+            self.m = m;
             
-            nargs = length(varargin);
-            
-            if nargs >= 1
-                self.K = varargin{1};
-            else
-                self.K = 4;
-            end
-            
-            if nargs >= 2
-                self.t_knot = varargin{2};
-            else
-                self.t_knot = BSpline.KnotPointsForPoints(t,self.K);
-            end 
-            
-            if nargs >= 3
-                self.m = varargin{3};
-            else
-                X = BSpline.Spline( t, self.t_knot, self.K, 0 );
-                M = size(X,2);
-                self.m = zeros(M,self.D);
-                
-                for i=1:self.D
-                    self.m(:,i) = X\x(:,i);
-                end
-            end 
             PP = length(self.t_knot) - 2*self.K + 1;
             self.C = zeros(PP,self.K,self.D);
             for i=1:self.D
                 [self.C(:,:,i),self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m(:,i), self.t_knot, self.K );
             end
-            
         end
         
         function varargout = subsref(self, index)
@@ -110,7 +62,13 @@ classdef BSpline < handle
                     for i=1:self.D
                         x_out(:,i) = BSpline.EvaluateFromPPCoefficients(t,self.C(:,:,i),self.t_pp,NumDerivatives);
                     end
-                    varargout{1} = x_out;
+                    if nargout == 1
+                        varargout{1} = x_out;
+                    else
+                        for i=1:self.D
+                            varargout{i} = x_out(:,i);
+                        end
+                    end
                     
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GET %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 case '.'       
@@ -136,80 +94,6 @@ classdef BSpline < handle
     
     
     methods (Static)
-        
-        function t_knot = KnotPointsForPoints( t, K, DF )
-            %% KnotPointsForPoints
-            %
-            % Returns the natural knot points for splines of order K for
-            % observations at time points t. These knot points are place so
-            % that each spline has exactly enough support for a fully
-            % constrained system.
-            %
-            % It defaults to 1 degree of freedom, but you can override this
-            % by setting DF to some nonnegative integer value.
-            %
-            % This matches the definitions in interpolation with tension
-            % splines paper.
-            
-            if nargin < 3
-                DF = 1;
-            end
-            
-            if (DF < 1 || mod(DF,1) ~= 0)
-                disp('DF must be a non-negative integer');
-                return;
-            end
-            
-            t = sort(t);
-            
-            t = [t(1); t(1+DF:DF:end-DF); t(end)];
-            
-            if mod(K,2) == 1
-                % Odd spline order, so knots go in between points.
-                dt = diff(t);
-                
-                % This gives us N+1 knot points
-                t_knot = [t(1); t(1:end-1)+dt/2; t(end)];
-                
-                % Now remove start and end knots
-                for i=1:((K-1)/2)
-                    t_knot(2) = [];
-                    t_knot(end-1) = [];
-                end
-                
-            else
-                t_knot = t;
-                
-                % Now remove start and end knots
-                for i=1:((K-2)/2)
-                    t_knot(2) = [];
-                    t_knot(end-1) = [];
-                end
-                
-            end
-            
-            % Now we increase the multiplicity of the knot points at the beginning and
-            % the end of the interval so that the splines do not extend past the end
-            % points.
-            t_knot = [repmat(t_knot(1),K-1,1); t_knot; repmat(t_knot(end),K-1,1)];
-        end
-        
-        function t_knot = KnotPointsForSplines( t, K, N_splines )
-            %% KnotPointsForSplines
-            %
-            % Creates knot points for the data such that there will be
-            % N_splines, each of which have approximately the same number
-            % of observation points in support.
-            %
-            % Very crude, quick way of doing this.
-            
-            if N_splines < K
-                N_splines = K;
-            end
-            
-            t_knot = BSpline.KnotPointsForPoints(t, K, ceil(length(t)/N_splines));
-        end
-        
         function [C,t_pp] = PPCoefficientsFromSplineCoefficients( m, t_knot, K )
             %% PPCoefficientsFromSplineCoefficients
             % Returns the piecewise polynomial coefficients in matrix C

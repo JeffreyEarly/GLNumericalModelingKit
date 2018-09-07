@@ -1,5 +1,5 @@
 classdef TensionSpline < BSpline
-    %UNTITLED2 Summary of this class goes here
+    %TensionSpline Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
@@ -88,7 +88,7 @@ classdef TensionSpline < BSpline
             end
             
             % Compute the spline values at the observation points
-            t_knot = BSpline.KnotPointsForPoints(t,K);
+            t_knot = InterpolatingSpline.KnotPointsForPoints(t,K);
             X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             
             % Now we need a quadrature (integration) grid that is finer
@@ -118,7 +118,7 @@ classdef TensionSpline < BSpline
                 end
             end
             
-            self@BSpline(t,x,K,t_knot,m);
+            self@BSpline(K,t_knot,m);
             self.isIsotropic = isIsotropic;
             self.lambda = lambda;
             self.mu = mu;
@@ -166,10 +166,16 @@ classdef TensionSpline < BSpline
         
         function self = tensionParameterDidChange(self)
             for i=1:self.D
-                if ~isempty(self.w)
-                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu,self.w,self.XWX,self.XWx(:,i),self.VV);
+                if length(self.lambda) > 1
+                    lambda_i = self.lambda(self.D);
                 else
-                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x(:,i),self.mu,self.XWX,self.XWx(:,i),self.VV);
+                    lambda_i = self.lambda;
+                end
+                
+                if ~isempty(self.w)
+                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,lambda_i,self.x(:,i),self.mu,self.w,self.XWX,self.XWx(:,i),self.VV);
+                else
+                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,lambda_i,self.x(:,i),self.mu,self.XWX,self.XWx(:,i),self.VV);
                 end
                 [self.C(:,:,i),self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m(:,i), self.t_knot, self.K );
             end
