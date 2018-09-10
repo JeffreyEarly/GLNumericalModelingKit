@@ -1,14 +1,14 @@
 classdef InterpolatingSpline < BSpline
     %InterpolatingSpline Summary of this class goes here
     %   2 argument initialization
-    %       f = BSpline(t,x);
+    %       f = InterpolatingSpline(t,x);
     %   where
     %       t       array of values for the independent axis
     %       x       array of values for the dependent axis 
     %       f       cubic spline interpolant
     % 
     %   3 argument initialization
-    %       f = BSpline(t,x,K);
+    %       f = InterpolatingSpline(t,x,K);
     %   where
     %       K       order of the spline
     

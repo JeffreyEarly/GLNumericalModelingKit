@@ -1,6 +1,25 @@
 classdef TensionSpline < BSpline
-    %TensionSpline Summary of this class goes here
-    %   Detailed explanation goes here
+    %TensionSpline Fit noisy data with a tensioned interpolating spline
+    %   3 argument initialization
+    %       f = TensionSpline(t,x,sigma);
+    %   where
+    %       t       array of values for the independent axis
+    %       x       array of values for the dependent axis 
+    %       sigma   std deviation of noise
+    %       f       cubic spline interpolant
+    %
+    %   TensionSpline takes a number of optional input argument pairs.
+    %
+    %   'weightFunction' the weight function should be specified when the
+    %   errors are non-guassian. The weight function should take a single
+    %   argument, the error, and map it to the Gaussian equivalent variance
+    %   for the error distribution of choice.
+    %
+    %   'lambda' lambda is the tension parameter, and can be given directly
+    %   as a numeric value, or can be a function that takes this
+    %   TensionSpline object as an argument, and returns a numeric value.
+    %
+    % 
     
     properties
         T           % degree at which tension is applied
@@ -229,6 +248,13 @@ classdef TensionSpline < BSpline
     end
     
     methods (Static)
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Methods for solving the least-squares problem
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
         function [XWX,XWx,VV] = PrecomputeTensionSolutionMatrices(X,V,sigma,x)
             N = length(x);
             if size(sigma,1) == N && size(sigma,2) == N
@@ -348,7 +374,15 @@ classdef TensionSpline < BSpline
             end
         end
         
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Methods for computing lambda
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        
         function [lambda, dof] = ExpectedInitialTension(t,x,sigma,T,isIsotropic)
+            % TensionParameterFromGammaAndAcceleration
             %ExpectedInitialTension returns the expected initial tension.
             % t             time, Nx1
             % x             data series NxD
@@ -377,6 +411,8 @@ classdef TensionSpline < BSpline
         end
         
         function lambda = MatchedDOFSolution(aTensionSpline, expectedDOF)
+            % TensionParameterFromGammaAndVarianceOfMean
+            % Matches 
             errorFunction = @(log10lambda) TensionSpline.ErrorWithTension(aTensionSpline,log10lambda,expectedDOF);
             optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 1., 'TolFun', 0.01) );
             lambda = 10^optimalLog10lambda;
@@ -469,7 +505,7 @@ classdef TensionSpline < BSpline
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Optimizing the parameter when the true value is known
+        % Optimizing lambda when the true values are known
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
