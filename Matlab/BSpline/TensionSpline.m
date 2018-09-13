@@ -215,6 +215,12 @@ classdef TensionSpline < BSpline
             dof = self.sigma*self.sigma / mean(meanOfTrace);
         end
         
+        function dof = IsotropicVarianceDOF(self)
+            dof = 1./(1-mean( (self.x - self.ValueAtPoints(self.t)).^2,1)/(self.sigma*self.sigma));
+            
+            dof = mean(dof);
+        end
+        
         
         
         
