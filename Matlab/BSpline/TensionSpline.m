@@ -221,6 +221,12 @@ classdef TensionSpline < BSpline
             dof = mean(dof);
         end
         
+        function S = SmoothingMatrix(self)
+            S = zeros(size(self.Cm));
+            for iDim = 1:self.D
+               S(:,:,iDim) =  (self.X*squeeze(self.Cm(:,:,iDim))*self.X.')/(self.sigma*self.sigma);
+            end
+        end
         
         
         
@@ -340,7 +346,7 @@ classdef TensionSpline < BSpline
             % Now solve
             m = E_x\B;
             
-            if nargout == 2
+            if nargout >= 2
                 Cm = inv(E_x);
             end
         end
@@ -432,7 +438,7 @@ classdef TensionSpline < BSpline
             IsotropicDOF = aTensionSpline.IsotropicDOF;
             error = abs(IsotropicDOF-expectedDOF);
             
-            fprintf('\t(lambda, dof) = (%g, %f)\n', aTensionSpline.lambda, IsotropicDOF);
+%             fprintf('\t(lambda, dof) = (%g, %f)\n', aTensionSpline.lambda, IsotropicDOF);
         end
         
         function [a_rms, a_std, a_mean] = EstimateRMSDerivativeFromSpectrum( t, x, sigma, D, shouldPlotSpectra)
@@ -529,7 +535,7 @@ classdef TensionSpline < BSpline
             
             error = sqrt(mean(mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2,1)));
             
-            fprintf('\t(lambda, dof, error) = (%g, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.IsotropicDOF, error);
+%             fprintf('\t(lambda, dof, error) = (%g, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.IsotropicDOF, error);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
