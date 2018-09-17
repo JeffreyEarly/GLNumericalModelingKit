@@ -221,6 +221,13 @@ classdef TensionSpline < BSpline
             dof = mean(dof);
         end
         
+        function dof = ExpectedMeanSquareErrorDOF(self)
+            S = self.SmoothingMatrix;
+            SI = (S-eye(size(S)));
+            
+            dof = 1./( mean((SI*self.x).^2)/(self.sigma*self.sigma) + 2*trace(S)/length(S) - 1); 
+        end
+        
         function S = SmoothingMatrix(self)
             S = zeros(size(self.Cm));
             for iDim = 1:self.D
@@ -393,6 +400,26 @@ classdef TensionSpline < BSpline
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         
+        function lambda = MinimizeExpectedMeanSquareError(aTensionSpline)
+            errorFunction = @(log10lambda) TensionSpline.ExpectedMeanSquareError(aTensionSpline,log10lambda);
+            optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            lambda = 10^optimalLog10lambda;
+        end
+        
+        function MSE = ExpectedMeanSquareError(aTensionSpline, log10lambda)
+            % This is the expected mean-square error as found in Craven &
+            % Wahba 1979, normalized by sigma^2.
+            aTensionSpline.lambda = 10^log10lambda;
+            
+            sigma = aTensionSpline.sigma;
+            S = aTensionSpline.SmoothingMatrix;
+            SI = (S-eye(size(S)));
+            
+            MSE = mean((SI*aTensionSpline.x).^2)/(sigma*sigma) + 2*trace(S)/length(S) - 1;
+        end
+        
+        
+        
         function [lambda, dof] = ExpectedInitialTension(t,x,sigma,T,isIsotropic)
             % TensionParameterFromGammaAndAcceleration
             %ExpectedInitialTension returns the expected initial tension.
@@ -521,19 +548,18 @@ classdef TensionSpline < BSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function lambda = OptimalTensionSolution(aTensionSpline, t_true, x_true)
-            errorFunction = @(log10lambda) TensionSpline.TrueRMSError(aTensionSpline,log10lambda,t_true, x_true);
+        function lambda = MinimizeMeanSquareError(aTensionSpline, t_true, x_true)
+            errorFunction = @(log10lambda) TensionSpline.MeanSquareError(aTensionSpline,log10lambda,t_true, x_true);
             optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 1., 'TolFun', 0.001) );
             lambda = 10^optimalLog10lambda;
         end
         
-        function error = TrueRMSError(aTensionSpline,log10lambda,t_true, x_true)
+        function error = MeanSquareError(aTensionSpline,log10lambda,t_true, x_true)
             % Given a TensionSpline object, this sets a new lambda, and
             % then computes the error on the actual DOF to the expected
             % DOF.
-            aTensionSpline.lambda = 10^log10lambda;
-            
-            error = sqrt(mean(mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2,1)));
+            aTensionSpline.lambda = 10^log10lambda;     
+            error = mean(mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2,1));
             
 %             fprintf('\t(lambda, dof, error) = (%g, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.IsotropicDOF, error);
         end
