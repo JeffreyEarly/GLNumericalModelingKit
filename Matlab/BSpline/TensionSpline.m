@@ -229,10 +229,33 @@ classdef TensionSpline < BSpline
         end
         
         function MSE = ExpectedMeanSquareError(self)
+            % This is the *expected* mean-square error normalized by the
+            % variance.
+            %
+            % From Craven and Wahba, 1979
             S = self.SmoothingMatrix;
             SI = (S-eye(size(S)));
             
             MSE = mean((SI*self.x).^2)/(self.sigma*self.sigma) + 2*trace(S)/length(S) - 1;
+        end
+        
+        function MSE = ExpectedMeanSquareErrorNoSigma(self)
+            % From Craven and Wahba, 1979
+            S = self.SmoothingMatrix;
+            
+            MSE = trace(S)/length(S);
+        end
+        
+        function MSE = ExpectedMeanSquareErrorNoSigmaAlt(self)
+            % From Craven and Wahba, 1979
+            S = self.SmoothingMatrix;
+            SI = (S-eye(size(S)));
+            a = mean((SI*self.x).^2);
+            b = trace(S)/length(S);
+            
+            MSE = a*(b/(1-b));
+%             MSE = a/(1-b)^2;
+            fprintf(' sigma^2=%.2f ',a/(1-b));
         end
         
         function S = SmoothingMatrix(self)
@@ -420,7 +443,19 @@ classdef TensionSpline < BSpline
             MSE = aTensionSpline.ExpectedMeanSquareError;
         end
         
+        function lambda = MinimizeExpectedMeanSquareErrorNoSigma(aTensionSpline)
+            errorFunction = @(log10lambda) TensionSpline.ExpectedMeanSquareErrorNoSigmaWrapper(aTensionSpline,log10lambda);
+            optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            lambda = 10^optimalLog10lambda;
+        end
         
+        function MSE = ExpectedMeanSquareErrorNoSigmaWrapper(aTensionSpline, log10lambda)
+            % This is the expected mean-square error as found in Craven &
+            % Wahba 1979, normalized by sigma^2.
+            aTensionSpline.lambda = 10^log10lambda;
+            MSE = aTensionSpline.ExpectedMeanSquareErrorNoSigmaAlt;
+            fprintf('lambda: %f, MSE: %f\n',aTensionSpline.lambda,MSE);
+        end
         
         function [lambda, dof] = ExpectedInitialTension(t,x,sigma,T,isIsotropic)
             % TensionParameterFromGammaAndAcceleration
@@ -563,7 +598,7 @@ classdef TensionSpline < BSpline
             aTensionSpline.lambda = 10^log10lambda;     
             error = mean(mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2,1))/(aTensionSpline.sigma*aTensionSpline.sigma);
             
-            fprintf('\t(lambda, dof, MSE, Expected MSE) = (%g, %f, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.ExpectedMeanSquareErrorDOF, error, aTensionSpline.ExpectedMeanSquareError);
+            fprintf('\t(lambda, dof, MSE, Expected MSE, NoSigma, NoSigmaAlt) = (%g, %f, %f, %f, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.ExpectedMeanSquareErrorDOF, error, aTensionSpline.ExpectedMeanSquareError, aTensionSpline.ExpectedMeanSquareErrorNoSigma, aTensionSpline.ExpectedMeanSquareErrorNoSigmaAlt );
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
