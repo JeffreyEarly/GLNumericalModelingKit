@@ -216,9 +216,13 @@ classdef TensionSpline < BSpline
             end
         end
         
+        function epsilon = epsilon(self)
+            epsilon = self.x - self.ValueAtPoints(self.t);
+        end
+        
         function X2 = SampleVariance(self)
             % The sample variance. Same as ||(S-I)*x||^2/N
-            X2 = mean( (self.x - self.ValueAtPoints(self.t)).^2,1);
+            X2 = mean( self.epsilon.^2,1);
         end
         
         function SE2 = VarianceOfTheMean(self)
@@ -431,7 +435,7 @@ classdef TensionSpline < BSpline
                 
                 W = diag(1./(dx2));
                 
-                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV);
+                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu);
                 
                 rel_error = max( (dx2-error_x_previous)./dx2 );
                 error_x_previous=dx2;
