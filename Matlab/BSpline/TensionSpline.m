@@ -30,7 +30,7 @@ classdef TensionSpline < BSpline
         
         X
         V
-        XWX,XWx,VV
+        W,XWX,XWx,VV
         
         x
         t
@@ -123,6 +123,7 @@ classdef TensionSpline < BSpline
             M = size(X,2);
             m = zeros(M,D);
             Cm = zeros(M,M,D);
+            W = zeros(N,N,D);
             for i=1:D
                 if length(lambda) > 1
                     lambda_i = lambda(D);
@@ -131,7 +132,7 @@ classdef TensionSpline < BSpline
                 end
                 
                 if didSetWeightFunction == 1
-                    [m(:,i),Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda_i,x(:,i),mu,w,XWX,XWx(:,i),VV);
+                    [m(:,i),Cm(:,:,i),W(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda_i,x(:,i),mu,w,XWX,XWx(:,i),VV);
                 else
                     [m(:,i),Cm(:,:,i)] = TensionSpline.TensionSolution(X,V,sigma,lambda_i,x(:,i),mu,XWX,XWx(:,i),VV);
                 end
@@ -143,6 +144,7 @@ classdef TensionSpline < BSpline
             self.mu = mu;
             self.T = T;
             self.Cm = Cm;
+            self.W = W;
             self.X = X;
             self.V = V;
             self.XWX=XWX;
@@ -192,7 +194,7 @@ classdef TensionSpline < BSpline
                 end
                 
                 if ~isempty(self.w)
-                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,lambda_i,self.x(:,i),self.mu,self.w,self.XWX,self.XWx(:,i),self.VV);
+                    [self.m(:,i),self.Cm(:,:,i),self.W(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,lambda_i,self.x(:,i),self.mu,self.w,self.XWX,self.XWx(:,i),self.VV);
                 else
                     [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,lambda_i,self.x(:,i),self.mu,self.XWX,self.XWx(:,i),self.VV);
                 end
@@ -200,50 +202,41 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function dof = DOF(self)
-            dof = zeros(1,self.D);
-            for iDim = 1:self.D
-                dof(iDim) = self.sigma*self.sigma / mean((diag(self.X*squeeze(self.Cm(:,:,iDim))*self.X.')));
-            end
-        end
-        
-        function dof = IsotropicDOF(self)
-            meanOfTrace = zeros(1,self.D);
-            for iDim = 1:self.D
-                meanOfTrace(iDim) = mean((diag(self.X*squeeze(self.Cm(:,:,iDim))*self.X.')));
-            end
-            dof = self.sigma*self.sigma / mean(meanOfTrace);
-        end
-        
-        function dof = IsotropicVarianceDOF(self)
-            dof = 1./(1-mean( (self.x - self.ValueAtPoints(self.t)).^2,1)/(self.sigma*self.sigma));
+        function S = SmoothingMatrix(self)
+            % The smoothing matrix S takes the observations and maps them
+            % onto the estimated true values.
+            S = zeros(size(self.Cm));
             
-            dof = mean(dof);
+            for iDim = 1:self.D
+                if ~isempty(self.w)
+                    S(:,:,iDim) =  (self.X*squeeze(self.Cm(:,:,iDim))*self.X.')*self.W(:,:,iDim);
+                else
+                    S(:,:,iDim) =  (self.X*squeeze(self.Cm(:,:,iDim))*self.X.')/(self.sigma*self.sigma);
+                end
+            end
         end
         
-        function dof = ExpectedMeanSquareErrorDOF(self)
+        function X2 = SampleVariance(self)
+            % The sample variance. Same as ||(S-I)*x||^2/N
+            X2 = mean( (self.x - self.ValueAtPoints(self.t)).^2,1);
+        end
+        
+        function SE2 = VarianceOfTheMean(self)
+            % The variance of the mean is the square of the standard error
             S = self.SmoothingMatrix;
-            SI = (S-eye(size(S)));
-            
-            dof = 1./( mean((SI*self.x).^2)/(self.sigma*self.sigma) + 2*trace(S)/length(S) - 1); 
+            SE2 = trace(S)/length(S);
         end
         
         function MSE = ExpectedMeanSquareError(self)
             % This is the *expected* mean-square error normalized by the
-            % variance.
+            % variance. Note that it is a combination of the sample
+            % variance and the variance of the mean.
             %
             % From Craven and Wahba, 1979
             S = self.SmoothingMatrix;
             SI = (S-eye(size(S)));
             
             MSE = mean((SI*self.x).^2)/(self.sigma*self.sigma) + 2*trace(S)/length(S) - 1;
-        end
-        
-        function MSE = ExpectedMeanSquareErrorNoSigma(self)
-            % From Craven and Wahba, 1979
-            S = self.SmoothingMatrix;
-            
-            MSE = trace(S)/length(S);
         end
         
         function MSE = ExpectedMeanSquareErrorNoSigmaAlt(self)
@@ -254,22 +247,42 @@ classdef TensionSpline < BSpline
             b = trace(S)/length(S);
             
             MSE = a*(b/(1-b));
-%             MSE = a/(1-b)^2;
-            fprintf(' sigma^2=%.2f ',a/(1-b));
+            %             MSE = a/(1-b)^2;
+            %             fprintf(' sigma^2=%.2f ',a/(1-b));
         end
         
-        function S = SmoothingMatrix(self)
-            S = zeros(size(self.Cm));
-            for iDim = 1:self.D
-               S(:,:,iDim) =  (self.X*squeeze(self.Cm(:,:,iDim))*self.X.')/(self.sigma*self.sigma);
-            end
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Measures of degrees-of-freedom
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function dof = DOFFromVarianceOfTheMean(self)
+            dof = 1./self.VarianceOfTheMean;
         end
         
+        function dof = IsotropicDOFFromVarianceOfTheMean(self)
+            dof = 1/mean(self.VarianceOfTheMean);
+        end
         
+        function dof = DOFFromSampleVariance(self)
+            dof = 1./(1-self.SampleVariance/(self.sigma*self.sigma));
+        end
         
+        function dof = IsotropicDOFFromSampleVariance(self)            
+            dof = mean(self.DOFFromSampleVariance);
+        end
         
+        function dof = DOFFromExpectedMeanSquareError(self)
+            dof = 1./self.ExpectedMeanSquareError;
+        end
         
-        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Estimates of signal velocity, acceleration, etc.
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%               
+
         function u_rms = DerivativeRMSFromSpectrum(self,D)
             u_rms = zeros(1,self.D);
             for iDim = 1:self.D
@@ -292,6 +305,19 @@ classdef TensionSpline < BSpline
         function lambda = ExpectedLambdaInitial(self)
             dof = self.ExpectedDOFFromVelocity();
             lambda = (dof-1)./(dof .* self.DerivativeRMSFromSpectrum(self.T).^2);
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Minimization
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function lambda = Minimize(self,penaltyFunction)
+            % the penalty function *must* take a tension spline object and
+            % return a scalar. The function will be minimized by varying
+            % lambda.
+            lambda = TensionSpline.MinimizeFunctionOfSpline(self,penaltyFunction);
         end
         
     end
@@ -388,24 +414,24 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function [m,Cm] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV)
+        function [m,Cm,W] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV)
             % Same calling sequence as the TensionSolution function, but
             % also includes the weight factor, w
             if length(sigma) == 1
                 sigma = ones(size(x))*sigma;
             end
-            Wx = diag(1./(sigma.^2));
-            m = TensionSpline.TensionSolution(X,V,Wx,lambda,x,mu,XWX,XWx,VV);
+            W = diag(1./(sigma.^2));
+            m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV);
             
-            error_x_previous = sigma*sigma;
+            error_x_previous = sigma.*sigma;
             rel_error = 1.0;
             repeats = 1;
             while (rel_error > 0.01)
                 dx2 = w(X*m - x);
                 
-                Wx = diag(1./(dx2));
+                W = diag(1./(dx2));
                 
-                m = TensionSpline.TensionSolution(X,V,Wx,lambda,x,mu,XWX,XWx,VV);
+                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV);
                 
                 rel_error = max( (dx2-error_x_previous)./dx2 );
                 error_x_previous=dx2;
@@ -418,8 +444,10 @@ classdef TensionSpline < BSpline
             end
             
             
-            if nargout == 2
-                Cm = inv(X'*Wx*X + (lambda*N/Q)*(V'*V));
+            if nargout >= 2
+                N = length(x);
+                Q = size(V,1);
+                Cm = inv(X'*W*X + (lambda*N/Q)*(V'*V));
             end
         end
         
@@ -429,19 +457,22 @@ classdef TensionSpline < BSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        
-        function lambda = MinimizeExpectedMeanSquareError(aTensionSpline)
-            errorFunction = @(log10lambda) TensionSpline.ExpectedMeanSquareErrorWrapper(aTensionSpline,log10lambda);
+        function lambda = MinimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
+            errorFunction = @(log10lambda) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambda,functionOfSpline);
             optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 0.01, 'TolFun', 0.01) );
             lambda = 10^optimalLog10lambda;
         end
-        
-        function MSE = ExpectedMeanSquareErrorWrapper(aTensionSpline, log10lambda)
-            % This is the expected mean-square error as found in Craven &
-            % Wahba 1979, normalized by sigma^2.
+        function error = FunctionOfSplineWrapper(aTensionSpline, log10lambda, functionOfSpline)
             aTensionSpline.lambda = 10^log10lambda;              
-            MSE = aTensionSpline.ExpectedMeanSquareError;
+            error = functionOfSpline(aTensionSpline);
         end
+        
+        
+        function lambda = MinimizeExpectedMeanSquareError(aTensionSpline)
+            lambda = TensionSpline.MinimizeFunctionOfSpline(aTensionSpline,@(aTensionSpline) aTensionSpline.ExpectedMeanSquareError);
+        end
+        
+
         
         function lambda = MinimizeExpectedMeanSquareErrorNoSigma(aTensionSpline)
             errorFunction = @(log10lambda) TensionSpline.ExpectedMeanSquareErrorNoSigmaWrapper(aTensionSpline,log10lambda);
@@ -454,7 +485,7 @@ classdef TensionSpline < BSpline
             % Wahba 1979, normalized by sigma^2.
             aTensionSpline.lambda = 10^log10lambda;
             MSE = aTensionSpline.ExpectedMeanSquareErrorNoSigmaAlt;
-            fprintf('lambda: %f, MSE: %f\n',aTensionSpline.lambda,MSE);
+            fprintf('\tExpectedMeanSquareErrorNoSigmaWrapper: lambda: %f, MSE: %f\n',aTensionSpline.lambda,MSE);
         end
         
         function [lambda, dof] = ExpectedInitialTension(t,x,sigma,T,isIsotropic)
@@ -560,6 +591,13 @@ classdef TensionSpline < BSpline
             alpha = 0.10;
             cutoff = 2/TensionSpline.chi2inv(alpha/2,2);
             
+            % There are two ways to think of this. Either you look for the
+            % 95% range of the signal, or the 95% range of the expected
+            % noise.
+            alpha = 0.999;
+            dof = 2;
+            cutoff = TensionSpline.chi2inv(alpha,dof)/dof;
+            
             u2 = sum((s_signal > cutoff*s_noise) .* s_signal)*df;
             a_std = sqrt(u2);
             a_rms = sqrt( u2 + a_mean^2 );
@@ -598,7 +636,7 @@ classdef TensionSpline < BSpline
             aTensionSpline.lambda = 10^log10lambda;     
             error = mean(mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2,1))/(aTensionSpline.sigma*aTensionSpline.sigma);
             
-            fprintf('\t(lambda, dof, MSE, Expected MSE, NoSigma, NoSigmaAlt) = (%g, %f, %f, %f, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.ExpectedMeanSquareErrorDOF, error, aTensionSpline.ExpectedMeanSquareError, aTensionSpline.ExpectedMeanSquareErrorNoSigma, aTensionSpline.ExpectedMeanSquareErrorNoSigmaAlt );
+%             fprintf('\tMeanSquareError: (lambda, dof, MSE, Expected MSE, NoSigma, NoSigmaAlt) = (%g, %f, %f, %f, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.ExpectedMeanSquareErrorDOF, error, aTensionSpline.ExpectedMeanSquareError, aTensionSpline.ExpectedMeanSquareErrorNoSigma, aTensionSpline.ExpectedMeanSquareErrorNoSigmaAlt );
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
