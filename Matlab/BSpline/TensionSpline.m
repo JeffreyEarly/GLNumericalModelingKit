@@ -313,6 +313,31 @@ classdef TensionSpline < BSpline
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
+        % Likelihood
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function phi = LogLikelihood(self)
+            Q = 10*length(self.t); % number of points on the quadrature grid
+            tq = linspace(self.t(1),self.t(end),Q)';
+            phi = self.SampleVariance/(self.sigma^2) + self.lambda *  mean( self.ValueAtPoints(tq,self.T).^2 );
+        end
+        
+        function AIC = AIC(self)
+            m = size(self.Cm,1);
+            k = self.K * m;
+            AIC = 2 * k - 2*self.LogLikelihood();
+        end
+        
+        function AICc = AICc(self)
+            m = size(self.Cm,1);
+            k = self.K * m;
+            n = length(self.x);
+            AICc = self.AIC + (2*k*k + 2*k)/(n-k-1);
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
         % Minimization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -641,6 +666,39 @@ classdef TensionSpline < BSpline
             error = mean(mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2,1))/(aTensionSpline.sigma*aTensionSpline.sigma);
             
 %             fprintf('\tMeanSquareError: (lambda, dof, MSE, Expected MSE, NoSigma, NoSigmaAlt) = (%g, %f, %f, %f, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.ExpectedMeanSquareErrorDOF, error, aTensionSpline.ExpectedMeanSquareError, aTensionSpline.ExpectedMeanSquareErrorNoSigma, aTensionSpline.ExpectedMeanSquareErrorNoSigmaAlt );
+        end
+        
+        function [rmse,norm] = MeanSquareErrorAtAllOrders(aTensionSpline, t_true, x_true)
+            if length(unique(diff(t_true))) > 1
+                error('This only works for evenly spaced data at the moment.');
+            end
+            
+            rmse = zeros(aTensionSpline.K,1);
+            norm = zeros(aTensionSpline.K,1);
+            dt = t_true(2)-t_true(1);
+            for D = 0:(aTensionSpline.K-1)
+                
+                % differentiate D times
+                % We remove the mean from *position*
+                signal_true = x_true;
+                for i=1:D
+                    signal_true = diff(signal_true)/dt;
+                end
+                
+                % points of accuracy move dt/2 further inside each D
+                t_signal = t_true(1:(length(t_true)-D)) + D*dt/2;
+                
+                rmse(D+1) = sqrt( mean( (signal_true - aTensionSpline.ValueAtPoints(t_signal,D)).^2 ) );
+                norm(D+1) = sqrt(mean(signal_true.^2));
+                if D == 0
+                    norm(D+1) = sqrt(mean((signal_true-mean(signal_true)).^2));
+                end
+            end
+        end
+        
+        function Q = QScore(aTensionSpline, t_true, x_true)
+            [rmse,norm] = TensionSpline.MeanSquareErrorAtAllOrders(aTensionSpline, t_true, x_true);
+            Q = mean(rmse./norm);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

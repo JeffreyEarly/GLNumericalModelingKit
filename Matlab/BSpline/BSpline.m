@@ -84,10 +84,13 @@ classdef BSpline < handle
         end
         
         
-        function x_out = ValueAtPoints( self, t)
+        function x_out = ValueAtPoints( self, t, NumDerivatives)
+            if ~exist('NumDerivatives','var')
+                NumDerivatives = 0;
+            end
             x_out = zeros(length(t),self.D);
             for i=1:self.D
-                x_out(:,i) = BSpline.EvaluateFromPPCoefficients(t,self.C(:,:,i),self.t_pp,0);
+                x_out(:,i) = BSpline.EvaluateFromPPCoefficients(t,self.C(:,:,i),self.t_pp,NumDerivatives);
             end
         end
     end
