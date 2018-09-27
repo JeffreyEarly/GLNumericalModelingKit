@@ -172,7 +172,7 @@ classdef TensionSpline < BSpline
                 B = BSpline.Spline( t, self.t_knot, self.K, 0 );
             else
                 B = BSpline.Spline( t, self.t_knot, self.K, varargin{1} );
-                B = B(:,:,varargin{1});
+                B = B(:,:,varargin{1}+1);
             end
         end
         
@@ -216,17 +216,34 @@ classdef TensionSpline < BSpline
             end
         end
         
+        function S = CovarianceMatrixForDerivative(self,numDerivs)
+            % The smoothing matrix S takes the observations and maps them
+            % onto the estimated true values.
+            S = zeros(size(self.Cm));
+            J = self.Splines(self.t,numDerivs);
+            
+            for iDim = 1:self.D
+                if ~isempty(self.w)
+                    S(:,:,iDim) =  (J*squeeze(self.Cm(:,:,iDim))*J.')*self.W(:,:,iDim);
+                else
+                    S(:,:,iDim) =  (J*squeeze(self.Cm(:,:,iDim))*J.');
+                end
+            end
+        end
+        
         function epsilon = epsilon(self)
             epsilon = self.x - self.ValueAtPoints(self.t);
         end
         
         function X2 = SampleVariance(self)
             % The sample variance. Same as ||(S-I)*x||^2/N
+            % Not normalized by the variance.
             X2 = mean( self.epsilon.^2,1);
         end
         
         function SE2 = VarianceOfTheMean(self)
             % The variance of the mean is the square of the standard error
+            % Normalized by the variance.
             S = self.SmoothingMatrix;
             SE2 = trace(S)/length(S);
         end
@@ -685,10 +702,19 @@ classdef TensionSpline < BSpline
                     signal_true = diff(signal_true)/dt;
                 end
                 
-                % points of accuracy move dt/2 further inside each D
-                t_signal = t_true(1:(length(t_true)-D)) + D*dt/2;
+                if 1 == 0
+                     % points of accuracy move dt/2 further inside each D
+                    t_signal = t_true(1:(length(t_true)-D)) + D*dt/2;
+                    
+                    signal_obs = aTensionSpline.ValueAtPoints(t_signal,D);
+                else
+                    signal_obs = aTensionSpline.ValueAtPoints(t_true);
+                    for i=1:D
+                        signal_obs = diff(signal_obs)/dt;
+                    end
+                end
                 
-                rmse(D+1) = sqrt( mean( (signal_true - aTensionSpline.ValueAtPoints(t_signal,D)).^2 ) );
+                rmse(D+1) = sqrt( mean( (signal_true - signal_obs).^2 ) );
                 norm(D+1) = sqrt(mean(signal_true.^2));
                 if D == 0
                     norm(D+1) = sqrt(mean((signal_true-mean(signal_true)).^2));
