@@ -272,6 +272,29 @@ classdef TensionSpline < BSpline
             %             fprintf(' sigma^2=%.2f ',a/(1-b));
         end
         
+        % This MSE is slightly higher than what we actually get, increase
+        % as a function of derivative.
+        function [MSE,noise] = ExpectedMeanSquareErrorAtAllOrders(self)
+           MSE = zeros(self.K,1);
+           noise = zeros(self.K,1);
+           
+           S = self.SmoothingMatrix;
+           SI = (S-eye(size(S)));
+           sigma2 = self.sigma*self.sigma;
+           MSE(1) = mean((SI*self.x).^2) + sigma2*(2*trace(S)/length(S) - 1);
+           noise(1) = self.sigma*self.sigma;
+           
+           for iDiff=1:(self.K-1)
+               Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
+               DS = Diff*S;
+               DminusDS = Diff - DS;
+               MSE(iDiff+1) = (sum((DminusDS*self.x).^2) - sigma2*sum(sum(DminusDS.^2)) + sigma2*sum(sum(DS.^2)))/length(Diff);
+%                MSE(iDiff+1) = ( sum((DminusDS*self.x).^2) + 2*sigma2*sum(sum(Diff.*DS)) - sigma2*sum(sum(Diff.^2)) )/length(Diff);
+               noise(iDiff+1) = sigma2*sum(sum(Diff.^2))/length(Diff);
+               % my nois estimate appears good
+           end
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Measures of degrees-of-freedom
