@@ -107,7 +107,7 @@ classdef TensionSpline < BSpline
             end
             
             % Compute the spline values at the observation points
-            t_knot = InterpolatingSpline.KnotPointsForPoints(t,K);
+            t_knot = InterpolatingSpline.KnotPointsForPoints(t,K,1);
             X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             
             % Now we need a quadrature (integration) grid that is finer
@@ -205,7 +205,7 @@ classdef TensionSpline < BSpline
         function S = SmoothingMatrix(self)
             % The smoothing matrix S takes the observations and maps them
             % onto the estimated true values.
-            S = zeros(size(self.Cm));
+            S = zeros(size(self.X,1),size(self.X,1));
             
             for iDim = 1:self.D
                 if ~isempty(self.w)
@@ -291,8 +291,34 @@ classdef TensionSpline < BSpline
                MSE(iDiff+1) = (sum((DminusDS*self.x).^2) - sigma2*sum(sum(DminusDS.^2)) + sigma2*sum(sum(DS.^2)))/length(Diff);
 %                MSE(iDiff+1) = ( sum((DminusDS*self.x).^2) + 2*sigma2*sum(sum(Diff.*DS)) - sigma2*sum(sum(Diff.^2)) )/length(Diff);
                noise(iDiff+1) = sigma2*sum(sum(Diff.^2))/length(Diff);
-               % my nois estimate appears good
+               % This is the equivalent of sigma2 for the derivative of the noise
            end
+        end
+        
+        function SNR = SignalToNoiseRatio(self)
+            sigma2 = self.sigma*self.sigma;
+            x_smoothed = self.ValueAtPoints(self.t);
+            
+            SNR = zeros(self.K,1);
+            SNR(1) = mean(x_smoothed.^2)/sigma2;
+            for iDiff=1:(self.K-1)
+               Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
+               SNR(1+iDiff) = sum((Diff*x_smoothed).^2)/(sigma2*sum(sum(Diff.^2)) );
+            end
+        end
+        
+        function SSER = SignalToStandardErrorRatio(self)
+            sigma2 = self.sigma*self.sigma;
+            x_smoothed = self.ValueAtPoints(self.t);
+            S = self.SmoothingMatrix;
+            
+            SSER = zeros(self.K,1);
+            SSER(1) = mean(x_smoothed.^2)/sigma2;
+            for iDiff=1:(self.K-1)
+               Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
+               SE = sigma2*sum(sum( Diff.*(Diff*S) ));
+               SSER(1+iDiff) = sum((Diff*x_smoothed).^2)/SE;
+            end
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
