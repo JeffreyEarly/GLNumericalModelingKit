@@ -103,11 +103,15 @@ classdef TensionSpline < BSpline
             end
                 
             if shouldSetLambdaFromInitialDOF == 1
-               lambda = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic);
+               [lambda, dof] = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic);
+               dof = ceil(dof/2);
+               fprintf('using %d dof\n', dof);
+            else
+                dof = 1;
             end
             
             % Compute the spline values at the observation points
-            t_knot = InterpolatingSpline.KnotPointsForPoints(t,K,1);
+            t_knot = InterpolatingSpline.KnotPointsForPoints(t,K,dof);
             X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             
             % Now we need a quadrature (integration) grid that is finer
@@ -176,7 +180,12 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function self = set.lambda(self,newlambda)
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Responding to changes in the tension parameter
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%       
+        function set.lambda(self,newlambda)
             if isempty(self.lambda) 
                 self.lambda = newlambda;
             elseif self.lambda ~= newlambda
@@ -202,6 +211,12 @@ classdef TensionSpline < BSpline
             end
         end
         
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Smoothing Matrix and Covariance matrix
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
         function S = SmoothingMatrix(self)
             % The smoothing matrix S takes the observations and maps them
             % onto the estimated true values.
@@ -216,11 +231,11 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function S = CovarianceMatrixForDerivative(self,numDerivs)
-            % The smoothing matrix S takes the observations and maps them
-            % onto the estimated true values.
+        function S = CovarianceMatrixAtPointsForDerivative(self,t,numDerivs)
+            % Returns the covariance matrix for a given derivative at the
+            % requested points.
             S = zeros(size(self.Cm));
-            J = self.Splines(self.t,numDerivs);
+            J = self.Splines(t,numDerivs);
             
             for iDim = 1:self.D
                 if ~isempty(self.w)
@@ -229,7 +244,31 @@ classdef TensionSpline < BSpline
                     S(:,:,iDim) =  (J*squeeze(self.Cm(:,:,iDim))*J.');
                 end
             end
+        end    
+        
+        function S = CovarianceMatrixForDerivative(self,numDerivs)
+            % Returns the covariance matrix for a given derivative at the
+            % points of observation
+            S = self.CovarianceMatrixAtPointsForDerivative(self.t,numDerivs);
         end
+        
+        function SE = StandardErrorAtPointsForDerivative(self,t,numDerivs)
+            % Returns the standard error for a given derivative at the
+            % points requested.
+            SE = sqrt(diag(self.CovarianceMatrixAtPointsForDerivative(t,numDerivs)));
+        end
+        
+        function SE = StandardErrorForDerivative(self,numDerivs)
+            % Returns the standard error for a given derivative at the
+            % observation points.
+           SE = sqrt(diag(self.CovarianceMatrixForDerivative(numDerivs)));
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Measures of error and degrees-of-freedom (DOF)
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function epsilon = epsilon(self)
             epsilon = self.x - self.ValueAtPoints(self.t);
@@ -254,10 +293,19 @@ classdef TensionSpline < BSpline
             % variance and the variance of the mean.
             %
             % From Craven and Wahba, 1979
-            S = self.SmoothingMatrix;
-            SI = (S-eye(size(S)));
             
-            MSE = mean((SI*self.x).^2)/(self.sigma*self.sigma) + 2*trace(S)/length(S) - 1;
+            if ~isempty(self.XWX)
+                MSE = self.SampleVariance/(self.sigma*self.sigma) + 2*trace(squeeze(self.Cm(:,:,1))*self.XWX)/length(self.x) - 1;
+            else
+                S = self.SmoothingMatrix;
+                SI = (S-eye(size(S)));
+                
+                MSE = mean((SI*self.x).^2)/(self.sigma*self.sigma) + 2*trace(S)/length(S) - 1;
+            end
+            
+
+
+
         end
         
         function MSE = ExpectedMeanSquareErrorNoSigmaAlt(self)
