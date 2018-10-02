@@ -234,7 +234,7 @@ classdef TensionSpline < BSpline
         function S = CovarianceMatrixAtPointsForDerivative(self,t,numDerivs)
             % Returns the covariance matrix for a given derivative at the
             % requested points.
-            S = zeros(size(self.Cm));
+            S = zeros(length(t),length(t),self.D);
             J = self.Splines(t,numDerivs);
             
             for iDim = 1:self.D
@@ -284,7 +284,7 @@ classdef TensionSpline < BSpline
             % The variance of the mean is the square of the standard error
             % Normalized by the variance.
             S = self.SmoothingMatrix;
-            SE2 = trace(S)/length(S);
+            SE2 = self.sigma*self.sigma*trace(S)/length(S);
         end
         
         function MSE = ExpectedMeanSquareError(self)
@@ -376,11 +376,11 @@ classdef TensionSpline < BSpline
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function dof = DOFFromVarianceOfTheMean(self)
-            dof = 1./self.VarianceOfTheMean;
+            dof = (self.sigma*self.sigma)./self.VarianceOfTheMean;
         end
         
         function dof = IsotropicDOFFromVarianceOfTheMean(self)
-            dof = 1/mean(self.VarianceOfTheMean);
+            dof = (self.sigma*self.sigma)/mean(self.VarianceOfTheMean);
         end
         
         function dof = DOFFromSampleVariance(self)

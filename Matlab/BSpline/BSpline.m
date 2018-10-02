@@ -225,7 +225,7 @@ classdef BSpline < handle
             delta_r = zeros(N,K);
             delta_l = zeros(N,K);
             knot_indices = discretize(t,t_knot(1:(M-K+1)));
-            
+                        
             % XB will contain all splines from (K-D) through order (K-1).
             % These are needed to compute the derivatives of the spline, if
             % requested by the user.
