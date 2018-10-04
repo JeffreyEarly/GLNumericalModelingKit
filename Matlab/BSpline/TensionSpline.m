@@ -27,6 +27,7 @@ classdef TensionSpline < BSpline
         mu          % mean value of tension
         w           % weight function
         Cm          % error in coefficients, MxMxD
+        knot_dof    % knot dofs
         
         X
         V
@@ -65,6 +66,8 @@ classdef TensionSpline < BSpline
             mu = 0;
             didSetWeightFunction = 0;
             isIsotropic = 0;
+            knot_dof = 1;
+            shouldSetKnotDOFAutomatically = 0;
             
             for k = 1:2:length(varargin)
                 if strcmp(varargin{k}, 'K')
@@ -82,6 +85,14 @@ classdef TensionSpline < BSpline
                     didSetWeightFunction = 1;
                 elseif strcmp(varargin{k}, 'isIsotropic')
                     isIsotropic = varargin{k+1};
+                elseif strcmp(varargin{k}, 'knot_dof')
+                    if ischar(varargin{k+1}) && strcmp(varargin{k+1}, 'auto')
+                        shouldSetKnotDOFAutomatically = 1;
+                    elseif isnumeric(varargin{k+1}) && varargin{k+1} >= 1
+                        knot_dof = varargin{k+1};
+                    else
+                        error('invalid option for knot_dof. Set to a value >= 1 or auto.');
+                    end
                 end
             end
             
@@ -101,17 +112,18 @@ classdef TensionSpline < BSpline
             elseif ~isscalar(lambda) && ~isvector(lambda)
                 error('Invalid choice for lambda. Lambda must be either a scalar (or vector if multidimensional) or the string values of initial_dof or iterated_dof. ');
             end
-                
-            if shouldSetLambdaFromInitialDOF == 1
-               [lambda, dof] = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic);
-               dof = ceil(dof/2);
-               fprintf('using %d dof\n', dof);
-            else
-                dof = 1;
+            
+            if shouldSetLambdaFromInitialDOF == 1 || shouldSetKnotDOFAutomatically == 1
+                [lambda, dof] = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic); 
+            end
+                        
+            if shouldSetKnotDOFAutomatically == 1
+                % conservative estimate
+                knot_dof = max(1,floor(0.5*dof));
             end
             
             % Compute the spline values at the observation points
-            t_knot = InterpolatingSpline.KnotPointsForPoints(t,K,dof);
+            t_knot = InterpolatingSpline.KnotPointsForPoints(t,K,knot_dof);
             X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             
             % Now we need a quadrature (integration) grid that is finer
@@ -157,9 +169,11 @@ classdef TensionSpline < BSpline
             self.t = t;
             self.x = x;
             self.sigma = sigma;
+            self.knot_dof = knot_dof;
             if didSetWeightFunction == 1
                 self.w = w;
             end
+            
             
         end
    
@@ -467,6 +481,24 @@ classdef TensionSpline < BSpline
     
     methods (Static)
         
+        function flag = IsEvenlySampled(t)
+            % Checks the sampling rate of t.
+            % Returns 1 if the data is evenly sampled (a single unique dt)
+            % Returns 2 if the data is sampled with multiples of a unique dt
+            % Return 0 otherwise
+           unique_dt = unique(diff(t));
+           if length(unique_dt) == 1
+               flag = 1;
+           else
+               dt_multiples = unique_dt/min(unique_dt);
+               if all(mod(dt_multiples,1.0) < 0.01)
+                   flag = 2;
+               else
+                   flag = 0;
+               end
+           end
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Methods for solving the least-squares problem
@@ -651,11 +683,21 @@ classdef TensionSpline < BSpline
             end
             
             dt = median(diff(t));
+
+            % These are the coefficients of the empirical best fits for
+            % slopes [-2,-3,-4] to the model dof = exp(b)*gamma^m
+            m = [0.6652; 0.7904; 0.8339];
+            b = [1.6903; 2.1786; 2.3288];
+             
+            % we use the most conservative estimate, since we don't know
+            % the slope a priori.
             if D == 1 || isIsotropic == 1
-                dof = 1 + 5*sigma/( sqrt(mean(u_rms.^2))*dt );
+                gamma = sigma/( sqrt(mean(u_rms.^2))*dt );
+                dof = max(1,exp(b(1))*gamma^m(1));
                 lambda = (dof-1)/(dof*mean(a_rms.^2));
             else
-                dof = 1 + 5*sigma./( u_rms*dt );
+                gamma = sigma/( u_rms*dt );
+                dof = max(1,exp(b(1))*gamma.^m(1));
                 lambda = (dof-1)./(dof.*a_rms.^2);
             end
         end
