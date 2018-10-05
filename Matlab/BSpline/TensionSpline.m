@@ -663,7 +663,7 @@ classdef TensionSpline < BSpline
             fprintf('\tExpectedMeanSquareErrorNoSigmaWrapper: lambda: %f, MSE: %f\n',aTensionSpline.lambda,MSE);
         end
         
-        function [lambda, dof] = ExpectedInitialTension(t,x,sigma,T,isIsotropic)
+        function [lambda, dof, u_rms, a_rms] = ExpectedInitialTension(t,x,sigma,T,isIsotropic)
             % TensionParameterFromGammaAndAcceleration
             %ExpectedInitialTension returns the expected initial tension.
             % t             time, Nx1
