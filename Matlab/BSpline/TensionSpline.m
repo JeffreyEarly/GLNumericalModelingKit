@@ -81,8 +81,10 @@ classdef TensionSpline < BSpline
                 elseif strcmp(varargin{k}, 'mu')
                     mu = varargin{k+1};
                 elseif strcmp(varargin{k}, 'weightFunction')
-                    w = varargin{k+1};
-                    didSetWeightFunction = 1;
+                    if ~isempty(varargin{k+1})
+                        w = varargin{k+1};
+                        didSetWeightFunction = 1;
+                    end
                 elseif strcmp(varargin{k}, 'isIsotropic')
                     isIsotropic = varargin{k+1};
                 elseif strcmp(varargin{k}, 'knot_dof')
