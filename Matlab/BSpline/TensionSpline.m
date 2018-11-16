@@ -62,7 +62,7 @@ classdef TensionSpline < BSpline
             end
             
             K = 4; % default spline order (cubic spline)
-            T = 2; % default tension *degree* (order-1)
+            T = []; % default tension *degree* (order-1)
             mu = 0;
             didSetWeightFunction = 0;
             isIsotropic = 0;
@@ -96,6 +96,10 @@ classdef TensionSpline < BSpline
                         error('invalid option for knot_dof. Set to a value >= 1 or auto.');
                     end
                 end
+            end
+            
+            if isempty(T)
+                T = K-1;
             end
             
             shouldSetLambdaFromInitialDOF = 0;
