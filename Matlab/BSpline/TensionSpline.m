@@ -68,6 +68,7 @@ classdef TensionSpline < BSpline
             isIsotropic = 0;
             knot_dof = 1;
             shouldSetKnotDOFAutomatically = 0;
+            lambda = Lambda.optimal;
             
             for k = 1:2:length(varargin)
                 if strcmp(varargin{k}, 'K')
@@ -102,6 +103,17 @@ classdef TensionSpline < BSpline
                 T = K-1;
             end
             
+            n_eff = [];
+            if isenum(lambda)
+                switch lambda
+                    case Lambda.initial
+                        [lambda, n_eff] = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic,1); 
+                    case Lambda.full = 
+                end
+            else
+                
+            end
+            
             shouldSetLambdaFromInitialDOF = 0;
             shouldSetLambdaFromIteratedDOF = 0;
             if ~exist('lambda','var')
@@ -120,12 +132,12 @@ classdef TensionSpline < BSpline
             end
             
             if shouldSetLambdaFromInitialDOF == 1 || shouldSetKnotDOFAutomatically == 1
-                [lambda, dof] = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic); 
+                [lambda, n_eff] = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic,1); 
             end
                         
             if shouldSetKnotDOFAutomatically == 1
                 % conservative estimate
-                knot_dof = max(1,floor(0.5*dof));
+                knot_dof = max(1,floor(0.5*n_eff));
             end
             
             % Compute the spline values at the observation points
@@ -639,12 +651,14 @@ classdef TensionSpline < BSpline
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function lambda = MinimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
-            errorFunction = @(log10lambda) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambda,functionOfSpline);
-            optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 0.01, 'TolFun', 0.01) );
-            lambda = 10^optimalLog10lambda;
+            epsilon = 1e-7;
+            errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
+            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
         end
-        function error = FunctionOfSplineWrapper(aTensionSpline, log10lambda, functionOfSpline)
-            aTensionSpline.lambda = 10^log10lambda;              
+        function error = FunctionOfSplineWrapper(aTensionSpline, log10lambdaPlusEpsilon, functionOfSpline)
+            epsilon = 1e-7;
+            aTensionSpline.lambda = 10^log10lambdaPlusEpsilon-epsilon;              
             error = functionOfSpline(aTensionSpline);
         end
         
@@ -669,7 +683,7 @@ classdef TensionSpline < BSpline
             fprintf('\tExpectedMeanSquareErrorNoSigmaWrapper: lambda: %f, MSE: %f\n',aTensionSpline.lambda,MSE);
         end
         
-        function [lambda, dof, u_rms, a_rms] = ExpectedInitialTension(t,x,sigma,T,isIsotropic)
+        function [lambda, dof, u_rms, a_rms] = ExpectedInitialTension(t,x,sigma,T,isIsotropic, infDOF)
             % TensionParameterFromGammaAndAcceleration
             %ExpectedInitialTension returns the expected initial tension.
             % t             time, Nx1
@@ -691,10 +705,10 @@ classdef TensionSpline < BSpline
             dt = median(diff(t));
 
             % These are the coefficients of the empirical best fits for
-            % slopes [-2,-3,-4] to the model dof = exp(b)*gamma^m
+            % slopes [-2,-3,-4] to the model n_eff = exp(b)*gamma^m
             m = [0.6652; 0.7904; 0.8339];
             b = [1.6903; 2.1786; 2.3288];
-             
+                  
             % we use the most conservative estimate, since we don't know
             % the slope a priori.
             if D == 1 || isIsotropic == 1
@@ -705,6 +719,10 @@ classdef TensionSpline < BSpline
                 gamma = sigma/( u_rms*dt );
                 dof = max(1,exp(b(1))*gamma.^m(1));
                 lambda = (dof-1)./(dof.*a_rms.^2);
+            end
+            
+            if ~isempty(infDOF) && infDOF == 1
+                lambda =  1/mean(a_rms.^2);
             end
         end
         
