@@ -36,7 +36,6 @@ classdef TensionSpline < BSpline
         x
         t
         sigma
-        isIsotropic
     end
     
     methods
@@ -47,14 +46,12 @@ classdef TensionSpline < BSpline
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function self = TensionSpline(t,x,sigma,varargin)
             N = length(t);
-            t = reshape(t,[],1); % Nx1
-            if size(x,2) == N
-                x = x.';
-            end
-            if size(x,1) ~= N
+            t = reshape(t,[],1);
+            x = reshape(x,[],1);
+            
+            if length(x) ~= N
                 error('x and t must have the same length.');
             end
-            D = size(x,2);
             
             nargs = length(varargin);
             if mod(nargs,2) ~= 0
@@ -65,10 +62,9 @@ classdef TensionSpline < BSpline
             T = []; % default tension *degree* (order-1)
             mu = 0;
             didSetWeightFunction = 0;
-            isIsotropic = 0;
             knot_dof = 1;
             shouldSetKnotDOFAutomatically = 0;
-            lambda = Lambda.optimal;
+            lambdaArgument = Lambda.optimalIterated;
             
             for k = 1:2:length(varargin)
                 if strcmp(varargin{k}, 'K')
@@ -78,7 +74,7 @@ classdef TensionSpline < BSpline
                 elseif strcmp(varargin{k}, 'T')
                     T = varargin{k+1};
                 elseif strcmp(varargin{k}, 'lambda')
-                    lambda = varargin{k+1};
+                    lambdaArgument = varargin{k+1};
                 elseif strcmp(varargin{k}, 'mu')
                     mu = varargin{k+1};
                 elseif strcmp(varargin{k}, 'weightFunction')
@@ -86,8 +82,6 @@ classdef TensionSpline < BSpline
                         w = varargin{k+1};
                         didSetWeightFunction = 1;
                     end
-                elseif strcmp(varargin{k}, 'isIsotropic')
-                    isIsotropic = varargin{k+1};
                 elseif strcmp(varargin{k}, 'knot_dof')
                     if ischar(varargin{k+1}) && strcmp(varargin{k+1}, 'auto')
                         shouldSetKnotDOFAutomatically = 1;
@@ -104,38 +98,28 @@ classdef TensionSpline < BSpline
             end
             
             n_eff = [];
-            if isenum(lambda)
-                switch lambda
-                    case Lambda.initial
-                        [lambda, n_eff] = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic,1); 
-                    case Lambda.full = 
+            if isenum(lambdaArgument)
+                switch lambdaArgument
+                    case {Lambda.optimalExpected, Lambda.optimalIterated}
+                        u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,1);
+                        n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t);
+                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,T);
+                        lambda = (n_eff-1)/(n_eff*a_rms.^2);
+                    case Lambda.fullTension
+                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,T);
+                        lambda = 1/a_rms.^2;
                 end
+            elseif isscalar(lambdaArgument)
+                lambda = lambdaArgument;
             else
-                
-            end
-            
-            shouldSetLambdaFromInitialDOF = 0;
-            shouldSetLambdaFromIteratedDOF = 0;
-            if ~exist('lambda','var')
-                shouldSetLambdaFromInitialDOF = 1;
-            elseif ischar(lambda)
-                if strcmp(lambda,'initial_dof')
-                    shouldSetLambdaFromInitialDOF = 1;
-                elseif strcmp(lambda,'iterated_dof')
-                    shouldSetLambdaFromInitialDOF = 1;
-                    shouldSetLambdaFromIteratedDOF = 1;
-                else
-                    error('Invalid choice for lambda. Lambda must be either a scalar (or vector if multidimensional) or the string values of initial_dof or iterated_dof. ');
-                end
-            elseif ~isscalar(lambda) && ~isvector(lambda)
-                error('Invalid choice for lambda. Lambda must be either a scalar (or vector if multidimensional) or the string values of initial_dof or iterated_dof. ');
-            end
-            
-            if shouldSetLambdaFromInitialDOF == 1 || shouldSetKnotDOFAutomatically == 1
-                [lambda, n_eff] = TensionSpline.ExpectedInitialTension(t,x,sigma,T,isIsotropic,1); 
+                error('Invalid choice for lambda. Lambda must be either a scalar or the enum Lambda.');
             end
                         
             if shouldSetKnotDOFAutomatically == 1
+                if isempty(n_eff)
+                    u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,1);
+                    n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t);
+                end
                 % conservative estimate
                 knot_dof = max(1,floor(0.5*n_eff));
             end
@@ -145,6 +129,8 @@ classdef TensionSpline < BSpline
             X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             
             % Now we need a quadrature (integration) grid that is finer
+            % if S=T we can optimize this much better because it's all
+            % piecewise constant.
             Q = 10*N; % number of points on the quadrature grid
             tq = linspace(t(1),t(end),Q)';
             B = BSpline.Spline( tq, t_knot, K, T );
@@ -154,26 +140,13 @@ classdef TensionSpline < BSpline
             [XWX,XWx,VV] = TensionSpline.PrecomputeTensionSolutionMatrices(X,V,sigma,x);
             
             % Now compute the coefficients
-            M = size(X,2);
-            m = zeros(M,D);
-            Cm = zeros(M,M,D);
-            W = zeros(N,N,D);
-            for i=1:D
-                if length(lambda) > 1
-                    lambda_i = lambda(D);
-                else
-                    lambda_i = lambda;
-                end
-                
-                if didSetWeightFunction == 1
-                    [m(:,i),Cm(:,:,i),W(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda_i,x(:,i),mu,w,XWX,XWx(:,i),VV);
-                else
-                    [m(:,i),Cm(:,:,i)] = TensionSpline.TensionSolution(X,V,sigma,lambda_i,x(:,i),mu,XWX,XWx(:,i),VV);
-                end
+            if didSetWeightFunction == 1
+                [m,Cm,W] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV);
+            else
+                [m,Cm] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV);
             end
             
             self@BSpline(K,t_knot,m);
-            self.isIsotropic = isIsotropic;
             self.lambda = lambda;
             self.mu = mu;
             self.T = T;
@@ -192,7 +165,9 @@ classdef TensionSpline < BSpline
                 self.w = w;
             end
             
-            
+            if lambdaArgument == Lambda.optimalIterated
+                warning('whoops, need to implement');
+            end
         end
    
         
@@ -227,20 +202,15 @@ classdef TensionSpline < BSpline
         end
         
         function self = tensionParameterDidChange(self)
-            for i=1:self.D
-                if length(self.lambda) > 1
-                    lambda_i = self.lambda(self.D);
-                else
-                    lambda_i = self.lambda;
-                end
-                
-                if ~isempty(self.w)
-                    [self.m(:,i),self.Cm(:,:,i),self.W(:,:,i)] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,lambda_i,self.x(:,i),self.mu,self.w,self.XWX,self.XWx(:,i),self.VV);
-                else
-                    [self.m(:,i),self.Cm(:,:,i)] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,lambda_i,self.x(:,i),self.mu,self.XWX,self.XWx(:,i),self.VV);
-                end
-                [self.C(:,:,i),self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m(:,i), self.t_knot, self.K );
+            % Tension parameter changed, so we need to recompute the
+            % solution, then then compute the PP coefficients for that
+            % solution.
+            if ~isempty(self.w)
+                [self.m,self.Cm,self.W] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,self.XWX,self.XWx,self.VV);
+            else
+                [self.m,self.Cm] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
             end
+            [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -252,29 +222,21 @@ classdef TensionSpline < BSpline
         function S = SmoothingMatrix(self)
             % The smoothing matrix S takes the observations and maps them
             % onto the estimated true values.
-            S = zeros(size(self.X,1),size(self.X,1));
-            
-            for iDim = 1:self.D
-                if ~isempty(self.w)
-                    S(:,:,iDim) =  (self.X*squeeze(self.Cm(:,:,iDim))*self.X.')*self.W(:,:,iDim);
-                else
-                    S(:,:,iDim) =  (self.X*squeeze(self.Cm(:,:,iDim))*self.X.')/(self.sigma*self.sigma);
-                end
+            if ~isempty(self.w)
+                S = (self.X*self.Cm*self.X.')*self.W;
+            else
+                S = (self.X*self.Cm*self.X.')/(self.sigma*self.sigma);
             end
         end
         
         function S = CovarianceMatrixAtPointsForDerivative(self,t,numDerivs)
             % Returns the covariance matrix for a given derivative at the
             % requested points.
-            S = zeros(length(t),length(t),self.D);
-            J = self.Splines(t,numDerivs);
-            
-            for iDim = 1:self.D
-                if ~isempty(self.w)
-                    S(:,:,iDim) =  (J*squeeze(self.Cm(:,:,iDim))*J.')*self.W(:,:,iDim);
-                else
-                    S(:,:,iDim) =  (J*squeeze(self.Cm(:,:,iDim))*J.');
-                end
+            J = self.Splines(t,numDerivs);            
+            if ~isempty(self.w)
+                S = (J*self.Cm*J.')*self.W;
+            else
+                S = (J*self.Cm*J.')/(self.sigma*self.sigma);
             end
         end    
         
@@ -298,7 +260,7 @@ classdef TensionSpline < BSpline
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Measures of error and degrees-of-freedom (DOF)
+        % Measures of error and effective sample size (n_eff)
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
@@ -334,10 +296,6 @@ classdef TensionSpline < BSpline
                 
                 MSE = mean((SI*self.x).^2)/(self.sigma*self.sigma) + 2*trace(S)/length(S) - 1;
             end
-            
-
-
-
         end
         
         function MSE = ExpectedMeanSquareErrorNoSigmaAlt(self)
@@ -403,58 +361,20 @@ classdef TensionSpline < BSpline
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Measures of degrees-of-freedom
+        % Measures of effective sample size ESS
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function dof = DOFFromVarianceOfTheMean(self)
-            dof = (self.sigma*self.sigma)./self.VarianceOfTheMean;
+        function n_eff = EffectiveSampleSizeFromVarianceOfTheMean(self)
+            n_eff = (self.sigma*self.sigma)./self.VarianceOfTheMean;
         end
         
-        function dof = IsotropicDOFFromVarianceOfTheMean(self)
-            dof = (self.sigma*self.sigma)/mean(self.VarianceOfTheMean);
+        function n_eff = EffectiveSampleSizeFromSampleVariance(self)
+            n_eff = 1./(1-self.SampleVariance/(self.sigma*self.sigma));
         end
-        
-        function dof = DOFFromSampleVariance(self)
-            dof = 1./(1-self.SampleVariance/(self.sigma*self.sigma));
-        end
-        
-        function dof = IsotropicDOFFromSampleVariance(self)            
-            dof = mean(self.DOFFromSampleVariance);
-        end
-        
-        function dof = DOFFromExpectedMeanSquareError(self)
-            dof = 1./self.ExpectedMeanSquareError;
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %
-        % Estimates of signal velocity, acceleration, etc.
-        %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%               
 
-        function u_rms = DerivativeRMSFromSpectrum(self,D)
-            u_rms = zeros(1,self.D);
-            for iDim = 1:self.D
-                u_rms(iDim) = TensionSpline.EstimateRMSDerivativeFromSpectrum(self.t,self.x(:,iDim),self.sigma,D);
-            end
-        end
-        
-        function u_rms = VelocityRMSFromSpectrum(self)
-           u_rms = self.DerivativeRMSFromSpectrum(1); 
-        end
-        
-        function a_rms = AccelerationRMSFromSpectrum(self)
-           a_rms = self.DerivativeRMSFromSpectrum(2); 
-        end
-        
-        function dof = ExpectedDOFFromVelocity(self)
-            dof = 1 + 3*self.sigma./(self.VelocityRMSFromSpectrum()*dt);
-        end
-        
-        function lambda = ExpectedLambdaInitial(self)
-            dof = self.ExpectedDOFFromVelocity();
-            lambda = (dof-1)./(dof .* self.DerivativeRMSFromSpectrum(self.T).^2);
+        function n_eff = EffectiveSampleSizeFromExpectedMeanSquareError(self)
+            n_eff = 1./self.ExpectedMeanSquareError;
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -495,28 +415,41 @@ classdef TensionSpline < BSpline
             lambda = TensionSpline.MinimizeFunctionOfSpline(self,penaltyFunction);
         end
         
+        function lambda = MinimizeExpectedMeanSquareError(self)
+            lambda = self.Minimize(@(aTensionSpline) aTensionSpline.ExpectedMeanSquareError);
+        end
+        
+        function lambda = MinimizedMeanSquareError(self,t_true,x_true)
+           mse = @(aTensionSpline) mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2)/(aTensionSpline.sigma*aTensionSpline.sigma);
+           lambda = self.Minimize(mse);
+        end
     end
     
     methods (Static)
         
-        function flag = IsEvenlySampled(t)
-            % Checks the sampling rate of t.
-            % Returns 1 if the data is evenly sampled (a single unique dt)
-            % Returns 2 if the data is sampled with multiples of a unique dt
-            % Return 0 otherwise
-           unique_dt = unique(diff(t));
-           if length(unique_dt) == 1
-               flag = 1;
-           else
-               dt_multiples = unique_dt/min(unique_dt);
-               if all(mod(dt_multiples,1.0) < 0.01)
-                   flag = 2;
-               else
-                   flag = 0;
-               end
-           end
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Minimization
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        % We wrap and then unwrap the user-provided penalty function so
+        % that it take log10(lambda) rather than lambda. This is much
+        % better for the fminsearch algorithm.
+
+        function lambda = MinimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
+            epsilon = 1e-7;
+            errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
+            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
         end
         
+        function error = FunctionOfSplineWrapper(aTensionSpline, log10lambdaPlusEpsilon, functionOfSpline)
+            epsilon = 1e-7;
+            aTensionSpline.lambda = 10^log10lambdaPlusEpsilon-epsilon;              
+            error = functionOfSpline(aTensionSpline);
+        end
+
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Methods for solving the least-squares problem
@@ -646,105 +579,22 @@ classdef TensionSpline < BSpline
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Methods for computing lambda
+        % Methods for estimating lambda
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        function lambda = MinimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
-            epsilon = 1e-7;
-            errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
-            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
-            lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
-        end
-        function error = FunctionOfSplineWrapper(aTensionSpline, log10lambdaPlusEpsilon, functionOfSpline)
-            epsilon = 1e-7;
-            aTensionSpline.lambda = 10^log10lambdaPlusEpsilon-epsilon;              
-            error = functionOfSpline(aTensionSpline);
-        end
-        
-        
-        function lambda = MinimizeExpectedMeanSquareError(aTensionSpline)
-            lambda = TensionSpline.MinimizeFunctionOfSpline(aTensionSpline,@(aTensionSpline) aTensionSpline.ExpectedMeanSquareError);
-        end
-        
-
-        
-        function lambda = MinimizeExpectedMeanSquareErrorNoSigma(aTensionSpline)
-            errorFunction = @(log10lambda) TensionSpline.ExpectedMeanSquareErrorNoSigmaWrapper(aTensionSpline,log10lambda);
-            optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 0.01, 'TolFun', 0.01) );
-            lambda = 10^optimalLog10lambda;
-        end
-        
-        function MSE = ExpectedMeanSquareErrorNoSigmaWrapper(aTensionSpline, log10lambda)
-            % This is the expected mean-square error as found in Craven &
-            % Wahba 1979, normalized by sigma^2.
-            aTensionSpline.lambda = 10^log10lambda;
-            MSE = aTensionSpline.ExpectedMeanSquareErrorNoSigmaAlt;
-            fprintf('\tExpectedMeanSquareErrorNoSigmaWrapper: lambda: %f, MSE: %f\n',aTensionSpline.lambda,MSE);
-        end
-        
-        function [lambda, dof, u_rms, a_rms] = ExpectedInitialTension(t,x,sigma,T,isIsotropic, infDOF)
-            % TensionParameterFromGammaAndAcceleration
-            %ExpectedInitialTension returns the expected initial tension.
-            % t             time, Nx1
-            % x             data series NxD
-            % sigma         position error, scalar
-            % T             tension degree, derivative at which tension
-            %               should be applied.
-            % isIsotropic   whether or not multidimensions should be
-            %               treated isotropically.
-            
-            D = size(x,2);
-            u_rms = zeros(1,D);
-            a_rms = zeros(1,D);
-            for iDim = 1:D
-                u_rms(iDim) = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x(:,iDim),sigma,1);
-                a_rms(iDim) = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x(:,iDim),sigma,T);
-            end
-            
-            dt = median(diff(t));
-
+ 
+        function n_eff = EffectiveSampleSizeFromUrms(u_rms, t)
             % These are the coefficients of the empirical best fits for
             % slopes [-2,-3,-4] to the model n_eff = exp(b)*gamma^m
             m = [0.6652; 0.7904; 0.8339];
             b = [1.6903; 2.1786; 2.3288];
-                  
-            % we use the most conservative estimate, since we don't know
-            % the slope a priori.
-            if D == 1 || isIsotropic == 1
-                gamma = sigma/( sqrt(mean(u_rms.^2))*dt );
-                dof = max(1,exp(b(1))*gamma^m(1));
-                lambda = (dof-1)/(dof*mean(a_rms.^2));
-            else
-                gamma = sigma/( u_rms*dt );
-                dof = max(1,exp(b(1))*gamma.^m(1));
-                lambda = (dof-1)./(dof.*a_rms.^2);
-            end
             
-            if ~isempty(infDOF) && infDOF == 1
-                lambda =  1/mean(a_rms.^2);
-            end
-        end
-        
-        function lambda = MatchedDOFSolution(aTensionSpline, expectedDOF)
-            % TensionParameterFromGammaAndVarianceOfMean
-            % Matches 
-            errorFunction = @(log10lambda) TensionSpline.ErrorWithTension(aTensionSpline,log10lambda,expectedDOF);
-            optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', 1., 'TolFun', 0.01) );
-            lambda = 10^optimalLog10lambda;
-        end
-        
-        function error = ErrorWithTension(aTensionSpline,log10lambda, expectedDOF)
-            % Given a TensionSpline object, this sets a new lambda, and
-            % then computes the error on the actual DOF to the expected
-            % DOF.
-            aTensionSpline.lambda = 10^log10lambda;
-            IsotropicDOF = aTensionSpline.IsotropicDOF;
-            error = abs(IsotropicDOF-expectedDOF);
+            dt = median(diff(t));
             
-%             fprintf('\t(lambda, dof) = (%g, %f)\n', aTensionSpline.lambda, IsotropicDOF);
+            gamma = sigma/( u_rms*dt );
+            n_eff = max(1,exp(b(1))*gamma.^m(1));
         end
-        
+                        
         function [a_rms, a_std, a_mean] = EstimateRMSDerivativeFromSpectrum( t, x, sigma, D, shouldPlotSpectra)
             % EstimateRMSDerivativeFromSpectrum Given some signal (t,x)
             % contaminated by noise sigma, this uses the spectrum to
@@ -832,21 +682,6 @@ classdef TensionSpline < BSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function lambda = MinimizeMeanSquareError(aTensionSpline, t_true, x_true)
-            errorFunction = @(log10lambda) TensionSpline.MeanSquareError(aTensionSpline,log10lambda,t_true, x_true);
-            optimalLog10lambda = fminsearch( errorFunction, log10(aTensionSpline.lambda), optimset('TolX', .1, 'TolFun', 0.001) );
-            lambda = 10^optimalLog10lambda;
-        end
-        
-        function error = MeanSquareError(aTensionSpline,log10lambda,t_true, x_true)
-            % Given a TensionSpline object, this sets a new lambda, and
-            % then computes the error on the actual DOF to the expected
-            % DOF.
-            aTensionSpline.lambda = 10^log10lambda;     
-            error = mean(mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2,1))/(aTensionSpline.sigma*aTensionSpline.sigma);
-            
-%             fprintf('\tMeanSquareError: (lambda, dof, MSE, Expected MSE, NoSigma, NoSigmaAlt) = (%g, %f, %f, %f, %f, %f)\n', aTensionSpline.lambda, aTensionSpline.ExpectedMeanSquareErrorDOF, error, aTensionSpline.ExpectedMeanSquareError, aTensionSpline.ExpectedMeanSquareErrorNoSigma, aTensionSpline.ExpectedMeanSquareErrorNoSigmaAlt );
-        end
         
         function [rmse,norm] = MeanSquareErrorAtAllOrders(aTensionSpline, t_true, x_true)
             if length(unique(diff(t_true))) > 1
