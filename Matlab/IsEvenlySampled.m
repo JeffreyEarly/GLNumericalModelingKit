@@ -8,7 +8,9 @@ if length(unique_dt) == 1
     flag = 1;
 else
     dt_multiples = unique_dt/min(unique_dt);
-    if all(mod(dt_multiples,1.0) < 0.01)
+    if all( dt_multiples-1.0 < 1e-7 )
+        flag = 1;
+    elseif all(mod(dt_multiples,1.0) < 0.01)
         flag = 2;
     else
         flag = 0;

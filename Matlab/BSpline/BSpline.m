@@ -9,9 +9,7 @@ classdef BSpline < handle
     
     
     properties (Access = public)
-        K       % order of polynomial
-        D       % number of dimensions
-        
+        K       % order of polynomial        
         m       % spline coefficients (MxD)
         t_knot  % spline knot points
         
@@ -27,16 +25,9 @@ classdef BSpline < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function self = BSpline(K,t_knot,m)
             self.K = K;
-            self.D = size(m,2);
             
             self.t_knot = t_knot;
-            self.m = m;
-            
-            PP = length(self.t_knot) - 2*self.K + 1;
-            self.C = zeros(PP,self.K,self.D);
-            for i=1:self.D
-                [self.C(:,:,i),self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m(:,i), self.t_knot, self.K );
-            end
+            self.m = m;            
         end
         
         function varargout = subsref(self, index)
@@ -58,17 +49,7 @@ classdef BSpline < handle
                         NumDerivatives = 0;
                     end
                     
-                    x_out = zeros(length(t),self.D);
-                    for i=1:self.D
-                        x_out(:,i) = BSpline.EvaluateFromPPCoefficients(t,self.C(:,:,i),self.t_pp,NumDerivatives);
-                    end
-                    if nargout == 1
-                        varargout{1} = x_out;
-                    else
-                        for i=1:self.D
-                            varargout{i} = x_out(:,i);
-                        end
-                    end
+                    varargout{1} = BSpline.EvaluateFromPPCoefficients(t,self.C,self.t_pp,NumDerivatives);
                     
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GET %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 case '.'       
@@ -88,10 +69,16 @@ classdef BSpline < handle
             if ~exist('NumDerivatives','var')
                 NumDerivatives = 0;
             end
-            x_out = zeros(length(t),self.D);
-            for i=1:self.D
-                x_out(:,i) = BSpline.EvaluateFromPPCoefficients(t,self.C(:,:,i),self.t_pp,NumDerivatives);
-            end
+            x_out = BSpline.EvaluateFromPPCoefficients(t,self.C,self.t_pp,NumDerivatives);
+        end
+        
+        function set.m(self,newM)
+            self.m = newM;
+            self.splineCoefficientsDidChange();
+        end
+        
+        function self = splineCoefficientsDidChange(self)
+            [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
         end
     end
     

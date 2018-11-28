@@ -102,7 +102,7 @@ classdef TensionSpline < BSpline
                 switch lambdaArgument
                     case {Lambda.optimalExpected, Lambda.optimalIterated}
                         u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,1);
-                        n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t);
+                        n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sigma);
                         a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,T);
                         lambda = (n_eff-1)/(n_eff*a_rms.^2);
                     case Lambda.fullTension
@@ -118,7 +118,7 @@ classdef TensionSpline < BSpline
             if shouldSetKnotDOFAutomatically == 1
                 if isempty(n_eff)
                     u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,1);
-                    n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t);
+                    n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sigma);
                 end
                 % conservative estimate
                 knot_dof = max(1,floor(0.5*n_eff));
@@ -151,7 +151,9 @@ classdef TensionSpline < BSpline
             self.mu = mu;
             self.T = T;
             self.Cm = Cm;
-            self.W = W;
+            if exist('W','var')
+                self.W = W;
+            end
             self.X = X;
             self.V = V;
             self.XWX=XWX;
@@ -166,7 +168,7 @@ classdef TensionSpline < BSpline
             end
             
             if lambdaArgument == Lambda.optimalIterated
-                warning('whoops, need to implement');
+                self.MinimizeExpectedMeanSquareError();
             end
         end
    
@@ -583,7 +585,7 @@ classdef TensionSpline < BSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
-        function n_eff = EffectiveSampleSizeFromUrms(u_rms, t)
+        function n_eff = EffectiveSampleSizeFromUrms(u_rms, t, sigma)
             % These are the coefficients of the empirical best fits for
             % slopes [-2,-3,-4] to the model n_eff = exp(b)*gamma^m
             m = [0.6652; 0.7904; 0.8339];
@@ -605,7 +607,7 @@ classdef TensionSpline < BSpline
             xin = x;
             tin = t;
             
-            if length(unique(diff(t))) > 1
+            if TensionSpline.IsEvenlySampled(t) ~= 1
                 %    fprintf('interpolating...\n');
                 dt = round(median(diff(t)));
                 N = ceil((t(end)-t(1))/dt);
@@ -673,6 +675,26 @@ classdef TensionSpline < BSpline
                 
                 figure
                 plot(tin,xin), hold on, plot(tin,polyval(p,tin,[],mu))
+            end
+        end
+        
+        function flag = IsEvenlySampled(t)
+            % Checks the sampling rate of t.
+            % Returns 1 if the data is evenly sampled (a single unique dt)
+            % Returns 2 if the data is sampled with multiples of a unique dt
+            % Return 0 otherwise
+            unique_dt = unique(diff(t));
+            if length(unique_dt) == 1
+                flag = 1;
+            else
+                dt_multiples = unique_dt/min(unique_dt);
+                if all( dt_multiples-1.0 < 1e-7 )
+                    flag = 1;
+                elseif all(mod(dt_multiples,1.0) < 0.01)
+                    flag = 2;
+                else
+                    flag = 0;
+                end
             end
         end
         

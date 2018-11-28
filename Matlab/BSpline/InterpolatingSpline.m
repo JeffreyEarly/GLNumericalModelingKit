@@ -28,13 +28,10 @@ classdef InterpolatingSpline < BSpline
             % dimensions of x we are given.
             t = reshape(t,[],1);
             N = length(t);
-            if size(x,2) == N
-                x = x.';
-            end
-            if size(x,1) ~= N
+            x = reshape(x,[],1);
+            if length(x) ~= N
                 error('x and t must have the same length.');
             end
-            D = size(x,2);
             
             % Parse any extra input options.
             nargs = length(varargin);
@@ -59,11 +56,7 @@ classdef InterpolatingSpline < BSpline
             
             % Find the spline coefficients
             X = BSpline.Spline( t, t_knot, K, 0 );
-            M = size(X,2);
-            m = zeros(M,D);
-            for i=1:D
-                m(:,i) = X\x(:,i);
-            end
+            m = X\x;
             
             self@BSpline(K,t_knot,m);
             
