@@ -131,7 +131,9 @@ plot(x_dense,f(x_dense)), hold on
 scatter(x,y,'k')
 legend('true function', 'noisy data')
 ```
-<img src="figures/noisydata.png" width="300">
+
+<img src="figures/noisydata.png" width="400" align="center">
+
 Finally, let's use a tension spline to try to smooth the data and plot the results,
 ```matlab
 spline = TensionSpline(x,y,sigma);
@@ -142,4 +144,5 @@ scatter(x,y,'k')
 plot(x_dense,spline(x_dense),'LineWidth',2)
 legend('true function', 'noisy data', 'tension spline fit')
 ```
-![noisy data with tension spline](figures/noisydatawithtensionspline.png)
+<img src="figures/noisydatawithtensionspline.png" width="400" align="center">
+
