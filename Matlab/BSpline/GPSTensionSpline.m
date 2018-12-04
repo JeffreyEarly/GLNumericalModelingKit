@@ -25,7 +25,8 @@ classdef GPSTensionSpline < handle
         spline_x
         spline_y
         
-        indicesOfOutliers
+        distanceError = []
+        indicesOfOutliers = []
         
         % t-distribution parameters
         % variance_of_the_noise = sigma*sigma*nu/(nu-2)
@@ -86,12 +87,7 @@ classdef GPSTensionSpline < handle
             variance_of_the_noise = sigma*sigma*nu/(nu-2);
             w = @(z)((nu/(nu+1))*sigma^2*(1+z.^2/(nu*sigma^2)));
             
-            if shouldIdentifyOutliers == 0
-                % if we're not identifying outliers, then just go ahead and
-                % find the optimal expected mean square error
-                self.spline_x = TensionSpline(self.t, self.x, sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);
-                self.spline_y = TensionSpline(self.t, self.y, sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);
-            else
+            if shouldIdentifyOutliers == 1
                 % we're looking for outliers, that is, data points that
                 % have low odds of occurring. By default we will find
                 % outliers with less than 1 in 10,000 odds of occurring,
@@ -102,11 +98,13 @@ classdef GPSTensionSpline < handle
                 % definition!) will add too much variance.
                 if isempty(outlierDistance)
                     if isempty(outlierOdds)
-                        outlierOdds = 10000;
+                        outlierOdds = length(t);
                     end
                     outlierThreshold = 1/outlierOdds;
                     gps_cdf = @(z) abs(tcdf(z/sigma,nu) - outlierThreshold/2);
-                    outlierDistance = fminsearch( gps_cdf, -50, optimset('TolX', 0.001, 'TolFun', 0.001) );
+                    outlierDistance = fminsearch( gps_cdf, -50, optimset('TolX', 0.001, 'TolFun', 0.001) );                   
+%                     gps_cdf = @(z) abs(tcdf(z/sigma,nu).^length(t) - .75);
+%                     outlierDistance = fminsearch( gps_cdf, 50, optimset('TolX', 0.001, 'TolFun', 0.001) );
                 end
                 valid_range = [-1 1]*abs(outlierDistance);
                 
@@ -115,16 +113,67 @@ classdef GPSTensionSpline < handle
                 self.spline_y = TensionSpline(self.t, self.y, sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.fullTensionExpected);
                 
                 % now minimize the KS error with the expected distribution
-                % within the valid range
-                self.spline_x.Minimize( @(spline) KolmogorovSmirnovErrorForTDistribution(spline.epsilon,sigma,nu,valid_range))
-                self.spline_y.Minimize( @(spline) KolmogorovSmirnovErrorForTDistribution(spline.epsilon,sigma,nu,valid_range))
+                % within the valid range (i.e., excluding outliers)
+                fprintf('Finding full tension solution by ignoring points with errors more than %.1f meters.\n',abs(outlierDistance));
+                self.spline_x.Minimize( @(spline) GPSTensionSpline.KolmogorovSmirnovErrorForTDistribution(spline.epsilon,sigma,nu,valid_range));
+                self.spline_y.Minimize( @(spline) GPSTensionSpline.KolmogorovSmirnovErrorForTDistribution(spline.epsilon,sigma,nu,valid_range));
                 
+                self.distanceError = sqrt( self.spline_x.epsilon.^2 + self.spline_y.epsilon.^2 );
                 
+                [r, ~, cdf] = GPSTensionSpline.TwoDimStudentTProbabilityDistributionFunction(sigma, nu);
+%                 outlierCut = interp1(cdf,r,1-outlierThreshold,'spline'); % set to spline so that it extrapolates by default, which is better than returning NaN.
+                
+                % About 10% of the time we will have one legit point above
+                % this threshold. 
+                jpd = cdf.^length(t);
+                idx = jpd>0.1; % make things monotonic
+                outlierCut = interp1(jpd(idx),r(idx),.90,'spline');
+                
+                self.indicesOfOutliers = find(self.distanceError(2:end-1) >= outlierCut)+1;
+                
+                fprintf('Found %d points (of %d) that exceed the two-dimensional outlier distance of %.1f meters.\n',length(self.indicesOfOutliers), length(self.t), outlierCut);   
             end
             
+            goodIndices = setdiff((1:length(t))',self.indicesOfOutliers);
+            
+            self.spline_x = TensionSpline(self.t(goodIndices), self.x(goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);
+            self.spline_y = TensionSpline(self.t(goodIndices), self.y(goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);         
+        end
+        
+        function varargout = subsref(self, index)
+            %% Subscript overload
+            %
+            % The forces subscript notation to behave as if it is
+            % evaluating a function.
+            idx = index(1).subs;
+            switch index(1).type
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% FEVAL / COMPOSE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                case '()'
+                    if length(idx) >= 1
+                        time = idx{1};
+                    end
+                    
+                    if length(idx) >= 2
+                        NumDerivatives = idx{2};
+                    else
+                        NumDerivatives = 0;
+                    end
+                    
+                    varargout{1} = self.spline_x(time,NumDerivatives);
+                    varargout{2} = self.spline_y(time,NumDerivatives);
+                    
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GET %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                case '.'
+                    [varargout{1:nargout}] = builtin('subsref',self,index);
+                    
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RESTRICT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                case '{}'
+                    error('The GPSTensionSpline class does not know what to do with {}.');
+                otherwise
+                    error('Unexpected syntax');
+            end
             
         end
-  
     end
     
     methods (Static)
@@ -159,6 +208,69 @@ classdef GPSTensionSpline < handle
             D = max(abs(y-y_data));
             
             totalError = (sqrt(n) + 0.12 + 0.11/sqrt(n))*D;
+        end
+        
+        function [r, pdf, cdf] = TwoDimStudentTProbabilityDistributionFunction(sigma, nu)
+            % returns the pdf and cdf of the two-dimensional t-distribution
+            % as a function of distance, r.
+            
+            % This function needs to fast, and the cdf needs to be
+            % accurate. So we use a strategy of putting points where
+            % necessary (logarthimically placed), and using the cdf as the
+            % fundamental quantity (rather than the pdf) because we can
+            % adjust for discretization more easily (b/c it's already
+            % integrated).
+            
+            % scale our axis to be 20 times the standard deviation of the
+            % 1 dimensional pdf.
+            maxR = 20*sqrt(sigma*sigma*nu/(nu-2));
+            
+            % This appears to be big enough, although we can go bigger if
+            % needed.
+            N = 150;
+            
+            % create a logarithmic axis that includes zero
+            r = [0;10.^(linspace(log10(maxR/1e3),log10(maxR),N))'];
+            x = [-flip(r(2:end),1); r];
+            
+            % evaluate the cdf on that axis
+            pdf_int = tcdf(x/sigma,nu);
+            
+            % use that to define the pdf...
+            dx = diff(x);
+            pdf = diff(pdf_int)./dx;
+            %...so that sum(pdf.*dx)=1.00000
+            
+            % now create a 2d version
+            pdf2d_norm = (pdf .* reshape(pdf,1,[])) .* (dx .* reshape(dx,1,[]));
+            % again, where sum(pdf2d_norm(:)) = 1.0000
+            
+            % create a 2d distance metric, rho
+            y = [-flip(r(2:end)); r(2:end)];
+            rho = sqrt( y.*y + reshape(y.*y,1,[]));
+            
+            % we are going to bin using the diagonal of rho, call it s.
+            s = diag(rho);
+            s = [0; s((N+1):end)];
+            
+            % Now sum up the energy in each bin
+            pdf1d = zeros( size(s) );
+            midS = [0; s(1:(end-1))+diff(s)/2];
+            for i = 1:(length(s)-1)
+                pdf1d(i) = sum( pdf2d_norm(  rho >= midS(i) & rho <= midS(i+1) ) );
+            end
+            % it must be true that sum(pdf1d) = 1.0000
+            
+            % but we want that sum(pdf1d .* diff(s)) = 1.000
+            pdf1d(2:end) = pdf1d(2:end)./diff(s);
+            cdf1d = [0; cumsum(pdf1d(2:end).*diff(s))];
+            
+            % now take care of the the fact that we used the diagnoal of a
+            % 2d rectangle, rather than the inscribed circle.
+            
+            pdf = pdf1d(s<maxR);
+            cdf = cdf1d(s<maxR);
+            r = s(s<maxR);
         end
         
         function p = tcdf(x,n)
