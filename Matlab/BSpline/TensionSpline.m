@@ -105,7 +105,7 @@ classdef TensionSpline < BSpline
                         n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sigma);
                         a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,T);
                         lambda = (n_eff-1)/(n_eff*a_rms.^2);
-                    case Lambda.fullTension
+                    case Lambda.fullTensionExpected
                         a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,T);
                         lambda = 1/a_rms.^2;
                 end

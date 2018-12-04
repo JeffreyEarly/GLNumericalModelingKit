@@ -5,9 +5,13 @@ A series of classes for interpolating and smoothing data using b-splines.
 
 The `InterpolatingSpline` class is useful for interpolating between points when the data is not noisy, while the `TensionSpline` class is useful for smoothing noisy data. Both classes are subclasses of `BSpline`, which can be used to generate b-splines from any set of knot points. 
 
+If you use these classes, please cite the following paper,
+- J. Early and A. Sykulski. Smoothing and interpolating noisy GPS data with tension splines. IEEE Transactions on Signal Processing. In prep.
+
 ### Table of contents
 1. [Quick Start](#quick-start)
 2. [Interpolating Spline](#interpolating-spline)
+2. [Tension Spline](#tension-spline)
 
 ------------------------
 
@@ -101,6 +105,8 @@ plot(x_dense,spline_2(x_dense))
 plot(x_dense,spline_5(x_dense))
 legend('true function', 'observations', 'spline fit, K=2', 'spline fit, K=5')
 ```
+
+<p align="center"><img src="figures/interpolatingspline.png" width="400" /></p>
 
 Tension spline
 ------------
