@@ -18,6 +18,8 @@ If you use these classes, please cite the following paper,
 Quick start
 ------------
 
+### Interpolating spline
+
 The `InterpolatingSpline` class is useful for interpolating smooth functions. Initialize with data (x,y),
 ```matlab
 x = linspace(0,20,10)';
@@ -34,6 +36,8 @@ By default the class uses cubic spline, but you can initialize with whatever ord
 spline = InterpolatingSpline(t,x,'K',5)
 ```
 
+### Tension spline
+
 If your data is noisy, you'll want to use the `TensionSpline` class instead. In this example we sample a smooth function (sine) and contaminate it Gaussian noise,
 ```matlab
 N = 30;
@@ -49,10 +53,58 @@ spline = TensionSpline(x,y,sigma)
 ```
 That's it! The `spline` object can be evaluated at any point in the domain, just as with the interpolating spline class.
 
+### GPS Tension spline
+
+The `GPSTensionSpline` class offers some GPS specific additions to the `TensionSpline` class including t-distributed errors and outlier detection.
+
+Basis spline
+------------
+
+The `BSpline` class is a primitive class that creates b-splines given some set of knot points, and then evaluates the splines given some set of coefficients for the splines.
+
+The class would be initialized as follows,
+```matlab
+K = 3; % order of spline
+D = K-1; % number of derivates to return
+t = (0:10)'; % observation points
+
+% increase the multiplicity of the end knots for higher order splines
+t_knot = [repmat(t(1),K-1,1); t; repmat(t(end),K-1,1)];
+
+nSplines = length(t)+K-2;
+
+% coefficients for the bsplines---set all of them to zero for now.
+m = zeros(nSplines,1);
+
+% initialize the BSpline class
+B = BSpline(K,t_knot,m);
+```
+
+If you set the coefficient of one of the splines to 1, e.g.,
+```matlab
+m = zeros(nSplines,1);
+m(3) = 1;
+B.m = m;
+```
+Then you can plot that particular spline,
+```matlab
+tq = linspace(min(t),max(t),1000)';
+figure, plot(tq,B(tq),'LineWidth',2)
+```
+Here's an image of all the splines and their first derivatives plotted,
+<p align="center"><img src="figures/bspline.png" width="400" /></p>
+
+Note the usage here that calling `B(t)` evaluates the splines at points `t`.
+
+This class serves as a useful building block for other classes.
+
 Interpolating spline
 ------------
 
 An interpolating spline uses local b-splines to interpolate across points. The (K-1)th derivative of a K order spline is piecewise continuous.
+
+### Example
+
 Let's start by defining a  function,
 ```matlab
 L = 10;
@@ -108,10 +160,19 @@ legend('true function', 'observations', 'spline fit, K=2', 'spline fit, K=5')
 
 <p align="center"><img src="figures/interpolatingspline.png" width="400" /></p>
 
+### Options
+
+The `InterpolatingSpline` class takes name/value pairs at initialization to set the spline order (or degree).
+
+- `'K'` spline order, default is 4.
+- `'S'` spline degree (order-1), default is 3.
+
 Tension spline
 ------------
 
 A tension spline can be used to smooth noisy data and attempt to recover the "true" underlying function.
+
+### Example
 
 Let's start by defining a new function,
 ```matlab
@@ -152,4 +213,22 @@ legend('true function', 'noisy data', 'tension spline fit')
 ```
 
 <p align="center"><img src="figures/noisydatawithtensionspline.png" width="400" /></p>
+
+### Options
+
+The `TensionSpline` class takes name/value pairs at initialization to set the spline order (or degree).
+
+- `'K'` spline order, default is 4.
+- `'S'` spline degree (order-1), default is 3.
+- `'T'` tension degree , default is to use the same degree as the spline.
+- `'lambda'` tension parameter, either pass a numeric value, or the `Lambda` enumeration. Default is `Lambda.optimalIterated`.
+- `'mu'` mean tension.
+- `'weightFunction'` the reweighting function if the errors are not gaussian.
+- `'knot_dof'` number of degrees of freedom to be used in placing knot points. Either specify an integer, or `'auto'` to have the algorithm attempt to choose an appropriate number. Default is 1.
+
+The `Lambda` enumeration has the following values,
+
+- `optimalIterated`  which minimize the expected mean-square error, but may take a while for lots of data.
+- `optimalExpected`  which takes a guess at minimizing the mean-square error based on the effective sample-size.
+- `fullTensionExpected`  which takes a guess at the full tension solution assuming infinite effective sample size.
 

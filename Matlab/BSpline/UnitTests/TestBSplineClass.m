@@ -14,7 +14,7 @@ m = zeros(nSplines,1);
 B = BSpline(K,t_knot,m);
 
 % make a really fine grid to draw the splines on
-tq = linspace(min(t),max(t),10000)';
+tq = linspace(min(t),max(t),1000)';
 
 figure
 subplot(2,1,1)
@@ -33,3 +33,4 @@ for iSpline = 1:nSplines
    plot(tq,B(tq,1),'LineWidth',2), hold on
 end
 title('1st derivative')
+print('-depsc2', '../figures/bspline.eps')
