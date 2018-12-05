@@ -250,3 +250,24 @@ The results can then be evaluated at any time,
 ```matlab
 [x_smooth,y_smooth] = spline(t);
 ```
+
+### Properties
+
+The  `GPSTensionSpline` class encapsulates two properties, `spline_x` and `spline_y` which are just independent `TensionSpline` objects for the x and y data.
+
+The `distanceError` property is root mean square of the spline errors under full tension. This property is only populated when looking for outliers.
+
+The `indicesOfOutliers` contains the indices of the outliers that were detected. The outliers are not used in the final fits.
+
+### Options
+
+The `GPSTensionSpline` class takes name/value pairs at initialization to set the spline order (or degree).
+
+- `'K'` spline order, default is 4.
+- `'S'` spline degree (order-1), default is 3.
+- `'T'` tension degree , default is to use the same degree as the spline.
+- `'sigma'` sigma parameter in the student t distribution. Default is 8.5.
+- `'nu'` nu parameter in the student t distribution. Default is 4.5.
+- `'shouldIdentifyOutliers'` either 1 or 0. Default is 1.
+
+
