@@ -9,9 +9,11 @@ If you use these classes, please cite the following paper,
 - J. Early and A. Sykulski. Smoothing and interpolating noisy GPS data with tension splines. IEEE Transactions on Signal Processing. In prep.
 
 ### Table of contents
-1. [Quick Start](#quick-start)
-2. [Interpolating Spline](#interpolating-spline)
-2. [Tension Spline](#tension-spline)
+1. [Quick start](#quick-start)
+2. [Basis spline](#basis-spline)
+2. [Interpolating spline](#interpolating-spline)
+2. [Tension spline](#tension-spline)
+2. [GPS tension spline](#gps-tension-spline)
 
 ------------------------
 
@@ -232,3 +234,19 @@ The `Lambda` enumeration has the following values,
 - `optimalExpected`  which takes a guess at minimizing the mean-square error based on the effective sample-size.
 - `fullTensionExpected`  which takes a guess at the full tension solution assuming infinite effective sample size.
 
+GPS Tension spline
+------------
+
+The `GPSTensionSpline` class is useful for smoothing noisy gps data and removing outliers. The class is initialized with,
+```matlab
+spline = GPSTensionSpline(t,x,y);
+```
+where `t` is time, and `x,y` are *projected* positions in meters. By default, the class will,
+
+1. identify outliers and,
+2. smooth the data to the appropriate value.
+
+The results can then be evaluated at any time,
+```matlab
+[x_smooth,y_smooth] = spline(t);
+```
