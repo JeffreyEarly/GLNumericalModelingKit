@@ -124,14 +124,16 @@ classdef GPSTensionSpline < handle
 %                 outlierCut = interp1(cdf,r,1-outlierThreshold,'spline'); % set to spline so that it extrapolates by default, which is better than returning NaN.
                 
                 % About 10% of the time we will have one legit point above
-                % this threshold. 
+                % this threshold.
+                outlierThreshold = 0.10;
                 jpd = cdf.^length(t);
                 idx = jpd>0.1; % make things monotonic
-                outlierCut = interp1(jpd(idx),r(idx),.90,'spline');
+                outlierCut = interp1(jpd(idx),r(idx),1-outlierThreshold,'spline');
                 
                 self.indicesOfOutliers = find(self.distanceError(2:end-1) >= outlierCut)+1;
                 
-                fprintf('Found %d points (of %d) that exceed the two-dimensional outlier distance of %.1f meters.\n',length(self.indicesOfOutliers), length(self.t), outlierCut);   
+                fprintf('Found %d points (of %d) that exceed the two-dimensional outlier distance of %.1f meters.\n',length(self.indicesOfOutliers), length(self.t), outlierCut); 
+                fprintf('This threshold was chosen because you would expect only 1 point to exceed this distance %d%% of the time.\n',round(outlierThreshold*100));
             end
             
             goodIndices = setdiff((1:length(t))',self.indicesOfOutliers);
