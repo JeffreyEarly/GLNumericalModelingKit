@@ -591,7 +591,7 @@ classdef TensionSpline < BSpline
             m = [0.6652; 0.7904; 0.8339];
             b = [1.6903; 2.1786; 2.3288];
             
-            dt = median(diff(t));
+            dt = median(abs(diff(t)));
             
             gamma = sigma/( u_rms*dt );
             n_eff = max(1,exp(b(1))*gamma.^m(1));

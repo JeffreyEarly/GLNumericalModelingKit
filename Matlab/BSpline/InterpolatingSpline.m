@@ -33,6 +33,10 @@ classdef InterpolatingSpline < BSpline
                 error('x and t must have the same length.');
             end
             
+            if any(isnan(x)) || any(isnan(t))
+                error('Some of the data contain NaNs!')
+            end
+            
             % Parse any extra input options.
             nargs = length(varargin);
             if nargs == 1
