@@ -27,6 +27,7 @@ classdef GPSTensionSpline < handle
         
         distanceError = []
         indicesOfOutliers = []
+        goodIndices = []
         
         % t-distribution parameters
         % variance_of_the_noise = sigma*sigma*nu/(nu-2)
@@ -100,10 +101,13 @@ classdef GPSTensionSpline < handle
                     if isempty(outlierOdds)
                         outlierOdds = length(t);
                     end
-                    outlierThreshold = 1/outlierOdds;
+                    outlierThreshold = 0.001;
                     gps_cdf = @(z) abs(tcdf(z/sigma,nu) - outlierThreshold/2);
                     outlierDistance = fminsearch( gps_cdf, -50, optimset('TolX', 0.001, 'TolFun', 0.001) );                   
 %                     gps_cdf = @(z) abs(tcdf(z/sigma,nu).^length(t) - .75);
+%                     outlierDistance = fminsearch( gps_cdf, 50, optimset('TolX', 0.001, 'TolFun', 0.001) );
+
+%                     gps_cdf = @(z) abs( (2*tcdf(abs(z/sigma),nu)-1).^length(t) - 0.95);
 %                     outlierDistance = fminsearch( gps_cdf, 50, optimset('TolX', 0.001, 'TolFun', 0.001) );
                 end
                 valid_range = [-1 1]*abs(outlierDistance);
@@ -125,9 +129,9 @@ classdef GPSTensionSpline < handle
                 
                 % About 10% of the time we will have one legit point above
                 % this threshold.
-                outlierThreshold = 0.10;
+                outlierThreshold = 0.05; % p-value test---control false positives
                 jpd = cdf.^length(t);
-                idx = jpd>0.1; % make things monotonic
+                idx = jpd>0.1; % make things monotonic (we don't need that data anyway)
                 outlierCut = interp1(jpd(idx),r(idx),1-outlierThreshold,'spline');
                 
                 self.indicesOfOutliers = find(self.distanceError(2:end-1) >= outlierCut)+1;
@@ -136,10 +140,10 @@ classdef GPSTensionSpline < handle
                 fprintf('This threshold was chosen because you would expect only 1 point to exceed this distance %d%% of the time.\n',round(outlierThreshold*100));
             end
             
-            goodIndices = setdiff((1:length(t))',self.indicesOfOutliers);
+            self.goodIndices = setdiff((1:length(t))',self.indicesOfOutliers);
             
-            self.spline_x = TensionSpline(self.t(goodIndices), self.x(goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);
-            self.spline_y = TensionSpline(self.t(goodIndices), self.y(goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);         
+            self.spline_x = TensionSpline(self.t(self.goodIndices), self.x(self.goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);
+            self.spline_y = TensionSpline(self.t(self.goodIndices), self.y(self.goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);         
         end
         
         function varargout = subsref(self, index)

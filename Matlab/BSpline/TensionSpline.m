@@ -440,14 +440,14 @@ classdef TensionSpline < BSpline
         % better for the fminsearch algorithm.
 
         function lambda = MinimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
-            epsilon = 1e-7;
+            epsilon = 1e-15;
             errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
             optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
             lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
         end
         
         function error = FunctionOfSplineWrapper(aTensionSpline, log10lambdaPlusEpsilon, functionOfSpline)
-            epsilon = 1e-7;
+            epsilon = 1e-15;
             aTensionSpline.lambda = 10^log10lambdaPlusEpsilon-epsilon;              
             error = functionOfSpline(aTensionSpline);
         end
