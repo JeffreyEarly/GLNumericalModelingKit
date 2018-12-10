@@ -18,44 +18,46 @@ x = (Lx/Nx)*(0:Nx-1)';
 y = (Ly/Ny)*(0:Ny-1)';
 z = (Lz/Nz)*(0:Nz-1)';
 
+omega_x = 2*pi/Lx;
+
 % valid frequencies (skipping zero)
-omega = 2*pi*(1:floor(Nz/2))'/Lz;
+omega_z = 2*pi*(1:floor(Nz/2))'/Lz;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1 derivative, cosine, 1st-dimension
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [Z,X,Y] = ndgrid(z,x,y);
 
-f = @(omega) cos(omega*Z);
-Df_analytical = @(omega) -omega*sin(omega*Z);
+f = @(omega) cos(omega_x*X).*cos(omega*Z);
+Df_analytical = @(omega) -omega*cos(omega_x*X).*sin(omega*Z);
 Df_numerical = @(x) DiffFourier(z,x);
 testname = 'Fourier differentiation of cosine (numDerivs=1), 1st dimension ';
 
-ReportErrors(f,Df_analytical,Df_numerical,testname,omega);
+ReportErrors(f,Df_analytical,Df_numerical,testname,omega_z);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1 derivative, cosine, 2nd-dimension
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [X,Z,Y] = ndgrid(x,z,y);
 
-f = @(omega) cos(omega*Z);
-Df_analytical = @(omega) -omega*sin(omega*Z);
+f = @(omega) cos(omega_x*X).*cos(omega*Z);
+Df_analytical = @(omega) -omega*cos(omega_x*X).*sin(omega*Z);
 Df_numerical = @(x) DiffFourier(z,x);
 testname = 'Fourier differentiation of cosine (numDerivs=1), 2nd dimension ';
 
-ReportErrors(f,Df_analytical,Df_numerical,testname,omega);
+ReportErrors(f,Df_analytical,Df_numerical,testname,omega_z);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1 derivative, cosine, 3rd-dimension
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [X,Y,Z] = ndgrid(x,y,z);
 
-f = @(omega) cos(omega*Z);
-Df_analytical = @(omega) -omega*sin(omega*Z);
+f = @(omega) cos(omega_x*X).*cos(omega*Z);
+Df_analytical = @(omega) -omega*cos(omega_x*X).*sin(omega*Z);
 Df_numerical = @(x) DiffFourier(z,x);
 testname = 'Fourier differentiation of cosine (numDerivs=1), 3rd dimension ';
 
-ReportErrors(f,Df_analytical,Df_numerical,testname,omega);
+ReportErrors(f,Df_analytical,Df_numerical,testname,omega_z);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -77,45 +79,47 @@ x = (Lx/Nx)*(0:Nx-1)';
 y = (Ly/Ny)*(0:Ny-1)';
 z = Lz*(0:(Nz-1))'/(Nz-1);
 
+omega_x = 2*pi/Lx;
+
 % valid frequencies (skipping zero)
 df = 1/((Nz-1)*(z(2)-z(1)));
-omega = pi*df*(0:(Nz-1))';
+omega_z = pi*df*(0:(Nz-1))';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1 derivative, cosine, 1st-dimension
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [Z,X,Y] = ndgrid(z,x,y);
 
-f = @(omega) cos(omega*Z);
-Df_analytical = @(omega) -omega*sin(omega*Z);
+f = @(omega) cos(omega_x*X).*cos(omega*Z);
+Df_analytical = @(omega) -omega*cos(omega_x*X).*sin(omega*Z);
 Df_numerical = @(x) DiffCosine(z,x);
 testname = 'Cosine differentiation (numDerivs=1), 1st dimension ';
 
-ReportErrors(f,Df_analytical,Df_numerical,testname,omega);
+ReportErrors(f,Df_analytical,Df_numerical,testname,omega_z);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1 derivative, cosine, 2nd-dimension
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [X,Z,Y] = ndgrid(x,z,y);
 
-f = @(omega) cos(omega*Z);
-Df_analytical = @(omega) -omega*sin(omega*Z);
+f = @(omega) cos(omega_x*X).*cos(omega*Z);
+Df_analytical = @(omega) -omega*cos(omega_x*X).*sin(omega*Z);
 Df_numerical = @(x) DiffCosine(z,x);
 testname = 'Cosine differentiation (numDerivs=1), 2nd dimension ';
 
-ReportErrors(f,Df_analytical,Df_numerical,testname,omega);
+ReportErrors(f,Df_analytical,Df_numerical,testname,omega_z);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1 derivative, cosine, 3rd-dimension
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [X,Y,Z] = ndgrid(x,y,z);
 
-f = @(omega) cos(omega*Z);
-Df_analytical = @(omega) -omega*sin(omega*Z);
+f = @(omega) cos(omega_x*X).*cos(omega*Z);
+Df_analytical = @(omega) -omega*cos(omega_x*X).*sin(omega*Z);
 Df_numerical = @(x) DiffCosine(z,x);
 testname = 'Cosine differentiation (numDerivs=1), 3rd dimension ';
 
-ReportErrors(f,Df_analytical,Df_numerical,testname,omega);
+ReportErrors(f,Df_analytical,Df_numerical,testname,omega_z);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -130,36 +134,36 @@ fprintf('Testing sine derivatives:\n')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [Z,X,Y] = ndgrid(z,x,y);
 
-f = @(omega) sin(omega*Z);
-Df_analytical = @(omega) omega*cos(omega*Z);
+f = @(omega) cos(omega_x*X).*sin(omega*Z);
+Df_analytical = @(omega) omega*cos(omega_x*X).*cos(omega*Z);
 Df_numerical = @(x) DiffSine(z,x);
 testname = 'Sine differentiation (numDerivs=1), 1st dimension ';
 
-ReportErrors(f,Df_analytical,Df_numerical,testname,omega(1:end-1));
+ReportErrors(f,Df_analytical,Df_numerical,testname,omega_z(1:end-1));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1 derivative, sine, 2nd-dimension
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [X,Z,Y] = ndgrid(x,z,y);
 
-f = @(omega) sin(omega*Z);
-Df_analytical = @(omega) omega*cos(omega*Z);
+f = @(omega) cos(omega_x*X).*sin(omega*Z);
+Df_analytical = @(omega) omega*cos(omega_x*X).*cos(omega*Z);
 Df_numerical = @(x) DiffSine(z,x);
 testname = 'Sine differentiation (numDerivs=1), 2nd dimension ';
 
-ReportErrors(f,Df_analytical,Df_numerical,testname,omega(1:end-1));
+ReportErrors(f,Df_analytical,Df_numerical,testname,omega_z(1:end-1));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1 derivative, sine, 3rd-dimension
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [X,Y,Z] = ndgrid(x,y,z);
 
-f = @(omega) sin(omega*Z);
-Df_analytical = @(omega) omega*cos(omega*Z);
+f = @(omega) cos(omega_x*X).*sin(omega*Z);
+Df_analytical = @(omega) omega*cos(omega_x*X).*cos(omega*Z);
 Df_numerical = @(x) DiffSine(z,x);
 testname = 'Sine differentiation (numDerivs=1), 3rd dimension ';
 
-ReportErrors(f,Df_analytical,Df_numerical,testname,omega(1:end-1));
+ReportErrors(f,Df_analytical,Df_numerical,testname,omega_z(1:end-1));
 
 return
 
