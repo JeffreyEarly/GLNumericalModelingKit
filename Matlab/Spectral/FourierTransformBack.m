@@ -8,7 +8,7 @@ deltaT = 1/(nT*fourierFrequencyT);
 t = (0:nT-1)'*deltaT;
 
 if length(varargin) == 1
-x = ifft( xbar, [], dim,varargin{1} )*nT;
+    x = ifft( xbar, [], dim,varargin{1} )*nT;
 else
     x = ifft( xbar, [], dim )*nT;
 end

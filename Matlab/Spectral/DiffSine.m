@@ -1,4 +1,4 @@
-function Dx = DiffCosine(t,x,varargin)
+function Dx = DiffSine(t,x,varargin)
 %DiffFourier Fourier transform derivative
 
 if length(varargin) >= 1
@@ -24,32 +24,37 @@ end
 % [x y dim] -> [dim x y]
 x = shiftdim(x,dim-1);
 
-[xbar, f] = CosineTransformForward( t, x, 1 );
+[xbar, f] = SineTransformForward( t, x, 1 );
 
 % reshape the dimension so that we can multiply
 f = reshape(f,[],1);
 
-% cosine goes to, [-1,-1,1,1] for numDerivs = [1,2,3,4]
-thesign = [-1,-1,1,1];
+% sine goes to, [1,-1,-1,1] for numDerivs = [1,2,3,4]
+thesign = [1,-1,-1,1];
 Dxbar = thesign(mod(numDerivs-1,4)+1)*((2*pi*f).^numDerivs).*xbar;
 
 if mod(numDerivs,2) == 0
-    Dx = CosineTransformBack(f, Dxbar, 1);
+    Dx = SineTransformBack(f, Dxbar, 1);
 else
+    df = f(2)-f(1);
+    f = cat(1,0,f,f(end)+df);
+    
+    
     switch ndims(Dxbar)
         case 2
-            Dx = SineTransformBack(f(2:end-1,:), Dxbar(2:end-1,:), 1);
+            Dxbar = cat(1,zeros(size(Dxbar(1,:))),Dxbar,zeros(size(Dxbar(1,:))));
         case 3
-            Dx = SineTransformBack(f(2:end-1,:,:), Dxbar(2:end-1,:,:), 1);
+            Dxbar = cat(1,zeros(size(Dxbar(1,:,:))),Dxbar,zeros(size(Dxbar(1,:,:))));
         otherwise
             error('Not yet implemented for more than 3 dimensions.');
     end
+    
+    Dx = CosineTransformBack(f, Dxbar, 1);
 end
 
 % now move the dim back to where it was
 % [dim x y]
 Dx = shiftdim(Dx,ndims(Dx)-(dim-1));
-
 
 end
 

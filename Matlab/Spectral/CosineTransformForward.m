@@ -26,22 +26,34 @@ else
     elseif length(dims) == 1
         dim = dims;
     else
-        error('You need to specifiy which dimension to differentiation, there are (at least) two dimensions with the same length as t.');
-    end
+        error('You need to specifiy which dimension to differentiation, there are %d dimensions with the same length as t.',length(dims));
+    end    
 end
 
 N = length(t);
 
-% current thought for supporting arbitrary dimensions is simply to copy the
-% array in the right order, using linear indices.
+% move the dim to the first dimension
+% [x y dim] -> [dim x y]
+x = shiftdim(x,dim-1);
 
-% bah. Just manually do the cases.
+switch ndims(x)
+    case 2
+        dctScratch = cat(1,x,x(N-1:-1:2,:));
+        dctScratch = ifft(dctScratch,2*N-2,1);
+        xbar = 2*real(dctScratch(1:N,:));
+        xbar(end,:) = xbar(end,:)/2;
+    case 3
+        dctScratch = cat(1,x,x(N-1:-1:2,:,:));
+        dctScratch = ifft(dctScratch,2*N-2,1);
+        xbar = 2*real(dctScratch(1:N,:,:));
+        xbar(end,:,:) = xbar(end,:,:)/2;
+    otherwise
+        error('Not yet implemented for more than 3 dimensions.')
+end
 
-dctScratch = cat(1,x,x(N-1:-1:2));
-dctScratch = ifft(dctScratch,2*N-2,1);
-xbar = 2*real(dctScratch(1:N));
-
-xbar(end) = xbar(end)/2;
+% now move the dim back to where it was
+% [dim x y]
+xbar = shiftdim(xbar,ndims(xbar)-(dim-1));
 
 df = 1/(2*(N-1)*(t(2)-t(1)));
 f = df*(0:(N-1))';

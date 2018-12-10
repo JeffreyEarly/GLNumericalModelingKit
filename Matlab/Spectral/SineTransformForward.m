@@ -1,4 +1,4 @@
-function [xbar,f] = SineTransformForward( t, x, endpointsIncluded )
+function [xbar,f] = SineTransformForward( t, x, varargin )
 % SineTransformForward  Fast Discrete Sine Transform (DST-I)
 % 
 % xbar is returned in the same units as x. This is the finite length
@@ -23,44 +23,128 @@ function [xbar,f] = SineTransformForward( t, x, endpointsIncluded )
 %
 %
 
-
-if nargin < 3
-    endpointsIncluded = 'both'; 
+if length(varargin) >= 1
+    dim = varargin{1};
+else
+    dims = find(size(x) == length(t));
+    if isempty(dims)
+        error('Could not find a dimension with the same length as t.');
+    elseif length(dims) == 1
+        dim = dims;
+    else
+        error('You need to specifiy which dimension to differentiation, there are %d dimensions with the same length as t.',length(dims));
+    end    
 end
 
-eps = 1e-14;
-mag = max(abs(x));
+if length(varargin) >= 2
+    endpointsIncluded = varargin{2};
+else
+    endpointsIncluded = 'both';
+end
+
+if length(varargin) >= 3
+    shouldPerformSanityCheck = varargin{3};
+else
+    shouldPerformSanityCheck = 1;
+end
+
+% move the dim to the first dimension
+% [x y dim] -> [dim x y]
+x = shiftdim(x,dim-1);
+
+
+if shouldPerformSanityCheck == 1
+    reltol = 1e-13;
+    abstol = 1e-13;
+    mag = max(abs(x(:)));
+    
+    iszero = @(x) (x/mag) < reltol || x < abstol;
+    
+    switch ndims(x)
+        case 2
+            leftPoint = max(abs(x(1,:)));
+            rightPoint = max(abs(x(end,:)));
+        case 3
+            leftPoint = max(abs(x(1,:)));
+            rightPoint = max(abs(x(end,:)));
+        otherwise
+            error('Not yet implemented for more than 3 dimensions.')
+    end
+
+    if strcmp(endpointsIncluded,'both') == 1
+        if ~iszero(leftPoint)|| ~iszero(rightPoint)
+            fprintf('warning: by assumption both end points should be zero, but they are not: x(1)=%g, x(end)=%g.\n',x(1),x(end));
+%             x(1) = 0; x(end) = 0;
+        end
+    elseif strcmp(endpointsIncluded,'left') == 1
+        if ~iszero(leftPoint)
+            fprintf('warning: by assumption the left point should be zero, but it is not: x(1)=%g.\n',x(1));
+%             x(1) = 0;
+        end
+    elseif strcmp(endpointsIncluded,'right') == 1
+        if ~iszero(rightPoint)
+            fprintf('warning: by assumption the right point should be zero, but it is not: x(end)=%g.\n',x(end));
+%             x(end) = 0;
+        end
+    end
+end
+
+
 if strcmp(endpointsIncluded,'both') == 1
-    if abs(x(1))/mag > eps || abs(x(end))/mag > eps
-        fprintf('warning: by assumption both end points should be zero, but they are not: x(1)=%g, x(end)=%g.\n',x(1),x(end));
-        x(1) = 0; x(end) = 0;
-    end
-    
     N = length(t)-1;
-    dstScratch = cat(1,x,-x(N:-1:2)); % 0, a, b, c, 0, -c, -b, -a
+    switch ndims(x)
+        case 2
+            dstScratch = cat(1,x,-x(N:-1:2,:)); % 0, a, b, c, 0, -c, -b, -a
+        case 3
+            dstScratch = cat(1,x,-x(N:-1:2,:,:)); % 0, a, b, c, 0, -c, -b, -a
+        otherwise
+            error('Not yet implemented for more than 3 dimensions.')
+    end
 elseif strcmp(endpointsIncluded,'left') == 1
-    if abs(x(1))/mag > eps
-        fprintf('warning: by assumption the left point should be zero, but it is not: x(1)=%g.\n',x(1));
-        x(1) = 0;
-    end
-    
     N = length(t);
-    dstScratch = cat(1,x,0,-x(N:-1:2));  % 0, a, b, c, 0, -c, -b, -a
-elseif strcmp(endpointsIncluded,'right') == 1
-    if abs(x(end))/mag > eps
-        fprintf('warning: by assumption the right point should be zero, but it is not: x(end)=%g.\n',x(end));
-        x(end) = 0;
+    switch ndims(x)
+        case 2
+            dstScratch = cat(1,x,0,-x(N:-1:2,:));  % 0, a, b, c, 0, -c, -b, -a
+        case 3
+            dstScratch = cat(1,x,0,-x(N:-1:2,:,:));  % 0, a, b, c, 0, -c, -b, -a
+        otherwise
+            error('Not yet implemented for more than 3 dimensions.')
     end
-    
+elseif strcmp(endpointsIncluded,'right') == 1    
     N = length(t);
-    dstScratch = cat(1,0,x,-x(N-1:-1:1));  % 0, a, b, c, 0, -c, -b, -a
+    switch ndims(x)
+        case 2
+            dstScratch = cat(1,0,x,-x(N-1:-1:1,:));  % 0, a, b, c, 0, -c, -b, -a
+        case 3
+            dstScratch = cat(1,0,x,-x(N-1:-1:1,:,:));  % 0, a, b, c, 0, -c, -b, -a
+        otherwise
+            error('Not yet implemented for more than 3 dimensions.')
+    end
 elseif strcmp(endpointsIncluded,'none') == 1
     N = length(t)+1;
-    dstScratch = cat(1,0,x,0,-x(N-1:-1:1));   % 0, a, b, c, 0, -c, -b, -a
+    switch ndims(x)
+        case 2
+            dstScratch = cat(1,0,x,0,-x(N-1:-1:1,:));   % 0, a, b, c, 0, -c, -b, -a
+        case 3
+            dstScratch = cat(1,0,x,0,-x(N-1:-1:1,:,:));   % 0, a, b, c, 0, -c, -b, -a
+        otherwise
+            error('Not yet implemented for more than 3 dimensions.')
+    end
 end
 
 dstScratch = ifft(dstScratch,2*N,1);
-xbar = 2*imag(dstScratch(2:N,:,:));
+
+switch ndims(x)
+    case 2
+        xbar = 2*imag(dstScratch(2:N,:));
+    case 3
+        xbar = 2*imag(dstScratch(2:N,:,:));
+    otherwise
+        error('Not yet implemented for more than 3 dimensions.')
+end
+% now move the dim back to where it was
+% [dim x y]
+xbar = shiftdim(xbar,ndims(xbar)-(dim-1));
 
 df = 1/(2*N*(t(2)-t(1)));
 f = ((1:N-1)*df)';
