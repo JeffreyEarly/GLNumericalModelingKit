@@ -1,4 +1,4 @@
-function [xbar, f] = CosineTransformForward( t, x )
+function [xbar, f] = CosineTransformForward( t, x, varargin )
 % CosineTransformForward  Fast Discrete Cosine Transform (DST-I)
 % 
 % xbar is returned in the same units as x. This is the finite length
@@ -17,7 +17,25 @@ function [xbar, f] = CosineTransformForward( t, x )
 %   Where we've taken care to integrate only to the endpoints (and not
 %   beyond) in the x_sum. The S_sum includes a correction for the Nyquist.
 
+if length(varargin) >= 1
+    dim = varargin{1};
+else
+    dims = find(size(x) == length(t));
+    if isempty(dims)
+        error('Could not find a dimension with the same length as t.');
+    elseif length(dims) == 1
+        dim = dims;
+    else
+        error('You need to specifiy which dimension to differentiation, there are (at least) two dimensions with the same length as t.');
+    end
+end
+
 N = length(t);
+
+% current thought for supporting arbitrary dimensions is simply to copy the
+% array in the right order, using linear indices.
+
+% bah. Just manually do the cases.
 
 dctScratch = cat(1,x,x(N-1:-1:2));
 dctScratch = ifft(dctScratch,2*N-2,1);
