@@ -7,7 +7,7 @@ for iParameter = 1:length(parameter)
     Dx_expected = Df_analytical(parameter(iParameter));
     Dx = Df_numerical(x);
     
-    if (max(abs(Dx-Dx_expected)) > 1e-7)
+    if (max(abs(Dx(:)-Dx_expected(:))) > 1e-7)
         failures = failures + 1;
     end
 end

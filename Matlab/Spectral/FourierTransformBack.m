@@ -1,6 +1,6 @@
 function [x, t] = FourierTransformBack( f, xbar, dim, varargin )
 
-nT = length(xbar);
+nT = size(xbar,dim);
 fourierFrequencyT = f(2)-f(1);
 deltaT = 1/(nT*fourierFrequencyT);
 % nyquistFrequencyT = 1/(2*deltaT);	% nyquist frequency

@@ -25,9 +25,9 @@ end
 % reshape the dimension so that we can multiply
 newdims = ones(1,ndims(x));
 newdims(dim) = length(f);
-f = reshape(f,newdims);
+omega = reshape(2*pi*f,newdims);
 
-Dx = FourierTransformBack(f, ((sqrt(-1)*2*pi*f).^numDerivs).*xbar, dim, 'symmetric');
+Dx = FourierTransformBack(f, ((sqrt(-1)*omega).^numDerivs).*xbar, dim, 'symmetric');
 
 end
 
