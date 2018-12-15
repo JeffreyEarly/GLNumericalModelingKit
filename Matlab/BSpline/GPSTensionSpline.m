@@ -186,6 +186,56 @@ classdef GPSTensionSpline < handle
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
+        % Minimization
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        % We wrap and then unwrap the user-provided penalty function so
+        % that it take log10(lambda) rather than lambda. This is much
+        % better for the fminsearch algorithm.
+
+        function lambda = MinimizeFunctionOfTwoSplines(aTensionSpline1,aTensionSpline2,functionOfSplines)
+            epsilon = 1e-15;
+            errorFunction = @(log10lambdaPlusEpsilon) GPSTensionSpline.FunctionOfSplineWrapper(aTensionSpline1,aTensionSpline2,log10lambdaPlusEpsilon,functionOfSplines);
+            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline1.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
+        end
+        
+        function error = FunctionOfSplineWrapper(aTensionSpline1, aTensionSpline2, log10lambdaPlusEpsilon, functionOfSplines)
+            epsilon = 1e-15;
+            aTensionSpline1.lambda = 10^log10lambdaPlusEpsilon-epsilon;  
+            aTensionSpline2.lambda = 10^log10lambdaPlusEpsilon-epsilon;  
+            error = functionOfSplines(aTensionSpline1,aTensionSpline2);
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % 2D LogLikelihood for Student-t and Normal
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function likelihood = LogLikelihood2D(spline_x, spline_y, sigma_t, nu, sigma_g)
+                        
+%             distance_pdf = @(epsilon) interp1(r,pdf,epsilon,'spline');
+%             acceleration_pdf = @(r) r.*exp(-r.*r/(2*sigma_T*sigma_T))/(sigma_T*sigma_T);
+
+            [r, pdf] = GPSTensionSpline.TwoDimStudentTProbabilityDistributionFunction(sigma_t, nu);
+            pdf(pdf<1e-15)=1e-15; % avoid log(0).
+            log_distance_pdf = @(epsilon) interp1(r,log(pdf),epsilon,'spline');
+            log_acceleration_pdf = @(r) log(r) + (-r.*r/(2*sigma_g*sigma_g));
+            
+            distance = sqrt(spline_x.epsilon.^2 + spline_y.epsilon.^2);
+            acceleration = sqrt( spline_x.UniqueValuesAtHighestDerivative().^2 + spline_y.UniqueValuesAtHighestDerivative().^2);
+            
+            error_likelihood = -sum(log_distance_pdf(distance));
+            acceleration_likelihood = -sum(log_acceleration_pdf(acceleration));
+            
+            likelihood = error_likelihood + acceleration_likelihood;
+            
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
         % 
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

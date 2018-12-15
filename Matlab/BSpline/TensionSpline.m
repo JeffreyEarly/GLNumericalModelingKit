@@ -26,6 +26,7 @@ classdef TensionSpline < BSpline
         lambda      % tension parameter
         mu          % mean value of tension
         w           % weight function
+        rho         % autocorrelation function
         Cm          % error in coefficients, MxMxD
         knot_dof    % knot dofs
         
@@ -65,6 +66,7 @@ classdef TensionSpline < BSpline
             knot_dof = 1;
             shouldSetKnotDOFAutomatically = 0;
             lambdaArgument = Lambda.optimalIterated;
+            rho = [];
             
             for k = 1:2:length(varargin)
                 if strcmp(varargin{k}, 'K')
@@ -82,6 +84,8 @@ classdef TensionSpline < BSpline
                         w = varargin{k+1};
                         didSetWeightFunction = 1;
                     end
+                elseif strcmp(varargin{k}, 'autocorrelationFunction')
+                    rho = varargin{k+1};
                 elseif strcmp(varargin{k}, 'knot_dof')
                     if ischar(varargin{k+1}) && strcmp(varargin{k+1}, 'auto')
                         shouldSetKnotDOFAutomatically = 1;
@@ -100,12 +104,15 @@ classdef TensionSpline < BSpline
             n_eff = [];
             if isenum(lambdaArgument)
                 switch lambdaArgument
-                    case {Lambda.optimalExpected, Lambda.optimalIterated}
+                    case {Lambda.optimalExpected}
                         u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,1);
                         n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sigma);
                         a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,T);
                         lambda = (n_eff-1)/(n_eff*a_rms.^2);
-                    case Lambda.fullTensionExpected
+                    case {Lambda.fullTensionExpected, Lambda.optimalIterated}
+                        % if you're going to optimize, it's best to start
+                        % near the full tension solution, rather than
+                        % (potentially) near zero
                         a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,T);
                         lambda = 1/a_rms.^2;
                 end
@@ -141,7 +148,11 @@ classdef TensionSpline < BSpline
             
             % Now compute the coefficients
             if didSetWeightFunction == 1
-                [m,Cm,W] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV);
+                if ~isempty(rho)
+                    [m,Cm,W] = TensionSpline.IteratedLeastSquaresTensionSolutionWithAC(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho);
+                else
+                    [m,Cm,W] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV);
+                end
             else
                 [m,Cm] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV);
             end
@@ -166,6 +177,7 @@ classdef TensionSpline < BSpline
             if didSetWeightFunction == 1
                 self.w = w;
             end
+            self.rho = rho;
             
             if lambdaArgument == Lambda.optimalIterated
                 self.MinimizeExpectedMeanSquareError();
@@ -189,6 +201,12 @@ classdef TensionSpline < BSpline
             end
         end
         
+        function [x_T, t_T] = UniqueValuesAtHighestDerivative(self)
+            t_T = self.t_knot(self.K:1:(end-self.K+1));
+            t_T = t_T(1:end-1) + diff(t_T)/2;
+            x_T = self.ValueAtPoints(t_T,self.K-1);
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Responding to changes in the tension parameter
@@ -208,7 +226,11 @@ classdef TensionSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if ~isempty(self.w)
-                [self.m,self.Cm,self.W] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,self.XWX,self.XWx,self.VV);
+                if ~isempty(self.rho)
+                    [self.m,self.Cm,self.W] = TensionSpline.IteratedLeastSquaresTensionSolutionWithAC(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,self.XWX,self.XWx,self.VV,self.t,self.rho);
+                else
+                    [self.m,self.Cm,self.W] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,self.XWX,self.XWx,self.VV);
+                end
             else
                 [self.m,self.Cm] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
             end
@@ -577,6 +599,73 @@ classdef TensionSpline < BSpline
                 Q = size(V,1);
                 Cm = inv(X'*W*X + (lambda*N/Q)*(V'*V));
             end
+        end
+        
+        function [m,Cm,W] = IteratedLeastSquaresTensionSolutionWithAC(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho)
+            % Same calling sequence as the TensionSolution function, but
+            % also includes the weight factor, w
+            
+            % autocorrelation matrix
+            rho_t = rho(t - t.');
+            
+            if length(sigma) == 1
+                sigma = ones(size(x))*sigma;
+            end
+            
+            Sigma2 = (sigma * sigma.') .* rho_t;
+            W = inv(Sigma2);
+            
+            m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV);
+            
+            error_x_previous = sigma.*sigma;
+            rel_error = 1.0;
+            repeats = 1;
+            while (rel_error > 0.01)
+                dx2 = w(X*m - x);
+                
+                
+                Sigma2 = (sqrt(dx2) * sqrt(dx2).') .* rho_t;
+                W = inv(Sigma2);
+                
+                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu);
+                
+                rel_error = max( (dx2-error_x_previous)./dx2 );
+                error_x_previous=dx2;
+                repeats = repeats+1;
+                
+                if (repeats == 100)
+                    disp('Failed to converge after 100 iterations.');
+                    break;
+                end
+            end
+            
+            
+            if nargout >= 2
+                N = length(x);
+                Q = size(V,1);
+                Cm = inv(X'*W*X + (lambda*N/Q)*(V'*V));
+            end
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Supporting function
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function [sigma, mu] = StandardDeviationAndMeanOfInterquartileRange(x)
+            mu = median(x);
+            x = sort(x-mu);
+            x_Q1 = median(x(1:floor(length(x)/2)));
+            x_Q3 = median(x(ceil(length(x)/2)+1:end));
+            sigma = (x_Q3-x_Q1)/1.349;
+        end
+        
+        function sigma = StandardDeviationOfInterquartileRange(x)
+            x = sort(x);
+            x_Q1 = median(x(1:floor(length(x)/2)));
+            x_Q3 = median(x(ceil(length(x)/2)+1:end));
+            sigma = (x_Q3-x_Q1)/1.349;
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
