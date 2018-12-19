@@ -62,10 +62,10 @@ classdef TensionSpline < BSpline
             K = 4; % default spline order (cubic spline)
             T = []; % default tension *degree* (order-1)
             mu = 0;
-            didSetWeightFunction = 0;
             knot_dof = 1;
             shouldSetKnotDOFAutomatically = 0;
             lambdaArgument = Lambda.optimalIterated;
+            w = [];
             rho = [];
             
             for k = 1:2:length(varargin)
@@ -80,10 +80,7 @@ classdef TensionSpline < BSpline
                 elseif strcmp(varargin{k}, 'mu')
                     mu = varargin{k+1};
                 elseif strcmp(varargin{k}, 'weightFunction')
-                    if ~isempty(varargin{k+1})
-                        w = varargin{k+1};
-                        didSetWeightFunction = 1;
-                    end
+                    w = varargin{k+1};
                 elseif strcmp(varargin{k}, 'autocorrelationFunction')
                     rho = varargin{k+1};
                 elseif strcmp(varargin{k}, 'knot_dof')
@@ -147,7 +144,7 @@ classdef TensionSpline < BSpline
             [XWX,XWx,VV] = TensionSpline.PrecomputeTensionSolutionMatrices(X,V,sigma,x);
             
             % Now compute the coefficients
-            if didSetWeightFunction == 1
+            if ~isempty(w)
                 if ~isempty(rho)
                     [m,Cm,W] = TensionSpline.IteratedLeastSquaresTensionSolutionWithAC(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho);
                 else
@@ -174,9 +171,7 @@ classdef TensionSpline < BSpline
             self.x = x;
             self.sigma = sigma;
             self.knot_dof = knot_dof;
-            if didSetWeightFunction == 1
-                self.w = w;
-            end
+            self.w = w;
             self.rho = rho;
             
             if lambdaArgument == Lambda.optimalIterated
