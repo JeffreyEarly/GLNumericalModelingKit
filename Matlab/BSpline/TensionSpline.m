@@ -228,7 +228,10 @@ classdef TensionSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if ~isempty(self.w)
-                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,self.XWX,self.XWx,self.VV,self.t,self.rho);
+                % do *not* feed in the previous values of self.XWX,self.XWx
+                % when the tension parameter changes for an iterated
+                % solution.
+                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,[],[],self.VV,self.t,self.rho);
             else
                 [self.m,CmInv] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
             end
