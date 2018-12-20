@@ -37,6 +37,9 @@ classdef TensionSpline < BSpline
         x
         t
         sigma
+        
+        indicesOfOutliers = []
+        goodIndices = []
     end
     
     methods
@@ -65,8 +68,10 @@ classdef TensionSpline < BSpline
             knot_dof = 1;
             shouldSetKnotDOFAutomatically = 0;
             lambdaArgument = Lambda.optimalIterated;
+            indicesOfOutliers = [];
             w = [];
             rho = [];
+            t_knot = [];
             
             for k = 1:2:length(varargin)
                 if strcmp(varargin{k}, 'K')
@@ -81,6 +86,8 @@ classdef TensionSpline < BSpline
                     mu = varargin{k+1};
                 elseif strcmp(varargin{k}, 'weightFunction')
                     w = varargin{k+1};
+                elseif strcmp(varargin{k}, 't_knot')
+                    t_knot = varargin{k+1};
                 elseif strcmp(varargin{k}, 'autocorrelationFunction')
                     rho = varargin{k+1};
                 elseif strcmp(varargin{k}, 'knot_dof')
@@ -129,7 +136,9 @@ classdef TensionSpline < BSpline
             end
             
             % Compute the spline values at the observation points
-            t_knot = InterpolatingSpline.KnotPointsForPoints(t,K,knot_dof);
+            if isempty(t_knot)
+                t_knot = InterpolatingSpline.KnotPointsForPoints(t,K,knot_dof);
+            end
             X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             
             % Now we need a quadrature (integration) grid that is finer
@@ -145,20 +154,16 @@ classdef TensionSpline < BSpline
             
             % Now compute the coefficients
             if ~isempty(w)
-                if ~isempty(rho)
-                    [m,Cm,W] = TensionSpline.IteratedLeastSquaresTensionSolutionWithAC(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho);
-                else
-                    [m,Cm,W] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV);
-                end
+                [m,CmInv,W,XWX,XWx,VV] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho);
             else
-                [m,Cm] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV);
+                [m,CmInv] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV);
             end
             
             self@BSpline(K,t_knot,m);
             self.lambda = lambda;
             self.mu = mu;
             self.T = T;
-            self.Cm = Cm;
+            self.Cm = inv(CmInv);
             if exist('W','var')
                 self.W = W;
             end
@@ -173,6 +178,8 @@ classdef TensionSpline < BSpline
             self.knot_dof = knot_dof;
             self.w = w;
             self.rho = rho;
+            self.indicesOfOutliers = indicesOfOutliers;
+            self.goodIndices = setdiff(1:length(self.x),self.indicesOfOutliers);
             
             if lambdaArgument == Lambda.optimalIterated
                 self.MinimizeExpectedMeanSquareError();
@@ -221,14 +228,11 @@ classdef TensionSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if ~isempty(self.w)
-                if ~isempty(self.rho)
-                    [self.m,self.Cm,self.W] = TensionSpline.IteratedLeastSquaresTensionSolutionWithAC(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,self.XWX,self.XWx,self.VV,self.t,self.rho);
-                else
-                    [self.m,self.Cm,self.W] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,self.XWX,self.XWx,self.VV);
-                end
+                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,self.XWX,self.XWx,self.VV,self.t,self.rho);
             else
-                [self.m,self.Cm] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
+                [self.m,CmInv] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
             end
+            self.Cm = inv(CmInv);
             [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
         end
         
@@ -308,6 +312,8 @@ classdef TensionSpline < BSpline
             % From Craven and Wahba, 1979
             
             if ~isempty(self.XWX)
+                % S = X*C*X'*W, so trace(S)=trace(C*X'*W*X) under the
+                % cyclic property
                 MSE = self.SampleVariance/(self.sigma*self.sigma) + 2*trace(squeeze(self.Cm(:,:,1))*self.XWX)/length(self.x) - 1;
             else
                 S = self.SmoothingMatrix;
@@ -492,7 +498,7 @@ classdef TensionSpline < BSpline
             VV = V'*V;
         end
         
-        function [m, Cm] = TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV)
+        function [m,CmInv,XWX,XWx,VV] = TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV)
             % N     # of observations
             % M     # of splines
             % Q     # of points in quadrature grid
@@ -500,7 +506,9 @@ classdef TensionSpline < BSpline
             % inputs:
             % X         splines on the observation grid, NxM
             % V         spline derivatives on the quadrature grid, QxM
-            % sigma     errors of observations, either a scalar, Nx1, OR if size(sigma)=[N N], then we assume it's the weight matrix
+            % sigma     errors of observations, either a scalar, Nx1, OR if 
+            %           size(sigma)=[N N], then we assume it's the weight
+            %           matrix W
             % lambda    tension parameter
             % x         observations (Nx1)
             % mu        mean tension
@@ -510,11 +518,11 @@ classdef TensionSpline < BSpline
             %
             % output:
             % m         coefficients of the splines, Mx1
-            % Cm        covariance of coefficients, MxM
+            % CmInv     Inverse of the covariance of coefficients, MxM
             N = length(x);
             Q = size(V,1);
             
-            if ~exist('XWX','var')
+            if ~exist('XWX','var') || isempty(XWX)
                 if size(sigma,1) == N && size(sigma,2) == N
                     XWX = X'*sigma*X;
                 elseif length(sigma) == 1
@@ -526,7 +534,7 @@ classdef TensionSpline < BSpline
                 end
             end
             
-            if ~exist('XWx','var')
+            if ~exist('XWx','var') || isempty(XWx)
                 if size(sigma,1) == N && size(sigma,2) == N
                     XWx = X'*sigma*x;
                 elseif length(sigma) == 1
@@ -538,7 +546,7 @@ classdef TensionSpline < BSpline
                 end
             end
             
-            if ~exist('VV','var')
+            if ~exist('VV','var') || isempty(VV)
                 VV = V'*V;
             end
             
@@ -554,12 +562,54 @@ classdef TensionSpline < BSpline
             % Now solve
             m = E_x\B;
             
-            if nargout >= 2
-                Cm = inv(E_x);
-            end
+            CmInv = E_x;
         end
         
-        function [m,Cm,W] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV)
+        function [m,CmInv,W,XWX,XWx,VV] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho)
+            % Same calling sequence as the TensionSolution function, but
+            % also includes the weight factor, w
+            if exist('t','var') && exist('rho','var') && ~isempty(rho)
+                rho_t = rho(t - t.');   
+                if length(sigma) == 1
+                    sigma = ones(size(x))*sigma;
+                end      
+                Sigma2 = (sigma * sigma.') .* rho_t;
+                W = inv(Sigma2);
+                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV);
+            else
+                m = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV);
+            end
+            
+            
+            sigma2_previous = sigma.*sigma;
+            rel_error = 1.0;
+            repeats = 1;
+            while (rel_error > 0.01)
+                sigma_w2 = w(X*m - x);
+                
+                if exist('rho_t','var')
+                    Sigma2 = (sqrt(sigma_w2) * sqrt(sigma_w2).') .* rho_t;
+                    W = inv(Sigma2);
+                else
+                    W = diag(1./sigma_w2);
+                end
+                
+                [m,CmInv,XWX,XWx,VV] = TensionSpline.TensionSolution(X,V,W,lambda,x,mu);
+                
+                rel_error = max( (sigma_w2-sigma2_previous)./sigma_w2 );
+                sigma2_previous=sigma_w2;
+                repeats = repeats+1;
+                
+                if (repeats == 100)
+                    disp('Failed to converge after 100 iterations.');
+                    break;
+                end
+            end
+            
+        end
+        
+        
+        function [m,Cm,W_g,indicesOfOutliers] = IteratedLeastSquaresTensionSolutionWithOutliers(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV)
             % Same calling sequence as the TensionSolution function, but
             % also includes the weight factor, w
             if length(sigma) == 1
@@ -574,12 +624,24 @@ classdef TensionSpline < BSpline
             while (rel_error > 0.01)
                 dx2 = w(X*m - x);
                 
-                W = diag(1./(dx2));
+                indicesOfOutliers = find(dx2>1e5*sigma.*sigma);
+                goodIndices = setdiff(1:length(x),indicesOfOutliers);
                 
-                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu);
+                x_g = x(goodIndices);
+                dx2_g = dx2(goodIndices);
+                X_g = X(goodIndices,:);
                 
-                rel_error = max( (dx2-error_x_previous)./dx2 );
-                error_x_previous=dx2;
+                W_g = diag(1./(dx2_g));
+                
+                m = TensionSpline.TensionSolution(X_g,V,W_g,lambda,x_g,mu);
+                
+                % dropping an outlier counts as 100% error
+                if size(dx2_g) == size(error_x_previous)
+                    rel_error = max( (dx2_g-error_x_previous)./dx2_g );
+                else
+                    rel_error = 1;
+                end
+                error_x_previous=dx2_g;
                 repeats = repeats+1;
                 
                 if (repeats == 100)
@@ -590,55 +652,9 @@ classdef TensionSpline < BSpline
             
             
             if nargout >= 2
-                N = length(x);
+                N = length(x_g);
                 Q = size(V,1);
-                Cm = inv(X'*W*X + (lambda*N/Q)*(V'*V));
-            end
-        end
-        
-        function [m,Cm,W] = IteratedLeastSquaresTensionSolutionWithAC(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho)
-            % Same calling sequence as the TensionSolution function, but
-            % also includes the weight factor, w
-            
-            % autocorrelation matrix
-            rho_t = rho(t - t.');
-            
-            if length(sigma) == 1
-                sigma = ones(size(x))*sigma;
-            end
-            
-            Sigma2 = (sigma * sigma.') .* rho_t;
-            W = inv(Sigma2);
-            
-            m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV);
-            
-            error_x_previous = sigma.*sigma;
-            rel_error = 1.0;
-            repeats = 1;
-            while (rel_error > 0.01)
-                dx2 = w(X*m - x);
-                
-                
-                Sigma2 = (sqrt(dx2) * sqrt(dx2).') .* rho_t;
-                W = inv(Sigma2);
-                
-                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu);
-                
-                rel_error = max( (dx2-error_x_previous)./dx2 );
-                error_x_previous=dx2;
-                repeats = repeats+1;
-                
-                if (repeats == 100)
-                    disp('Failed to converge after 100 iterations.');
-                    break;
-                end
-            end
-            
-            
-            if nargout >= 2
-                N = length(x);
-                Q = size(V,1);
-                Cm = inv(X'*W*X + (lambda*N/Q)*(V'*V));
+                Cm = inv(X_g'*W_g*X_g + (lambda*N/Q)*(V'*V));
             end
         end
         
