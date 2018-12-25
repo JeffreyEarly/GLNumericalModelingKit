@@ -20,7 +20,7 @@ legend('true function', 'noisy data')
 print('-depsc2', '../figures/noisydata.eps')
 
 % now create a tension spline fit to the data
-spline = TensionSpline(x,y,sigma);
+spline = TensionSpline(x,y,NormalDistribution(sigma));
 
 figure
 plot(x_dense,f(x_dense)), hold on

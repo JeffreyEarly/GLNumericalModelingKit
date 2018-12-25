@@ -177,7 +177,7 @@ classdef TensionSpline < BSpline
             self.goodIndices = setdiff(1:length(self.x),self.indicesOfOutliers);
             
             if lambdaArgument == Lambda.optimalIterated
-                self.MinimizeExpectedMeanSquareError();
+                self.minimizeExpectedMeanSquareError();
             end
         end
    
@@ -243,7 +243,7 @@ classdef TensionSpline < BSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function S = SmoothingMatrix(self)
+        function S = smoothingMatrix(self)
             % The smoothing matrix S takes the observations and maps them
             % onto the estimated true values.
             if ~isempty(self.distribution.w)
@@ -253,7 +253,7 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function S = CovarianceMatrixAtPointsForDerivative(self,t,numDerivs)
+        function S = covarianceMatrixAtPointsForDerivative(self,t,numDerivs)
             % Returns the covariance matrix for a given derivative at the
             % requested points.
             J = self.Splines(t,numDerivs);            
@@ -264,22 +264,22 @@ classdef TensionSpline < BSpline
             end
         end    
         
-        function S = CovarianceMatrixForDerivative(self,numDerivs)
+        function S = covarianceMatrixForDerivative(self,numDerivs)
             % Returns the covariance matrix for a given derivative at the
             % points of observation
-            S = self.CovarianceMatrixAtPointsForDerivative(self.t,numDerivs);
+            S = self.covarianceMatrixAtPointsForDerivative(self.t,numDerivs);
         end
         
-        function SE = StandardErrorAtPointsForDerivative(self,t,numDerivs)
+        function SE = standardErrorAtPointsForDerivative(self,t,numDerivs)
             % Returns the standard error for a given derivative at the
             % points requested.
-            SE = sqrt(diag(self.CovarianceMatrixAtPointsForDerivative(t,numDerivs)));
+            SE = sqrt(diag(self.covarianceMatrixAtPointsForDerivative(t,numDerivs)));
         end
         
-        function SE = StandardErrorForDerivative(self,numDerivs)
+        function SE = standardErrorForDerivative(self,numDerivs)
             % Returns the standard error for a given derivative at the
             % observation points.
-           SE = sqrt(diag(self.CovarianceMatrixForDerivative(numDerivs)));
+           SE = sqrt(diag(self.covarianceMatrixForDerivative(numDerivs)));
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -292,20 +292,31 @@ classdef TensionSpline < BSpline
             epsilon = self.x - self.ValueAtPoints(self.t);
         end
         
-        function X2 = SampleVariance(self)
+        function X2 = sampleVariance(self)
             % The sample variance. Same as ||(S-I)*x||^2/N
             % Not normalized by the variance.
             X2 = mean( self.epsilon.^2,1);
         end
         
-        function SE2 = VarianceOfTheMean(self)
+        function X2 = sampleVarianceInRange(self,zmin,zmax)
+            epsilon = self.epsilon;
+            X2 = mean( epsilon( epsilon >= zmin & epsilon <= zmax ).^2,1);
+        end
+        
+        function X2 = sampleVarianceInPercentileRange(self,pctmin,pctmax)
+            zmin = self.distribution.locationOfCDFPercentile(pctmin);
+            zmax = self.distribution.locationOfCDFPercentile(pctmax);
+            X2 = self.sampleVarianceInRange(zmin,zmax);
+        end
+        
+        function SE2 = varianceOfTheMean(self)
             % The variance of the mean is the square of the standard error
             % Normalized by the variance.
-            S = self.SmoothingMatrix;
+            S = self.smoothingMatrix;
             SE2 = self.distribution.variance*trace(S)/length(S);
         end
         
-        function MSE = ExpectedMeanSquareError(self)
+        function MSE = expectedMeanSquareError(self)
             % This is the *expected* mean-square error normalized by the
             % variance. Note that it is a combination of the sample
             % variance and the variance of the mean.
@@ -315,18 +326,30 @@ classdef TensionSpline < BSpline
             if ~isempty(self.XWX)
                 % S = X*C*X'*W, so trace(S)=trace(C*X'*W*X) under the
                 % cyclic property
-                MSE = self.SampleVariance/self.distribution.variance + 2*trace(squeeze(self.Cm(:,:,1))*self.XWX)/length(self.x) - 1;
+                MSE = self.sampleVariance/self.distribution.variance + 2*trace(squeeze(self.Cm(:,:,1))*self.XWX)/length(self.x) - 1;
             else
-                S = self.SmoothingMatrix;
+                S = self.smoothingMatrix;
                 SI = (S-eye(size(S)));
                 
                 MSE = mean((SI*self.x).^2)/self.distribution.variance + 2*trace(S)/length(S) - 1;
             end
         end
         
+        function MSE = expectedMeanSquareErrorInRange(self,zmin,zmax)
+            epsilon = self.epsilon;
+            indices = find(epsilon >= zmin & epsilon <= zmax);
+            X2 = mean(epsilon(indices).^2,1);
+            expectedVariance = self.distribution.varianceInRange(zmin,zmax);
+            
+            S = self.smoothingMatrix;
+            S = S(indices,indices); 
+            
+            MSE = X2/expectedVariance + 2*trace(S)/length(S) - 1;
+        end
+        
         function MSE = ExpectedMeanSquareErrorNoSigmaAlt(self)
             % From Craven and Wahba, 1979
-            S = self.SmoothingMatrix;
+            S = self.smoothingMatrix;
             SI = (S-eye(size(S)));
             a = mean((SI*self.x).^2);
             b = trace(S)/length(S);
@@ -342,7 +365,7 @@ classdef TensionSpline < BSpline
            MSE = zeros(self.K,1);
            noise = zeros(self.K,1);
            
-           S = self.SmoothingMatrix;
+           S = self.smoothingMatrix;
            SI = (S-eye(size(S)));
            sigma2 = self.distribution.variance;
            MSE(1) = mean((SI*self.x).^2) + sigma2*(2*trace(S)/length(S) - 1);
@@ -374,7 +397,7 @@ classdef TensionSpline < BSpline
         function SSER = SignalToStandardErrorRatio(self)
             sigma2 = self.distribution.variance;
             x_smoothed = self.ValueAtPoints(self.t);
-            S = self.SmoothingMatrix;
+            S = self.smoothingMatrix;
             
             SSER = zeros(self.K,1);
             SSER(1) = mean(x_smoothed.^2)/sigma2;
@@ -391,16 +414,16 @@ classdef TensionSpline < BSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function n_eff = EffectiveSampleSizeFromVarianceOfTheMean(self)
-            n_eff = self.distribution.variance ./ self.VarianceOfTheMean;
+        function n_eff = effectiveSampleSizeFromVarianceOfTheMean(self)
+            n_eff = self.distribution.variance ./ self.varianceOfTheMean;
         end
         
-        function n_eff = EffectiveSampleSizeFromSampleVariance(self)
-            n_eff = 1./(1-self.SampleVariance/self.distribution.variance);
+        function n_eff = effectiveSampleSizeFromSampleVariance(self)
+            n_eff = 1./(1-self.sampleVariance/self.distribution.variance);
         end
 
-        function n_eff = EffectiveSampleSizeFromExpectedMeanSquareError(self)
-            n_eff = 1./self.ExpectedMeanSquareError;
+        function n_eff = effectiveSampleSizeFromExpectedMeanSquareError(self)
+            n_eff = 1./self.expectedMeanSquareError;
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -412,7 +435,7 @@ classdef TensionSpline < BSpline
         function phi = LogLikelihood(self)
             Q = 10*length(self.t); % number of points on the quadrature grid
             tq = linspace(self.t(1),self.t(end),Q)';
-            phi = self.SampleVariance/(self.sigma^2) + self.lambda *  mean( self.ValueAtPoints(tq,self.T).^2 );
+            phi = self.sampleVariance/(self.sigma^2) + self.lambda *  mean( self.ValueAtPoints(tq,self.T).^2 );
         end
         
         function AIC = AIC(self)
@@ -434,20 +457,26 @@ classdef TensionSpline < BSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function lambda = Minimize(self,penaltyFunction)
+        function lambda = minimize(self,penaltyFunction)
             % the penalty function *must* take a tension spline object and
             % return a scalar. The function will be minimized by varying
             % lambda.
-            lambda = TensionSpline.MinimizeFunctionOfSpline(self,penaltyFunction);
+            lambda = TensionSpline.minimizeFunctionOfSpline(self,penaltyFunction);
         end
         
-        function lambda = MinimizeExpectedMeanSquareError(self)
-            lambda = self.Minimize(@(aTensionSpline) aTensionSpline.ExpectedMeanSquareError);
+        function lambda = minimizeExpectedMeanSquareError(self)
+            lambda = self.minimize(@(aTensionSpline) aTensionSpline.expectedMeanSquareError);
         end
         
-        function lambda = MinimizedMeanSquareError(self,t_true,x_true)
+        function lambda = minimizeExpectedMeanSquareErrorInPercentileRange(self,pctmin,pctmax)
+            zmin = self.distribution.locationOfCDFPercentile(pctmin);
+            zmax = self.distribution.locationOfCDFPercentile(pctmax); 
+            lambda = self.minimize( @(aTensionSpline) aTensionSpline.expectedMeanSquareErrorInRange(zmin,zmax) );
+        end
+        
+        function lambda = minimizedMeanSquareError(self,t_true,x_true)
            mse = @(aTensionSpline) mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2)/(aTensionSpline.distribution.variance);
-           lambda = self.Minimize(mse);
+           lambda = self.minimize(mse);
         end
     end
     
@@ -463,7 +492,7 @@ classdef TensionSpline < BSpline
         % that it take log10(lambda) rather than lambda. This is much
         % better for the fminsearch algorithm.
 
-        function lambda = MinimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
+        function lambda = minimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
             epsilon = 1e-15;
             errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
             optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
