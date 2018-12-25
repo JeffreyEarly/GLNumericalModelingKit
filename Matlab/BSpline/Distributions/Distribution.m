@@ -3,12 +3,14 @@ classdef (Abstract) Distribution < handle
     %   Detailed explanation goes here
     
     properties
-        pdf
-        cdf
-        w
-        variance
+        pdf     % probability density function
+        cdf     % cumulative distribution function
+        rho     % autocorrelation function
         
-        dPDFoverZ % derivative of the pdf wrt z, divided by z
+        variance    % total variance
+
+        w           % 'weight' function, 
+        dPDFoverZ   % derivative of the pdf wrt z, divided by z
     end
     
     methods

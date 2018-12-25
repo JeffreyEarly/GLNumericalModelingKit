@@ -22,22 +22,20 @@ classdef TensionSpline < BSpline
     % 
     
     properties
+        x
+        t
+        distribution
+        
         T           % degree at which tension is applied
         lambda      % tension parameter
         mu          % mean value of tension
-        w           % weight function
-        rho         % autocorrelation function
         Cm          % error in coefficients, MxMxD
         knot_dof    % knot dofs
         
         X
         V
         W,XWX,XWx,VV
-        
-        x
-        t
-        sigma
-        
+
         indicesOfOutliers = []
         goodIndices = []
     end
@@ -48,13 +46,17 @@ classdef TensionSpline < BSpline
         % Initialization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function self = TensionSpline(t,x,sigma,varargin)
+        function self = TensionSpline(t,x,distribution,varargin)
             N = length(t);
             t = reshape(t,[],1);
             x = reshape(x,[],1);
             
             if length(x) ~= N
                 error('x and t must have the same length.');
+            end
+            
+            if ~isa(distribution,'Distribution')
+               error('The distribution must be a Distribution subclass.') 
             end
             
             nargs = length(varargin);
@@ -69,8 +71,6 @@ classdef TensionSpline < BSpline
             shouldSetKnotDOFAutomatically = 0;
             lambdaArgument = Lambda.optimalIterated;
             indicesOfOutliers = [];
-            w = [];
-            rho = [];
             t_knot = [];
             
             for k = 1:2:length(varargin)
@@ -84,12 +84,8 @@ classdef TensionSpline < BSpline
                     lambdaArgument = varargin{k+1};
                 elseif strcmp(varargin{k}, 'mu')
                     mu = varargin{k+1};
-                elseif strcmp(varargin{k}, 'weightFunction')
-                    w = varargin{k+1};
                 elseif strcmp(varargin{k}, 't_knot')
                     t_knot = varargin{k+1};
-                elseif strcmp(varargin{k}, 'autocorrelationFunction')
-                    rho = varargin{k+1};
                 elseif strcmp(varargin{k}, 'knot_dof')
                     if ischar(varargin{k+1}) && strcmp(varargin{k+1}, 'auto')
                         shouldSetKnotDOFAutomatically = 1;
@@ -109,15 +105,15 @@ classdef TensionSpline < BSpline
             if isenum(lambdaArgument)
                 switch lambdaArgument
                     case {Lambda.optimalExpected}
-                        u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,1);
-                        n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sigma);
-                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,T);
+                        u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),1);
+                        n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
+                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
                         lambda = (n_eff-1)/(n_eff*a_rms.^2);
                     case {Lambda.fullTensionExpected, Lambda.optimalIterated}
                         % if you're going to optimize, it's best to start
                         % near the full tension solution, rather than
                         % (potentially) near zero
-                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,T);
+                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
                         lambda = 1/a_rms.^2;
                 end
             elseif isscalar(lambdaArgument)
@@ -128,8 +124,8 @@ classdef TensionSpline < BSpline
                         
             if shouldSetKnotDOFAutomatically == 1
                 if isempty(n_eff)
-                    u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sigma,1);
-                    n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sigma);
+                    u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),1);
+                    n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
                 end
                 % conservative estimate
                 knot_dof = max(1,floor(0.5*n_eff));
@@ -150,15 +146,16 @@ classdef TensionSpline < BSpline
             V = squeeze(B(:,:,T+1)); % QxM
             
             % Precompute some matrices that might be used again later,
-            [XWX,XWx,VV] = TensionSpline.PrecomputeTensionSolutionMatrices(X,V,sigma,x);
+            [XWX,XWx,VV] = TensionSpline.PrecomputeTensionSolutionMatrices(X,V,sqrt(distribution.variance),x);
             
-            % Now compute the coefficients
-            if ~isempty(w)
-                [m,CmInv,W,XWX,XWx,VV] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho);
+            if isa(distribution,'NormalDistribution')
+                [m,CmInv] = TensionSpline.TensionSolution(X,V,distribution.sigma,lambda,x,mu,XWX,XWx,VV);
+            elseif ~isempty(distribution.w)
+                [m,CmInv,W,XWX,XWx,VV] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sqrt(distribution.variance),lambda,x,mu,distribution.w,XWX,XWx,VV,t,distribution.rho);
             else
-                [m,CmInv] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV);
+                error('No weight function given! Unable to proceed.');
             end
-            
+                        
             self@BSpline(K,t_knot,m);
             self.lambda = lambda;
             self.mu = mu;
@@ -174,10 +171,8 @@ classdef TensionSpline < BSpline
             self.VV=VV;
             self.t = t;
             self.x = x;
-            self.sigma = sigma;
             self.knot_dof = knot_dof;
-            self.w = w;
-            self.rho = rho;
+            self.distribution = distribution;
             self.indicesOfOutliers = indicesOfOutliers;
             self.goodIndices = setdiff(1:length(self.x),self.indicesOfOutliers);
             
@@ -227,14 +222,17 @@ classdef TensionSpline < BSpline
             % Tension parameter changed, so we need to recompute the
             % solution, then then compute the PP coefficients for that
             % solution.
-            if ~isempty(self.w)
+            if isa(self.distribution,'NormalDistribution')
+                [self.m,CmInv] = TensionSpline.TensionSolution(self.X,self.V,self.distribution.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
+            elseif ~isempty(self.distribution.w)
                 % do *not* feed in the previous values of self.XWX,self.XWx
                 % when the tension parameter changes for an iterated
                 % solution.
-                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.w,[],[],self.VV,self.t,self.rho);
+                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,sqrt(self.distribution.variance),self.lambda,self.x,self.mu,self.distribution.w,[],[],self.VV,self.t,self.distribution.rho);
             else
-                [self.m,CmInv] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
+                error('No weight function given! Unable to proceed.'); 
             end
+
             self.Cm = inv(CmInv);
             [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
         end
@@ -248,10 +246,10 @@ classdef TensionSpline < BSpline
         function S = SmoothingMatrix(self)
             % The smoothing matrix S takes the observations and maps them
             % onto the estimated true values.
-            if ~isempty(self.w)
+            if ~isempty(self.distribution.w)
                 S = (self.X*self.Cm*self.X.')*self.W;
             else
-                S = (self.X*self.Cm*self.X.')/(self.sigma*self.sigma);
+                S = (self.X*self.Cm*self.X.')/self.distribution.variance;
             end
         end
         
@@ -259,10 +257,10 @@ classdef TensionSpline < BSpline
             % Returns the covariance matrix for a given derivative at the
             % requested points.
             J = self.Splines(t,numDerivs);            
-            if ~isempty(self.w)
+            if ~isempty(self.distribution.w)
                 S = (J*self.Cm*J.')*self.W;
             else
-                S = (J*self.Cm*J.')/(self.sigma*self.sigma);
+                S = (J*self.Cm*J.')/self.distribution.variance;
             end
         end    
         
@@ -304,7 +302,7 @@ classdef TensionSpline < BSpline
             % The variance of the mean is the square of the standard error
             % Normalized by the variance.
             S = self.SmoothingMatrix;
-            SE2 = self.sigma*self.sigma*trace(S)/length(S);
+            SE2 = self.distribution.variance*trace(S)/length(S);
         end
         
         function MSE = ExpectedMeanSquareError(self)
@@ -317,12 +315,12 @@ classdef TensionSpline < BSpline
             if ~isempty(self.XWX)
                 % S = X*C*X'*W, so trace(S)=trace(C*X'*W*X) under the
                 % cyclic property
-                MSE = self.SampleVariance/(self.sigma*self.sigma) + 2*trace(squeeze(self.Cm(:,:,1))*self.XWX)/length(self.x) - 1;
+                MSE = self.SampleVariance/self.distribution.variance + 2*trace(squeeze(self.Cm(:,:,1))*self.XWX)/length(self.x) - 1;
             else
                 S = self.SmoothingMatrix;
                 SI = (S-eye(size(S)));
                 
-                MSE = mean((SI*self.x).^2)/(self.sigma*self.sigma) + 2*trace(S)/length(S) - 1;
+                MSE = mean((SI*self.x).^2)/self.distribution.variance + 2*trace(S)/length(S) - 1;
             end
         end
         
@@ -346,9 +344,9 @@ classdef TensionSpline < BSpline
            
            S = self.SmoothingMatrix;
            SI = (S-eye(size(S)));
-           sigma2 = self.sigma*self.sigma;
+           sigma2 = self.distribution.variance;
            MSE(1) = mean((SI*self.x).^2) + sigma2*(2*trace(S)/length(S) - 1);
-           noise(1) = self.sigma*self.sigma;
+           noise(1) = self.distribution.variance;
            
            for iDiff=1:(self.K-1)
                Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
@@ -362,7 +360,7 @@ classdef TensionSpline < BSpline
         end
         
         function SNR = SignalToNoiseRatio(self)
-            sigma2 = self.sigma*self.sigma;
+            sigma2 = self.distribution.variance;
             x_smoothed = self.ValueAtPoints(self.t);
             
             SNR = zeros(self.K,1);
@@ -374,7 +372,7 @@ classdef TensionSpline < BSpline
         end
         
         function SSER = SignalToStandardErrorRatio(self)
-            sigma2 = self.sigma*self.sigma;
+            sigma2 = self.distribution.variance;
             x_smoothed = self.ValueAtPoints(self.t);
             S = self.SmoothingMatrix;
             
@@ -394,11 +392,11 @@ classdef TensionSpline < BSpline
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function n_eff = EffectiveSampleSizeFromVarianceOfTheMean(self)
-            n_eff = (self.sigma*self.sigma)./self.VarianceOfTheMean;
+            n_eff = self.distribution.variance ./ self.VarianceOfTheMean;
         end
         
         function n_eff = EffectiveSampleSizeFromSampleVariance(self)
-            n_eff = 1./(1-self.SampleVariance/(self.sigma*self.sigma));
+            n_eff = 1./(1-self.SampleVariance/self.distribution.variance);
         end
 
         function n_eff = EffectiveSampleSizeFromExpectedMeanSquareError(self)
@@ -448,7 +446,7 @@ classdef TensionSpline < BSpline
         end
         
         function lambda = MinimizedMeanSquareError(self,t_true,x_true)
-           mse = @(aTensionSpline) mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2)/(aTensionSpline.sigma*aTensionSpline.sigma);
+           mse = @(aTensionSpline) mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2)/(aTensionSpline.distribution.variance);
            lambda = self.Minimize(mse);
         end
     end
