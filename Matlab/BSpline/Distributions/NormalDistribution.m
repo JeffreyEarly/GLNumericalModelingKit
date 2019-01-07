@@ -15,6 +15,7 @@ classdef NormalDistribution < Distribution
             self.variance = sigma*sigma;
             
             self.dPDFoverZ = @(z) -exp(-(z.*z)/(2*sigma*sigma))/(sigma*sqrt(2*pi))/(sigma*sigma);
+            self.logPDF = @(z) -(z.*z)/(2*sigma*sigma);
         end
         
     end

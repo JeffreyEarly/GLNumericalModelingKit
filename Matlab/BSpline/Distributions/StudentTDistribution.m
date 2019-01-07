@@ -20,6 +20,7 @@ classdef StudentTDistribution < Distribution
             c = nu*sigma*sigma;
             m = (nu+1)/2;
             self.dPDFoverZ = @(z) -2*(a*m/c)*(1+z.*z/c).^(-m-1);
+            self.logPDF = @(z) -m*log(1+z.*z/c);
         end
         
     end

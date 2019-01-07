@@ -33,6 +33,7 @@ classdef AddedDistribution < Distribution
             self.cdf = @(z) self.SummedCDF(z);
             self.dPDFoverZ = @(z) self.SummeddPDFoverZ(z);
             self.w = @(z) self.SummedWeight(z);
+            self.logPDF = @(z) log(self.pdf(z));
             
             self.variance = 0;
             for i=1:length(self.distributions)
@@ -47,7 +48,7 @@ classdef AddedDistribution < Distribution
                pdf = pdf + self.scalings(i)*self.distributions{i}.pdf(z); 
             end
         end
-        
+                
         function cdf = SummedCDF(self,z)
             cdf = zeros(size(z));
             for i=1:length(self.distributions)

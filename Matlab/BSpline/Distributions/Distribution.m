@@ -11,6 +11,7 @@ classdef (Abstract) Distribution < handle
 
         w           % 'weight' function, 
         dPDFoverZ   % derivative of the pdf wrt z, divided by z
+        logPDF      % log of the pdf
     end
     
     methods

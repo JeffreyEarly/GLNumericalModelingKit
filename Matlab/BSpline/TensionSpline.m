@@ -198,7 +198,7 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function [x_T, t_T] = UniqueValuesAtHighestDerivative(self)
+        function [x_T, t_T] = uniqueValuesAtHighestDerivative(self)
             t_T = self.t_knot(self.K:1:(end-self.K+1));
             t_T = t_T(1:end-1) + diff(t_T)/2;
             x_T = self.ValueAtPoints(t_T,self.K-1);
@@ -246,7 +246,7 @@ classdef TensionSpline < BSpline
         function S = smoothingMatrix(self)
             % The smoothing matrix S takes the observations and maps them
             % onto the estimated true values.
-            if ~isempty(self.distribution.w)
+            if ~isa(self.distribution,'NormalDistribution')
                 S = (self.X*self.Cm*self.X.')*self.W;
             else
                 S = (self.X*self.Cm*self.X.')/self.distribution.variance;
@@ -474,7 +474,7 @@ classdef TensionSpline < BSpline
             lambda = self.minimize( @(aTensionSpline) aTensionSpline.expectedMeanSquareErrorInRange(zmin,zmax) );
         end
         
-        function lambda = minimizedMeanSquareError(self,t_true,x_true)
+        function lambda = minimizeMeanSquareError(self,t_true,x_true)
            mse = @(aTensionSpline) mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2)/(aTensionSpline.distribution.variance);
            lambda = self.minimize(mse);
         end
