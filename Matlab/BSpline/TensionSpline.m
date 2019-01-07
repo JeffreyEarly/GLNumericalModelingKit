@@ -198,7 +198,7 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function [x_T, t_T] = UniqueValuesAtHighestDerivative(self)
+        function [x_T, t_T] = uniqueValuesAtHighestDerivative(self)
             t_T = self.t_knot(self.K:1:(end-self.K+1));
             t_T = t_T(1:end-1) + diff(t_T)/2;
             x_T = self.ValueAtPoints(t_T,self.K-1);
@@ -246,7 +246,7 @@ classdef TensionSpline < BSpline
         function S = smoothingMatrix(self)
             % The smoothing matrix S takes the observations and maps them
             % onto the estimated true values.
-            if ~isempty(self.distribution.w)
+            if ~isempty(self.W)
                 S = (self.X*self.Cm*self.X.')*self.W;
             else
                 S = (self.X*self.Cm*self.X.')/self.distribution.variance;
@@ -335,7 +335,7 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function MSE = expectedMeanSquareErrorInRange(self,zmin,zmax)
+        function [MSE, n] = expectedMeanSquareErrorInRange(self,zmin,zmax)
             epsilon = self.epsilon;
             indices = find(epsilon >= zmin & epsilon <= zmax);
             X2 = mean(epsilon(indices).^2,1);
@@ -344,7 +344,8 @@ classdef TensionSpline < BSpline
             S = self.smoothingMatrix;
             S = S(indices,indices); 
             
-            MSE = X2/expectedVariance + 2*trace(S)/length(S) - 1;
+            n = length(S);
+            MSE = X2/expectedVariance + 2*trace(S)/n - 1;
         end
         
         function MSE = ExpectedMeanSquareErrorNoSigmaAlt(self)
@@ -474,7 +475,7 @@ classdef TensionSpline < BSpline
             lambda = self.minimize( @(aTensionSpline) aTensionSpline.expectedMeanSquareErrorInRange(zmin,zmax) );
         end
         
-        function lambda = minimizedMeanSquareError(self,t_true,x_true)
+        function lambda = minimizeMeanSquareError(self,t_true,x_true)
            mse = @(aTensionSpline) mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2)/(aTensionSpline.distribution.variance);
            lambda = self.minimize(mse);
         end
@@ -504,7 +505,35 @@ classdef TensionSpline < BSpline
             aTensionSpline.lambda = 10^log10lambdaPlusEpsilon-epsilon;              
             error = functionOfSpline(aTensionSpline);
         end
-
+        
+        % Same thing as above, but for a bunch of splines given as a cell
+        % array
+        function lambda = minimizeFunctionOfSplines(tensionSplines,functionOfSplines)
+            epsilon = 1e-15;
+            errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.functionOfSplinesWrapper(tensionSplines,log10lambdaPlusEpsilon,functionOfSplines);
+            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(tensionSplines{1}.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
+        end
+        
+        function error = functionOfSplinesWrapper(tensionSplines, log10lambdaPlusEpsilon, functionOfSplines)
+            epsilon = 1e-15;
+            for iSpline=1:length(tensionSplines)
+                tensionSplines{iSpline}.lambda = 10^log10lambdaPlusEpsilon-epsilon;
+            end
+            error = functionOfSplines(tensionSplines);
+        end
+        
+        function error = expectedMeanSquareErrorOfSplines(tensionSplines,zmin,zmax)
+            MSE = 0;
+            N = 0;
+            for iSpline=1:length(tensionSplines)
+                [iMSE, n] = tensionSplines{iSpline}.expectedMeanSquareErrorInRange(zmin,zmax);
+                MSE = MSE + n*iMSE;
+                N = N + n;
+            end
+            error = MSE/N;
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Methods for solving the least-squares problem
@@ -774,6 +803,11 @@ classdef TensionSpline < BSpline
                 
                 ubar = fft(DiffMatrix*x);
                 s_signal = (ubar .* conj(ubar)) * (dt/N);
+
+    % This is a one-sided spectrum, need to double the cutoff below.            
+%                 psi = sleptap(size(t_u,1),1);
+%                 [f,s_signal] = mspec(t_u(2)-t_u(1),DiffMatrix*xin,psi,'cyclic');
+%                 df = f(2)-f(1);
             end
             s_noise = sigma*sigma*dt*(2*pi*f).^(2*D);
             
@@ -785,9 +819,9 @@ classdef TensionSpline < BSpline
             % There are two ways to think of this. Either you look for the
             % 95% range of the signal, or the 95% range of the expected
             % noise.
-            alpha = 0.999;
+            alpha = 0.99999;
             dof = 2;
-            cutoff = TensionSpline.chi2inv(alpha,dof)/dof;
+            cutoff = 1*TensionSpline.chi2inv(alpha,dof)/dof;
             
             u2 = sum((s_signal > cutoff*s_noise) .* s_signal)*df;
             a_std = sqrt(u2);
