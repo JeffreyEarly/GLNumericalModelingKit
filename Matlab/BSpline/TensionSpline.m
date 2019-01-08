@@ -798,16 +798,16 @@ classdef TensionSpline < BSpline
                 T = t_u(end)-t_u(1);
                 N = length(t_u);
                 
-                df = 1/T;
-                f = ([0:ceil(N/2)-1 -floor(N/2):-1]*df)';
-                
-                ubar = fft(DiffMatrix*x);
-                s_signal = (ubar .* conj(ubar)) * (dt/N);
+%                 df = 1/T;
+%                 f = ([0:ceil(N/2)-1 -floor(N/2):-1]*df)';
+%                 
+%                 ubar = fft(DiffMatrix*x);
+%                 s_signal = (ubar .* conj(ubar)) * (dt/N);
 
     % This is a one-sided spectrum, need to double the cutoff below.            
-%                 psi = sleptap(size(t_u,1),1);
-%                 [f,s_signal] = mspec(t_u(2)-t_u(1),DiffMatrix*xin,psi,'cyclic');
-%                 df = f(2)-f(1);
+                psi = sleptap(size(t_u,1),1);
+                [f,s_signal] = mspec(t_u(2)-t_u(1),DiffMatrix*xin,psi,'cyclic');
+                df = f(2)-f(1);
             end
             s_noise = sigma*sigma*dt*(2*pi*f).^(2*D);
             
@@ -821,7 +821,7 @@ classdef TensionSpline < BSpline
             % noise.
             alpha = 0.99999;
             dof = 2;
-            cutoff = 1*TensionSpline.chi2inv(alpha,dof)/dof;
+            cutoff = 2*TensionSpline.chi2inv(alpha,dof)/dof;
             
             u2 = sum((s_signal > cutoff*s_noise) .* s_signal)*df;
             a_std = sqrt(u2);
