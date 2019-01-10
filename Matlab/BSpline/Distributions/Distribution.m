@@ -29,6 +29,22 @@ classdef (Abstract) Distribution < handle
             zmax = self.locationOfCDFPercentile(pctmax);
             var = self.varianceInRange(zmin,zmax);
         end
+        
+        function totalError = kolmogorovSmirnovError(self,epsilon,zmin,zmax)
+            if nargin == 4
+                x = sort(epsilon( epsilon > zmin & epsilon < zmax ));
+            else
+                x = sort(epsilon);
+            end
+            
+            n = length(x);
+            y_data = (1:n)'/n;
+            y = self.cdf(x);
+            
+            D = max(abs(y-y_data));
+            
+            totalError = (sqrt(n) + 0.12 + 0.11/sqrt(n))*D;
+        end
     end
 end
 

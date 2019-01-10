@@ -348,15 +348,18 @@ classdef TensionSpline < BSpline
             MSE = X2/expectedVariance + 2*trace(S)/n - 1;
         end
         
-        function MSE = ExpectedMeanSquareErrorNoSigmaAlt(self)
-            % From Craven and Wahba, 1979
+        function MSE = expectedMeanSquareErrorFromGCV(self)
+            % generalized cross-validation estimate for the mean square
+            % error from Craven and Wahba, 1979 equation 1.9.
             S = self.smoothingMatrix;
             SI = (S-eye(size(S)));
             a = mean((SI*self.x).^2);
             b = trace(S)/length(S);
             
-            MSE = a*(b/(1-b));
-            %             MSE = a/(1-b)^2;
+            MSE = a/(1-b)^2;
+            
+%             MSE = a*(b/(1-b));
+            %             
             %             fprintf(' sigma^2=%.2f ',a/(1-b));
         end
         
@@ -798,16 +801,16 @@ classdef TensionSpline < BSpline
                 T = t_u(end)-t_u(1);
                 N = length(t_u);
                 
-%                 df = 1/T;
-%                 f = ([0:ceil(N/2)-1 -floor(N/2):-1]*df)';
-%                 
-%                 ubar = fft(DiffMatrix*x);
-%                 s_signal = (ubar .* conj(ubar)) * (dt/N);
+                df = 1/T;
+                f = ([0:ceil(N/2)-1 -floor(N/2):-1]*df)';
+                
+                ubar = fft(DiffMatrix*x);
+                s_signal = (ubar .* conj(ubar)) * (dt/N);
 
     % This is a one-sided spectrum, need to double the cutoff below.            
-                psi = sleptap(size(t_u,1),1);
-                [f,s_signal] = mspec(t_u(2)-t_u(1),DiffMatrix*xin,psi,'cyclic');
-                df = f(2)-f(1);
+%                 psi = sleptap(size(t_u,1),1);
+%                 [f,s_signal] = mspec(t_u(2)-t_u(1),DiffMatrix*xin,psi,'cyclic');
+%                 df = f(2)-f(1);
             end
             s_noise = sigma*sigma*dt*(2*pi*f).^(2*D);
             
@@ -821,7 +824,7 @@ classdef TensionSpline < BSpline
             % noise.
             alpha = 0.99999;
             dof = 2;
-            cutoff = 2*TensionSpline.chi2inv(alpha,dof)/dof;
+            cutoff = 1*TensionSpline.chi2inv(alpha,dof)/dof;
             
             u2 = sum((s_signal > cutoff*s_noise) .* s_signal)*df;
             a_std = sqrt(u2);
@@ -837,8 +840,8 @@ classdef TensionSpline < BSpline
                 hold on
                 plot(f,cutoff*s_noise), ylog
                 
-                figure
-                plot(tin,xin), hold on, plot(tin,polyval(p,tin,[],mu))
+%                 figure
+%                 plot(tin,xin), hold on, plot(tin,polyval(p,tin,[],mu))
             end
         end
         
