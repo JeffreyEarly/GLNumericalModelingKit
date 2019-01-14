@@ -348,19 +348,25 @@ classdef TensionSpline < BSpline
             MSE = X2/expectedVariance + 2*trace(S)/n - 1;
         end
         
+        function MSE = expectedMeanSquareErrorFromCV(self)
+            % Cross-validation (CV) estimate for the mean square error from
+            % Green and Silverman, equation 3.5
+            epsilon = self.epsilon;
+            Sii = diag(self.smoothingMatrix);
+            
+            MSE = mean( (epsilon./(1-Sii)).^2 );
+        end
+        
         function MSE = expectedMeanSquareErrorFromGCV(self)
-            % generalized cross-validation estimate for the mean square
-            % error from Craven and Wahba, 1979 equation 1.9.
+            % Generalized cross-validation (GCV) estimate for the mean
+            % square error from Craven and Wahba, 1979 equation 1.9.
+            epsilon = self.epsilon;
             S = self.smoothingMatrix;
-            SI = (S-eye(size(S)));
-            a = mean((SI*self.x).^2);
+            
+            a = mean(epsilon.^2);
             b = trace(S)/length(S);
             
             MSE = a/(1-b)^2;
-            
-%             MSE = a*(b/(1-b));
-            %             
-            %             fprintf(' sigma^2=%.2f ',a/(1-b));
         end
         
         % This MSE is slightly higher than what we actually get, increase
