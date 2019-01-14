@@ -218,6 +218,11 @@ classdef TensionSpline < BSpline
             end
         end
         
+        function set.indicesOfOutliers(self,outliers)
+            self.indicesOfOutliers = outliers;
+            self.goodIndices = setdiff(1:length(self.x),self.indicesOfOutliers);
+        end
+        
         function self = tensionParameterDidChange(self)
             % Tension parameter changed, so we need to recompute the
             % solution, then then compute the PP coefficients for that
