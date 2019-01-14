@@ -45,6 +45,18 @@ classdef (Abstract) Distribution < handle
             
             totalError = (sqrt(n) + 0.12 + 0.11/sqrt(n))*D;
         end
+        
+        function y = rand(self,n)
+            pct = 1/1e4;
+            zmin = self.locationOfCDFPercentile(pct/2);
+            zmax = self.locationOfCDFPercentile(1-pct/2);
+            binEdges = linspace(zmin,zmax,1e4+1)';
+            binWidths = diff(binEdges);
+            binEdges_cdf = self.cdf(binEdges); % maps the bin edges [0, 1]
+            [~, ~, bin] = histcounts(rand(n,1),binEdges_cdf);
+            bin(bin==0 | bin == length(binWidths+1)) = [];
+            y = binEdges(bin) + rand(length(bin),1).*binWidths(bin);
+        end
     end
 end
 
