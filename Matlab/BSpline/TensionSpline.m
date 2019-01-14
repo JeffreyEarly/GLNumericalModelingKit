@@ -340,11 +340,13 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function [MSE, n] = expectedMeanSquareErrorInRange(self,zmin,zmax)
+        function [MSE, n] = expectedMeanSquareErrorInRange(self,zmin,zmax,expectedVariance)
             epsilon = self.epsilon;
             indices = find(epsilon >= zmin & epsilon <= zmax);
             X2 = mean(epsilon(indices).^2,1);
-            expectedVariance = self.distribution.varianceInRange(zmin,zmax);
+            if nargin < 4 || isempty(expectedVariance)
+                expectedVariance = self.distribution.varianceInRange(zmin,zmax);
+            end
             
             S = self.smoothingMatrix;
             S = S(indices,indices); 
