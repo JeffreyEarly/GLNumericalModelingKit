@@ -2,12 +2,12 @@ classdef RobustTensionSpline < TensionSpline
     %RobustTensionSpline Allows for outliers
     
     properties
-        indicesOfOutliers = []
-        goodIndices = []
-        t
-        x
-        X
-        W
+        noiseDistribution
+        outlierDistribution
+        
+        zmin
+        zmax
+        outlierThreshold
     end
     
     properties (Dependent)
@@ -16,57 +16,77 @@ classdef RobustTensionSpline < TensionSpline
     end
     
     methods
-        function self = RobustTensionSpline(t,x,sigma,varargin)
-            self@TensionSpline(t,x,sigma,varargin{:});
-            self.goodIndices = reshape(1:length(t),[],1);
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %
-        % Smoothing Matrix and Covariance matrix
-        %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        function t = get.t(self)
-            t = self.t(self.goodIndices);
-        end
-        
-        function x = get.x(self)
-            x = self.x(self.goodIndices);
-        end
-        
-        function X = get.X(self)
-            X = self.X(self.goodIndices,:);
-        end
-        
-        function W = get.W(self)
-            W = self.W(self.goodIndices,self.goodIndices);
-        end
-        
-        function S = SmoothingMatrix(self)
-            % The smoothing matrix S takes the observations and maps them
-            % onto the estimated true values.
-            S = (self.X*self.Cm*self.X.')*self.W;
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %
-        % Measures of error and effective sample size (n_eff)
-        %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        function MSE = ExpectedMeanSquareError(self)
-            % This is the *expected* mean-square error normalized by the
-            % variance. Note that it is a combination of the sample
-            % variance and the variance of the mean.
-            %
-            % From Craven and Wahba, 1979
+        function self = RobustTensionSpline(t,x,distribution,varargin)
+            % Construct a new 'robust' distribution by adding a Student's
+            % t-distribution with 1000 times the variance, but assuming
+            % only 1 percent outliers.
+            noiseDistribution = distribution;
+            nu = 3.0;
+            sigma = sqrt(noiseDistribution.variance*1000*(nu-2)/nu);
+            outlierDistribution = StudentTDistribution(sigma,nu);
+            distribution = AddedDistribution(0.01,outlierDistribution,noiseDistribution);
             
-            S = self.SmoothingMatrix;
-            SI = (S-eye(size(S)));
+            % Override any user settings for lambda
+            didOverrideLambda = 0;
+            for k = 1:2:length(varargin)
+                if strcmp(varargin{k}, 'lambda')
+                    varargin{k+1} = Lambda.fullTensionExpected;
+                    didOverrideLambda = 1;
+                end
+            end
+            if didOverrideLambda == 0
+                varargin{end+1} = 'lambda';
+                varargin{end+1} = Lambda.fullTensionExpected;
+            end
             
-            MSE = mean((SI*self.x(self.goodIndices)).^2)/(self.sigma*self.sigma) + 2*trace(S)/length(S) - 1;
+            self@TensionSpline(t,x,distribution,varargin{:});
+            
+            self.noiseDistribution = noiseDistribution;
+            self.outlierDistribution = outlierDistribution;
+            
+            % Minimize using the expected mean square error
+            pctmin = 1/100/2;
+            pctmax = 1-1/100/2;
+            self.zmin = noiseDistribution.locationOfCDFPercentile(pctmin);
+            self.zmax = noiseDistribution.locationOfCDFPercentile(pctmax);
+            self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(self.zmin,self.zmax) );
+            
+            % Remove knot support from outliers, and rescale the
+            % distribution
+            self.outlierThreshold = noiseDistribution.locationOfCDFPercentile(1-1/10000/2);
+            self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
+            
+            if isempty(self.indicesOfOutliers)
+                % No outliers? Then revert to the usual case
+                self.distribution = self.noiseDistribution;    
+            else
+                % otherwise rescale the distribution more appropriately
+                self.distribution = AddedDistribution(length(self.indicesOfOutliers)/length(self.t),self.outlierDistribution,self.noiseDistribution);     
+            end
+            
+            self.t_knot = InterpolatingSpline.KnotPointsForPoints(self.t(self.goodIndices),self.K,self.knot_dof);
+            self.X = BSpline.Spline( self.t, self.t_knot, self.K, 0 ); % NxM
+            
+            % Now we need a quadrature (integration) grid that is finer
+            % if S=T we can optimize this much better because it's all
+            % piecewise constant.
+            Q = 10*length(self.t); % number of points on the quadrature grid
+            tq = linspace(self.t(1),self.t(end),Q)';
+            B = BSpline.Spline( tq, self.t_knot, self.K, self.T );
+            self.V = squeeze(B(:,:,self.T+1)); % QxM
+            
+            % Precompute some matrices that might be used again later,
+            [self.XWX,self.XWx,self.VV] = TensionSpline.PrecomputeTensionSolutionMatrices(self.X,self.V,sqrt(self.distribution.variance),self.x);
+            
+            self.tensionParameterDidChange();
+            
+            self.zmin = noiseDistribution.locationOfCDFPercentile(pctmin);
+            self.zmax = noiseDistribution.locationOfCDFPercentile(pctmax);
+            self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(self.zmin,self.zmax) );
+            self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
         end
+
+        
         
     end
     

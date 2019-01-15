@@ -37,9 +37,12 @@ classdef TensionSpline < BSpline
         W,XWX,XWx,VV
 
         indicesOfOutliers = []
-        goodIndices = []
     end
     
+    properties (Dependent)
+        goodIndices
+    end
+
     methods
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
@@ -174,7 +177,6 @@ classdef TensionSpline < BSpline
             self.knot_dof = knot_dof;
             self.distribution = distribution;
             self.indicesOfOutliers = indicesOfOutliers;
-            self.goodIndices = setdiff(1:length(self.x),self.indicesOfOutliers);
             
             if lambdaArgument == Lambda.optimalIterated
                 self.minimizeExpectedMeanSquareError();
@@ -220,7 +222,10 @@ classdef TensionSpline < BSpline
         
         function set.indicesOfOutliers(self,outliers)
             self.indicesOfOutliers = outliers;
-            self.goodIndices = setdiff(1:length(self.x),self.indicesOfOutliers);
+        end
+        
+        function goodIndices = get.goodIndices(self)
+            goodIndices = setdiff(1:length(self.x),self.indicesOfOutliers);
         end
         
         function self = tensionParameterDidChange(self)
