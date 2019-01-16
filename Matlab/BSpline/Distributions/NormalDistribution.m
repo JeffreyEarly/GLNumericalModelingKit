@@ -19,7 +19,7 @@ classdef NormalDistribution < Distribution
         end
         
         function y = rand(self,n)
-           y = randn(n,1); 
+           y = self.sigma*randn(n,1); 
         end
         
     end

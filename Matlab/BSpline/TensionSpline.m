@@ -212,6 +212,10 @@ classdef TensionSpline < BSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%       
         function set.lambda(self,newlambda)
+            if newlambda < 0
+                newlambda = 0;
+            end
+            
             if isempty(self.lambda) 
                 self.lambda = newlambda;
             elseif self.lambda ~= newlambda
