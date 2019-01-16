@@ -56,15 +56,33 @@ classdef RobustTensionSpline < TensionSpline
             self.outlierThreshold = noiseDistribution.locationOfCDFPercentile(1-1/10000/2);
             self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
             
+            self.secondIteration();
+        end
+
+        function secondIteration(self)
+            % you could try to scale the variance correctly.
+            % we have a certain percentage of points outside zmin/zmax
+            % we have a certain variance of those points
+            % is that enough to properly rescale an added distribution?
+            % I want a dist w/ x^2 variance in a certain range
+            % I then want the added cdf to give the right sum at zmin/zmax
             if isempty(self.indicesOfOutliers)
                 % No outliers? Then revert to the usual case
-                self.distribution = self.noiseDistribution;    
+                self.distribution = self.noiseDistribution;
             else
                 % otherwise rescale the distribution more appropriately
-                self.distribution = AddedDistribution(length(self.indicesOfOutliers)/length(self.t),self.outlierDistribution,self.noiseDistribution);     
+                self.distribution = AddedDistribution(length(self.indicesOfOutliers)/length(self.t),self.outlierDistribution,self.noiseDistribution);
             end
             
-            self.t_knot = InterpolatingSpline.KnotPointsForPoints(self.t(self.goodIndices),self.K,self.knot_dof);
+            newKnotIndices = self.goodIndices;
+            if newKnotIndices(1) ~= 1
+                newKnotIndices = cat(2,1,newKnotIndices);
+            end
+            if newKnotIndices(end) ~= length(self.t)
+                newKnotIndices = cat(2,newKnotIndices,length(self.t));
+            end
+            
+            self.t_knot = InterpolatingSpline.KnotPointsForPoints(self.t(newKnotIndices),self.K,self.knot_dof);
             self.X = BSpline.Spline( self.t, self.t_knot, self.K, 0 ); % NxM
             
             % Now we need a quadrature (integration) grid that is finer
@@ -80,13 +98,14 @@ classdef RobustTensionSpline < TensionSpline
             
             self.tensionParameterDidChange();
             
-            self.zmin = noiseDistribution.locationOfCDFPercentile(pctmin);
-            self.zmax = noiseDistribution.locationOfCDFPercentile(pctmax);
+            % Minimize using the expected mean square error
+            pctmin = 1/100/2;
+            pctmax = 1-1/100/2;
+            self.zmin = self.noiseDistribution.locationOfCDFPercentile(pctmin);
+            self.zmax = self.noiseDistribution.locationOfCDFPercentile(pctmax);
             self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(self.zmin,self.zmax) );
             self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
         end
-
-        
         
     end
     

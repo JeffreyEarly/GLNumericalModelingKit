@@ -487,6 +487,7 @@ classdef TensionSpline < BSpline
             % the penalty function *must* take a tension spline object and
             % return a scalar. The function will be minimized by varying
             % lambda.
+            TensionSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
             lambda = TensionSpline.minimizeFunctionOfSpline(self,penaltyFunction);
         end
         
@@ -517,7 +518,19 @@ classdef TensionSpline < BSpline
         % We wrap and then unwrap the user-provided penalty function so
         % that it take log10(lambda) rather than lambda. This is much
         % better for the fminsearch algorithm.
-
+        
+        function lambda = minimizeFunctionOfSplineWithGridSearch(aTensionSpline,functionOfSpline)
+            lambdas = 10.^linspace(log10(aTensionSpline.lambda)-3,log10(aTensionSpline.lambda)+3,13)';
+            err = zeros(size(lambdas));
+            for iLambda = 1:length(lambdas)
+                aTensionSpline.lambda = lambdas(iLambda);
+                err(iLambda) =  functionOfSpline(aTensionSpline);
+            end
+            [~,index] = min(err);
+            lambda = lambdas(index);
+            aTensionSpline.lambda = lambda; 
+        end
+        
         function lambda = minimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
             epsilon = 1e-15;
             errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
