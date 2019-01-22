@@ -21,10 +21,16 @@ classdef RobustTensionSpline < TensionSpline
             % t-distribution with 1000 times the variance, but assuming
             % only 1 percent outliers.
             noiseDistribution = distribution;
-            nu = 3.0;
-            sigma = sqrt(noiseDistribution.variance*1000*(nu-2)/nu);
-            outlierDistribution = StudentTDistribution(sigma,nu);
-            distribution = AddedDistribution(0.01,outlierDistribution,noiseDistribution);
+            
+%             nu = 3.0;
+%             noiseDistribution = StudentTDistribution(sqrt(distribution.variance*(nu-2)/nu),nu);
+%             
+            distribution =  noiseDistribution;
+            
+%             nu = 3.0;
+%             sigma = sqrt(noiseDistribution.variance*1000*(nu-2)/nu);
+%             outlierDistribution = StudentTDistribution(sigma,nu);
+%             distribution = AddedDistribution(0.01,outlierDistribution,noiseDistribution);
             
             % Override any user settings for lambda
             didOverrideLambda = 0;
@@ -42,30 +48,42 @@ classdef RobustTensionSpline < TensionSpline
             self@TensionSpline(t,x,distribution,varargin{:});
             
             self.noiseDistribution = noiseDistribution;
-            self.outlierDistribution = outlierDistribution;
+%             self.outlierDistribution = outlierDistribution;
+            self.outlierThreshold = self.noiseDistribution.locationOfCDFPercentile(1-1/10000/2);
+
             
+%             self.secondIteration();
+        end
+        
+        function firstIteration(self,alpha)
             % Minimize using the expected mean square error
-            pctmin = 1/100/2;
-            pctmax = 1-1/100/2;
-            self.zmin = noiseDistribution.locationOfCDFPercentile(pctmin);
-            self.zmax = noiseDistribution.locationOfCDFPercentile(pctmax);
+            self.zmin = self.noiseDistribution.locationOfCDFPercentile(alpha/2);
+            self.zmax = self.noiseDistribution.locationOfCDFPercentile(1-alpha/2);
             self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(self.zmin,self.zmax) );
             
             % Remove knot support from outliers, and rescale the
             % distribution
-            self.outlierThreshold = noiseDistribution.locationOfCDFPercentile(1-1/10000/2);
             self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
+        end
+        
+        function firstIterationCV(self)
+            % Minimize using the expected mean square error from
+            % cross-validation
+            self.minimize( @(spline) spline.expectedMeanSquareErrorFromCV() );
             
-            self.secondIteration();
+            self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
         end
 
-        function secondIteration(self)
+        function rescaleDistributionAndRetension(self,alpha)
             % you could try to scale the variance correctly.
             % we have a certain percentage of points outside zmin/zmax
             % we have a certain variance of those points
             % is that enough to properly rescale an added distribution?
             % I want a dist w/ x^2 variance in a certain range
             % I then want the added cdf to give the right sum at zmin/zmax
+            
+            % Remove knot support from outliers, and rescale the
+            % distribution
             if isempty(self.indicesOfOutliers)
                 % No outliers? Then revert to the usual case
                 self.distribution = self.noiseDistribution;
@@ -73,7 +91,15 @@ classdef RobustTensionSpline < TensionSpline
                 % otherwise rescale the distribution more appropriately
                 self.distribution = AddedDistribution(length(self.indicesOfOutliers)/length(self.t),self.outlierDistribution,self.noiseDistribution);
             end
-            
+                        
+            % Minimize using the expected mean square error
+            self.zmin = self.noiseDistribution.locationOfCDFPercentile(alpha/2);
+            self.zmax = self.noiseDistribution.locationOfCDFPercentile(1-alpha/2);
+            self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(self.zmin,self.zmax) );
+            self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
+        end
+        
+        function removeOutlierKnotsAndRetension(self,alpha)  
             newKnotIndices = self.goodIndices;
             if newKnotIndices(1) ~= 1
                 newKnotIndices = cat(2,1,newKnotIndices);
@@ -99,10 +125,8 @@ classdef RobustTensionSpline < TensionSpline
             self.tensionParameterDidChange();
             
             % Minimize using the expected mean square error
-            pctmin = 1/100/2;
-            pctmax = 1-1/100/2;
-            self.zmin = self.noiseDistribution.locationOfCDFPercentile(pctmin);
-            self.zmax = self.noiseDistribution.locationOfCDFPercentile(pctmax);
+            self.zmin = self.noiseDistribution.locationOfCDFPercentile(alpha/2);
+            self.zmax = self.noiseDistribution.locationOfCDFPercentile(1-alpha/2);
             self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(self.zmin,self.zmax) );
             self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
         end
