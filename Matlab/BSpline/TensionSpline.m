@@ -37,6 +37,7 @@ classdef TensionSpline < BSpline
         W,XWX,XWx,VV
 
         indicesOfOutliers = []
+        outlierThreshold
     end
     
     properties (Dependent)
@@ -177,6 +178,7 @@ classdef TensionSpline < BSpline
             self.knot_dof = knot_dof;
             self.distribution = distribution;
             self.indicesOfOutliers = indicesOfOutliers;
+            self.outlierThreshold = self.distribution.locationOfCDFPercentile(1-1/10000/2);
             
             if lambdaArgument == Lambda.optimalIterated
                 self.minimizeExpectedMeanSquareError();
@@ -249,6 +251,8 @@ classdef TensionSpline < BSpline
 
             self.Cm = inv(CmInv);
             [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
+            
+            self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -693,12 +697,12 @@ classdef TensionSpline < BSpline
                 
                 [m,CmInv,XWX,XWx,VV] = TensionSpline.TensionSolution(X,V,W,lambda,x,mu);
                 
-                rel_error = max( (sigma_w2-sigma2_previous)./sigma_w2 );
+                rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
                 sigma2_previous=sigma_w2;
                 repeats = repeats+1;
                 
-                if (repeats == 100)
-                    disp('Failed to converge after 100 iterations.');
+                if (repeats == 150)
+                    disp('Failed to converge after 150 iterations.');
                     break;
                 end
             end

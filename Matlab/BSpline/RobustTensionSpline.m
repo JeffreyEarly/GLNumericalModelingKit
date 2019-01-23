@@ -7,7 +7,6 @@ classdef RobustTensionSpline < TensionSpline
         
         zmin
         zmax
-        outlierThreshold
     end
     
     properties (Dependent)
@@ -20,24 +19,23 @@ classdef RobustTensionSpline < TensionSpline
             % Construct a new 'robust' distribution by adding a Student's
             % t-distribution with 1000 times the variance, but assuming
             % only 1 percent outliers.
-            noiseDistribution = distribution;
             
 %             nu = 3.0;
 %             noiseDistribution = StudentTDistribution(sqrt(distribution.variance*(nu-2)/nu),nu);
 %             
-            distribution =  noiseDistribution;
+%             distribution =  noiseDistribution;
             
-%             nu = 3.0;
-%             sigma = sqrt(noiseDistribution.variance*1000*(nu-2)/nu);
-%             outlierDistribution = StudentTDistribution(sigma,nu);
-%             distribution = AddedDistribution(0.01,outlierDistribution,noiseDistribution);
+
             
             % Override any user settings for lambda
             didOverrideLambda = 0;
+            alpha = 0.01;
             for k = 1:2:length(varargin)
                 if strcmp(varargin{k}, 'lambda')
                     varargin{k+1} = Lambda.fullTensionExpected;
                     didOverrideLambda = 1;
+                elseif strcmp(varargin{k}, 'alpha')
+                    alpha = varargin{k+1};
                 end
             end
             if didOverrideLambda == 0
@@ -45,10 +43,16 @@ classdef RobustTensionSpline < TensionSpline
                 varargin{end+1} = Lambda.fullTensionExpected;
             end
             
+            noiseDistribution = distribution;
+            nu = 3.0;
+            sigma = sqrt(noiseDistribution.variance*1000*(nu-2)/nu);
+            outlierDistribution = StudentTDistribution(sigma,nu);
+            distribution = AddedDistribution(alpha,outlierDistribution,noiseDistribution);
+            
             self@TensionSpline(t,x,distribution,varargin{:});
             
             self.noiseDistribution = noiseDistribution;
-%             self.outlierDistribution = outlierDistribution;
+            self.outlierDistribution = outlierDistribution;
             self.outlierThreshold = self.noiseDistribution.locationOfCDFPercentile(1-1/10000/2);
 
             
@@ -89,6 +93,11 @@ classdef RobustTensionSpline < TensionSpline
                 self.distribution = self.noiseDistribution;
             else
                 % otherwise rescale the distribution more appropriately
+                nu = 3.0;
+                epsilon = self.epsilon;
+                variance = var(epsilon(self.indicesOfOutliers));
+                sigma = sqrt(variance*(nu-2)/nu);
+                self.outlierDistribution = StudentTDistribution(sigma,nu);
                 self.distribution = AddedDistribution(length(self.indicesOfOutliers)/length(self.t),self.outlierDistribution,self.noiseDistribution);
             end
                         
