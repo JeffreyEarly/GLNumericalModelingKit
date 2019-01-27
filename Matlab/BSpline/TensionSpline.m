@@ -353,6 +353,12 @@ classdef TensionSpline < BSpline
             end
         end
         
+        function MSE = expectedMeanSquareErrorInPercentileRange(self,pctmin,pctmax)
+            zmin = self.distribution.locationOfCDFPercentile(pctmin);
+            zmax = self.distribution.locationOfCDFPercentile(pctmax);
+            MSE = self.expectedMeanSquareErrorInRange(zmin,zmax);
+        end
+        
         function [MSE, n] = expectedMeanSquareErrorInRange(self,zmin,zmax,expectedVariance)
             epsilon = self.epsilon;
             indices = find(epsilon >= zmin & epsilon <= zmax);

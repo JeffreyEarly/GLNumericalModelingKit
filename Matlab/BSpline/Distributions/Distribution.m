@@ -53,9 +53,10 @@ classdef (Abstract) Distribution < handle
             binEdges = linspace(zmin,zmax,1e5+1)';
             binWidths = diff(binEdges);
             binEdges_cdf = self.cdf(binEdges); % maps the bin edges [0, 1]
-            [~, ~, bin] = histcounts(rand(n,1),binEdges_cdf);
+            [~, ~, bin] = histcounts(rand(n+10,1),binEdges_cdf);
             bin(bin==0 | bin == length(binWidths+1)) = [];
             y = binEdges(bin) + rand(length(bin),1).*binWidths(bin);
+            y = y(1:n);
         end
     end
 end
