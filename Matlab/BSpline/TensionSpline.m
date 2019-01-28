@@ -359,19 +359,57 @@ classdef TensionSpline < BSpline
             MSE = self.expectedMeanSquareErrorInRange(zmin,zmax);
         end
         
-        function [MSE, n] = expectedMeanSquareErrorInRange(self,zmin,zmax,expectedVariance)
+        function [MSE, n] = expectedMeanSquareErrorInRange(self,zmin,zmax)
             epsilon = self.epsilon;
             indices = find(epsilon >= zmin & epsilon <= zmax);
+            expectedVariance = self.distribution.varianceInRange(zmin,zmax);
+            [MSE, n] = self.expectedMeanSquareErrorForPointsAtIndices(indices,expectedVariance);
+        end
+        
+        function [MSE, n] = expectedMeanSquareErrorForPointsAtIndices(self,indices,expectedVariance)
+            epsilon = self.epsilon;
             X2 = mean(epsilon(indices).^2,1);
-            if nargin < 4 || isempty(expectedVariance)
-                expectedVariance = self.distribution.varianceInRange(zmin,zmax);
-            end
             
             S = self.smoothingMatrix;
             S = S(indices,indices); 
-            
+                        
             n = length(S);
             MSE = X2/expectedVariance + 2*trace(S)/n - 1;
+        end
+        
+        function MSE = expectedMeanSquareErrorRobust(self,zmin,zmax)
+            epsilon = self.epsilon;
+            noise_indices = find(epsilon >= zmin & epsilon <= zmax);
+            expectedVariance = self.distribution.varianceInRange(zmin,zmax);
+            MSE = self.expectedMeanSquareErrorForPointsAtIndices(noise_indices,expectedVariance);
+            
+            expectedNumberOfOutliers = length(self.t)*(self.distribution.cdf(zmin) + (1-self.distribution.cdf(zmax)));
+            
+            outlier_indices = find(epsilon < zmin | epsilon > zmax);
+            n_outliers = length(outlier_indices);
+            if n_outliers > 3*expectedNumberOfOutliers
+                MSE_outlier = self.expectedMeanSquareErrorFromCVForPointsAtIndices(outlier_indices);
+                
+                n_eff = self.effectiveSampleSizeFromVarianceOfTheMeanForIndices(outlier_indices);
+                outlier_variance = mean(epsilon(outlier_indices).^2)/(1-1/n_eff);
+                MSE_outlier = MSE_outlier/outlier_variance;
+                
+%                 alpha = n_outliers/length(self.t);
+%                 MSE = (1-alpha)*MSE + alpha*MSE_outlier/outlier_variance;
+                MSE = (length(noise_indices)*MSE + n_outliers*MSE_outlier)/length(self.t);
+            end
+        end
+        
+        function MSE = expectedMeanSquareErrorFromCVForPointsAtIndices(self,indices)
+            % Cross-validation (CV) estimate for the mean square error from
+            % Green and Silverman, equation 3.5
+            epsilon = self.epsilon;
+            
+            S = self.smoothingMatrix;
+            S = S(indices,indices); 
+            Sii = diag(S);
+            
+            MSE = mean( (epsilon(indices)./(1-Sii)).^2 );
         end
         
         function MSE = expectedMeanSquareErrorFromCV(self)
@@ -460,6 +498,18 @@ classdef TensionSpline < BSpline
 
         function n_eff = effectiveSampleSizeFromExpectedMeanSquareError(self)
             n_eff = 1./self.expectedMeanSquareError;
+        end
+        
+        
+        function n_eff = effectiveSampleSizeFromSampleVarianceForIndices(self,indices)
+            epsilon = self.epsilon;
+            n_eff = 1./(1-mean(epsilon(indices).^2)/self.distribution.variance);
+        end
+        
+        function n_eff = effectiveSampleSizeFromVarianceOfTheMeanForIndices(self,indices)
+            S = self.smoothingMatrix;
+            S = S(indices,indices); 
+            n_eff = length(S)/trace(S);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
