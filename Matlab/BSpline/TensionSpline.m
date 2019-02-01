@@ -363,6 +363,7 @@ classdef TensionSpline < BSpline
             epsilon = self.epsilon;
             indices = find(epsilon >= zmin & epsilon <= zmax);
             expectedVariance = self.distribution.varianceInRange(zmin,zmax);
+%             expectedVariance = self.distribution.variance;
             [MSE, n] = self.expectedMeanSquareErrorForPointsAtIndices(indices,expectedVariance);
         end
         
@@ -377,7 +378,64 @@ classdef TensionSpline < BSpline
             MSE = X2/expectedVariance + 2*trace(S)/n - 1;
         end
         
-        function MSE = expectedMeanSquareErrorRobust(self,zmin,zmax)
+        function [MSEoutlier,MSEnoise] = findParameterizedNoiseCrossoverPoint(self)
+            zmin = self.distribution.locationOfCDFPercentile(1/10000);
+            zmax = self.distribution.locationOfCDFPercentile(1/10);
+            z = linspace(abs(zmax),abs(zmin),10)';
+            
+            MSEoutlier = zeros(length(z),1);
+            MSEnoise = zeros(length(z),1);
+            
+            epsilon = self.epsilon;
+            
+            for iZ = 1:length(z)
+               zValue = z(iZ);
+               noise_indices = find(epsilon >= -zValue & epsilon <= zValue);
+               outlier_indices = setdiff(1:length(self.t),noise_indices);
+               MSEoutlier(iZ) = self.expectedMeanSquareErrorFromCVForPointsAtIndices(outlier_indices);
+               MSEnoise(iZ) = self.expectedMeanSquareErrorForPointsAtIndices(noise_indices,self.distribution.variance)*self.distribution.variance;
+            end
+        end
+        
+        function zCrossover = findSampleVarianceCrossover(self)            
+            zCrossover = fminsearch(@(z) self.diffExpectedActualSampleVariance(z),sqrt(self.distribution.variance));
+        end
+        
+        function dSampleVariance = diffExpectedActualSampleVariance(self,z)
+            epsilon = self.epsilon;
+            noise_indices = find(epsilon >= -abs(z) & epsilon <= abs(z));
+            n_eff = self.effectiveSampleSizeFromVarianceOfTheMeanForIndices(noise_indices);
+            dSampleVariance = abs( (1-1/n_eff)*self.distribution.variance - mean(epsilon(noise_indices).^2) );
+        end
+        
+        function MSE = expectedMeanSquareErrorRobust(self)
+            zCrossover = fminsearch(@(z) self.diffExpectedActualSampleVariance(z),sqrt(self.distribution.variance));
+%             fprintf('%f\t',zCrossover);
+            MSE = self.expectedMeanSquareErrorInRange(-abs(zCrossover),abs(zCrossover));
+        end
+        
+        function [z,n_eff,expectedSampleVariance,actualSampleVariance] = findSampleVarianceCrossoverWithGridSearch(self)
+            zmin = self.distribution.locationOfCDFPercentile(1/10000);
+            zmax = self.distribution.locationOfCDFPercentile(1/10);
+            z = linspace(abs(zmax),abs(zmin),10)';
+            
+            n_eff = zeros(length(z),1);
+            expectedSampleVariance = zeros(length(z),1);
+            actualSampleVariance = zeros(length(z),1);
+            
+            epsilon = self.epsilon;
+            
+            for iZ = 1:length(z)
+                zValue = z(iZ);
+                noise_indices = find(epsilon >= -zValue & epsilon <= zValue);
+                
+                n_eff(iZ) = self.effectiveSampleSizeFromVarianceOfTheMeanForIndices(noise_indices);
+                expectedSampleVariance(iZ) = (1-1/n_eff(iZ))*self.distribution.variance;
+                actualSampleVariance(iZ) = mean(epsilon(noise_indices).^2);
+            end
+        end
+        
+        function MSE = expectedMeanSquareErrorRobustOld(self,zmin,zmax)
             epsilon = self.epsilon;
             noise_indices = find(epsilon >= zmin & epsilon <= zmax);
             expectedVariance = self.distribution.varianceInRange(zmin,zmax);

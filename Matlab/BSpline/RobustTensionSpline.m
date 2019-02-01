@@ -77,6 +77,72 @@ classdef RobustTensionSpline < TensionSpline
             
             self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
         end
+        
+        function setToFullTension(self)
+            % This gives us "full tension".
+            alpha = 1/10;
+            self.minimize(@(spline) abs(spline.sampleVarianceInPercentileRange(alpha/2,1-alpha/2)-spline.noiseDistribution.varianceInPercentileRange(alpha/2,1-alpha/2)))
+        end
+        
+        function [outlierDistribution, alpha] = estimateOutlierDistribution(self)
+            self.setToFullTension();
+            
+            % Identify the spot where our distribution no longer looks
+            % right using the KS test
+            epsilon = self.epsilon;
+            z = linspace(self.noiseDistribution.locationOfCDFPercentile(1-1/1000/2),self.noiseDistribution.locationOfCDFPercentile(1-1/5/2),10)';
+            err = zeros(length(z),1);
+            for iZ = 1:length(z)
+                err(iZ) = self.noiseDistribution.kolmogorovSmirnovError(epsilon,-abs(z(iZ)),abs(z(iZ)));
+            end
+            [~,iZ] = min(err);
+            minZ = z(iZ);
+            zOutlier = fminsearch( @(z) self.noiseDistribution.kolmogorovSmirnovError(epsilon,-abs(z),abs(z)), minZ);
+%             fprintf('zOutlier: %f\n',zOutlier);
+            
+            % Now try to estimate the outlier distribution
+            noiseIndices = find(epsilon >= -zOutlier & epsilon <= zOutlier);
+            outlierIndices = setdiff(1:length(self.t),noiseIndices);
+            
+            n_eff_o = self.effectiveSampleSizeFromVarianceOfTheMeanForIndices(outlierIndices);
+            n_eff_n = self.effectiveSampleSizeFromVarianceOfTheMeanForIndices(noiseIndices);
+            s2_total = mean(epsilon.^2);
+            s2_noise = (1-1/n_eff_n)*self.noiseDistribution.variance;
+            alpha = @(sigma2) (s2_total-s2_noise)/(3*(1-1/n_eff_o)*sigma2 - s2_noise);
+            
+            % if s2_total is anywhere near the expected variance, we should
+            % bail
+            
+            outlierFraction = length(outlierIndices)/length(self.t);
+            
+            f = @(sigma2) abs( (1-alpha(sigma2))*2*self.noiseDistribution.cdf(-abs(zOutlier)) + alpha(sigma2)*2*StudentTDistribution(sqrt(sigma2),3).cdf(-abs(zOutlier)) - outlierFraction);
+            
+            sigma2_outlier = fminsearch(f,s2_total);
+            alpha = alpha(sigma2_outlier);
+            
+            % if sigma2_outlier is less than sigma2_noise, we should bail.
+            
+            outlierDistribution = StudentTDistribution(sqrt(sigma2_outlier),3);
+        end
+        
+        function rebuildOutlierDistribution(self)
+            [newOutlierDistribution, alpha] = self.estimateOutlierDistribution();
+            
+            newAddedDistribution = AddedDistribution(alpha,newOutlierDistribution,self.noiseDistribution);
+                        
+            crossover = @(z) abs((1-alpha).*self.noiseDistribution.pdf(z) - alpha.*newOutlierDistribution.pdf(z));
+            z_crossover = abs(fminsearch(crossover,-abs(zOutlier)));
+            
+            noiseIndices = epsilon >= -z_crossover & epsilon <= z_crossover;
+            outlierIndices = ~noiseIndices;
+            
+            self.distribution = newAddedDistribution;
+            self.distribution.w = @(z) noiseIndices .* self.noiseDistribution.w(z) + outlierIndices .* newOutlierDistribution.w(z);
+            
+            self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(-abs(z_crossover),z_crossover) );
+%             fprintf('z_crossover: %.2f\n',z_crossover);
+%             self.removeOutlierKnotsAndRetensionInRange(-abs(z_crossover),z_crossover);
+        end
 
         function rescaleDistributionAndRetension(self,alpha)
             % you could try to scale the variance correctly.
@@ -136,6 +202,38 @@ classdef RobustTensionSpline < TensionSpline
             % Minimize using the expected mean square error
             self.zmin = self.noiseDistribution.locationOfCDFPercentile(alpha/2);
             self.zmax = self.noiseDistribution.locationOfCDFPercentile(1-alpha/2);
+            self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(self.zmin,self.zmax) );
+            self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
+        end
+        
+        function removeOutlierKnotsAndRetensionInRange(self,zmin,zmax)
+            newKnotIndices = self.goodIndices;
+            if newKnotIndices(1) ~= 1
+                newKnotIndices = cat(2,1,newKnotIndices);
+            end
+            if newKnotIndices(end) ~= length(self.t)
+                newKnotIndices = cat(2,newKnotIndices,length(self.t));
+            end
+            
+            self.t_knot = InterpolatingSpline.KnotPointsForPoints(self.t(newKnotIndices),self.K,self.knot_dof);
+            self.X = BSpline.Spline( self.t, self.t_knot, self.K, 0 ); % NxM
+            
+            % Now we need a quadrature (integration) grid that is finer
+            % if S=T we can optimize this much better because it's all
+            % piecewise constant.
+            Q = 10*length(self.t); % number of points on the quadrature grid
+            tq = linspace(self.t(1),self.t(end),Q)';
+            B = BSpline.Spline( tq, self.t_knot, self.K, self.T );
+            self.V = squeeze(B(:,:,self.T+1)); % QxM
+            
+            % Precompute some matrices that might be used again later,
+            [self.XWX,self.XWx,self.VV] = TensionSpline.PrecomputeTensionSolutionMatrices(self.X,self.V,sqrt(self.distribution.variance),self.x);
+            
+            self.tensionParameterDidChange();
+            
+            % Minimize using the expected mean square error
+            self.zmin = zmin;
+            self.zmax = zmax;
             self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(self.zmin,self.zmax) );
             self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
         end
