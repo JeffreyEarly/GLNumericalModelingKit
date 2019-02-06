@@ -310,6 +310,11 @@ classdef TensionSpline < BSpline
             epsilon = self.x - self.ValueAtPoints(self.t);
         end
         
+        function epsilon = epsilonAtIndices(self,indices)
+            epsilon = self.x - self.ValueAtPoints(self.t);
+            epsilon = epsilon(indices);
+        end
+        
         function X2 = sampleVariance(self)
             % The sample variance. Same as ||(S-I)*x||^2/N
             % Not normalized by the variance.

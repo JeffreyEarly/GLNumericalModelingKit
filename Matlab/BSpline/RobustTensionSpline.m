@@ -78,10 +78,12 @@ classdef RobustTensionSpline < TensionSpline
             self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
         end
         
-        function setToFullTension(self)
+        function setToFullTension(self,alpha)
             % This gives us "full tension".
-            alpha = 1/10;
-            self.minimize(@(spline) abs(spline.sampleVarianceInPercentileRange(alpha/2,1-alpha/2)-spline.noiseDistribution.varianceInPercentileRange(alpha/2,1-alpha/2)))
+            if nargin == 1
+                alpha = 1/10;
+            end
+            self.minimize(@(spline) abs(spline.sampleVarianceInPercentileRange(alpha/2,1-alpha/2)-spline.noiseDistribution.varianceInPercentileRange(alpha/2,1-alpha/2)));
         end
         
         function [outlierDistribution, alpha] = estimateOutlierDistribution(self)
