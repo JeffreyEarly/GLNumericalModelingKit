@@ -109,15 +109,17 @@ classdef TensionSpline < BSpline
             if isenum(lambdaArgument)
                 switch lambdaArgument
                     case {Lambda.optimalExpected}
-                        u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),1);
+                        x_filtered = TensionSpline.RunningFilter(x,11,'median');
+                        u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),1);
                         n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
-                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
+                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),T);
                         lambda = (n_eff-1)/(n_eff*a_rms.^2);
                     case {Lambda.fullTensionExpected, Lambda.optimalIterated}
                         % if you're going to optimize, it's best to start
                         % near the full tension solution, rather than
                         % (potentially) near zero
-                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
+                        x_filtered = TensionSpline.RunningFilter(x,11,'median');
+                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),T);
                         lambda = 1/a_rms.^2;
                 end
             elseif isscalar(lambdaArgument)
@@ -313,6 +315,11 @@ classdef TensionSpline < BSpline
         function epsilon = epsilonAtIndices(self,indices)
             epsilon = self.x - self.ValueAtPoints(self.t);
             epsilon = epsilon(indices);
+        end
+        
+        function epsilon = epsilonInRange(self,zmin,zmax)
+            epsilon = self.epsilon;
+            epsilon = epsilon( epsilon >= zmin & epsilon <= zmax );
         end
         
         function X2 = sampleVariance(self)
@@ -575,6 +582,12 @@ classdef TensionSpline < BSpline
             n_eff = length(S)/trace(S);
         end
         
+        function n_eff = effectiveSampleSizeFromVarianceOfTheMeanInRange(self,zmin,zmax)
+            epsilon = self.epsilon;
+            n_eff = self.effectiveSampleSizeFromVarianceOfTheMeanForIndices(epsilon >= zmin & epsilon <= zmax);
+        end
+        
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Likelihood
@@ -610,8 +623,8 @@ classdef TensionSpline < BSpline
             % the penalty function *must* take a tension spline object and
             % return a scalar. The function will be minimized by varying
             % lambda.
-            TensionSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
-            lambda = TensionSpline.minimizeFunctionOfSpline(self,penaltyFunction);
+            [~,lambdaBelow,lambdaAbove] = TensionSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
+            lambda = TensionSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,lambdaBelow,lambdaAbove);
         end
         
         function lambda = minimizeExpectedMeanSquareError(self)
@@ -642,16 +655,58 @@ classdef TensionSpline < BSpline
         % that it take log10(lambda) rather than lambda. This is much
         % better for the fminsearch algorithm.
         
-        function lambda = minimizeFunctionOfSplineWithGridSearch(aTensionSpline,functionOfSpline)
-            lambdas = 10.^linspace(log10(aTensionSpline.lambda)-3,log10(aTensionSpline.lambda)+3,13)';
-            err = zeros(size(lambdas));
-            for iLambda = 1:length(lambdas)
-                aTensionSpline.lambda = lambdas(iLambda);
-                err(iLambda) =  functionOfSpline(aTensionSpline);
+        function [lambda,lambdaBelow,lambdaAbove] = minimizeFunctionOfSplineWithGridSearch(aTensionSpline,functionOfSpline,dlog10lambda,n)
+            lambdas = aTensionSpline.lambda;
+            err = functionOfSpline(aTensionSpline);
+            nLambdas = 1;
+            index = 1;
+            
+            if nargin < 4
+                dlog10lambda = 0.5; % step size in factors of 10
+                n = 3; % number of steps to make each direction
             end
-            [~,index] = min(err);
+            
+            while (index <= 2 || index >= nLambdas-1)   
+                if index <= 2
+                    % expand search below
+                    lambda0 = lambdas(1);
+                    lambdas = cat(1,10.^linspace(log10(lambda0)-n*dlog10lambda,log10(lambda0)-dlog10lambda,n)',lambdas);
+                    err = cat(1,zeros(n,1),err);
+                    for iLambda = 1:n
+                        aTensionSpline.lambda = lambdas(iLambda);
+                        err(iLambda) =  functionOfSpline(aTensionSpline);
+                    end
+                    
+                    nLambdas = length(lambdas);
+                    index = index+n;
+                end
+                
+                if index >= nLambdas-1
+                    % expand search above
+                    lambda0 = lambdas(end);
+                    lambdas = cat(1,lambdas,10.^linspace(log10(lambda0)+dlog10lambda,log10(lambda0)+n*dlog10lambda,n)');
+                    err = cat(1,err,zeros(n,1));
+                    for iLambda = (nLambdas+1):(nLambdas+n)
+                        aTensionSpline.lambda = lambdas(iLambda);
+                        err(iLambda) =  functionOfSpline(aTensionSpline);
+                    end
+                    
+                    nLambdas = length(lambdas);
+                end
+                
+                [~,index] = min(err);
+            end
             lambda = lambdas(index);
             aTensionSpline.lambda = lambda; 
+            lambdaBelow = lambdas(index-1);
+            lambdaAbove = lambdas(index+1);
+        end
+        
+        function lambda = minimizeFunctionOfSplineBounded(aTensionSpline,functionOfSpline,x1,x2)
+            epsilon = 1e-15;
+            errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
+            optimalLog10lambdaPlusEpsilon = fminbnd( errorFunction, log10(x1+epsilon), log10(x2+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
         end
         
         function lambda = minimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
@@ -770,8 +825,13 @@ classdef TensionSpline < BSpline
                 VV = V'*V;
             end
             
+            if max(XWX(:))/((lambda*N/Q)*max(VV(:))) < 1e-12
+                warning('Matrix will probably be singular.');
+                lambda = 1e12*max(XWX(:))/((N/Q)*max(VV(:)));
+            end
+            
             E_x = XWX + (lambda*N/Q)*(VV);
-                        
+            
             % add the mean tension value
             if mu ~= 0.0
                 B = XWx + (lambda*N/Q)*mu*transpose(sum( V,1));
@@ -814,7 +874,7 @@ classdef TensionSpline < BSpline
                     W = diag(1./sigma_w2);
                 end
                 
-                [m,CmInv,XWX,XWx,VV] = TensionSpline.TensionSolution(X,V,W,lambda,x,mu);
+                [m,CmInv,XWX,XWx,VV] = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,[],[],VV);
                 
                 rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
                 sigma2_previous=sigma_w2;
@@ -941,17 +1001,29 @@ classdef TensionSpline < BSpline
             
             % now remove the trend
             x = x-polyval(p,t,[],mu);
-            
-            if 1 == 0
+                  
+            if 1 == 1
+                
                 dt = t(2) - t(1);
+                % temp hack?begin
+                t(end) = [];
+                x = diff(x)/dt;
+                D = D-1;
+                % temp hack?end
+                
                 T = t(end)-t(1);
                 N = length(t);
                 
                 df = 1/T;
                 f = ([0:ceil(N/2)-1 -floor(N/2):-1]*df)';
                 
+                SpectralD = (2*pi*f).^(2*D);
+                SpectralD = (2*(1-cos(dt*2*pi*f))/(dt^2)).^D;
+                
                 ubar = fft(x);
-                s_signal = (ubar.*conj(ubar)) .* (2*pi*f).^(2*D) * (dt/N);
+                s_signal = (ubar.*conj(ubar)) .* SpectralD * (dt/N);
+                
+                SpectralD = (2*(1-cos(dt*2*pi*f))/(dt^2)).^(D+1);
             else
                 [DiffMatrix,t_u] = TensionSpline.FiniteDifferenceMatrixNoBoundary(D,t,1);
                 
@@ -970,7 +1042,7 @@ classdef TensionSpline < BSpline
 %                 [f,s_signal] = mspec(t_u(2)-t_u(1),DiffMatrix*xin,psi,'cyclic');
 %                 df = f(2)-f(1);
             end
-            s_noise = sigma*sigma*dt*(2*pi*f).^(2*D);
+            s_noise = sigma*sigma*dt*SpectralD;
             
             % The factor of 10 is consistent with 80% confidence.
             % 95% confidence (actually, 97.5% ?) is 39.5
@@ -998,8 +1070,8 @@ classdef TensionSpline < BSpline
                 hold on
                 plot(f,cutoff*s_noise), ylog
                 
-%                 figure
-%                 plot(tin,xin), hold on, plot(tin,polyval(p,tin,[],mu))
+                figure
+                plot(tin,xin), hold on, plot(tin,polyval(p,tin,[],mu))
             end
         end
         
@@ -1154,6 +1226,43 @@ classdef TensionSpline < BSpline
                 c1=c2;
             end
             
+        end
+        
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Smoothing
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        % Computes a running average across ensembles and reports standard error
+        % size(vec) = [n m] where n is time, and m is the ensemble
+        
+        function [y,yerr] = RunningFilter( x, smoothness, filter )
+            %	Returns a running average of vec. Tries to handle end points well.
+            
+            n = size(x,1);
+            m = size(x,2);
+            
+            y = NaN(n,1);
+            yerr = NaN(n,1);
+            
+            smoothnessHalfLength = ceil((smoothness - 1)/2);
+            
+            for index=1:n
+                restrictionDistance = min([smoothnessHalfLength; index-1; n-index]);
+                indices = (index-restrictionDistance):(index+restrictionDistance);
+                
+                if ( ~isempty(indices) )
+                    vals = reshape(x(indices,:),[length(indices)*m 1]);
+                    if strcmp(filter,'mean')
+                        y(index) = mean(vals);
+                    elseif strcmp(filter,'median')
+                        y(index) = median(vals);
+                    end
+                    yerr(index) = std(vals)/sqrt(length(indices)*m);
+                end
+            end
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

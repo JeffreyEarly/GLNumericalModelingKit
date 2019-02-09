@@ -33,13 +33,17 @@ classdef (Abstract) Distribution < handle
         function totalError = kolmogorovSmirnovError(self,epsilon,zmin,zmax)
             if nargin == 4
                 x = sort(epsilon( epsilon > zmin & epsilon < zmax ));
+                A = 1/(self.cdf(zmax)-self.cdf(zmin));
+                b = self.cdf(zmin);
             else
                 x = sort(epsilon);
+                A = 1;
+                b = 0;
             end
             
             n = length(x);
             y_data = (1:n)'/n;
-            y = self.cdf(x);
+            y = A*(self.cdf(x)-b);
             
             D = max(abs(y-y_data));
             
