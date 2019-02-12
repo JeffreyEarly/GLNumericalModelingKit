@@ -48,6 +48,9 @@ classdef (Abstract) Distribution < handle
             D = max(abs(y-y_data));
             
             totalError = (sqrt(n) + 0.12 + 0.11/sqrt(n))*D;
+            if isempty(totalError)
+                totalError = Inf;
+            end
         end
         
         function y = rand(self,n)
