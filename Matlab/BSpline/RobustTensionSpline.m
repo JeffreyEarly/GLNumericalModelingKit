@@ -111,6 +111,10 @@ classdef RobustTensionSpline < TensionSpline
             zmin = self.distribution.locationOfCDFPercentile(alpha/2);
             zmax = self.distribution.locationOfCDFPercentile(1-alpha/2);
             expectedVarianceInRange = self.distribution.varianceInRange(zmin,zmax);
+            self.setInnerVarianceToExpectedValue(alpha,expectedVarianceInRange);
+        end
+        
+        function setInnerVarianceToExpectedValue(self,alpha,expectedVarianceInRange)
             self.minimize(@(spline) abs(spline.varianceOfInterquartile(alpha) - expectedVarianceInRange));
         end
         
@@ -230,20 +234,19 @@ classdef RobustTensionSpline < TensionSpline
             end
         end
         
-        function rebuildOutlierDistributionAndAdjustWeightings(self)
+        function z_crossover = rebuildOutlierDistributionAndAdjustWeightings(self)
             [newOutlierDistribution, alpha,z_crossover] = self.estimateOutlierDistribution();
             
             if alpha > 0.0
                 fprintf('Rebuilding outlier distribution/weightings with alpha=%.2f and sqrt(var)=%.1f\n',alpha,sqrt(newOutlierDistribution.variance));
                 newAddedDistribution = AddedDistribution(alpha,newOutlierDistribution,self.noiseDistribution);
                 self.distribution = newAddedDistribution;
-   z_crossover = 2*z_crossover;
+   
                 epsilon = self.epsilon;
                 noiseIndices = epsilon >= -z_crossover & epsilon <= z_crossover;
-                outlierIndices = ~noiseIndices;
                 
                 self.distribution = newAddedDistribution;
-                self.distribution.w = @(z) noiseIndices .* self.noiseDistribution.w(z) + outlierIndices .* newOutlierDistribution.w(z);
+                self.distribution.w = @(z) noiseIndices .* self.noiseDistribution.w(z) + (~noiseIndices) .* newOutlierDistribution.w(z);
                 
 %                 self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(-abs(z_crossover),z_crossover) );
 %             else
