@@ -140,7 +140,8 @@ classdef RobustTensionSpline < TensionSpline
         end
         
         function setToFullTensionWithIteratedIQAD(self)
-            % set to full tension by 
+            % set to full tension by minimizing the Anderson-Darling test
+            % on the interquartile range of epsilons.
             self.minimize(@(spline) self.noiseDistribution.andersonDarlingInterquartileError(spline.epsilon));
             lastAlpha = 0.0;
             totalIterations = 0;
