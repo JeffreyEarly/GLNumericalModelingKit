@@ -945,6 +945,7 @@ classdef TensionSpline < BSpline
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function [sigma, mu] = StandardDeviationAndMeanOfInterquartileRange(x)
+            % am I sure this is right? This looks wrong!
             mu = median(x);
             x = sort(x-mu);
             x_Q1 = median(x(1:floor(length(x)/2)));

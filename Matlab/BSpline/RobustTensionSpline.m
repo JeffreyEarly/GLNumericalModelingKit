@@ -115,7 +115,43 @@ classdef RobustTensionSpline < TensionSpline
         end
         
         function setInnerVarianceToExpectedValue(self,alpha,expectedVarianceInRange)
+            fprintf('Setting variance to %.1f m^2\n',expectedVarianceInRange);
             self.minimize(@(spline) abs(spline.varianceOfInterquartile(alpha) - expectedVarianceInRange));
+        end
+        
+        function setToFullTensionWithIteratedIQSV(self,extraVarianceFactor)
+           % set to full tension by matching the expected sample variance with the interquartile sample variance.
+           % at each iteration the outlier distribution is estimated
+           if nargin < 2
+               extraVarianceFactor = 1.0;
+           end
+           pctRange = 1/2; % alpha=1/2 is the inner half of the distribution
+           self.setInnerVarianceToExpectedValue(pctRange,extraVarianceFactor*self.noiseDistribution.varianceInPercentileRange(pctRange/2,1-pctRange/2));
+           lastAlpha = 0.0;
+           totalIterations = 0;
+           [newOutlierDistribution, newAlpha] = self.estimateOutlierDistribution();
+           while (abs(lastAlpha-newAlpha) > 0.01 && totalIterations < 10)
+               addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.noiseDistribution);
+               self.setInnerVarianceToExpectedValue(pctRange,extraVarianceFactor*addedDistribution.varianceInPercentileRange(pctRange/2,1-pctRange/2));
+               lastAlpha = newAlpha;
+               [newOutlierDistribution, newAlpha] = self.estimateOutlierDistribution();
+               totalIterations = totalIterations + 1;
+           end
+        end
+        
+        function setToFullTensionWithIteratedIQAD(self)
+            % set to full tension by 
+            self.minimize(@(spline) self.noiseDistribution.andersonDarlingInterquartileError(spline.epsilon));
+            lastAlpha = 0.0;
+            totalIterations = 0;
+            [newOutlierDistribution, newAlpha] = self.estimateOutlierDistribution();
+            while (abs(lastAlpha-newAlpha) > 0.01 && totalIterations < 10)
+                addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.noiseDistribution);
+                self.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError(spline.epsilon));
+                lastAlpha = newAlpha;
+                [newOutlierDistribution, newAlpha] = self.estimateOutlierDistribution();
+                totalIterations = totalIterations + 1;
+            end
         end
         
         function sampleVariance = varianceOfInterquartile(self,alpha)
@@ -198,22 +234,24 @@ classdef RobustTensionSpline < TensionSpline
             end
             
             alpha_outlier = 10.^(linspace(log10(0.01),log10(0.5),100))';
-            sigma_outlier = (s2_total-(1-alpha_outlier)*s2_noise)./(3*alpha_outlier);     
+            sigma2_outlier = (s2_total-(1-alpha_outlier)*s2_noise)./(3*alpha_outlier);
+            var_total = zeros(size(alpha_outlier));
             ks_error = zeros(size(alpha_outlier));
             
             for iAlpha = 1:length(alpha_outlier)
-                newAddedDistribution = AddedDistribution(alpha_outlier(iAlpha),StudentTDistribution(sqrt(sigma_outlier(iAlpha)),3),self.noiseDistribution);
+                newAddedDistribution = AddedDistribution(alpha_outlier(iAlpha),StudentTDistribution(sqrt(sigma2_outlier(iAlpha)),3),self.noiseDistribution);
+                var_total(iAlpha) = newAddedDistribution.variance;
                 ks_error(iAlpha) = newAddedDistribution.andersonDarlingError(epsilon);   
             end
             
-            [minAlpha,minIndex] = min(ks_error);
-            if (self.noiseDistribution.andersonDarlingError(epsilon) < minAlpha)
+            [minError,minIndex] = min(ks_error);
+            if (self.noiseDistribution.andersonDarlingError(epsilon) < minError)
                 outlierDistribution = [];
                 alpha = 0;
                 zOutlier = Inf;
             else
                 alpha = alpha_outlier(minIndex);
-                sigma2o = sigma_outlier(minIndex);
+                sigma2o = sigma2_outlier(minIndex);
                 outlierDistribution = StudentTDistribution(sqrt(sigma2o),3);
                 
                 if nargout == 3
@@ -234,16 +272,24 @@ classdef RobustTensionSpline < TensionSpline
             end
         end
         
-        function z_crossover = rebuildOutlierDistributionAndAdjustWeightings(self)
+        function z_crossover = rebuildOutlierDistributionAndAdjustWeightings(self,outlierOdds)
             [newOutlierDistribution, alpha,z_crossover] = self.estimateOutlierDistribution();
             
             if alpha > 0.0
                 fprintf('Rebuilding outlier distribution/weightings with alpha=%.2f and sqrt(var)=%.1f\n',alpha,sqrt(newOutlierDistribution.variance));
                 newAddedDistribution = AddedDistribution(alpha,newOutlierDistribution,self.noiseDistribution);
                 self.distribution = newAddedDistribution;
-   
+                
+                if ~isempty(outlierOdds)
+                   f = @(z) abs( (alpha/(1-alpha))*newOutlierDistribution.cdf(-abs(z))/self.noiseDistribution.cdf(-abs(z)) - outlierOdds);
+                   z_outlier = fminsearch(f,sqrt(self.noiseDistribution.variance));
+                   fprintf('Setting outlier cutoff at z=%.1f m\n',z_outlier);
+                else
+                    z_outlier = z_crossover;
+                end
+                
                 epsilon = self.epsilon;
-                noiseIndices = epsilon >= -z_crossover & epsilon <= z_crossover;
+                noiseIndices = epsilon >= -z_outlier & epsilon <= z_outlier;
                 
                 self.distribution = newAddedDistribution;
                 self.distribution.w = @(z) noiseIndices .* self.noiseDistribution.w(z) + (~noiseIndices) .* newOutlierDistribution.w(z);
@@ -376,6 +422,42 @@ classdef RobustTensionSpline < TensionSpline
     end
     
     methods (Static)
+        
+        function [outlierDistribution, alpha] = estimateOutlierDistributionFromKnownNoise(epsilon,noiseDistribution)
+            
+            % Let's find a reasonable set of z_crossover points.
+            s2_total = mean(epsilon.^2);
+            s2_noise = noiseDistribution.variance;
+            
+            if s2_total/s2_noise < 1.1
+                outlierDistribution = [];
+                alpha = 0;
+                return;
+            end
+            
+            alpha_outlier = 10.^(linspace(log10(0.01),log10(0.5),100))';
+            sigma2_outlier = (s2_total-(1-alpha_outlier)*s2_noise)./(3*alpha_outlier);
+            var_total = zeros(size(alpha_outlier));
+            ks_error = zeros(size(alpha_outlier));
+            
+            for iAlpha = 1:length(alpha_outlier)
+                newAddedDistribution = AddedDistribution(alpha_outlier(iAlpha),StudentTDistribution(sqrt(sigma2_outlier(iAlpha)),3),noiseDistribution);
+                var_total(iAlpha) = newAddedDistribution.variance;
+                ks_error(iAlpha) = newAddedDistribution.andersonDarlingError(epsilon);
+            end
+            
+            [minError,minIndex] = min(ks_error);
+            if (noiseDistribution.andersonDarlingError(epsilon) < minError)
+                outlierDistribution = [];
+                alpha = 0;
+            else
+                alpha = alpha_outlier(minIndex);
+                sigma2o = sigma2_outlier(minIndex);
+                outlierDistribution = StudentTDistribution(sqrt(sigma2o),3);
+            end
+        end
+
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Methods for solving the least-squares problem

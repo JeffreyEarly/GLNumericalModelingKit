@@ -39,6 +39,16 @@ classdef (Abstract) Distribution < handle
             totalError = -n-sum(s);
         end
         
+        function totalError = andersonDarlingInterquartileError(self,epsilon)
+            Y = sort(epsilon);
+            n = length(Y);
+            
+            s = ((2*(1:n)'-1)/n) .* (log(self.cdf(Y)) + log(1-self.cdf(flip(Y))));
+            sIQ = s(floor(n/4):ceil(3*n/4));
+            
+            totalError = length(sIQ)-sum(sIQ);
+        end
+        
         function totalError = kolmogorovSmirnovError(self,epsilon,zmin,zmax)
             if nargin == 4
                 x = sort(epsilon( epsilon > zmin & epsilon < zmax ));
