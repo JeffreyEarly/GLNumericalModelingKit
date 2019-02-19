@@ -4,6 +4,7 @@ classdef RobustTensionSpline < TensionSpline
     properties
         noiseDistribution
         outlierDistribution
+        alpha
         
         zmin
         zmax
@@ -53,6 +54,7 @@ classdef RobustTensionSpline < TensionSpline
             
             self.noiseDistribution = noiseDistribution;
             self.outlierDistribution = outlierDistribution;
+            self.alpha = alpha;
             self.outlierThreshold = self.noiseDistribution.locationOfCDFPercentile(1-1/10000/2);
 
             
@@ -274,15 +276,14 @@ classdef RobustTensionSpline < TensionSpline
         end
         
         function z_crossover = rebuildOutlierDistributionAndAdjustWeightings(self,outlierOdds)
-            [newOutlierDistribution, alpha,z_crossover] = self.estimateOutlierDistribution();
+            [self.outlierDistribution, self.alpha,z_crossover] = self.estimateOutlierDistribution();
             
-            if alpha > 0.0
-                fprintf('Rebuilding outlier distribution/weightings with alpha=%.2f and sqrt(var)=%.1f\n',alpha,sqrt(newOutlierDistribution.variance));
-                newAddedDistribution = AddedDistribution(alpha,newOutlierDistribution,self.noiseDistribution);
-                self.distribution = newAddedDistribution;
+            if self.alpha > 0.0
+                fprintf('Rebuilding outlier distribution/weightings with alpha=%.2f and sqrt(var)=%.1f\n',self.alpha,sqrt(self.outlierDistribution.variance));
+                self.distribution = AddedDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution);
                 
                 if ~isempty(outlierOdds)
-                   f = @(z) abs( (alpha/(1-alpha))*newOutlierDistribution.cdf(-abs(z))/self.noiseDistribution.cdf(-abs(z)) - outlierOdds);
+                   f = @(z) abs( (self.alpha/(1-self.alpha))*self.outlierDistribution.cdf(-abs(z))/self.noiseDistribution.cdf(-abs(z)) - outlierOdds);
                    z_outlier = fminsearch(f,sqrt(self.noiseDistribution.variance));
                    fprintf('Setting outlier cutoff at z=%.1f m\n',z_outlier);
                 else
@@ -292,8 +293,8 @@ classdef RobustTensionSpline < TensionSpline
                 epsilon = self.epsilon;
                 noiseIndices = epsilon >= -z_outlier & epsilon <= z_outlier;
                 
-                self.distribution = newAddedDistribution;
-                self.distribution.w = @(z) noiseIndices .* self.noiseDistribution.w(z) + (~noiseIndices) .* newOutlierDistribution.w(z);
+                self.distribution.w = @(z) noiseIndices .* self.noiseDistribution.w(z) + (~noiseIndices) .* self.outlierDistribution.w(z);
+                self.sigma = noiseIndices .* sqrt(self.noiseDistribution.variance) + (~noiseIndices) .* sqrt(self.outlierDistribution.variance);
                 
 %                 self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(-abs(z_crossover),z_crossover) );
 %             else
@@ -418,6 +419,29 @@ classdef RobustTensionSpline < TensionSpline
             self.zmax = zmax;
             self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(self.zmin,self.zmax) );
             self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
+        end
+        
+        function minimizeExpectedMeanSquareError(self)
+            % This value of beta is chosen from
+            % MakeTableOutliersWithAddedDistributionBlind.m as a good value
+            % for distribution with very few outliers.
+            beta = 1/400;
+            zmin_ = self.noiseDistribution.locationOfCDFPercentile(beta/2);
+            zmax_ = self.noiseDistribution.locationOfCDFPercentile(1-beta/2);
+            
+            if ~(isempty(self.outlierDistribution) || self.alpha < 0.01)
+                % If we a non-trivial outlier distribution, includepoints
+                % that are more likely than not to be part of the
+                % characterized noise distribution.
+                f = @(z) abs( (1-self.alpha)*self.noiseDistribution.pdf(z) - self.alpha*self.outlierDistribution.pdf(z) );
+                zoutlier = abs(fminsearch(f,sqrt(self.noiseDistribution.variance)));        
+                if zoutlier < zmax_
+                    zmin_ = -zoutlier;
+                    zmax_ = zoutlier;
+                end
+            end
+            self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(zmin_,zmax_) );
+            fprintf('Minimizing in range: (%.1f, %.1f)\n',zmin_,zmax_);
         end
         
     end

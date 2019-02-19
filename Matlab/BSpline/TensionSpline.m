@@ -35,6 +35,7 @@ classdef TensionSpline < BSpline
         X
         V
         W,XWX,XWx,VV
+        sigma       % initial weight (given as normal std dev.)
 
         indicesOfOutliers = []
         outlierThreshold
@@ -60,7 +61,7 @@ classdef TensionSpline < BSpline
             end
             
             if ~isa(distribution,'Distribution')
-               error('The distribution must be a Distribution subclass.') 
+               error('The distribution must be a Distribution subclass.')
             end
             
             nargs = length(varargin);
@@ -76,6 +77,7 @@ classdef TensionSpline < BSpline
             lambdaArgument = Lambda.optimalIterated;
             indicesOfOutliers = [];
             t_knot = [];
+            sigma = sqrt(distribution.variance);
             
             for k = 1:2:length(varargin)
                 if strcmp(varargin{k}, 'K')
@@ -90,6 +92,8 @@ classdef TensionSpline < BSpline
                     mu = varargin{k+1};
                 elseif strcmp(varargin{k}, 't_knot')
                     t_knot = varargin{k+1};
+                elseif strcmp(varargin{k}, 'sigma')
+                    sigma = varargin{k+1};
                 elseif strcmp(varargin{k}, 'knot_dof')
                     if ischar(varargin{k+1}) && strcmp(varargin{k+1}, 'auto')
                         shouldSetKnotDOFAutomatically = 1;
@@ -155,9 +159,9 @@ classdef TensionSpline < BSpline
             [XWX,XWx,VV] = TensionSpline.PrecomputeTensionSolutionMatrices(X,V,sqrt(distribution.variance),x);
             
             if isa(distribution,'NormalDistribution')
-                [m,CmInv] = TensionSpline.TensionSolution(X,V,distribution.sigma,lambda,x,mu,XWX,XWx,VV);
+                [m,CmInv] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV);
             elseif ~isempty(distribution.w)
-                [m,CmInv,W,XWX,XWx,VV] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sqrt(distribution.variance),lambda,x,mu,distribution.w,XWX,XWx,VV,t,distribution.rho);
+                [m,CmInv,W,XWX,XWx,VV] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,distribution.w,XWX,XWx,VV,t,distribution.rho);
             else
                 error('No weight function given! Unable to proceed.');
             end
@@ -179,6 +183,7 @@ classdef TensionSpline < BSpline
             self.x = x;
             self.knot_dof = knot_dof;
             self.distribution = distribution;
+            self.sigma = sigma;
             self.indicesOfOutliers = indicesOfOutliers;
             self.outlierThreshold = self.distribution.locationOfCDFPercentile(1-1/10000/2);
             
@@ -241,12 +246,12 @@ classdef TensionSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if isa(self.distribution,'NormalDistribution')
-                [self.m,CmInv] = TensionSpline.TensionSolution(self.X,self.V,self.distribution.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
+                [self.m,CmInv] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
             elseif ~isempty(self.distribution.w)
                 % do *not* feed in the previous values of self.XWX,self.XWx
                 % when the tension parameter changes for an iterated
                 % solution.
-                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,sqrt(self.distribution.variance),self.lambda,self.x,self.mu,self.distribution.w,[],[],self.VV,self.t,self.distribution.rho);
+                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.distribution.w,[],[],self.VV,self.t,self.distribution.rho);
             else
                 error('No weight function given! Unable to proceed.'); 
             end
@@ -304,7 +309,7 @@ classdef TensionSpline < BSpline
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Measures of error and effective sample size (n_eff)
+        % Sample variance
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
@@ -313,13 +318,19 @@ classdef TensionSpline < BSpline
         end
         
         function epsilon = epsilonAtIndices(self,indices)
-            epsilon = self.x - self.ValueAtPoints(self.t);
-            epsilon = epsilon(indices);
+            epsilon = self.x(indices) - self.ValueAtPoints(self.t(indices));
         end
         
         function epsilon = epsilonInRange(self,zmin,zmax)
             epsilon = self.epsilon;
             epsilon = epsilon( epsilon >= zmin & epsilon <= zmax );
+        end
+        
+        function epsilonIQ = epsilonIQ(self)
+            % interquartile epsilon
+            epsilon = sort(self.epsilon);
+            n = length(epsilon);
+            epsilonIQ = epsilon(floor(n/4):ceil(3*n/4));
         end
         
         function X2 = sampleVariance(self)
@@ -338,6 +349,12 @@ classdef TensionSpline < BSpline
             zmax = self.distribution.locationOfCDFPercentile(pctmax);
             X2 = self.sampleVarianceInRange(zmin,zmax);
         end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Measures of error and effective sample size (n_eff)
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function SE2 = varianceOfTheMean(self)
             % The variance of the mean is the square of the standard error
@@ -363,6 +380,16 @@ classdef TensionSpline < BSpline
                 
                 MSE = mean((SI*self.x).^2)/self.distribution.variance + 2*trace(S)/length(S) - 1;
             end
+        end
+        
+        function MSE = expectedMeanSquareErrorInterquartile(self)
+            epsilon = self.x - self.ValueAtPoints(self.t);
+            sortedEpsilon = sort(epsilon);
+            n = length(epsilon);
+            zmin = sortedEpsilon(floor(n/4));
+            zmax = sortedEpsilon(ceil(3*n/4));
+            expectedVariance = self.distribution.varianceInPercentileRange(0.25,0.75);
+            MSE = self.expectedMeanSquareErrorForPointsAtIndices(epsilon >= zmin & epsilon <= zmax,expectedVariance);
         end
         
         function MSE = expectedMeanSquareErrorInPercentileRange(self,pctmin,pctmax)
@@ -888,56 +915,6 @@ classdef TensionSpline < BSpline
                 end
             end
             
-        end
-        
-        
-        function [m,Cm,W_g,indicesOfOutliers] = IteratedLeastSquaresTensionSolutionWithOutliers(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV)
-            % Same calling sequence as the TensionSolution function, but
-            % also includes the weight factor, w
-            if length(sigma) == 1
-                sigma = ones(size(x))*sigma;
-            end
-            W = diag(1./(sigma.^2));
-            m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV);
-            
-            error_x_previous = sigma.*sigma;
-            rel_error = 1.0;
-            repeats = 1;
-            while (rel_error > 0.01)
-                dx2 = w(X*m - x);
-                
-                indicesOfOutliers = find(dx2>1e5*sigma.*sigma);
-                goodIndices = setdiff(1:length(x),indicesOfOutliers);
-                
-                x_g = x(goodIndices);
-                dx2_g = dx2(goodIndices);
-                X_g = X(goodIndices,:);
-                
-                W_g = diag(1./(dx2_g));
-                
-                m = TensionSpline.TensionSolution(X_g,V,W_g,lambda,x_g,mu);
-                
-                % dropping an outlier counts as 100% error
-                if size(dx2_g) == size(error_x_previous)
-                    rel_error = max( (dx2_g-error_x_previous)./dx2_g );
-                else
-                    rel_error = 1;
-                end
-                error_x_previous=dx2_g;
-                repeats = repeats+1;
-                
-                if (repeats == 100)
-                    disp('Failed to converge after 100 iterations.');
-                    break;
-                end
-            end
-            
-            
-            if nargout >= 2
-                N = length(x_g);
-                Q = size(V,1);
-                Cm = inv(X_g'*W_g*X_g + (lambda*N/Q)*(V'*V));
-            end
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
