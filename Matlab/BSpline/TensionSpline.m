@@ -705,15 +705,17 @@ classdef TensionSpline < BSpline
         function lambda = minimizeFunctionOfSplineBounded(aTensionSpline,functionOfSpline,x1,x2)
             epsilon = 1e-15;
             errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
-            optimalLog10lambdaPlusEpsilon = fminbnd( errorFunction, log10(x1+epsilon), log10(x2+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            optimalLog10lambdaPlusEpsilon = fminbnd( errorFunction, log10(x1+epsilon), log10(x2+epsilon), optimset('TolX', 0.01, 'TolFun', 0.001) );
             lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
+            aTensionSpline.lambda = lambda;
         end
         
         function lambda = minimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
             epsilon = 1e-15;
             errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
-            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.001) );
             lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
+            aTensionSpline.lambda = lambda;
         end
         
         function error = FunctionOfSplineWrapper(aTensionSpline, log10lambdaPlusEpsilon, functionOfSpline)
@@ -727,7 +729,7 @@ classdef TensionSpline < BSpline
         function lambda = minimizeFunctionOfSplines(tensionSplines,functionOfSplines)
             epsilon = 1e-15;
             errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.functionOfSplinesWrapper(tensionSplines,log10lambdaPlusEpsilon,functionOfSplines);
-            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(tensionSplines{1}.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(tensionSplines{1}.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.001) );
             lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
         end
         

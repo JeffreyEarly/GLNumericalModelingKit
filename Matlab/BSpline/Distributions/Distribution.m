@@ -1,4 +1,4 @@
-classdef (Abstract) Distribution < handle
+classdef (Abstract) Distribution
     %UNTITLED Summary of this class goes here
     %   Detailed explanation goes here
     
