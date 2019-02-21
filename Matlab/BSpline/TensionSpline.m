@@ -398,11 +398,12 @@ classdef TensionSpline < BSpline
             MSE = self.expectedMeanSquareErrorInRange(zmin,zmax);
         end
         
-        function [MSE, n] = expectedMeanSquareErrorInRange(self,zmin,zmax)
+        function [MSE, n] = expectedMeanSquareErrorInRange(self,zmin,zmax,expectedVariance)
             epsilon = self.epsilon;
             indices = find(epsilon >= zmin & epsilon <= zmax);
-            expectedVariance = self.distribution.varianceInRange(zmin,zmax);
-%             expectedVariance = self.distribution.variance;
+            if nargin < 4 || isempty(expectedVariance)
+                expectedVariance = self.distribution.varianceInRange(zmin,zmax);
+            end
             [MSE, n] = self.expectedMeanSquareErrorForPointsAtIndices(indices,expectedVariance);
         end
         

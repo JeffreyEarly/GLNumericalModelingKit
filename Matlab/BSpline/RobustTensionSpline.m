@@ -6,6 +6,8 @@ classdef RobustTensionSpline < TensionSpline
         outlierDistribution
         alpha
         
+        w_epsilon   % weighting of the errors
+        
         zmin
         zmax
     end
@@ -56,9 +58,7 @@ classdef RobustTensionSpline < TensionSpline
             self.outlierDistribution = outlierDistribution;
             self.alpha = alpha;
             self.outlierThreshold = self.noiseDistribution.locationOfCDFPercentile(1-1/10000/2);
-
-            
-%             self.secondIteration();
+            self.w_epsilon = ones(size(self.t));            
         end
         
         function firstIteration(self,alpha)
@@ -149,13 +149,39 @@ classdef RobustTensionSpline < TensionSpline
             totalIterations = 0;
             [newOutlierDistribution, newAlpha] = self.estimateOutlierDistribution();
             while (abs(lastAlpha-newAlpha) > 0.01 && totalIterations < 10)
-                addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.noiseDistribution);
+                if newAlpha > 0 && ~isempty(newOutlierDistribution)
+                    addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.noiseDistribution);
+                else
+                    addedDistribution = self.noiseDistribution;
+                end
                 self.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError(spline.epsilon));
                 lastAlpha = newAlpha;
                 [newOutlierDistribution, newAlpha] = self.estimateOutlierDistribution();
                 totalIterations = totalIterations + 1;
             end
         end
+        
+        function generateEpsilonWeighting(self)
+           % assuming we're at full tension
+           if self.alpha > 0 && ~isempty(self.outlierDistribution)
+               epsilon = self.epsilon;
+               self.w_epsilon = (1-self.alpha)*self.noiseDistribution.pdf(epsilon)./self.distribution.pdf(epsilon);
+           else
+              self.w_epsilon = ones(size(self.t)); 
+           end
+        end
+        
+        function [MSE, n] = expectedMeanSquareErrorWithWeighting(self,expectedVariance)
+            epsilon = self.epsilon;
+            n = sum(self.w_epsilon);
+            X2 = sum((epsilon).^2 .* self.w_epsilon)/n;
+            
+            Sii = diag(self.smoothingMatrix);
+            traceS = sum( Sii .* self.w_epsilon );
+            
+            MSE = X2/expectedVariance + 2*traceS/n - 1;
+        end
+        
         
         function sampleVariance = varianceOfInterquartile(self,alpha)
            epsilon = sort(self.epsilon);
@@ -230,7 +256,8 @@ classdef RobustTensionSpline < TensionSpline
             s2_total = mean(epsilon.^2);
             s2_noise = self.noiseDistribution.variance;
             
-            if s2_total/s2_noise < 1.1
+            % What's a reasonable cutoff here?
+            if s2_total/s2_noise < 2.0
                 outlierDistribution = [];
                 alpha = 0;
                 return;
@@ -266,12 +293,11 @@ classdef RobustTensionSpline < TensionSpline
         
         
         function rebuildOutlierDistribution(self)
-            [newOutlierDistribution, alpha] = self.estimateOutlierDistribution();
+            [self.outlierDistribution, self.alpha] = self.estimateOutlierDistribution();
             
-            if alpha > 0.0
-                fprintf('Rebuilding outlier distribution with alpha=%.2f and sqrt(var)=%.1f\n',alpha,sqrt(newOutlierDistribution.variance));
-                newAddedDistribution = AddedDistribution(alpha,newOutlierDistribution,self.noiseDistribution);
-                self.distribution = newAddedDistribution;
+            if self.alpha > 0.0
+                fprintf('Rebuilding outlier distribution with alpha=%.2f and sqrt(var)=%.1f\n',self.alpha,sqrt(self.outlierDistribution.variance));
+                self.distribution = AddedDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution);
             end
         end
         
@@ -433,15 +459,16 @@ classdef RobustTensionSpline < TensionSpline
                 % If we a non-trivial outlier distribution, includepoints
                 % that are more likely than not to be part of the
                 % characterized noise distribution.
-                f = @(z) abs( (1-self.alpha)*self.noiseDistribution.pdf(z) - self.alpha*self.outlierDistribution.pdf(z) );
-                zoutlier = abs(fminsearch(f,sqrt(self.noiseDistribution.variance)));        
+                noiseOdds = 3; % This is from MakeTableOutliersBlindMinimization.m
+                f = @(z) abs( (1-self.alpha)*self.noiseDistribution.pdf(z) - noiseOdds*self.alpha*self.outlierDistribution.pdf(z) );
+                zoutlier = abs(fminsearch(f,sqrt(self.noiseDistribution.variance)));     
                 if zoutlier < zmax_
                     zmin_ = -zoutlier;
                     zmax_ = zoutlier;
                 end
             end
             self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(zmin_,zmax_) );
-            fprintf('Minimizing in range: (%.1f, %.1f)\n',zmin_,zmax_);
+%             fprintf('Minimizing in range: (%.1f, %.1f) with expected variance %.1f m^2\n',zmin_,zmax_,self.distribution.varianceInRange(zmin_,zmax_));
         end
         
     end
@@ -481,61 +508,15 @@ classdef RobustTensionSpline < TensionSpline
                 outlierDistribution = StudentTDistribution(sqrt(sigma2o),3);
             end
         end
-
         
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %
-        % Methods for solving the least-squares problem
-        %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [m,Cm,W_g,indicesOfOutliers] = IteratedLeastSquaresTensionSolutionWithOutliers(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV)
-            % Same calling sequence as the TensionSolution function, but
-            % also includes the weight factor, w
-            if length(sigma) == 1
-                sigma = ones(size(x))*sigma;
-            end
-            W = diag(1./(sigma.^2));
-            m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV);
-            
-            error_x_previous = sigma.*sigma;
-            rel_error = 1.0;
-            repeats = 1;
-            while (rel_error > 0.01)
-                dx2 = w(X*m - x);
-                
-                indicesOfOutliers = find(dx2>1e5*sigma.*sigma);
-                goodIndices = setdiff(1:length(x),indicesOfOutliers);
-                
-                x_g = x(goodIndices);
-                dx2_g = dx2(goodIndices);
-                X_g = X(goodIndices,:);
-                
-                W_g = diag(1./(dx2_g));
-                
-                m = TensionSpline.TensionSolution(X_g,V,W_g,lambda,x_g,mu);
-                
-                % dropping an outlier counts as 100% error
-                if size(dx2_g) == size(error_x_previous)
-                    rel_error = max( (dx2_g-error_x_previous)./dx2_g );
-                else
-                    rel_error = 1;
-                end
-                error_x_previous=dx2_g;
-                repeats = repeats+1;
-                
-                if (repeats == 100)
-                    disp('Failed to converge after 100 iterations.');
-                    break;
-                end
-            end
-            
-            
-            if nargout >= 2
-                N = length(x);
-                Q = size(V,1);
-                Cm = inv(X'*W_g*X + (lambda*N/Q)*(V'*V));
+        function w_epsilon = generateEpsilonWeightingFromOutlierDistribution(epsilon,alpha,outlierDistribution,noiseDistribution)
+            if alpha > 0 && ~isempty(outlierDistribution)
+                w_epsilon = (1-alpha)*noiseDistribution.pdf(epsilon)./AddedDistribution(alpha,outlierDistribution,noiseDistribution).pdf(epsilon);
+            else
+                w_epsilon = ones(size(epsilon));
             end
         end
+        
     end
 end
 
