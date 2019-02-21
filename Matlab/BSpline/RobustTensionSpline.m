@@ -201,7 +201,7 @@ classdef RobustTensionSpline < TensionSpline
         end
         
         function [outlierDistribution, alpha,zOutlier] = estimateOutlierDistributionOldMethod(self)
-            self.setToFullTensionWithSV(0.5);
+%             self.setToFullTensionWithSV(0.5);
             
             % Identify the spot where our distribution no longer looks
             % right using the KS test
@@ -309,15 +309,14 @@ classdef RobustTensionSpline < TensionSpline
                 self.distribution = AddedDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution);
                 
                 if ~isempty(outlierOdds)
-                   f = @(z) abs( (self.alpha/(1-self.alpha))*self.outlierDistribution.cdf(-abs(z))/self.noiseDistribution.cdf(-abs(z)) - outlierOdds);
+                   f = @(z) abs( (self.alpha/(1-self.alpha))*self.outlierDistribution.pdf(-abs(z))/self.noiseDistribution.pdf(-abs(z)) - outlierOdds);
                    z_outlier = fminsearch(f,sqrt(self.noiseDistribution.variance));
                    fprintf('Setting outlier cutoff at z=%.1f m\n',z_outlier);
                 else
                     z_outlier = z_crossover;
                 end
                 
-                epsilon = self.epsilon;
-                noiseIndices = epsilon >= -z_outlier & epsilon <= z_outlier;
+                noiseIndices = abs(self.epsilon) <= z_outlier;
                 
                 self.distribution.w = @(z) noiseIndices .* self.noiseDistribution.w(z) + (~noiseIndices) .* self.outlierDistribution.w(z);
                 self.sigma = noiseIndices .* sqrt(self.noiseDistribution.variance) + (~noiseIndices) .* sqrt(self.outlierDistribution.variance);

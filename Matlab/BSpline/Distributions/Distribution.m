@@ -72,6 +72,19 @@ classdef (Abstract) Distribution
             end
         end
         
+        function totalError = kolmogorovSmirnovInterquartileError(self,epsilon)
+            x = sort(epsilon);
+            n = length(x);
+            y_data = (1:n)'/n;
+            y = self.cdf(x);
+            
+            ks = y-y_data;
+            DIQ = max(abs(ks(floor(n/4):ceil(3*n/4))));
+            n = length(DIQ);
+            
+            totalError = (sqrt(n) + 0.12 + 0.11/sqrt(n))*DIQ;
+        end
+        
         function y = rand(self,n)
             pct = 1/1e5;
             zmin = self.locationOfCDFPercentile(pct/2);
