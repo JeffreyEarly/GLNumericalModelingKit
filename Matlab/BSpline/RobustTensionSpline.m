@@ -301,6 +301,8 @@ classdef RobustTensionSpline < TensionSpline
             end
         end
         
+
+        
         function z_crossover = rebuildOutlierDistributionAndAdjustWeightings(self,outlierOdds)
             [self.outlierDistribution, self.alpha,z_crossover] = self.estimateOutlierDistribution();
             
@@ -474,6 +476,31 @@ classdef RobustTensionSpline < TensionSpline
     end
     
     methods (Static)
+        
+        function sigma = sigmaFromOutlierDistribution(alpha,outlierDistribution,noiseDistribution,epsilon_full,outlierOdds)
+            f = @(z) abs( (alpha/(1-alpha))*outlierDistribution.pdf(-abs(z))/noiseDistribution.pdf(-abs(z)) - outlierOdds);
+            z_outlier = fminsearch(f,sqrt(noiseDistribution.variance));
+            noiseIndices = abs(epsilon_full) <= z_outlier;           
+            sigma = noiseIndices .* sqrt(noiseDistribution.variance) + (~noiseIndices) .* sqrt(outlierDistribution.variance);
+        end
+        
+        function [z,expectedVariance] = varianceCrossOverFromOutlierDistribution(alpha,outlierDistribution,noiseDistribution)
+            % Given the same *total* variance, where (in z) do two
+            % distributions with different ratios of outliers have the same
+            % integrated variance?
+            addedDistribution = AddedDistribution(alpha,outlierDistribution,noiseDistribution);
+            weakAddedDistribution = AddedDistribution(alpha/1.5,StudentTDistribution(sqrt((addedDistribution.variance-(1-alpha/1.5)*noiseDistribution.variance)/(3*alpha/2)),3.0),noiseDistribution);
+            strongAddedDistribution = AddedDistribution(1.5*alpha,StudentTDistribution(sqrt((addedDistribution.variance-(1-alpha*1.5)*noiseDistribution.variance)/(3*alpha*1.5)),3.0),noiseDistribution);
+            f = @(z) abs(weakAddedDistribution.varianceInRange(0,z)-strongAddedDistribution.varianceInRange(0,z));
+            z = fminbnd(f,sqrt(noiseDistribution.variance),sqrt(strongAddedDistribution.variance));
+            expectedVariance = addedDistribution.varianceInRange(-z,z);
+        end
+        
+        function [z,expectedVariance] = locationOfNoiseToOutlierPDFRatio(alpha,outlierDistribution,noiseDistribution,pdfRatio)
+            f = @(z) abs((1-alpha)*noiseDistribution.pdf(z)./(alpha*outlierDistribution.pdf(z))-pdfRatio);
+            z = abs(fminsearch(f,sqrt(noiseDistribution.variance)));
+            expectedVariance = AddedDistribution(alpha,outlierDistribution,noiseDistribution).varianceInRange(-z,z);
+        end
         
         function [outlierDistribution, alpha] = estimateOutlierDistributionFromKnownNoise(epsilon,noiseDistribution)
             
