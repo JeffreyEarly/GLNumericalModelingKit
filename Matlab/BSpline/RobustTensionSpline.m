@@ -318,9 +318,10 @@ classdef RobustTensionSpline < TensionSpline
                 
                 noiseIndices = abs(self.epsilon) <= z_outlier;
                 
-                self.distribution.w = @(z) noiseIndices .* self.noiseDistribution.w(z) + (~noiseIndices) .* self.outlierDistribution.w(z);
+%                 self.distribution.w = @(z) noiseIndices .* self.noiseDistribution.w(z) + (~noiseIndices) .* self.outlierDistribution.w(z);
                 self.sigma = noiseIndices .* sqrt(self.noiseDistribution.variance) + (~noiseIndices) .* sqrt(self.outlierDistribution.variance);
-                
+
+                self.distribution = self.noiseDistribution;
 %                 self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(-abs(z_crossover),z_crossover) );
 %             else
 %                 self.minimizeExpectedMeanSquareError();
