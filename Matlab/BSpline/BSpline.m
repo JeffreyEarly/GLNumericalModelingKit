@@ -198,6 +198,12 @@ classdef BSpline < handle
             % numer of knots
             M = length(t_knot);
             
+            nl = find(t_knot <= t_knot(1),1,'last');
+            nr = M - find(t_knot == t_knot(end),1,'first')+1;
+            if (nl < K || nr < K)
+                error('Your splines are not terminated. You need to have K repeat knot points at the beginning and end.');
+            end
+            
             % This is true assuming the original t_knot was strictly monotonically
             % increasing (no repeat knots) and we added repeat knots at the beginning
             % and end of the sequences.

@@ -35,6 +35,7 @@ classdef TensionSpline < BSpline
         X
         V
         W,XWX,XWx,VV
+        F           % constraint matrix
         sigma       % initial weight (given as normal std dev.)
 
         indicesOfOutliers = []
@@ -122,7 +123,11 @@ classdef TensionSpline < BSpline
                         % if you're going to optimize, it's best to start
                         % near the full tension solution, rather than
                         % (potentially) near zero
-                        x_filtered = TensionSpline.RunningFilter(x,11,'median');
+                        if length(x)>33
+                            x_filtered = TensionSpline.RunningFilter(x,11,'median');
+                        else
+                            x_filtered=x;
+                        end
                         a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),T);
                         lambda = 1/a_rms.^2;
                 end
@@ -158,10 +163,21 @@ classdef TensionSpline < BSpline
             % Precompute some matrices that might be used again later,
             [XWX,XWx,VV] = TensionSpline.PrecomputeTensionSolutionMatrices(X,V,sqrt(distribution.variance),x);
             
+            % On the off-chance that the user requests a lambda that is too
+            % large, we need to be prepared to use a constrained system.
+            tc = ConstrainedSpline.MinimumConstraintPoints(t_knot,K,T);
+            M = size(X,2);
+            NC = length(tc);
+            F = zeros(NC,M);
+            Xc = BSpline.Spline( tc, t_knot, K, K-1 );
+            for i=1:NC
+                F(i,:) = squeeze(Xc(i,:,T+1));
+            end
+            
             if isa(distribution,'NormalDistribution')
-                [m,CmInv] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV);
+                [m,CmInv] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F);
             elseif ~isempty(distribution.w)
-                [m,CmInv,W,XWX,XWx,VV] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,distribution.w,XWX,XWx,VV,t,distribution.rho);
+                [m,CmInv,W,XWX,XWx,VV] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,distribution.w,XWX,XWx,VV,t,distribution.rho,F);
             else
                 error('No weight function given! Unable to proceed.');
             end
@@ -179,6 +195,7 @@ classdef TensionSpline < BSpline
             self.XWX=XWX;
             self.XWx=XWx;
             self.VV=VV;
+            self.F = F;
             self.t = t;
             self.x = x;
             self.knot_dof = knot_dof;
@@ -214,7 +231,7 @@ classdef TensionSpline < BSpline
             t_T = t_T(1:end-1) + diff(t_T)/2;
             x_T = self.ValueAtPoints(t_T,self.K-1);
         end
-        
+                
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Responding to changes in the tension parameter
@@ -246,12 +263,12 @@ classdef TensionSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if isa(self.distribution,'NormalDistribution')
-                [self.m,CmInv] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV);
+                [self.m,CmInv] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV,self.F);
             elseif ~isempty(self.distribution.w)
                 % do *not* feed in the previous values of self.XWX,self.XWx
                 % when the tension parameter changes for an iterated
                 % solution.
-                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.distribution.w,[],[],self.VV,self.t,self.distribution.rho);
+                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.distribution.w,[],[],self.VV,self.t,self.distribution.rho,self.F);
             else
                 error('No weight function given! Unable to proceed.'); 
             end
@@ -803,7 +820,7 @@ classdef TensionSpline < BSpline
             VV = V'*V;
         end
         
-        function [m,CmInv,XWX,XWx,VV] = TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV)
+        function [m,CmInv,XWX,XWx,VV] = TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F)
             % N     # of observations
             % M     # of splines
             % Q     # of points in quadrature grid
@@ -855,10 +872,10 @@ classdef TensionSpline < BSpline
                 VV = V'*V;
             end
             
-            if max(XWX(:))/((lambda*N/Q)*max(VV(:))) < 1e-12
-                warning('Matrix will probably be singular.');
-                lambda = 1e12*max(XWX(:))/((N/Q)*max(VV(:)));
-            end
+%             if max(XWX(:))/((lambda*N/Q)*max(VV(:))) < 1e-12
+%                 warning('Matrix will probably be singular.\n');
+%                 lambda = 1e12*max(XWX(:))/((N/Q)*max(VV(:)));
+%             end
             
             E_x = XWX + (lambda*N/Q)*(VV);
             
@@ -870,12 +887,18 @@ classdef TensionSpline < BSpline
             end
             
             % Now solve
-            m = E_x\B;
+            if rcond(E_x) < 1e-10
+                fprintf('Lambda large. Using constrained solution.\n');
+                [m,CmInv] = ConstrainedSpline.ConstrainedSolution(X,x,F);
+            else
+                m = E_x\B;
+                CmInv = E_x;
+            end
             
-            CmInv = E_x;
+            
         end
         
-        function [m,CmInv,W,XWX,XWx,VV] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho)
+        function [m,CmInv,W,XWX,XWx,VV] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho,F)
             % Same calling sequence as the TensionSolution function, but
             % also includes the weight factor, w
             if exist('t','var') && exist('rho','var') && ~isempty(rho)
@@ -904,7 +927,7 @@ classdef TensionSpline < BSpline
                     W = diag(1./sigma_w2);
                 end
                 
-                [m,CmInv,XWX,XWx,VV] = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,[],[],VV);
+                [m,CmInv,XWX,XWx,VV] = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,[],[],VV,F);
                 
                 rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
                 sigma2_previous=sigma_w2;
