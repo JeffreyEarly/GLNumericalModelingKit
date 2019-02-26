@@ -71,7 +71,13 @@ classdef ConstrainedSpline < BSpline
     methods (Static)
         
         function tc = MinimumConstraintPoints(t_knot,K,T)
-            % assuming repeat knot points at the beginning and end
+            %% MinimumConstraintPoints
+            % Given some set of knot points for a spline of order K, if you
+            % want to universally constrain that spline at degree T, this
+            % function returns a set of constraint locations (in t) that
+            % let you do that, assuming repeat knot points at the beginning
+            % and end.
+            
             t = unique(t_knot);
             D = K-1-T; % 0 if we're constraining at the same order
             if mod(D,2) == 0
@@ -88,6 +94,12 @@ classdef ConstrainedSpline < BSpline
         end
         
         function [m,CmInv] = ConstrainedSolution(X,x,F,sigma,XWX,XWx)
+            %% ConstrainedSolution
+            %
+            % Returns the spline fit solution with constraints, given by
+            % the F matrix. It also supports IRLS with non-constant sigma.
+            %
+            %
             % N     # of observations
             % M     # of splines
             % NC    # of constraints

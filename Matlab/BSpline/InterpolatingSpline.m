@@ -70,70 +70,7 @@ classdef InterpolatingSpline < BSpline
     
     
     methods (Static)
-        
-        function [m,CmInv] = ConstrainedSolution(X,sigma,x,F,XWX,XWx)
-            % N     # of observations
-            % M     # of splines
-            % NC    # of constraints
-            %
-            % inputs:
-            % X         splines on the observation grid, NxM
-            % sigma     errors of observations, either a scalar, Nx1, OR if
-            %           size(sigma)=[N N], then we assume it's the weight
-            %           matrix W
-            % x         observations (Nx1)
-            % XWX       (optional) precomputed matrix X'*Wx*X
-            % XWx       (optional) precomputed matrix X'*Wx*x
-            %
-            % output:
-            % m         coefficients of the splines, Mx1
-            % CmInv     Inverse of the covariance of coefficients, MxM
-            %
-            % X is NxM
-            % W is NxN
-            % x is Nx1
-            % F is NCxM
-            N = length(x);
-            NC = size(F,1);
-            
-            if ~exist('XWX','var') || isempty(XWX)
-                if size(sigma,1) == N && size(sigma,2) == N
-                    XWX = X'*sigma*X;
-                elseif length(sigma) == 1
-                    XWX = X'*X/(sigma*sigma);
-                elseif length(sigma) == N
-                    XWX = X'*diag(1./(sigma.^2))*X; % MxM
-                else
-                    error('sigma must have the same length as x and t.');
-                end
-            end
-            
-            if ~exist('XWx','var') || isempty(XWx)
-                if size(sigma,1) == N && size(sigma,2) == N
-                    XWx = X'*sigma*x;
-                elseif length(sigma) == 1
-                    XWx = X'*x/(sigma*sigma);
-                elseif length(sigma) == N
-                    XWx = X'*diag(1./(sigma.^2))*x; % (MxN * NxN * Nx1) = Mx1
-                else
-                    error('sigma must have the same length as x and t.');
-                end
-            end
-            
-            % set up inverse matrices
-            E_x = XWX; % MxM
-            E_x = cat(1,E_x,F); % (M+NC)xM
-            E_x = cat(2,E_x,cat(1,F',zeros(NC)));
-            
-            F_x = XWx;
-            F_x = cat(1,F_x,zeros(NC,1));
-            
-            m_x = E_x\F_x;
-            m = m_x(1:size(X,2));
-            
-            CmInv = XWX;
-        end
-        
+                
         function t_knot = KnotPointsForPoints( t, K, DF )
             %% KnotPointsForPoints
             %

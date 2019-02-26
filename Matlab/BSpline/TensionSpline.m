@@ -37,13 +37,15 @@ classdef TensionSpline < BSpline
         W,XWX,XWx,VV
         F           % constraint matrix
         sigma       % initial weight (given as normal std dev.)
-
-        indicesOfOutliers = []
-        outlierThreshold
+        
+        % These have no consequence to the fit, but can be useful for
+        % diagnostics.
+        outlierIndices = [] 
+        outlierThreshold % set to a distance with < 1/10000 odds
     end
     
     properties (Dependent)
-        goodIndices
+        nonOutlierIndices
     end
 
     methods
@@ -76,7 +78,7 @@ classdef TensionSpline < BSpline
             knot_dof = 1;
             shouldSetKnotDOFAutomatically = 0;
             lambdaArgument = Lambda.optimalIterated;
-            indicesOfOutliers = [];
+            outlierIndices = [];
             t_knot = [];
             sigma = sqrt(distribution.variance);
             
@@ -201,7 +203,7 @@ classdef TensionSpline < BSpline
             self.knot_dof = knot_dof;
             self.distribution = distribution;
             self.sigma = sigma;
-            self.indicesOfOutliers = indicesOfOutliers;
+            self.outlierIndices = outlierIndices;
             self.outlierThreshold = self.distribution.locationOfCDFPercentile(1-1/10000/2);
             
             if lambdaArgument == Lambda.optimalIterated
@@ -250,12 +252,12 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function set.indicesOfOutliers(self,outliers)
-            self.indicesOfOutliers = outliers;
+        function set.outlierIndices(self,outliers)
+            self.outlierIndices = outliers;
         end
         
-        function goodIndices = get.goodIndices(self)
-            goodIndices = setdiff(1:length(self.x),self.indicesOfOutliers);
+        function nonOutlierIndices = get.nonOutlierIndices(self)
+            nonOutlierIndices = setdiff(1:length(self.x),self.outlierIndices);
         end
         
         function self = tensionParameterDidChange(self)
@@ -276,12 +278,12 @@ classdef TensionSpline < BSpline
             self.Cm = inv(CmInv);
             [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
             
-            self.indicesOfOutliers = find(abs(self.epsilon) > self.outlierThreshold);
+            self.outlierIndices = find(abs(self.epsilon) > self.outlierThreshold);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Smoothing Matrix and Covariance matrix
+        % Smoothing matrix and covariance matrix
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
@@ -326,7 +328,7 @@ classdef TensionSpline < BSpline
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Sample variance
+        % epsilon = observed position minus the fit position
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
@@ -350,6 +352,12 @@ classdef TensionSpline < BSpline
             epsilonIQ = epsilon(floor(n/4):ceil(3*n/4));
         end
         
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Sample variance
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
         function X2 = sampleVariance(self)
             % The sample variance. Same as ||(S-I)*x||^2/N
             % Not normalized by the variance.
@@ -357,6 +365,8 @@ classdef TensionSpline < BSpline
         end
         
         function X2 = sampleVarianceInRange(self,zmin,zmax)
+            % Sample variance by restricting the computation to epsilons
+            % that fall within a certain range.
             epsilon = self.epsilon;
             X2 = mean( epsilon( epsilon >= zmin & epsilon <= zmax ).^2,1);
         end
@@ -367,18 +377,35 @@ classdef TensionSpline < BSpline
             X2 = self.sampleVarianceInRange(zmin,zmax);
         end
         
+        function sampleVariance = sampleVarianceIQ(self,alpha)
+            % This computes the sample variance from the inner percentage
+            % of epsilons, given by alpha. If alpha=1/2 this is the
+            % interquartile sample variance.
+            if nargin < 2
+                alpha = 1/2;
+            end
+            epsilon = sort(self.epsilon);
+            indices = floor(length(epsilon)*alpha/2):ceil(length(epsilon)*(1-alpha/2));
+            sampleVariance = mean(epsilon(indices).^2);
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Measures of error and effective sample size (n_eff)
+        % Variance of the mean
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function SE2 = varianceOfTheMean(self)
             % The variance of the mean is the square of the standard error
-            % Normalized by the variance.
             S = self.smoothingMatrix;
             SE2 = self.distribution.variance*trace(S)/length(S);
         end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Measures of error
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function MSE = expectedMeanSquareError(self)
             % This is the *expected* mean-square error normalized by the
