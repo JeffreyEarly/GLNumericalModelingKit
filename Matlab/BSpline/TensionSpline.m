@@ -28,7 +28,7 @@ classdef TensionSpline < BSpline
         
         T           % degree at which tension is applied
         lambda      % tension parameter
-        mu          % mean value of tension
+        mu          % mean value of the tension variable
         Cm          % error in coefficients, MxMxD
         knot_dof    % knot dofs
         
