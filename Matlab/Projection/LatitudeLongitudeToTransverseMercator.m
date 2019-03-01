@@ -17,7 +17,7 @@ t2 = t.*t;
 % Compute v and e2 -- pieces of this could be precomputed and #define
 f = 1 / WGS84invf;
 e2 = f*(2 - f);
-v = WGS84a / sqrt( 1 - e2*s2);
+v = WGS84a ./ sqrt( 1 - e2*s2);
 e2 = e2 / (1 - e2); % From this point forward e2 will actually be (e^prime)^2
 e2c2 = e2*c2;
 
