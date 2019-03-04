@@ -138,7 +138,7 @@ classdef RobustTensionSpline < TensionSpline
            end
            if self.alpha > 0
                [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistribution,self.noiseDistribution,minimizationPDFRatio);
-               self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(-zoutlier,zoutlier,expectedVariance))
+               self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(-zoutlier,zoutlier,expectedVariance));
            else
                self.minimizeExpectedMeanSquareError();
            end

@@ -28,6 +28,7 @@ classdef TensionSpline < BSpline
         
         T           % degree at which tension is applied
         lambda      % tension parameter
+        isConstrained % indicates whether or not lambda was so big that the solution is just a constrained solution
         mu          % mean value of the tension variable
         Cm          % error in coefficients, MxMxD
         knot_dof    % knot dofs
@@ -177,15 +178,16 @@ classdef TensionSpline < BSpline
             end
             
             if isa(distribution,'NormalDistribution')
-                [m,CmInv] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F);
+                [m,CmInv,~,~,~,isConstrained] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F);
             elseif ~isempty(distribution.w)
-                [m,CmInv,W,XWX,XWx,VV] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,distribution.w,XWX,XWx,VV,t,distribution.rho,F);
+                [m,CmInv,W,XWX,XWx,VV,isConstrained] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,distribution.w,XWX,XWx,VV,t,distribution.rho,F);
             else
                 error('No weight function given! Unable to proceed.');
             end
                         
             self@BSpline(K,t_knot,m);
             self.lambda = lambda;
+            self.isConstrained = isConstrained;
             self.mu = mu;
             self.T = T;
             self.Cm = inv(CmInv);
@@ -265,12 +267,12 @@ classdef TensionSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if isa(self.distribution,'NormalDistribution')
-                [self.m,CmInv] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV,self.F);
+                [self.m,CmInv,~,~,~,self.isConstrained] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV,self.F);
             elseif ~isempty(self.distribution.w)
                 % do *not* feed in the previous values of self.XWX,self.XWx
                 % when the tension parameter changes for an iterated
                 % solution.
-                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.distribution.w,[],[],self.VV,self.t,self.distribution.rho,self.F);
+                [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV,self.isConstrained] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.distribution.w,[],[],self.VV,self.t,self.distribution.rho,self.F);
             else
                 error('No weight function given! Unable to proceed.'); 
             end
@@ -726,10 +728,13 @@ classdef TensionSpline < BSpline
         % We wrap and then unwrap the user-provided penalty function so
         % that it take log10(lambda) rather than lambda. This is much
         % better for the fminsearch algorithm.
-        
+        %
+        % This algorithm also *stops* looking at higher lambdas once the
+        % problem becomes constrained.
         function [lambda,lambdaBelow,lambdaAbove] = minimizeFunctionOfSplineWithGridSearch(aTensionSpline,functionOfSpline,dlog10lambda,n)
             lambdas = aTensionSpline.lambda;
             err = functionOfSpline(aTensionSpline);
+            isConstrained = aTensionSpline.isConstrained;
             nLambdas = 1;
             index = 1;
             
@@ -738,29 +743,33 @@ classdef TensionSpline < BSpline
                 n = 3; % number of steps to make each direction
             end
             
-            while (index <= 2 || index >= nLambdas-1)   
+            while (index <= 2 || (index >= nLambdas-1 && isConstrained(index) ~=1) )   
                 if index <= 2
                     % expand search below
                     lambda0 = lambdas(1);
                     lambdas = cat(1,10.^linspace(log10(lambda0)-n*dlog10lambda,log10(lambda0)-dlog10lambda,n)',lambdas);
                     err = cat(1,zeros(n,1),err);
+                    isConstrained = cat(1,zeros(n,1),isConstrained);
                     for iLambda = 1:n
                         aTensionSpline.lambda = lambdas(iLambda);
                         err(iLambda) =  functionOfSpline(aTensionSpline);
+                        isConstrained(iLambda) = aTensionSpline.isConstrained;
                     end
                     
                     nLambdas = length(lambdas);
                     index = index+n;
                 end
                 
-                if index >= nLambdas-1
+                if (index >= nLambdas-1 && isConstrained(index) ~=1)
                     % expand search above
                     lambda0 = lambdas(end);
                     lambdas = cat(1,lambdas,10.^linspace(log10(lambda0)+dlog10lambda,log10(lambda0)+n*dlog10lambda,n)');
                     err = cat(1,err,zeros(n,1));
+                    isConstrained = cat(1,isConstrained,zeros(n,1));
                     for iLambda = (nLambdas+1):(nLambdas+n)
                         aTensionSpline.lambda = lambdas(iLambda);
                         err(iLambda) =  functionOfSpline(aTensionSpline);
+                        isConstrained(iLambda) = aTensionSpline.isConstrained;
                     end
                     
                     nLambdas = length(lambdas);
@@ -771,7 +780,11 @@ classdef TensionSpline < BSpline
             lambda = lambdas(index);
             aTensionSpline.lambda = lambda; 
             lambdaBelow = lambdas(index-1);
-            lambdaAbove = lambdas(index+1);
+            if length(lambda)>index
+                lambdaAbove = lambdas(index+1);
+            else
+                lambdaAbove = lambdas(index);
+            end
         end
         
         function lambda = minimizeFunctionOfSplineBounded(aTensionSpline,functionOfSpline,x1,x2)
@@ -847,7 +860,7 @@ classdef TensionSpline < BSpline
             VV = V'*V;
         end
         
-        function [m,CmInv,XWX,XWx,VV] = TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F)
+        function [m,CmInv,XWX,XWx,VV,isConstrained] = TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F)
             % N     # of observations
             % M     # of splines
             % Q     # of points in quadrature grid
@@ -914,10 +927,11 @@ classdef TensionSpline < BSpline
             end
             
             % Now solve
-            if rcond(E_x) < 1e-10
-                fprintf('Lambda large. Using constrained solution.\n');
-                [m,CmInv] = ConstrainedSpline.ConstrainedSolution(X,x,F);
+            if rcond(E_x) < 5e-14
+                isConstrained = 1;
+                [m,CmInv] = ConstrainedSpline.ConstrainedSolution(X,x,F,sigma,XWX,XWx);
             else
+                isConstrained = 0;
                 m = E_x\B;
                 CmInv = E_x;
             end
@@ -925,7 +939,7 @@ classdef TensionSpline < BSpline
             
         end
         
-        function [m,CmInv,W,XWX,XWx,VV] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho,F)
+        function [m,CmInv,W,XWX,XWx,VV,isConstrained] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho,F)
             % Same calling sequence as the TensionSolution function, but
             % also includes the weight factor, w
             if exist('t','var') && exist('rho','var') && ~isempty(rho)
@@ -935,9 +949,9 @@ classdef TensionSpline < BSpline
                 end      
                 Sigma2 = (sigma * sigma.') .* rho_t;
                 W = inv(Sigma2);
-                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV);
+                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV,F);
             else
-                m = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV);
+                m = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F);
             end
             
             
@@ -954,7 +968,7 @@ classdef TensionSpline < BSpline
                     W = diag(1./sigma_w2);
                 end
                 
-                [m,CmInv,XWX,XWx,VV] = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,[],[],VV,F);
+                [m,CmInv,XWX,XWx,VV,isConstrained] = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,[],[],VV,F);
                 
                 rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
                 sigma2_previous=sigma_w2;
@@ -1020,7 +1034,7 @@ classdef TensionSpline < BSpline
             
             if TensionSpline.IsEvenlySampled(t) ~= 1
                 %    fprintf('interpolating...\n');
-                dt = round(median(diff(t)));
+                dt = median(diff(t));
                 N = ceil((t(end)-t(1))/dt);
                 t2 = dt*((0:(N-1))') + t(1);
                 x = interp1(t,x,t2);
