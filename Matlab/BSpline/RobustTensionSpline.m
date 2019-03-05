@@ -89,7 +89,7 @@ classdef RobustTensionSpline < TensionSpline
                         if outlierMethod == OutlierMethod.weightingMethod
                             self.minimize( @(spline) spline.expectedMeanSquareErrorWithWeighting(self.noiseDistribution.variance) );
                         else
-                            self.minimizedExpectedMeanSquareErrorInNoiseRange(minimizationPDFRatio);
+                            self.minimizeExpectedMeanSquareErrorInNoiseRange(minimizationPDFRatio);
                         end
                 end
             elseif isscalar(lambdaArgument)
@@ -132,7 +132,7 @@ classdef RobustTensionSpline < TensionSpline
 %             %             fprintf('Minimizing in range: (%.1f, %.1f) with expected variance %.1f m^2\n',zmin_,zmax_,self.distribution.varianceInRange(zmin_,zmax_));
 %         end
         
-        function minimizedExpectedMeanSquareErrorInNoiseRange(self,minimizationPDFRatio)
+        function minimizeExpectedMeanSquareErrorInNoiseRange(self,minimizationPDFRatio)
            if nargin < 2
                minimizationPDFRatio = 1;
            end

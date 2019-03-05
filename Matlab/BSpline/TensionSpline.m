@@ -405,7 +405,7 @@ classdef TensionSpline < BSpline
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Measures of error
+        % Measures of expected error
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
@@ -426,6 +426,59 @@ classdef TensionSpline < BSpline
                 
                 MSE = mean((SI*self.x).^2)/self.distribution.variance + 2*trace(S)/length(S) - 1;
             end
+        end
+        
+        function MSE = expectedMeanSquareErrorFromCV(self)
+            % Cross-validation (CV) estimate for the mean square error from
+            % Green and Silverman, equation 3.5
+            epsilon = self.epsilon;
+            Sii = diag(self.smoothingMatrix);
+            
+            MSE = mean( (epsilon./(1-Sii)).^2 );
+        end
+        
+        function MSE = expectedMeanSquareErrorFromGCV(self)
+            % Generalized cross-validation (GCV) estimate for the mean
+            % square error from Craven and Wahba, 1979 equation 1.9.
+            epsilon = self.epsilon;
+            S = self.smoothingMatrix;
+            
+            a = mean(epsilon.^2);
+            b = trace(S)/length(S);
+            
+            MSE = a/(1-b)^2;
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Measures of expected error?restricted to a subset of points
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function [MSE, n] = expectedMeanSquareErrorForPointsAtIndices(self,indices,expectedVariance)
+            % This is essentially the same as expectedMeanSquareError
+            % above, but restricts the calculation to a subset of points
+            % (and let's you set the expected variance).
+            epsilon = self.epsilon;
+            X2 = mean(epsilon(indices).^2,1);
+            
+            S = self.smoothingMatrix;
+            S = S(indices,indices);
+            
+            n = length(S);
+            MSE = X2/expectedVariance + 2*trace(S)/n - 1;
+        end
+        
+        function MSE = expectedMeanSquareErrorFromCVForPointsAtIndices(self,indices)
+            % Cross-validation (CV) estimate for the mean square error from
+            % Green and Silverman, equation 3.5
+            epsilon = self.epsilon;
+            
+            S = self.smoothingMatrix;
+            S = S(indices,indices);
+            Sii = diag(S);
+            
+            MSE = mean( (epsilon(indices)./(1-Sii)).^2 );
         end
         
         function MSE = expectedMeanSquareErrorInterquartile(self)
@@ -453,16 +506,7 @@ classdef TensionSpline < BSpline
             [MSE, n] = self.expectedMeanSquareErrorForPointsAtIndices(indices,expectedVariance);
         end
         
-        function [MSE, n] = expectedMeanSquareErrorForPointsAtIndices(self,indices,expectedVariance)
-            epsilon = self.epsilon;
-            X2 = mean(epsilon(indices).^2,1);
-            
-            S = self.smoothingMatrix;
-            S = S(indices,indices); 
-                        
-            n = length(S);
-            MSE = X2/expectedVariance + 2*trace(S)/n - 1;
-        end
+
         
         function [MSEoutlier,MSEnoise] = findParameterizedNoiseCrossoverPoint(self)
             zmin = self.distribution.locationOfCDFPercentile(1/10000);
@@ -544,38 +588,9 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function MSE = expectedMeanSquareErrorFromCVForPointsAtIndices(self,indices)
-            % Cross-validation (CV) estimate for the mean square error from
-            % Green and Silverman, equation 3.5
-            epsilon = self.epsilon;
-            
-            S = self.smoothingMatrix;
-            S = S(indices,indices); 
-            Sii = diag(S);
-            
-            MSE = mean( (epsilon(indices)./(1-Sii)).^2 );
-        end
+
         
-        function MSE = expectedMeanSquareErrorFromCV(self)
-            % Cross-validation (CV) estimate for the mean square error from
-            % Green and Silverman, equation 3.5
-            epsilon = self.epsilon;
-            Sii = diag(self.smoothingMatrix);
-            
-            MSE = mean( (epsilon./(1-Sii)).^2 );
-        end
-        
-        function MSE = expectedMeanSquareErrorFromGCV(self)
-            % Generalized cross-validation (GCV) estimate for the mean
-            % square error from Craven and Wahba, 1979 equation 1.9.
-            epsilon = self.epsilon;
-            S = self.smoothingMatrix;
-            
-            a = mean(epsilon.^2);
-            b = trace(S)/length(S);
-            
-            MSE = a/(1-b)^2;
-        end
+
         
         % This MSE is slightly higher than what we actually get, increase
         % as a function of derivative.
