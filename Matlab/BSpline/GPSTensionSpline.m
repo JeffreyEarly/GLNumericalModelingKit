@@ -160,6 +160,12 @@ classdef GPSTensionSpline < handle
             
         end
         
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Projection
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
         function [x,y] = xyAtTime(self,time)
             x=zeros(size(time));
             y=zeros(size(time));
@@ -176,6 +182,71 @@ classdef GPSTensionSpline < handle
             [x_,y_] = self.xyAtTime(time);
             [lat,lon] = TransverseMercatorToLatitudeLongitude(x_+self.x0,y_+self.y0,self.lon0, self.k0);
         end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % 2D methods for achieving full tension
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function setToFullTensionWithIteratedIQAD(self)
+            % Set to full tension by minimizing the Anderson-Darling (AD)
+            % error on the interquartile (IQ) range of epsilons. At each
+            % iteration the outlier distribution is estimated and used to
+            % refine the tension.
+            self.spline_x{1}.minimize(@(spline) self.distribution.andersonDarlingInterquartileError(spline.epsilon));
+            self.spline_y{1}.minimize(@(spline) self.distribution.andersonDarlingInterquartileError(spline.epsilon));
+            lastAlpha = 0.0;
+            totalIterations = 0;
+            [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(cat(1,self.spline_x{1}.epsilon,self.spline_y{1}.epsilon),self.distribution);
+            while (abs(lastAlpha-newAlpha) > 0.01 && totalIterations < 10)
+                if newAlpha > 0 && ~isempty(newOutlierDistribution)
+                    addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.distribution);
+                else
+                    addedDistribution = self.distribution;
+                end
+                self.spline_x{1}.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError(spline.epsilon));
+                self.spline_y{1}.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError(spline.epsilon));
+                lastAlpha = newAlpha;
+                [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(cat(1,self.spline_x{1}.epsilon,self.spline_y{1}.epsilon),self.distribution);
+                totalIterations = totalIterations + 1;
+            end
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % 2D methods for outlier identification
+        %
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function [outlierDistribution,alpha] = setSigmaFromOutlierDistribution(self,rejectionPDFRatio)
+            % The function sets sigma (which is the initial seed in the
+            % IRLS algorithm) based on the empirically determined pdf for
+            % the outliers. A rejectionPDFRatio = 1e5 means that the
+            % outlier pdf to noise pdf ratio is 1e5, and only point further
+            % out than that are given a different sigma.
+            %
+            % This works remarkably well for the real GPS data, but only a
+            % very small effect on the synthetic data. We speculate this is
+            % because the outlier errors are correlated in the GPS data.
+            if nargin < 2
+                rejectionPDFRatio = 1e5;
+            end
+            self.setToFullTensionWithIteratedIQAD();
+            epsilon_full = cat(1,self.spline_x{1}.epsilon,self.spline_y{1}.epsilon);
+            [outlierDistribution,alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.distribution);
+%             if self.alpha > 0
+%                 self.sigma = RobustTensionSpline.sigmaFromOutlierDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution,epsilon_full,rejectionPDFRatio);
+%             end
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Superclass override
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
         
         function varargout = subsref(self, index)
             %% Subscript overload
