@@ -47,6 +47,7 @@ classdef TensionSpline < BSpline
     
     properties (Dependent)
         nonOutlierIndices
+        tensionValue
     end
 
     methods
@@ -281,6 +282,14 @@ classdef TensionSpline < BSpline
             [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
             
             self.outlierIndices = find(abs(self.epsilon) > self.outlierThreshold);
+        end
+        
+        function set.tensionValue(self,x_T)
+            TensionSpline.minimizeFunctionOfSpline(self,@(spline) abs(std(spline.uniqueValuesAtHighestDerivative)-x_T));
+        end
+        
+        function x_T = get.tensionValue(self)
+           x_T = std(self.uniqueValuesAtHighestDerivative);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -144,6 +144,7 @@ classdef RobustTensionSpline < TensionSpline
            end
         end
         
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Methods for achieve full tension
