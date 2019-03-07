@@ -135,7 +135,7 @@ classdef GPSTensionSpline < handle
             M_xy = mean(xtilde.*ytilde);
             [A, ~] = eig([M_xx, M_xy; M_xy, M_yy]);
             v = A(:,2);
-            self.theta = atan(v(2)/v(1)) + pi/2;
+            self.theta = atan(v(2)/v(1)) + pi/4;
             self.q = xtilde*cos(self.theta) + ytilde*sin(self.theta);
             self.r = -xtilde*sin(self.theta) + ytilde*cos(self.theta);
             
@@ -247,7 +247,10 @@ classdef GPSTensionSpline < handle
                 end
                 self.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError( reshape(spline.epsilon,[],1) ));  
                 lastAlpha = newAlpha;
-                [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(spline.epsilon,[],1),self.distribution);
+                [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.distribution);
+                if newAlpha >= 0.5
+                   fprintf('Alpha reached 0.5!\n'); break; 
+                end
                 totalIterations = totalIterations + 1;
             end
         end
