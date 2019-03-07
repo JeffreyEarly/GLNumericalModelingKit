@@ -135,7 +135,7 @@ classdef GPSTensionSpline < handle
             M_xy = mean(xtilde.*ytilde);
             [A, ~] = eig([M_xx, M_xy; M_xy, M_yy]);
             v = A(:,2);
-            self.theta = atan(v(2)/v(1)) + pi/4;
+            self.theta = atan(v(2)/v(1));% + pi/4;
             self.q = xtilde*cos(self.theta) + ytilde*sin(self.theta);
             self.r = -xtilde*sin(self.theta) + ytilde*cos(self.theta);
             
