@@ -17,6 +17,10 @@ classdef BSpline < handle
         C       % piecewise polynomial coefficients. size(C) = [length(t_pp)-1, K]
     end
     
+    properties (Dependent)
+        S
+    end
+    
     methods
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
@@ -28,6 +32,10 @@ classdef BSpline < handle
             
             self.t_knot = t_knot;
             self.m = m;            
+        end
+        
+        function S = get.S(self)
+            S = self.K-1;
         end
         
         function varargout = subsref(self, index)

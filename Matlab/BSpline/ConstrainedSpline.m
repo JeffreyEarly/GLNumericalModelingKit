@@ -14,7 +14,7 @@ classdef ConstrainedSpline < BSpline
     
     
     properties (Access = public)
-
+        distribution
     end
     
     methods
@@ -23,7 +23,7 @@ classdef ConstrainedSpline < BSpline
         % Initialization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function self = ConstrainedSpline(t,x,K,t_knot,constraints)
+        function self = ConstrainedSpline(t,x,K,t_knot,distribution,constraints)
             % Make sure (t,x) are the right shapes, and see how many
             % dimensions of x we are given.
             t = reshape(t,[],1);
@@ -37,6 +37,10 @@ classdef ConstrainedSpline < BSpline
                 error('Some of the data contain NaNs!')
             end
             
+            if isempty(distribution)
+                distribution = NormalDistribution(1);
+            end
+            
             nl = find(t_knot <= t_knot(1),1,'last');
             nr = length(t_knot)- find(t_knot == t_knot(end),1,'first')+1;
             t_knot = [repmat(t_knot(1),K-nl,1); t_knot; repmat(t_knot(end),K-nr,1)];
@@ -46,7 +50,7 @@ classdef ConstrainedSpline < BSpline
             
             % Deal with constraints, if any
             if isempty(constraints)
-                m = X\x;
+                F=[];
             else
                 M = size(X,2); % number of splines
                 NC = length(constraints.t); % number of constraints
@@ -58,11 +62,16 @@ classdef ConstrainedSpline < BSpline
                 for i=1:NC
                     F(i,:) = squeeze(Xc(i,:,constraints.D(i)+1));
                 end
-                m = ConstrainedSpline.ConstrainedSolution(X,x,F);
+
+            end
+            if isa(distribution,'NormalDistribution')
+                m = ConstrainedSpline.ConstrainedSolution(X,x,F,distribution.sigma);
+            else
+                m = ConstrainedSpline.IteratedLeastSquaresConstrainedSolution(X,x,F,sqrt(distribution.variance),[],[],distribution.w);
             end
             
             self@BSpline(K,t_knot,m);
-            
+            self.distribution = distribution;
         end
 
     end
@@ -154,16 +163,63 @@ classdef ConstrainedSpline < BSpline
             
             % set up inverse matrices
             E_x = XWX; % MxM
-            E_x = cat(1,E_x,F); % (M+NC)xM
-            E_x = cat(2,E_x,cat(1,F',zeros(NC)));
-            
             F_x = XWx;
-            F_x = cat(1,F_x,zeros(NC,1));
             
-            m_x = E_x\F_x;
-            m = m_x(1:size(X,2));
+            if NC > 0
+                E_x = cat(1,E_x,F); % (M+NC)xM
+                E_x = cat(2,E_x,cat(1,F',zeros(NC)));
+                F_x = cat(1,F_x,zeros(NC,1));
+                m_x = E_x\F_x;
+                m = m_x(1:size(X,2));
+            else
+                m = E_x\F_x;
+            end
+            
             
             CmInv = XWX;
+        end
+        
+        function [m,CmInv] = IteratedLeastSquaresConstrainedSolution(X,x,F,sigma,XWX,XWx,w,t,rho)
+            % Same calling sequence as the TensionSolution function, but
+            % also includes the weight factor, w
+            if exist('t','var') && exist('rho','var') && ~isempty(rho)
+                rho_t = rho(t - t.');
+                if length(sigma) == 1
+                    sigma = ones(size(x))*sigma;
+                end
+                Sigma2 = (sigma * sigma.') .* rho_t;
+                W = inv(Sigma2);
+                m = ConstrainedSpline.ConstrainedSolution(X,x,F,W,XWX,XWx);
+            else
+                m = ConstrainedSpline.ConstrainedSolution(X,x,F,sigma,XWX,XWx);
+            end
+            
+            
+            sigma2_previous = sigma.*sigma;
+            rel_error = 1.0;
+            repeats = 1;
+            while (rel_error > 0.01)
+                sigma_w2 = w(X*m - x);
+                
+                if exist('rho_t','var')
+                    Sigma2 = (sqrt(sigma_w2) * sqrt(sigma_w2).') .* rho_t;
+                    W = inv(Sigma2);
+                else
+                    W = diag(1./sigma_w2);
+                end
+                
+                [m,CmInv] = ConstrainedSpline.ConstrainedSolution(X,x,F,W,XWX,XWx);
+                
+                rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
+                sigma2_previous=sigma_w2;
+                repeats = repeats+1;
+                
+                if (repeats == 150)
+                    disp('Failed to converge after 150 iterations.');
+                    break;
+                end
+            end
+            
         end
   
     end

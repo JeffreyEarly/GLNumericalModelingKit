@@ -18,8 +18,8 @@ classdef NormalDistribution < Distribution
             self.logPDF = @(z) -(z.*z)/(2*sigma*sigma);
         end
         
-        function y = rand(self,n)
-           y = self.sigma*randn(n,1); 
+        function y = rand(self,sz)
+           y = self.sigma*randn(sz); 
         end
         
     end

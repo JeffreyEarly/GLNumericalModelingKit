@@ -55,7 +55,7 @@ end
 % underlying data is necessary C^3 everywhere. In that case, you want
 % discontinuities--probably at the midway knots.
 
-f = ConstrainedSpline(t,x,K,t_knot,constraints);
+f = ConstrainedSpline(t,x,K,t_knot,NormalDistribution(1),constraints);
 
 fig1 = figure;
 

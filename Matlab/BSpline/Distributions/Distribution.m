@@ -85,7 +85,8 @@ classdef (Abstract) Distribution
             totalError = (sqrt(n) + 0.12 + 0.11/sqrt(n))*DIQ;
         end
         
-        function y = rand(self,n)
+        function y = rand(self,sz)
+            n = prod(sz);
             pct = 1/1e5;
             zmin = self.locationOfCDFPercentile(pct/2);
             zmax = self.locationOfCDFPercentile(1-pct/2);
@@ -96,6 +97,7 @@ classdef (Abstract) Distribution
             bin(bin==0 | bin == length(binWidths+1)) = [];
             y = binEdges(bin) + rand(length(bin),1).*binWidths(bin);
             y = y(1:n);
+            y = reshape(y,sz);
         end
     end
 end

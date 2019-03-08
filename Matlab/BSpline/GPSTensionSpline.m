@@ -29,6 +29,9 @@ classdef GPSTensionSpline < handle
         x
         y
         
+        x_rms
+        y_rms
+        
         % translated and rotated data
         xbar
         ybar
@@ -44,6 +47,8 @@ classdef GPSTensionSpline < handle
         tensionLambdaTable = [] % size(n,3) [x_T lambda_x lambda_y];
         
         % splines
+        spline_constrained_x
+        spline_constrained_y
         spline_x
         spline_y
         
@@ -126,29 +131,27 @@ classdef GPSTensionSpline < handle
             self.x = self.x - self.x0;
             self.y = self.y - self.y0;
             
-            self.xbar = mean(self.x);
-            self.ybar = mean(self.y);
-            xtilde = (self.x - self.xbar);
-            ytilde = (self.y - self.ybar);
-            M_xx = mean(xtilde.*xtilde);
-            M_yy = mean(ytilde.*ytilde);
-            M_xy = mean(xtilde.*ytilde);
-            [A, ~] = eig([M_xx, M_xy; M_xy, M_yy]);
-            v = A(:,2);
-            self.theta = atan(v(2)/v(1));% + pi/4;
-            self.q = xtilde*cos(self.theta) + ytilde*sin(self.theta);
-            self.r = -xtilde*sin(self.theta) + ytilde*cos(self.theta);
             
             self.distribution = StudentTDistribution(self.sigma,self.nu);
-            % empirically determined autocorrelation function
+            % empirically determined autocorrelation function--do we want
+            % this set for the constrained fit?!?!?!?!?
             self.distribution.rho = @(dt) exp(max(-abs(dt)/100., - abs(dt)/760 -1.3415)) ;
             
+            t_knot_constrained = cat(1,min(t)*ones(K+1,1),max(t)*ones(K+1,1));
+            self.spline_constrained_x = ConstrainedSpline(self.t,self.x,self.K+1,t_knot_constrained,self.distribution,[]);
+            self.spline_constrained_y = ConstrainedSpline(self.t,self.y,self.K+1,t_knot_constrained,self.distribution,[]);
+            
+            
+            self.x_rms = self.x - self.spline_constrained_x(self.t);
+            self.y_rms = self.y - self.spline_constrained_y(self.t);
+            
+            
             if self.shouldUseRobustFit == 1
-                self.spline_x = RobustTensionSpline(self.t,self.q,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-                self.spline_y = RobustTensionSpline(self.t,self.r,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+                self.spline_x = RobustTensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+                self.spline_y = RobustTensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
             else
-                self.spline_x = TensionSpline(self.t,self.q,self.distribution,'K',self.K,'T',self.T);
-                self.spline_y = TensionSpline(self.t,self.r,self.distribution,'K',self.K,'T',self.T);
+                self.spline_x = TensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T);
+                self.spline_y = TensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T);
             end
             
         end
@@ -174,11 +177,8 @@ classdef GPSTensionSpline < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function [x,y] = xyAtTime(self,time)
-            q_ = self.spline_x(time);
-            r_ = self.spline_y(time);
-            
-            x = q_*cos(self.theta) - r_*sin(self.theta) + self.xbar;
-            y = q_*sin(self.theta) + r_*cos(self.theta) + self.ybar;
+            x = self.spline_x(time) + self.spline_constrained_x(time);
+            y = self.spline_y(time) + self.spline_constrained_y(time);
         end
         
         function [lat,lon] = latitudeLongitudeAtTime(self,time)
