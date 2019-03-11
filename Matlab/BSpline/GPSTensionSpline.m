@@ -137,22 +137,22 @@ classdef GPSTensionSpline < handle
             % this set for the constrained fit?!?!?!?!?
             self.distribution.rho = @(dt) exp(max(-abs(dt)/100., - abs(dt)/760 -1.3415)) ;
             
-            t_knot_constrained = cat(1,min(t)*ones(K+1,1),max(t)*ones(K+1,1));
-            self.spline_constrained_x = ConstrainedSpline(self.t,self.x,self.K+1,t_knot_constrained,self.distribution,[]);
-            self.spline_constrained_y = ConstrainedSpline(self.t,self.y,self.K+1,t_knot_constrained,self.distribution,[]);
-            
-            
-            self.x_rms = self.x - self.spline_constrained_x(self.t);
-            self.y_rms = self.y - self.spline_constrained_y(self.t);
-            
-            
-            if self.shouldUseRobustFit == 1
-                self.spline_x = RobustTensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-                self.spline_y = RobustTensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-            else
-                self.spline_x = TensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T);
-                self.spline_y = TensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T);
-            end
+%             t_knot_constrained = cat(1,min(t)*ones(self.K+1,1),max(t)*ones(self.K+1,1));
+%             self.spline_constrained_x = ConstrainedSpline(self.t,self.x,self.K+1,t_knot_constrained,self.distribution,[]);
+%             self.spline_constrained_y = ConstrainedSpline(self.t,self.y,self.K+1,t_knot_constrained,self.distribution,[]);
+%             
+%             
+%             self.x_rms = self.x - self.spline_constrained_x(self.t);
+%             self.y_rms = self.y - self.spline_constrained_y(self.t);
+%             
+%             
+%             if self.shouldUseRobustFit == 1
+%                 self.spline_x = RobustTensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+%                 self.spline_y = RobustTensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+%             else
+%                 self.spline_x = TensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T);
+%                 self.spline_y = TensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T);
+%             end
             
         end
         

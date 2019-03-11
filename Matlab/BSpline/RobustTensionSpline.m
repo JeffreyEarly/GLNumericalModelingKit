@@ -417,8 +417,11 @@ classdef RobustTensionSpline < TensionSpline
             % Returns an array that serves as the initial seed in the IRLS
             % algorithm. This *usually* doesn't matter, but does have an
             % effect in some case (when the outliers are correlated?).
-            f = @(z) abs( (alpha/(1-alpha))*outlierDistribution.pdf(-abs(z))/noiseDistribution.pdf(-abs(z)) - outlierOdds);
+            f = @(z) abs( (alpha/(1-alpha))*outlierDistribution.pdf(abs(z))/noiseDistribution.pdf(abs(z)) - outlierOdds);
             z_outlier = fminsearch(f,sqrt(noiseDistribution.variance));
+            if isempty(z_outlier)
+               error('Unable to locate the outlier/noise pdf ratio requested.'); 
+            end
             noiseIndices = abs(epsilon_full) <= z_outlier;           
             sigma = noiseIndices .* sqrt(noiseDistribution.variance) + (~noiseIndices) .* sqrt(outlierDistribution.variance);
         end

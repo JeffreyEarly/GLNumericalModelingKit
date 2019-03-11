@@ -3,9 +3,10 @@ classdef (Abstract) Distribution
     %   Detailed explanation goes here
     
     properties
-        pdf     % probability density function
-        cdf     % cumulative distribution function
-        rho     % autocorrelation function
+        pdf                  % probability density function
+        cdf                  % cumulative distribution function
+        rho                  % autocorrelation function
+        zrange = [-Inf Inf]  % range of support
         
         variance    % total variance
 
@@ -21,7 +22,9 @@ classdef (Abstract) Distribution
         end
         
         function var = varianceInRange(self,zmin,zmax)
-           var = integral( @(z) z.*z.*self.pdf(z),zmin,zmax);
+            zmin = Distribution.truncate(zmin,self.zrange);
+            zmax = Distribution.truncate(zmax,self.zrange);
+            var = integral( @(z) z.*z.*self.pdf(z),zmin,zmax);
         end
         
         function var = varianceInPercentileRange(self,pctmin,pctmax)
@@ -98,6 +101,17 @@ classdef (Abstract) Distribution
             y = binEdges(bin) + rand(length(bin),1).*binWidths(bin);
             y = y(1:n);
             y = reshape(y,sz);
+        end
+    end
+    
+    methods (Static)
+        function z = truncate(z,zrange)
+            if z < zrange(1)
+                z=zrange(1);
+            end
+            if z > zrange(2)
+                z = zrange(2);
+            end
         end
     end
 end

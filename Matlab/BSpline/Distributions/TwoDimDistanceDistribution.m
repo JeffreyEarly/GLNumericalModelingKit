@@ -12,12 +12,10 @@ classdef TwoDimDistanceDistribution < Distribution
             
             [r_, pdf_, cdf_] = TwoDimDistanceDistribution.TwoDimDistributionFromOneDimDistribution(distribution1d);
             
-            self.pdf = @(z) interp1(r_,pdf_,z,'linear');
-            self.cdf = @(z) interp1(r_,cdf_,z,'linear');
-%             self.w = @(z) sigma*sigma*ones(size(z));
-%             self.variance = (4-pi)*sigma*sigma/2;
-            
-%             self.dPDFoverZ = @(z) -exp(-(z.*z)/(2*sigma*sigma))/(sigma*sqrt(2*pi))/(sigma*sigma);
+            self.pdf = @(z) interp1(r_,pdf_,z,'linear',0);
+            self.cdf = @(z) interp1(r_,cdf_,z,'linear',0);
+            self.zrange = [0 Inf];
+            self.variance = self.varianceInRange(0,Inf);
         end
     end
     
@@ -35,14 +33,15 @@ classdef TwoDimDistanceDistribution < Distribution
             
             % scale our axis to be 20 times the standard deviation of the
             % 1 dimensional pdf.
-            maxR = distribution1d.locationOfCDFPercentile(0.9999);
+            resolution = 1e-10;
+            maxR = distribution1d.locationOfCDFPercentile(1-resolution);
             
             % This appears to be big enough, although we can go bigger if
             % needed.
-            N = 250;
+            N = 1e3;
             
             % create a logarithmic axis that includes zero
-            r = [0;10.^(linspace(log10(maxR/1e5),log10(maxR),N))'];
+            r = [0;10.^(linspace(log10(maxR*resolution),log10(maxR),N))'];
             x = [-flip(r(2:end),1); r];
             
             % evaluate the cdf on that axis
