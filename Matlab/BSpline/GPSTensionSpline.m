@@ -146,13 +146,13 @@ classdef GPSTensionSpline < handle
 %             self.y_rms = self.y - self.spline_constrained_y(self.t);
 %             
 %             
-%             if self.shouldUseRobustFit == 1
-%                 self.spline_x = RobustTensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-%                 self.spline_y = RobustTensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-%             else
-%                 self.spline_x = TensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T);
-%                 self.spline_y = TensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T);
-%             end
+            if self.shouldUseRobustFit == 1
+                self.spline_x = RobustTensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+                self.spline_y = RobustTensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+            else
+                self.spline_x = TensionSpline(self.t,self.x,self.distribution,'K',self.K,'T',self.T);
+                self.spline_y = TensionSpline(self.t,self.y,self.distribution,'K',self.K,'T',self.T);
+            end
             
         end
         
@@ -177,8 +177,8 @@ classdef GPSTensionSpline < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function [x,y] = xyAtTime(self,time)
-            x = self.spline_x(time) + self.spline_constrained_x(time);
-            y = self.spline_y(time) + self.spline_constrained_y(time);
+            x = self.spline_x(time); % + self.spline_constrained_x(time);
+            y = self.spline_y(time); % + self.spline_constrained_y(time);
         end
         
         function [lat,lon] = latitudeLongitudeAtTime(self,time)

@@ -301,6 +301,8 @@ classdef BivariateTensionSpline < handle
             end
             if self.alpha > 0
                 [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,minimizationPDFRatio);
+                expectedVariance2D = AddedDistribution(self.alpha,self.noiseDistribution,self.outlierDistribution).varianceInRange(-zoutlier,zoutlier);
+                fprintf('Expected variance (1d/2d): %.1f / %.1f \n',expectedVariance,expectedVariance2D);
                 self.minimize( @(spline) spline.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance));
             else
                 self.minimizeExpectedMeanSquareError();
