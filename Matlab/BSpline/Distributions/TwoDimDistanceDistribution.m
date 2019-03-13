@@ -62,8 +62,33 @@ classdef TwoDimDistanceDistribution < Distribution
             
 resolution = 1e-10;
 maxR = distribution1d.locationOfCDFPercentile(1-resolution);
-N = 250;
-            r = [0;TwoDimDistanceDistribution.fInverseBisection(distribution1d.cdf,linspace(0.5,1-resolution,N)',0,maxR,1e-12)];
+N = 500;
+            L = integral( @(z) z.*distribution1d.pdf(z),0,Inf );
+            zmax = fminsearch( @(z) -z.*distribution1d.pdf(z),sqrt(distribution1d.variance) );
+            f = @(z) TwoDimDistanceDistribution.vecIntegral( @(x) x.*distribution1d.pdf(x)/L,0,z );
+            cdf_zmax = f(zmax);
+            
+            % past the pdf peak, we space sample points evenly in cdf
+            % changes
+            cdfsample2 = linspace(cdf_zmax,1-resolution,N/2+1)';
+            r2 = TwoDimDistanceDistribution.fInverseBisection(f,cdfsample2,0,maxR,1e-12);
+            
+            % before the pdf peak, we need to space sample points
+            % logarithmically. We want the spacing between the last sample
+            % point to equal the spacing of the first sample points of r2.
+            dr = r2(2)-r2(1);
+            %%%%%%%% LEFT OFF HERE
+            % Need to compute the increments to grow with log, which will
+            % set the smallest increment
+            
+%             r2 = TwoDimDistanceDistribution.fInverseBisection(f,linspace(0.25,1-resolution,N/2+1)',0,maxR,1e-12);
+%             r1 = 10.^(linspace(log10(maxR*resolution),log10(r2(1)),N/2))';
+%             r = [0;r1;r2(2:end)];
+            cdfsample1 = 10.^(linspace(log10(resolution),log10(cdf_zmax),N/2)'); 
+            
+            r = [0;TwoDimDistanceDistribution.fInverseBisection(f,[cdfsample1;cdfsample2(2:end)],0,maxR,1e-12)];
+            
+            %r = [0;TwoDimDistanceDistribution.fInverseBisection(distribution1d.cdf,linspace(0.5,1-resolution,N)',0,maxR,1e-12)];
             % create a logarithmic axis that includes zero
 %             r = [0;10.^(linspace(log10(maxR*resolution),log10(maxR),N))'];
 %             r = [0;10.^(linspace(log10(sqrt(maxR*resolution)),log10(sqrt(maxR)),N))'].^2;
@@ -113,6 +138,13 @@ N = 250;
 %             cdf(end+1) = 1;
         end
        
+        function y = vecIntegral(f,alim,blim)
+           y = zeros(size(blim));
+           for i=1:length(y)
+              y(i) = integral(f,alim,blim(i)); 
+           end
+        end
+        
         function y = fInverseBisection(f, x, yMin,yMax, tol)
             %FINVERSEBISECTION(F, X)   Compute F^{-1}(X) using Bisection.
             % Taken from cumsum as part of chebfun.
