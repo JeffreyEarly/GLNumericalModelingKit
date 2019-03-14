@@ -67,16 +67,36 @@ N = 500;
             zmax = fminsearch( @(z) -z.*distribution1d.pdf(z),sqrt(distribution1d.variance) );
             f = @(z) TwoDimDistanceDistribution.vecIntegral( @(x) x.*distribution1d.pdf(x)/L,0,z );
             cdf_zmax = f(zmax);
+            zverymax = TwoDimDistanceDistribution.fInverseBisection(f,1-resolution,0,maxR,1e-12);
             
-            % past the pdf peak, we space sample points evenly in cdf
-            % changes
-            cdfsample2 = linspace(cdf_zmax,1-resolution,N/2+1)';
-            r2 = TwoDimDistanceDistribution.fInverseBisection(f,cdfsample2,0,maxR,1e-12);
+            r1 = 10.^(linspace(log10(zmax*1e-3),log10(zmax),N/2))';
+            dr = r1(end)-r1(end-1);
+            r2 = [(r1(end):dr:zverymax)';zverymax];
+            r = [0;r1;r2(2:end)];
+            N = length(r)-1;
             
-            % before the pdf peak, we need to space sample points
-            % logarithmically. We want the spacing between the last sample
-            % point to equal the spacing of the first sample points of r2.
-            dr = r2(2)-r2(1);
+            % LEFT OFF HERE
+            % The more the pdf is changing in R, the more points we need?
+            
+%             % to the pdf peak, we sample point logarithmically
+%             r1 = 10.^(linspace(log10(zmax*1e-3),log10(zmax),floor(3*N/4)))';
+%             dcdf = f(r1(end))-f(r1(end-1));
+%             
+%             % past the pdf peak, we space sample points evenly in cdf
+%             % changes... BUT, we want dr to match at the transition. So
+%             % what 
+%             cdfsample2 = [(cdf_zmax:dcdf:(1-resolution))';(1-resolution)];
+%             
+%             r2 = TwoDimDistanceDistribution.fInverseBisection(f,cdfsample2,0,maxR,1e-12);
+%            
+%             r = [0;r1;r2(2:end)];
+%             N = length(r)-1;
+%             
+%             cdfvalues = 10.^(linspace(log10(resolution),log10(1-resolution),N)');
+%             cdfvalues = 10.^(linspace(log10(resolution),log10(1-resolution),N)');
+%             r = [0;TwoDimDistanceDistribution.fInverseBisection(f,cdfvalues,0,maxR,1e-12)];
+%             N = length(r)-1;
+            
             %%%%%%%% LEFT OFF HERE
             % Need to compute the increments to grow with log, which will
             % set the smallest increment
@@ -84,9 +104,9 @@ N = 500;
 %             r2 = TwoDimDistanceDistribution.fInverseBisection(f,linspace(0.25,1-resolution,N/2+1)',0,maxR,1e-12);
 %             r1 = 10.^(linspace(log10(maxR*resolution),log10(r2(1)),N/2))';
 %             r = [0;r1;r2(2:end)];
-            cdfsample1 = 10.^(linspace(log10(resolution),log10(cdf_zmax),N/2)'); 
-            
-            r = [0;TwoDimDistanceDistribution.fInverseBisection(f,[cdfsample1;cdfsample2(2:end)],0,maxR,1e-12)];
+%             cdfsample1 = 10.^(linspace(log10(resolution),log10(cdf_zmax),N/2)'); 
+%             
+%             r = [0;TwoDimDistanceDistribution.fInverseBisection(f,[cdfsample1;cdfsample2(2:end)],0,maxR,1e-12)];
             
             %r = [0;TwoDimDistanceDistribution.fInverseBisection(distribution1d.cdf,linspace(0.5,1-resolution,N)',0,maxR,1e-12)];
             % create a logarithmic axis that includes zero
