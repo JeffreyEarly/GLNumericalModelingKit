@@ -147,8 +147,8 @@ classdef GPSTensionSpline < handle
 %             
 %             
             if self.shouldUseRobustFit == 1
-                self.spline_x = RobustTensionSpline(self.t,self.x_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-                self.spline_y = RobustTensionSpline(self.t,self.y_rms,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+                self.spline_x = RobustTensionSpline(self.t,self.x,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+                self.spline_y = RobustTensionSpline(self.t,self.y,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
             else
                 self.spline_x = TensionSpline(self.t,self.x,self.distribution,'K',self.K,'T',self.T);
                 self.spline_y = TensionSpline(self.t,self.y,self.distribution,'K',self.K,'T',self.T);

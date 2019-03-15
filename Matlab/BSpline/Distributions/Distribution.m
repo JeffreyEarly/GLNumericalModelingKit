@@ -88,7 +88,17 @@ classdef (Abstract) Distribution
             totalError = (sqrt(n) + 0.12 + 0.11/sqrt(n))*DIQ;
         end
         
-        function y = rand(self,sz)
+        function y = rand(self,varargin)
+            if nargin == 1
+                error('You must specify the size')
+            elseif nargin == 2
+                sz = [varargin{1}, varargin{1}];
+            else
+                sz = zeros(1,nargin-1);
+                for i=1:(nargin-1)
+                    sz(i)=varargin{i};
+                end
+            end
             n = prod(sz);
             pct = 1/1e5;
             zmin = self.locationOfCDFPercentile(pct/2);

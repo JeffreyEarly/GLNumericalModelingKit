@@ -453,6 +453,19 @@ classdef RobustTensionSpline < TensionSpline
             expectedVariance = AddedDistribution(alpha,outlierDistribution,noiseDistribution).varianceInRange(-z,z);
         end
         
+        function [z,expectedVariance] = locationOfNoiseLikelihood(alpha,outlierDistribution,noiseDistribution,likelihood)
+           % Finds the point above which the fewer than likelihood
+           % percentage of points will be part of the noise distribution.
+           %
+           % For example, likelihood = 0.01 means only 1 percent of points
+           % greater than z are expected to be part of the noise
+           % distribution--99% are expected to be outliers.
+           added = AddedDistribution(alpha,outlierDistribution,noiseDistribution);
+           f = @(z) abs( ((1-alpha)*(1-noiseDistribution.cdf(z)))./(1-added.cdf(z)) - likelihood );
+           z = abs(fminsearch(f,sqrt(noiseDistribution.variance)));
+           expectedVariance = added.varianceInRange(-z,z);
+        end
+        
         function [outlierDistribution, alpha] = estimateOutlierDistributionFromKnownNoise(epsilon,noiseDistribution)
             % Given epsilon at full tension, and some characterized noise
             % distribution, estimate the outlier distribution.

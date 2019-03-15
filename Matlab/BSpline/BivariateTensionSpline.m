@@ -295,14 +295,13 @@ classdef BivariateTensionSpline < handle
             lambda = TensionSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,lambdaBelow,lambdaAbove);
         end
         
-        function minimizeExpectedMeanSquareErrorInNoiseRange(self,minimizationPDFRatio)
+        function minimizeExpectedMeanSquareErrorInNoiseRange(self,noiseLikelihoodCutoff)
             if nargin < 2
-                minimizationPDFRatio = 1;
+                noiseLikelihoodCutoff = .01; % e.g., we expected to mischaracterize 1% of valid points.
             end
             if self.alpha > 0
-                [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,minimizationPDFRatio);
-                expectedVariance2D = AddedDistribution(self.alpha,self.noiseDistribution,self.outlierDistribution).varianceInRange(-zoutlier,zoutlier);
-                fprintf('Expected variance (1d/2d): %.1f / %.1f \n',expectedVariance,expectedVariance2D);
+                [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseLikelihood(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,noiseLikelihoodCutoff);
+                expectedVariance2D = AddedDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution).varianceInRange(-zoutlier,zoutlier);
                 self.minimize( @(spline) spline.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance));
             else
                 self.minimizeExpectedMeanSquareError();
