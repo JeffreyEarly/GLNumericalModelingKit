@@ -67,6 +67,8 @@ classdef RobustTensionSpline < TensionSpline
             self.w_epsilon = ones(size(self.t));
             
             switch outlierMethod
+                case OutlierMethod.doNothing
+                    self.setToFullTensionWithIteratedIQAD();
                 case OutlierMethod.sigmaMethod
                     self.setSigmaFromOutlierDistribution(rejectionPDFRatio);
                 case OutlierMethod.distributionMethod
@@ -84,7 +86,7 @@ classdef RobustTensionSpline < TensionSpline
                     case {Lambda.optimalExpected,Lambda.fullTensionExpected}
                         fprintf('Ignoring your request for expected tension values. Tension set to fullTensionIterated.');
                     case Lambda.fullTensionIterated
-                        
+                        % Doing nothing causes this to happen
                     case {Lambda.optimalIterated}
                         if outlierMethod == OutlierMethod.weightingMethod
                             self.minimize( @(spline) spline.expectedMeanSquareErrorWithWeighting(self.noiseDistribution.variance) );
@@ -276,6 +278,12 @@ classdef RobustTensionSpline < TensionSpline
         % identifies outliers as the pdf ratio for ALL these functions.
         
         % Minimization should be separated out in this same way.
+        
+        function setSigmaFromFullTensionSolution(self)
+            self.setToFullTensionWithIteratedIQAD();
+            self.sigma = self.noiseDistribution.w(self.epsilon);
+        end
+        
         
         function setSigmaFromOutlierDistribution(self,rejectionPDFRatio)
             % The function sets sigma (which is the initial seed in the
