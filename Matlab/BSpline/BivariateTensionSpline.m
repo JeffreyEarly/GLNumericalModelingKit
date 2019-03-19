@@ -256,6 +256,26 @@ classdef BivariateTensionSpline < handle
         
         % Minimization should be separated out in this same way.
         
+        function estimateOutlierDistribution(self)
+            self.setToFullTensionWithIteratedIQAD();
+            
+            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.noiseDistribution);
+            self.noiseDistanceDistribution = TwoDimDistanceDistribution(self.noiseDistribution);
+            self.outlierDistanceDistribution = TwoDimDistanceDistribution(self.outlierDistribution);
+        end
+        
+        function setSigmaFromFullTensionSolution(self)
+            self.setToFullTensionWithIteratedIQAD();
+            
+            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.noiseDistribution);
+            self.noiseDistanceDistribution = TwoDimDistanceDistribution(self.noiseDistribution);
+            self.outlierDistanceDistribution = TwoDimDistanceDistribution(self.outlierDistribution);
+            
+            self.sigma = self.noiseDistribution.w(self.epsilon_d/sqrt(2));
+            self.spline_x.sigma = self.sigma;
+            self.spline_y.sigma = self.sigma;
+        end
+        
         function setSigmaFromOutlierDistribution(self,rejectionPDFRatio)
             % The function sets sigma (which is the initial seed in the
             % IRLS algorithm) based on the empirically determined pdf for
@@ -295,7 +315,7 @@ classdef BivariateTensionSpline < handle
             lambda = TensionSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,lambdaBelow,lambdaAbove);
         end
         
-        function minimizeExpectedMeanSquareErrorInNoiseRange(self,noiseLikelihoodCutoff)
+        function mse = minimizeExpectedMeanSquareErrorInNoiseRange(self,noiseLikelihoodCutoff)
             if nargin < 2
                 noiseLikelihoodCutoff = .01; % e.g., we expected to mischaracterize 1% of valid points.
             end
@@ -303,8 +323,10 @@ classdef BivariateTensionSpline < handle
                 [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseLikelihood(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,noiseLikelihoodCutoff);
                 expectedVariance2D = AddedDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution).varianceInRange(-zoutlier,zoutlier);
                 self.minimize( @(spline) spline.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance));
+                mse = self.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance);
             else
                 self.minimizeExpectedMeanSquareError();
+                mse = self.expectedMeanSquareError();
             end
         end
         
