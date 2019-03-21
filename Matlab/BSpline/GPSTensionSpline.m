@@ -1,4 +1,4 @@
-classdef GPSTensionSpline < handle
+classdef GPSTensionSpline < BivariateTensionSpline
     % GPSTensionSpline Fit noisy GPS data with a tensioned interpolating
     % spline
     %   3 argument initialization
@@ -13,12 +13,8 @@ classdef GPSTensionSpline < handle
     
     
     properties
-        K           % order of spline (degree = order + 1)
-        T           % degree at which tension is applied
-        
         % bivariate gps data
         t_raw % format that was given
-        t % converted to second from start date
         lat
         lon
         
@@ -26,44 +22,12 @@ classdef GPSTensionSpline < handle
         lon0 % reference longitude of transverse mercator projection being used
         x0  % false easting
         y0  % false northing
-        x
-        y
         
-        x_rms
-        y_rms
-        
-        % translated and rotated data
-        xbar
-        ybar
-        theta
-        q
-        r
-        
-        shouldUseRobustFit = 0;
-        
-        distribution
-        
-        % lookup table for tension
-        tensionLambdaTable = [] % size(n,3) [x_T lambda_x lambda_y];
-        
-        % splines
-        spline_constrained_x
-        spline_constrained_y
-        spline_x
-        spline_y
-        
-        % t-distribution parameters
-        % variance_of_the_noise = sigma*sigma*nu/(nu-2)
-        sigma = 8.5
-        nu = 4.5
+        gpsNoiseDistribution = StudentTDistribution(8.5,4.5)
         
         k0 = 0.9996
     end
-    
-    properties (Dependent)
-        tensionValue
-    end
-    
+        
     methods
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
@@ -72,26 +36,25 @@ classdef GPSTensionSpline < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function self = GPSTensionSpline(t,lat,lon,varargin)
             N = length(t);
-            self.t_raw = reshape(t,[],1);
-            self.lat = reshape(lat,[],1);
-            self.lon = reshape(lon,[],1);
+            t_raw = reshape(t,[],1);
+            lat = reshape(lat,[],1);
+            lon = reshape(lon,[],1);
             
-            if isdatetime(self.t_raw)
-                self.t = (datenum(self.t_raw) - datenum(self.t_raw(1)))*24*60*60;
+            if isdatetime(t_raw)
+                t = (datenum(t_raw) - datenum(t_raw(1)))*24*60*60;
             else
-                self.t = self.t_raw;
+                t = t_raw;
             end
             
             if length(lat) ~= N || length(lon) ~= N
                 error('lat, lon, and t must have the same length.');
             end
             
-            self.K = 4; % default spline order (cubic spline)
-            self.T = self.K-1; % default tension *degree* (order-1)
-            self.lon0 = min(lon)+(max(lon)-min(lon))/2;
-            self.x0 = NaN;
-            self.y0 = NaN;
-            
+            lon0 = min(lon)+(max(lon)-min(lon))/2;
+            x0 = 0;
+            y0 = 0;
+            gpsNoiseDistribution = StudentTDistribution(8.5,4.5);
+            gpsNoiseDistribution.rho = @(dt) exp(max(-abs(dt)/100., - abs(dt)/760 -1.3415)) ;
             
             nargs = length(varargin);
             if mod(nargs,2) ~= 0
@@ -99,198 +62,46 @@ classdef GPSTensionSpline < handle
             end
                         
             for k = 1:2:length(varargin)
-                if strcmp(varargin{k}, 'K')
-                    self.K = varargin{k+1};
-                elseif strcmp(varargin{k}, 'S')
-                    self.K = varargin{k+1}+1;
-                elseif strcmp(varargin{k}, 'T')
-                    self.T = varargin{k+1};
-                elseif strcmp(varargin{k}, 'sigma')
-                    self.sigma = varargin{k+1};
-                elseif strcmp(varargin{k}, 'nu')
-                    self.nu = varargin{k+1};
+                if strcmp(varargin{k}, 'gpsNoiseDistribution')
+                    gpsNoiseDistribution = varargin{k+1};
                 elseif strcmp(varargin{k}, 'lon0')
-                    self.lon0 = varargin{k+1};
+                    lon0 = varargin{k+1};
                 elseif strcmp(varargin{k}, 'x0')
-                    self.x0 = varargin{k+1};
+                    x0 = varargin{k+1};
                 elseif strcmp(varargin{k}, 'y0')
-                    self.y0 = varargin{k+1};
-                elseif strcmp(varargin{k}, 'shouldUseRobustFit')
-                    self.shouldUseRobustFit = varargin{k+1};
+                    y0 = varargin{k+1};
                 end
             end
             
-            [self.x,self.y] = LatitudeLongitudeToTransverseMercator( self.lat, self.lon, self.lon0, self.k0 );
-            if isnan(self.x0)
-                self.x0 = min(self.x);
-            end
-            if isnan(self.y0)
-                self.y0 = min(self.y);
-            end
+            k0 = 0.9996;
+            [x,y] = LatitudeLongitudeToTransverseMercator( lat, lon, lon0, k0 );
             
-            self.x = self.x - self.x0;
-            self.y = self.y - self.y0;
+            x = x - x0;
+            y = y - y0;
             
+            self@BivariateTensionSpline(t,x,y,gpsNoiseDistribution,varargin{:});
+            self.gpsNoiseDistribution = gpsNoiseDistribution;
+            self.t_raw = t_raw;
+            self.lat = lat;
+            self.lon = lon;
+            self.lon0 = lon0;
+            self.x0 = x0;
+            self.y0 = y0;
             
-            self.distribution = StudentTDistribution(self.sigma,self.nu);
-            % empirically determined autocorrelation function--do we want
-            % this set for the constrained fit?!?!?!?!?
-            self.distribution.rho = @(dt) exp(max(-abs(dt)/100., - abs(dt)/760 -1.3415)) ;
-            
-%             t_knot_constrained = cat(1,min(t)*ones(self.K+1,1),max(t)*ones(self.K+1,1));
-%             self.spline_constrained_x = ConstrainedSpline(self.t,self.x,self.K+1,t_knot_constrained,self.distribution,[]);
-%             self.spline_constrained_y = ConstrainedSpline(self.t,self.y,self.K+1,t_knot_constrained,self.distribution,[]);
-%             
-%             
-%             self.x_rms = self.x - self.spline_constrained_x(self.t);
-%             self.y_rms = self.y - self.spline_constrained_y(self.t);
-%             
-%             
-            if self.shouldUseRobustFit == 1
-                self.spline_x = RobustTensionSpline(self.t,self.x,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-                self.spline_y = RobustTensionSpline(self.t,self.y,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-            else
-                self.spline_x = TensionSpline(self.t,self.x,self.distribution,'K',self.K,'T',self.T);
-                self.spline_y = TensionSpline(self.t,self.y,self.distribution,'K',self.K,'T',self.T);
-            end
+           
             
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % epsilon = observed position minus the fit position
+        % Evaluation
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function epsilon = epsilon(self)
-            epsilon = cat(2,self.spline_x.epsilon,self.spline_y.epsilon);
-        end
-        
-        function a = isConstrained(self)
-           a = self.spline_x.isConstrained && self.spline_y.isConstrained;
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %
-        % Projection
-        %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        function [x,y] = xyAtTime(self,time)
-            x = self.spline_x(time); % + self.spline_constrained_x(time);
-            y = self.spline_y(time); % + self.spline_constrained_y(time);
-        end
-        
-        function [lat,lon] = latitudeLongitudeAtTime(self,time)
-            [x_,y_] = self.xyAtTime(time);
-            [lat,lon] = TransverseMercatorToLatitudeLongitude(x_+self.x0,y_+self.y0,self.lon0, self.k0);
-        end
-        
-        function [lambda_x,lambda_y] = lambdasForTension(self,x_T)
-            lambda_x = NaN; lambda_y = NaN;
-            if isempty(self.tensionLambdaTable)
-                return;
-            else
-               index = find( self.tensionLambdaTable(:,1) > x_T/1.1 & self.tensionLambdaTable(:,1) < x_T*1.1,1,'first' );
-               if isempty(index)
-                   return;
-               else
-                   lambda_x = self.tensionLambdaTable(index,2);
-                   lambda_y = self.tensionLambdaTable(index,3);
-               end
-            end
-        end
-        
-        function insertLambdasForTension(self,x_T,lambda_x,lambda_y)
-            self.tensionLambdaTable = cat(1,self.tensionLambdaTable,[x_T, lambda_x, lambda_y]);
-            [~,i] = sort(self.tensionLambdaTable(:,1));
-            self.tensionLambdaTable = self.tensionLambdaTable(i,:);
-        end
-        
-        function set.tensionValue(self,x_T)
-            [lambda_x,lambda_y] = self.lambdasForTension(x_T);
-            if any(isnan([lambda_x,lambda_y]))
-                self.spline_x.tensionValue = x_T;
-                self.spline_y.tensionValue = x_T;
-                self.insertLambdasForTension(x_T, self.spline_x.lambda, self.spline_y.lambda);
-            else
-                self.spline_x.lambda = lambda_x;
-                self.spline_y.lambda = lambda_y;
-            end
-        end
-        
-        function x_T = get.tensionValue(self)
-            x_T = std(self.spline_x.uniqueValuesAtHighestDerivative());
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %
-        % 2D methods for achieving full tension
-        %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        function setToFullTensionWithIteratedIQAD(self)
-            % Set to full tension by minimizing the Anderson-Darling (AD)
-            % error on the interquartile (IQ) range of epsilons. At each
-            % iteration the outlier distribution is estimated and used to
-            % refine the tension.
-            self.minimize(@(spline) self.distribution.andersonDarlingInterquartileError( reshape(spline.epsilon,[],1) ));          
-            
-            lastAlpha = 0.0;
-            totalIterations = 0;
-            [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.distribution);
-            while (abs(lastAlpha-newAlpha) > 0.01 && totalIterations < 10)
-                if newAlpha > 0 && ~isempty(newOutlierDistribution)
-                    addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.distribution);
-                else
-                    addedDistribution = self.distribution;
-                end
-                self.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError( reshape(spline.epsilon,[],1) ));  
-                lastAlpha = newAlpha;
-                [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.distribution);
-                if newAlpha >= 0.5
-                   fprintf('Alpha reached 0.5!\n'); break; 
-                end
-                totalIterations = totalIterations + 1;
-            end
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %
-        % 2D methods for outlier identification
-        %
-        %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        function [outlierDistribution,alpha] = setSigmaFromOutlierDistribution(self,rejectionPDFRatio)
-            % The function sets sigma (which is the initial seed in the
-            % IRLS algorithm) based on the empirically determined pdf for
-            % the outliers. A rejectionPDFRatio = 1e5 means that the
-            % outlier pdf to noise pdf ratio is 1e5, and only point further
-            % out than that are given a different sigma.
-            %
-            % This works remarkably well for the real GPS data, but only a
-            % very small effect on the synthetic data. We speculate this is
-            % because the outlier errors are correlated in the GPS data.
-            if nargin < 2
-                rejectionPDFRatio = 1e5;
-            end
-            self.setToFullTensionWithIteratedIQAD();
-            epsilon_full = cat(1,self.spline_x.epsilon,self.spline_y.epsilon);
-            [outlierDistribution,alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.distribution);
-%             if self.alpha > 0
-%                 self.sigma = RobustTensionSpline.sigmaFromOutlierDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution,epsilon_full,rejectionPDFRatio);
-%             end
-        end
-        
-        function tensionValue = minimize(self,penaltyFunction)
-            % the penalty function *must* take a tension spline object and
-            % return a scalar. The function will be minimized by varying
-            % lambda.
-            [~,tensionValueBelow,tensionValueAbove] = GPSTensionSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
-            tensionValue = mean([tensionValueAbove,tensionValueBelow]);
-            self.tensionValue = tensionValue;
-%             tensionValue = GPSTensionSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,tensionValueBelow,tensionValueAbove);
+        function [lat,lon] = latLonAtTime(self,time)
+            x = self.spline_x(time) + self.spline_mean_x(time) + self.x0;
+            y = self.spline_y(time) + self.spline_mean_y(time) + self.y0;
+            [lat,lon] = TransverseMercatorToLatitudeLongitude(x,y,self.lon0,self.k0);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -319,8 +130,14 @@ classdef GPSTensionSpline < handle
                         NumDerivatives = 0;
                     end
                     
-                    varargout{1} = self.spline_x(time,NumDerivatives);
-                    varargout{2} = self.spline_y(time,NumDerivatives);
+                    if NumDerivatives == 0
+                        [lat_,lon_] = self.latLonAtTime(time);
+                        varargout{1} = lat_;
+                        varargout{2} = lon_;
+                    else
+                        varargout{1} = self.spline_x(time,NumDerivatives) + self.spline_mean_x(time,NumDerivatives);
+                        varargout{2} = self.spline_y(time,NumDerivatives) + self.spline_mean_y(time,NumDerivatives);
+                    end
                     
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GET %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 case '.'
@@ -336,90 +153,6 @@ classdef GPSTensionSpline < handle
         end
     end
     
-    methods (Static)
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %
-        % Minimization
-        %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        % We wrap and then unwrap the user-provided penalty function so
-        % that it take log10(lambda) rather than lambda. This is much
-        % better for the fminsearch algorithm.
-        %
-        % This algorithm also *stops* looking at higher lambdas once the
-        % problem becomes constrained.
-        function [lambda,lambdaBelow,lambdaAbove] = minimizeFunctionOfSplineWithGridSearch(aBivariateSpline,functionOfBivariateSpline,dlog10tensionValue,n)
-            tensionValues = aBivariateSpline.tensionValue;
-            err = functionOfBivariateSpline(aBivariateSpline);
-            isConstrained = aBivariateSpline.isConstrained;
-            nLambdas = 1;
-            index = 1;
-            
-            if nargin < 4
-                dlog10tensionValue = 0.5; % step size in factors of 10
-                n = 3; % number of steps to make each direction
-            end
-            
-            while ( (index <= 2 && isConstrained(index) ~=1) || index >= nLambdas-1 )   
-                if index <= 2 && isConstrained(index) ~=1
-                    % expand search below
-                    tensionValue0 = tensionValues(1);
-                    tensionValues = cat(1,10.^linspace(log10(tensionValue0)-n*dlog10tensionValue,log10(tensionValue0)-dlog10tensionValue,n)',tensionValues);
-                    err = cat(1,zeros(n,1),err);
-                    isConstrained = cat(1,zeros(n,1),isConstrained);
-                    for iLambda = 1:n
-                        aBivariateSpline.tensionValue = tensionValues(iLambda);
-                        err(iLambda) =  functionOfBivariateSpline(aBivariateSpline);
-                        isConstrained(iLambda) = aBivariateSpline.isConstrained;
-                    end
-                    
-                    nLambdas = length(tensionValues);
-                    index = index+n;
-                end
-                
-                if index >= nLambdas-1
-                    % expand search above
-                    tensionValue0 = tensionValues(end);
-                    tensionValues = cat(1,tensionValues,10.^linspace(log10(tensionValue0)+dlog10tensionValue,log10(tensionValue0)+n*dlog10tensionValue,n)');
-                    err = cat(1,err,zeros(n,1));
-                    isConstrained = cat(1,isConstrained,zeros(n,1));
-                    for iLambda = (nLambdas+1):(nLambdas+n)
-                        aBivariateSpline.tensionValue = tensionValues(iLambda);
-                        err(iLambda) =  functionOfBivariateSpline(aBivariateSpline);
-                        isConstrained(iLambda) = aBivariateSpline.isConstrained;
-                    end
-                    
-                    nLambdas = length(tensionValues);
-                end
-                
-                [~,index] = min(err);
-            end
-            lambda = tensionValues(index);
-            aBivariateSpline.tensionValue = lambda; 
-            lambdaBelow = tensionValues(index-1);
-            if length(lambda)>index
-                lambdaAbove = tensionValues(index+1);
-            else
-                lambdaAbove = tensionValues(index);
-            end
-        end
-        
-        function tensionValue = minimizeFunctionOfSplineBounded(aBivariateSpline,functionOfBivariateSpline,x1,x2)
-            epsilon = 1e-15;
-            errorFunction = @(log10tensionValuePlusEpsilon) GPSTensionSpline.functionOfSplineWrapper(aBivariateSpline,log10tensionValuePlusEpsilon,functionOfBivariateSpline);
-            optimalLog10tensionValuePlusEpsilon = fminbnd( errorFunction, log10(x1+epsilon), log10(x2+epsilon), optimset('TolX', 0.01, 'TolFun', 0.001) );
-            tensionValue = 10^optimalLog10tensionValuePlusEpsilon - epsilon;
-            aBivariateSpline.tensionValue = tensionValue;
-        end
-        
-        function error = functionOfSplineWrapper(aBivariateSpline, log10tensionValuePlusEpsilon, functionOfSpline)
-            epsilon = 1e-15;
-            aBivariateSpline.tensionValue = 10^log10tensionValuePlusEpsilon-epsilon;
-            error = functionOfSpline(aBivariateSpline);
-        end
-        
-    end
+    
     
 end

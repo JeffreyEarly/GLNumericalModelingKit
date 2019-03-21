@@ -113,12 +113,16 @@ classdef TensionSpline < BSpline
             if isempty(T)
                 T = K-1;
             end
-            
+                        
             n_eff = [];
             if isenum(lambdaArgument)
                 switch lambdaArgument
                     case {Lambda.optimalExpected}
-                        x_filtered = TensionSpline.RunningFilter(x,11,'median');
+                        if length(x)>33
+                            x_filtered = TensionSpline.RunningFilter(x,11,'median');
+                        else
+                            x_filtered=x;
+                        end
                         u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),1);
                         n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
                         a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),T);

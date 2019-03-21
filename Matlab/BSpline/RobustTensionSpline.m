@@ -1,5 +1,6 @@
 classdef RobustTensionSpline < TensionSpline
-    %RobustTensionSpline Allows for outliers
+    %RobustTensionSpline Allows for outliers to occur.
+    % 
     
     properties
         % These are not used directly in minimization, only the
@@ -14,12 +15,7 @@ classdef RobustTensionSpline < TensionSpline
         zmin
         zmax
     end
-    
-    properties (Dependent)
-       t_all
-       x_all
-    end
-    
+
     methods
         function self = RobustTensionSpline(t,x,distribution,varargin)
             % Construct a new 'robust' distribution by adding a Student's
@@ -66,10 +62,19 @@ classdef RobustTensionSpline < TensionSpline
             self.outlierThreshold = self.noiseDistribution.locationOfCDFPercentile(1-1/10000/2);
             self.w_epsilon = ones(size(self.t));
             
+            [self.outlierDistribution, self.alpha] = self.setToFullTensionWithIteratedIQAD();
+            
+            if outlierMethod == OutlierMethod.doNothing
+                
+            else
+                self.setToFullTensionWithIteratedIQAD();
+                
+            end
+            
             switch outlierMethod
                 case OutlierMethod.doNothing
                     self.setToFullTensionWithIteratedIQAD();
-                case OutlierMethod.sigmaMethod
+                case OutlierMethod.sigmaRejectionMethod
                     self.setSigmaFromOutlierDistribution(rejectionPDFRatio);
                 case OutlierMethod.distributionMethod
                     self.setDistributionFromOutlierDistribution();
@@ -156,7 +161,7 @@ classdef RobustTensionSpline < TensionSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function setToFullTensionWithIteratedIQAD(self)
+        function [newOutlierDistribution, newAlpha] = setToFullTensionWithIteratedIQAD(self)
             % Set to full tension by minimizing the Anderson-Darling (AD)
             % error on the interquartile (IQ) range of epsilons. At each
             % iteration the outlier distribution is estimated and used to
