@@ -59,6 +59,19 @@ That's it! The `spline` object can be evaluated at any point in the domain, just
 
 The `GPSTensionSpline` class offers some GPS specific additions to the `TensionSpline` class including t-distributed errors and outlier detection.
 
+Overview
+------------
+
+The `Spline` classes are as follows,
+
+- The `BSpline` class is a primitive class that creates b-splines given some set of knot points, and then evaluates the splines given some set of coefficients for the splines. This class is just for generating b-splines and doesn't do anything with data.
+- An `InterpolatingSpline` uses local b-splines to interpolate between data points. The (K-1)th derivative of a K order spline is piecewise continuous. This is a generalization of Matlab's cubic spline interpolation function.
+- The `ConstrainedSpline` class does a least-squares fit to given data points with a chosen set of b-splines. Constraints can be added at any point in the domain and the class can also accommodate non-gaussian errors.
+- A `TensionSpline` can be used to smooth noisy data and attempt to recover the "true" underlying function.
+- A `RobustTensionSpline` adds additional functionality to  `TensionSpline` in order to accommodate the presence of outliers in the data.
+
+
+
 Basis spline
 ------------
 

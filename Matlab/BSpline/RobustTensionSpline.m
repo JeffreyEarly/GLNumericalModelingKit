@@ -10,6 +10,9 @@ classdef RobustTensionSpline < TensionSpline
         outlierDistribution
         alpha
         
+        lambdaAtFullTension % what was the value of lambda at full tension
+        sigmaAtFullTension % what was the set of 'sigmas' produced from the full tension solution
+        
         w_epsilon   % weighting of the errors
         
         zmin
@@ -24,7 +27,7 @@ classdef RobustTensionSpline < TensionSpline
             % Override any user settings for lambda
             didOverrideLambda = 0;
             alpha = 1/10000;
-            outlierMethod = OutlierMethod.sigmaMethod;
+            outlierMethod = OutlierMethod.sigmaFullTensionMethod;
             rejectionPDFRatio = 1e5;
             minimizationPDFRatio = 1;
             lambdaArgument = Lambda.optimalIterated;
@@ -52,7 +55,9 @@ classdef RobustTensionSpline < TensionSpline
             nu = 3.0;
             sigma = sqrt(noiseDistribution.variance*1000*(nu-2)/nu);
             outlierDistribution = StudentTDistribution(sigma,nu);
-            distribution = AddedDistribution(alpha,outlierDistribution,noiseDistribution);
+            if alpha > 0
+                distribution = AddedDistribution(alpha,outlierDistribution,noiseDistribution);
+            end
             
             self@TensionSpline(t,x,distribution,varargin{:});
             
@@ -62,18 +67,39 @@ classdef RobustTensionSpline < TensionSpline
             self.outlierThreshold = self.noiseDistribution.locationOfCDFPercentile(1-1/10000/2);
             self.w_epsilon = ones(size(self.t));
             
-            [self.outlierDistribution, self.alpha] = self.setToFullTensionWithIteratedIQAD();
             
-            if outlierMethod == OutlierMethod.doNothing
-                
-            else
-                self.setToFullTensionWithIteratedIQAD();
-                
+            % Default algorithm is as follows:
+            % 1. estimate the outlier distribution by going to full tension
+            % 2. find the ranged expected mean square error (using the pdf
+            %    cross over point)
+            % 3. apply some user selected outlier method
+            % 4. re-compute the ranged expected mean square error.
+            % 5. choose the global minimum (from step 2 and 4)
+            
+            
+            % Step 1---estimate the outlier distribution (unless
+            % we're told to do nothing)
+            if outlierMethod ~= OutlierMethod.doNothing
+                [self.outlierDistribution, self.alpha] = self.setToFullTensionWithIteratedIQAD();
+                self.lambdaAtFullTension = self.lambda;
+                self.sigmaAtFullTension = self.distribution.w(self.epsilon);
             end
             
+            % Step 2---minimize under current conditions
+        
+            if isenum(lambdaArgument)
+                if lambdaArgument == Lambda.optimalIterated || lambdaArgument == Lambda.optimalExpected
+                    if outlierMethod ~= OutlierMethod.weightingMethod
+                        mse1 = self.minimizeExpectedMeanSquareErrorInNoiseRange(minimizationPDFRatio);
+                        mse1_lambda = self.lambda;
+                    end
+                end
+            end
+            
+            % Step 3---apply outlier method
             switch outlierMethod
-                case OutlierMethod.doNothing
-                    self.setToFullTensionWithIteratedIQAD();
+                case OutlierMethod.sigmaFullTensionMethod
+                    self.sigma = self.sigmaAtFullTension;
                 case OutlierMethod.sigmaRejectionMethod
                     self.setSigmaFromOutlierDistribution(rejectionPDFRatio);
                 case OutlierMethod.distributionMethod
@@ -85,18 +111,23 @@ classdef RobustTensionSpline < TensionSpline
                 case OutlierMethod.weightingMethod
                     self.generateEpsilonWeightingFromOutlierDistribution();
             end
-                            
+            
+            % Step 4---re-compute minimum expected mean square error
             if isenum(lambdaArgument)
                 switch lambdaArgument
-                    case {Lambda.optimalExpected,Lambda.fullTensionExpected}
-                        fprintf('Ignoring your request for expected tension values. Tension set to fullTensionIterated.');
-                    case Lambda.fullTensionIterated
-                        % Doing nothing causes this to happen
-                    case {Lambda.optimalIterated}
+                    case {Lambda.fullTensionIterated,Lambda.fullTensionExpected}
+                        self.lambda = self.lambdaAtFullTension;
+                    case {Lambda.optimalIterated,Lambda.optimalExpected}
                         if outlierMethod == OutlierMethod.weightingMethod
                             self.minimize( @(spline) spline.expectedMeanSquareErrorWithWeighting(self.noiseDistribution.variance) );
                         else
-                            self.minimizeExpectedMeanSquareErrorInNoiseRange(minimizationPDFRatio);
+                            mse2 = self.minimizeExpectedMeanSquareErrorInNoiseRange(minimizationPDFRatio);
+                            
+                            % Step 5---set to global minimum
+                            if mse1 < mse2
+                                self.sigma = sqrt(self.distribution.variance);
+                                self.lambda = mse1_lambda;
+                            end
                         end
                 end
             elseif isscalar(lambdaArgument)
@@ -139,15 +170,17 @@ classdef RobustTensionSpline < TensionSpline
 %             %             fprintf('Minimizing in range: (%.1f, %.1f) with expected variance %.1f m^2\n',zmin_,zmax_,self.distribution.varianceInRange(zmin_,zmax_));
 %         end
         
-        function minimizeExpectedMeanSquareErrorInNoiseRange(self,minimizationPDFRatio)
+        function mse = minimizeExpectedMeanSquareErrorInNoiseRange(self,minimizationPDFRatio)
            if nargin < 2
                minimizationPDFRatio = 1;
            end
            if self.alpha > 0
                [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistribution,self.noiseDistribution,minimizationPDFRatio);
                self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(-zoutlier,zoutlier,expectedVariance));
+               mse = self.expectedMeanSquareErrorInRange(-zoutlier,zoutlier,expectedVariance);
            else
                self.minimizeExpectedMeanSquareError();
+               mse = self.expectedMeanSquareError();
            end
         end
         

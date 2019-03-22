@@ -39,6 +39,9 @@ classdef BivariateTensionSpline < handle
         outlierDistanceDistribution
         sigma
         
+        lambdaAtFullTension % what was the value of lambda at full tension
+        sigmaAtFullTension % what was the set of 'sigmas' produced from the full tension solution
+        
         % lookup table for tension
         tensionLambdaTable = [] % size(n,3) [x_T lambda_x lambda_y];
         
@@ -109,14 +112,45 @@ classdef BivariateTensionSpline < handle
             self.x_prime = self.x - self.x_bar;
             self.y_prime = self.y - self.y_bar;
              
+            % initialize splines so that they have the same lambda
             if self.shouldUseRobustFit == 1
-                self.spline_x = RobustTensionSpline(self.t,self.x_prime,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-                self.spline_y = RobustTensionSpline(self.t,self.y_prime,self.distribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
+                % We don't let the RobustTensionSpline do any extra work
+                self.spline_x = RobustTensionSpline(self.t,self.x_prime,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated, 'outlierMethod', OutlierMethod.doNothing);
+                self.spline_y = RobustTensionSpline(self.t,self.y_prime,self.distribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda, 'outlierMethod', OutlierMethod.doNothing);
+                self.lambda = self.spline_x.lambda;
+                
+                % Step 1---estimate the outlier distribution
+                self.estimateOutlierDistribution();
+                self.lambdaAtFullTension = self.lambda;
+                self.sigmaAtFullTension = self.spline_x.distribution.w(self.epsilon_d/sqrt(2));
+                
+                % Step 2---minimize under current conditions
+                mse1 = self.minimizeExpectedMeanSquareErrorInNoiseRange();
+                mse1_lambda = self.lambda;
+                
+                % Step 3---apply outlier method
+                self.spline_x.sigma = self.sigma;
+                self.spline_y.sigma = self.sigma;
+                
+                % Step 4---re-compute minimum expected mean square error
+                mse2 = self.minimizeExpectedMeanSquareErrorInNoiseRange();
+                
+                % Step 5---set to global minimum
+                if mse1 < mse2
+                    self.spline_x.sigma = sqrt(self.spline_x.distribution.variance);
+                    self.spline_y.sigma = sqrt(self.spline_x.distribution.variance);
+                    self.lambda = mse1_lambda;
+                end
             else
                 self.spline_x = TensionSpline(self.t,self.x_prime,self.distribution,'K',self.K,'T',self.T);
                 self.spline_y = TensionSpline(self.t,self.y_prime,self.distribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
+                self.lambda = self.spline_x.lambda;
+                
+                self.minimizeExpectedMeanSquareErrorInNoiseRange();
             end
-            self.lambda = self.spline_x.lambda;
+            
+            
+            
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -322,18 +356,13 @@ classdef BivariateTensionSpline < handle
             lambda = TensionSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,lambdaBelow,lambdaAbove);
         end
         
-        function mse = minimizeExpectedMeanSquareErrorInNoiseRange(self,noiseLikelihoodCutoff)
-            if nargin < 2
-                noiseLikelihoodCutoff = .01; % e.g., we expected to mischaracterize 1% of valid points.
-            end
+        function mse = minimizeExpectedMeanSquareErrorInNoiseRange(self)
             if self.alpha > 0
-                [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseLikelihood(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,noiseLikelihoodCutoff);
                 [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,1);
-                expectedVariance2D = AddedDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution).varianceInRange(-zoutlier,zoutlier);
                 self.minimize( @(spline) spline.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance));
                 mse = self.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance);
             else
-                self.minimizeExpectedMeanSquareError();
+                self.minimize( @(spline) spline.expectedMeanSquareError );
                 mse = self.expectedMeanSquareError();
             end
         end
