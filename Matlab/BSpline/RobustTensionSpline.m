@@ -7,16 +7,8 @@ classdef RobustTensionSpline < TensionSpline
         % 'distribution' property in the TensionSpline superclass is used
         % directly.
         noiseDistribution
-        outlierDistribution
-        alpha
-        
-        lambdaAtFullTension % what was the value of lambda at full tension
-        sigmaAtFullTension % what was the set of 'sigmas' produced from the full tension solution
         
         w_epsilon   % weighting of the errors
-        
-        zmin
-        zmax
     end
 
     methods
@@ -77,13 +69,10 @@ classdef RobustTensionSpline < TensionSpline
             % 5. choose the global minimum (from step 2 and 4)
             
             
-            % Step 1---estimate the outlier distribution (unless
-            % we're told to do nothing)
-            if outlierMethod ~= OutlierMethod.doNothing
-                [self.outlierDistribution, self.alpha] = self.setToFullTensionWithIteratedIQAD();
-                self.lambdaAtFullTension = self.lambda;
-                self.sigmaAtFullTension = self.distribution.w(self.epsilon);
-            end
+            % Step 1---estimate the outlier distribution *always*
+            [self.outlierDistribution, self.alpha] = self.setToFullTensionWithIteratedIQAD();
+            self.lambdaAtFullTension = self.lambda;
+            self.sigmaAtFullTension = self.distribution.w(self.epsilon);
             
             % Step 2---minimize under current conditions
         
@@ -184,6 +173,170 @@ classdef RobustTensionSpline < TensionSpline
            end
         end
         
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Experimental methods
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+              
+        function [MSEoutlier,MSEnoise] = findParameterizedNoiseCrossoverPoint(self)
+            zmin = self.distribution.locationOfCDFPercentile(1/10000);
+            zmax = self.distribution.locationOfCDFPercentile(1/10);
+            z = linspace(abs(zmax),abs(zmin),10)';
+            
+            MSEoutlier = zeros(length(z),1);
+            MSEnoise = zeros(length(z),1);
+            
+            epsilon = self.epsilon;
+            
+            for iZ = 1:length(z)
+               zValue = z(iZ);
+               noise_indices = find(epsilon >= -zValue & epsilon <= zValue);
+               outlier_indices = setdiff(1:length(self.t),noise_indices);
+               MSEoutlier(iZ) = self.expectedMeanSquareErrorFromCVForPointsAtIndices(outlier_indices);
+               MSEnoise(iZ) = self.expectedMeanSquareErrorForPointsAtIndices(noise_indices,self.distribution.variance)*self.distribution.variance;
+            end
+        end
+        
+        function zCrossover = findSampleVarianceCrossover(self)            
+            zCrossover = fminsearch(@(z) self.diffExpectedActualSampleVariance(z),sqrt(self.distribution.variance));
+        end
+        
+        function dSampleVariance = diffExpectedActualSampleVariance(self,z)
+            epsilon = self.epsilon;
+            noise_indices = find(epsilon >= -abs(z) & epsilon <= abs(z));
+            n_eff = self.effectiveSampleSizeFromVarianceOfTheMeanForIndices(noise_indices);
+            dSampleVariance = abs( (1-1/n_eff)*self.distribution.variance - mean(epsilon(noise_indices).^2) );
+        end
+        
+        function MSE = expectedMeanSquareErrorRobust(self)
+            zCrossover = fminsearch(@(z) self.diffExpectedActualSampleVariance(z),sqrt(self.distribution.variance));
+%             fprintf('%f\t',zCrossover);
+            MSE = self.expectedMeanSquareErrorInRange(-abs(zCrossover),abs(zCrossover));
+        end
+        
+        function [z,n_eff,expectedSampleVariance,actualSampleVariance] = findSampleVarianceCrossoverWithGridSearch(self)
+            zmin = self.distribution.locationOfCDFPercentile(1/10000);
+            zmax = self.distribution.locationOfCDFPercentile(1/10);
+            z = linspace(abs(zmax),abs(zmin),10)';
+            
+            n_eff = zeros(length(z),1);
+            expectedSampleVariance = zeros(length(z),1);
+            actualSampleVariance = zeros(length(z),1);
+            
+            epsilon = self.epsilon;
+            
+            for iZ = 1:length(z)
+                zValue = z(iZ);
+                noise_indices = find(epsilon >= -zValue & epsilon <= zValue);
+                
+                n_eff(iZ) = self.effectiveSampleSizeFromVarianceOfTheMeanForIndices(noise_indices);
+                expectedSampleVariance(iZ) = (1-1/n_eff(iZ))*self.distribution.variance;
+                actualSampleVariance(iZ) = mean(epsilon(noise_indices).^2);
+            end
+        end
+        
+        function MSE = expectedMeanSquareErrorRobustOld(self,zmin,zmax)
+            epsilon = self.epsilon;
+            noise_indices = find(epsilon >= zmin & epsilon <= zmax);
+            expectedVariance = self.distribution.varianceInRange(zmin,zmax);
+            MSE = self.expectedMeanSquareErrorForPointsAtIndices(noise_indices,expectedVariance);
+            
+            expectedNumberOfOutliers = length(self.t)*(self.distribution.cdf(zmin) + (1-self.distribution.cdf(zmax)));
+            
+            outlier_indices = find(epsilon < zmin | epsilon > zmax);
+            n_outliers = length(outlier_indices);
+            if n_outliers > 3*expectedNumberOfOutliers
+                MSE_outlier = self.expectedMeanSquareErrorFromCVForPointsAtIndices(outlier_indices);
+                
+                n_eff = self.effectiveSampleSizeFromVarianceOfTheMeanForIndices(outlier_indices);
+                outlier_variance = mean(epsilon(outlier_indices).^2)/(1-1/n_eff);
+                MSE_outlier = MSE_outlier/outlier_variance;
+                
+%                 alpha = n_outliers/length(self.t);
+%                 MSE = (1-alpha)*MSE + alpha*MSE_outlier/outlier_variance;
+                MSE = (length(noise_indices)*MSE + n_outliers*MSE_outlier)/length(self.t);
+            end
+        end
+        
+        
+        % This MSE is slightly higher than what we actually get, increase
+        % as a function of derivative.
+        function [MSE,noise] = ExpectedMeanSquareErrorAtAllOrders(self)
+           MSE = zeros(self.K,1);
+           noise = zeros(self.K,1);
+           
+           S = self.smoothingMatrix;
+           SI = (S-eye(size(S)));
+           sigma2 = self.distribution.variance;
+           MSE(1) = mean((SI*self.x).^2) + sigma2*(2*trace(S)/length(S) - 1);
+           noise(1) = self.distribution.variance;
+           
+           for iDiff=1:(self.K-1)
+               Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
+               DS = Diff*S;
+               DminusDS = Diff - DS;
+               MSE(iDiff+1) = (sum((DminusDS*self.x).^2) - sigma2*sum(sum(DminusDS.^2)) + sigma2*sum(sum(DS.^2)))/length(Diff);
+%                MSE(iDiff+1) = ( sum((DminusDS*self.x).^2) + 2*sigma2*sum(sum(Diff.*DS)) - sigma2*sum(sum(Diff.^2)) )/length(Diff);
+               noise(iDiff+1) = sigma2*sum(sum(Diff.^2))/length(Diff);
+               % This is the equivalent of sigma2 for the derivative of the noise
+           end
+        end
+        
+        function SNR = SignalToNoiseRatio(self)
+            sigma2 = self.distribution.variance;
+            x_smoothed = self.ValueAtPoints(self.t);
+            
+            SNR = zeros(self.K,1);
+            SNR(1) = mean(x_smoothed.^2)/sigma2;
+            for iDiff=1:(self.K-1)
+               Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
+               SNR(1+iDiff) = sum((Diff*x_smoothed).^2)/(sigma2*sum(sum(Diff.^2)) );
+            end
+        end
+        
+        function SSER = SignalToStandardErrorRatio(self)
+            sigma2 = self.distribution.variance;
+            x_smoothed = self.ValueAtPoints(self.t);
+            S = self.smoothingMatrix;
+            
+            SSER = zeros(self.K,1);
+            SSER(1) = mean(x_smoothed.^2)/sigma2;
+            for iDiff=1:(self.K-1)
+               Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
+               SE = sigma2*sum(sum( Diff.*(Diff*S) ));
+               SSER(1+iDiff) = sum((Diff*x_smoothed).^2)/SE;
+            end
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Measures of expected error restricted to a subset of points
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function MSE = expectedMeanSquareErrorFromCVForPointsAtIndices(self,indices)
+            % Cross-validation (CV) estimate for the mean square error from
+            % Green and Silverman, equation 3.5
+            epsilon = self.epsilon;
+            
+            S = self.smoothingMatrix;
+            S = S(indices,indices);
+            Sii = diag(S);
+            
+            MSE = mean( (epsilon(indices)./(1-Sii)).^2 );
+        end
+        
+        function MSE = expectedMeanSquareErrorInterquartile(self)
+            epsilon = self.x - self.ValueAtPoints(self.t);
+            sortedEpsilon = sort(epsilon);
+            n = length(epsilon);
+            zmin = sortedEpsilon(floor(n/4));
+            zmax = sortedEpsilon(ceil(3*n/4));
+            expectedVariance = self.distribution.varianceInPercentileRange(0.25,0.75);
+            MSE = self.expectedMeanSquareErrorForPointsAtIndices(epsilon >= zmin & epsilon <= zmax,expectedVariance);
+        end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
@@ -193,29 +346,7 @@ classdef RobustTensionSpline < TensionSpline
         % interquartile Anderson-Darling test.
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        function [newOutlierDistribution, newAlpha] = setToFullTensionWithIteratedIQAD(self)
-            % Set to full tension by minimizing the Anderson-Darling (AD)
-            % error on the interquartile (IQ) range of epsilons. At each
-            % iteration the outlier distribution is estimated and used to
-            % refine the tension.
-            self.minimize(@(spline) self.noiseDistribution.andersonDarlingInterquartileError(spline.epsilon));
-            lastAlpha = 0.0;
-            totalIterations = 0;
-            [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,self.noiseDistribution);
-            while (abs(lastAlpha-newAlpha) > 0.01 && totalIterations < 10)
-                if newAlpha > 0 && ~isempty(newOutlierDistribution)
-                    addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.noiseDistribution);
-                else
-                    addedDistribution = self.noiseDistribution;
-                end
-                self.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError(spline.epsilon));
-                lastAlpha = newAlpha;
-                [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,self.noiseDistribution);
-                totalIterations = totalIterations + 1;
-            end
-        end
-        
+                
         function setToFullTensionWithIteratedIQSV(self,extraVarianceFactor)
             % Set to full tension by matching the expected sample variance
             % (SV) with the interquartile (IQ) sample variance. At each
@@ -487,17 +618,7 @@ classdef RobustTensionSpline < TensionSpline
             expectedVariance = addedDistribution.varianceInRange(-z,z);
         end
         
-        function [z,expectedVariance] = locationOfNoiseToOutlierPDFRatio(alpha,outlierDistribution,noiseDistribution,pdfRatio)
-            % Setting the pdfRatio to 1 means that this will return the
-            % point where the odds of being an outlier are equal with the
-            % odds of being characterized noise. 1 seems to be a good
-            % value... but a bit higher is good too, like 3 or so. This
-            % value is *less* than the variance crossover found with the
-            % above distribution.
-            f = @(z) abs((1-alpha)*noiseDistribution.pdf(z)./(alpha*outlierDistribution.pdf(z))-pdfRatio);
-            z = abs(fminsearch(f,sqrt(noiseDistribution.variance)));
-            expectedVariance = AddedDistribution(alpha,outlierDistribution,noiseDistribution).varianceInRange(-z,z);
-        end
+
         
         function [z,expectedVariance] = locationOfNoiseLikelihood(alpha,outlierDistribution,noiseDistribution,likelihood)
            % Finds the point above which the fewer than likelihood
@@ -512,48 +633,7 @@ classdef RobustTensionSpline < TensionSpline
            expectedVariance = added.varianceInRange(-z,z);
         end
         
-        function [outlierDistribution, alpha] = estimateOutlierDistributionFromKnownNoise(epsilon,noiseDistribution)
-            % Given epsilon at full tension, and some characterized noise
-            % distribution, estimate the outlier distribution.
-            %
-            % This method generates all possible fractions "added
-            % distributions" that enough variance to match the observed
-            % value, and then find the fraction that minimizes the
-            % Anderson-Darling test.
-            
-            % Let's find a reasonable set of z_crossover points.
-            s2_total = mean(epsilon.^2);
-            s2_noise = noiseDistribution.variance;
-            
-            % What's a reasonable cutoff here? For now 2.0 is just a magic
-            % number...
-            if s2_total/s2_noise < 2.0
-                outlierDistribution = [];
-                alpha = 0;
-                return;
-            end
-            
-            alpha_outlier = 10.^(linspace(log10(0.01),log10(0.5),100))';
-            sigma2_outlier = (s2_total-(1-alpha_outlier)*s2_noise)./(3*alpha_outlier);
-            var_total = zeros(size(alpha_outlier));
-            ks_error = zeros(size(alpha_outlier));
-            
-            for iAlpha = 1:length(alpha_outlier)
-                newAddedDistribution = AddedDistribution(alpha_outlier(iAlpha),StudentTDistribution(sqrt(sigma2_outlier(iAlpha)),3),noiseDistribution);
-                var_total(iAlpha) = newAddedDistribution.variance;
-                ks_error(iAlpha) = newAddedDistribution.andersonDarlingError(epsilon);
-            end
-            
-            [minError,minIndex] = min(ks_error);
-            if (noiseDistribution.andersonDarlingError(epsilon) < minError)
-                outlierDistribution = [];
-                alpha = 0;
-            else
-                alpha = alpha_outlier(minIndex);
-                sigma2o = sigma2_outlier(minIndex);
-                outlierDistribution = StudentTDistribution(sqrt(sigma2o),3);
-            end
-        end
+
         
     end
 end
