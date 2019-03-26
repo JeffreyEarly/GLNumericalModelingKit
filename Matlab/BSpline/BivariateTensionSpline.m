@@ -115,25 +115,29 @@ classdef BivariateTensionSpline < handle
             % initialize splines so that they have the same lambda
             if self.shouldUseRobustFit == 1
                 % We don't let the RobustTensionSpline do any extra work
-                self.spline_x = RobustTensionSpline(self.t,self.x_prime,self.distribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated, 'outlierMethod', OutlierMethod.doNothing);
-                self.spline_y = RobustTensionSpline(self.t,self.y_prime,self.distribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda, 'outlierMethod', OutlierMethod.doNothing);
+                nu = 3.0;
+                sigma = sqrt(self.noiseDistribution.variance*1000*(nu-2)/nu);
+                addedDistribution = AddedDistribution(1/100,StudentTDistribution(sigma,nu),self.noiseDistribution);
+                self.spline_x = TensionSpline(self.t,self.x_prime,addedDistribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+                self.spline_y = TensionSpline(self.t,self.y_prime,addedDistribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
                 self.lambda = self.spline_x.lambda;
                 
                 % Step 1---estimate the outlier distribution
                 self.estimateOutlierDistribution();
                 self.lambdaAtFullTension = self.lambda;
                 self.sigmaAtFullTension = self.spline_x.distribution.w(self.epsilon_d/sqrt(2));
-                
+                return
                 % Step 2---minimize under current conditions
-                mse1 = self.minimizeExpectedMeanSquareErrorInNoiseRange();
-                mse1_lambda = self.lambda;
+                [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInNoiseRange();
+%                 [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInPercentileRange(1-1/100);
                 
                 % Step 3---apply outlier method
-                self.spline_x.sigma = self.sigma;
-                self.spline_y.sigma = self.sigma;
+                self.spline_x.sigma = self.sigmaAtFullTension;
+                self.spline_y.sigma = self.sigmaAtFullTension;
                 
                 % Step 4---re-compute minimum expected mean square error
-                mse2 = self.minimizeExpectedMeanSquareErrorInNoiseRange();
+                [~,mse2] = self.minimizeExpectedMeanSquareErrorInNoiseRange();
+%                 [~,mse2] = self.minimizeExpectedMeanSquareErrorInPercentileRange(1-1/100);
                 
                 % Step 5---set to global minimum
                 if mse1 < mse2
@@ -218,7 +222,7 @@ classdef BivariateTensionSpline < handle
             % variance, simply added together across dimensions. Does *not*
             % include the mean.
             
-            MSE = self.spline_x.MSE + self.spline_y.MSE;
+            MSE = self.spline_x.expectedMeanSquareError + self.spline_y.expectedMeanSquareError;
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -237,7 +241,7 @@ classdef BivariateTensionSpline < handle
         
         function [MSE, n] = expectedMeanSquareErrorInDistanceRange(self,zmin,zmax,expectedVariance)
             epsilon = self.epsilon_d;
-            indices = find(epsilon >= zmin & epsilon <= zmax);
+            indices = epsilon >= zmin & epsilon <= zmax;
             if nargin < 4 || isempty(expectedVariance)
                 expectedVariance = self.distribution.varianceInRange(zmin,zmax);
             end
@@ -255,7 +259,12 @@ classdef BivariateTensionSpline < handle
             % error on the interquartile (IQ) range of epsilons. At each
             % iteration the outlier distribution is estimated and used to
             % refine the tension.
-            self.minimize(@(spline) self.distribution.andersonDarlingInterquartileError( reshape(spline.epsilon,[],1) ));
+            if self.alpha > 0
+                initialDistribution = AddedDistribution(self.alpha,self.outlierDistribution,self.distribution);
+            else
+                initialDistribution = self.distribution;
+            end
+            self.minimize(@(spline) initialDistribution.andersonDarlingInterquartileError( reshape(spline.epsilon,[],1) ));
             
             lastAlpha = 0.0;
             totalIterations = 0;
@@ -348,22 +357,28 @@ classdef BivariateTensionSpline < handle
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function lambda = minimize(self,penaltyFunction)
+        function [lambda,fval] = minimize(self,penaltyFunction)
             % the penalty function *must* take a bivariate tension spline
             % object and return a scalar. The function will be minimized by
             % varying lambda.
             [~,lambdaBelow,lambdaAbove] = TensionSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
             lambda = TensionSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,lambdaBelow,lambdaAbove);
+            fval = penaltyFunction(self);
         end
         
-        function mse = minimizeExpectedMeanSquareErrorInNoiseRange(self)
-            if self.alpha > 0
+        function [lambda,mse] = minimizeExpectedMeanSquareErrorInPercentileRange(self,pctmax)
+            zmin = 0;
+            zmax = self.noiseDistanceDistribution.locationOfCDFPercentile(pctmax);
+            expectedVariance = self.noiseDistanceDistribution.varianceInRange(zmin,zmax);
+            [lambda,mse] = self.minimize( @(aTensionSpline) aTensionSpline.expectedMeanSquareErrorInDistanceRange(zmin,zmax,expectedVariance) );
+        end
+        
+        function [lambda,mse] = minimizeExpectedMeanSquareErrorInNoiseRange(self)
+            if ~isempty(self.alpha) && self.alpha > 0
                 [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,1);
-                self.minimize( @(spline) spline.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance));
-                mse = self.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance);
+                [lambda,mse] =self.minimize( @(spline) spline.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance));
             else
-                self.minimize( @(spline) spline.expectedMeanSquareError );
-                mse = self.expectedMeanSquareError();
+                [lambda,mse] =self.minimize( @(spline) spline.expectedMeanSquareError );
             end
         end
         
@@ -475,13 +490,7 @@ classdef BivariateTensionSpline < handle
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        % We wrap and then unwrap the user-provided penalty function so
-        % that it take log10(lambda) rather than lambda. This is much
-        % better for the fminsearch algorithm.
-        %
-        % This algorithm also *stops* looking at higher lambdas once the
-        % problem becomes constrained.
-        function [lambda,lambdaBelow,lambdaAbove] = minimizeFunctionOfSplineWithGridSearch(aBivariateSpline,functionOfBivariateSpline,dlog10tensionValue,n)
+        function [lambda,lambdaBelow,lambdaAbove] = minimizeFunctionOfBivariateSplineWithGridSearch(aBivariateSpline,functionOfBivariateSpline,dlog10tensionValue,n)
             tensionValues = aBivariateSpline.tensionValue;
             err = functionOfBivariateSpline(aBivariateSpline);
             isConstrained = aBivariateSpline.isConstrained;

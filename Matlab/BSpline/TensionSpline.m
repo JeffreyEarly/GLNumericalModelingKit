@@ -228,7 +228,7 @@ classdef TensionSpline < BSpline
                 zmax = self.distribution.locationOfCDFPercentile(1-beta/2);
                 expectedVariance = self.distribution.varianceInRange(zmin,zmax);
                 self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(zmin,zmax,expectedVariance) );
-            elseif lambdaArgument == Lambda.fullTensionExpected
+            elseif lambdaArgument == Lambda.fullTensionIterated
                 self.estimateOutlierDistribution();
             end
         end

@@ -54,7 +54,8 @@ classdef GPSTensionSpline < BivariateTensionSpline
             x0 = 0;
             y0 = 0;
             gpsNoiseDistribution = StudentTDistribution(8.5,4.5);
-            gpsNoiseDistribution.rho = @(dt) exp(max(-abs(dt)/100., - abs(dt)/760 -1.3415)) ;
+            % works fine, but really slows it down
+%             gpsNoiseDistribution.rho = @(dt) exp(max(-abs(dt)/100., - abs(dt)/760 -1.3415)) ;
             
             nargs = length(varargin);
             if mod(nargs,2) ~= 0
