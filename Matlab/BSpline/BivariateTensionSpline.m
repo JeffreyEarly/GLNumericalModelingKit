@@ -115,29 +115,29 @@ classdef BivariateTensionSpline < handle
             % initialize splines so that they have the same lambda
             if self.shouldUseRobustFit == 1
                 % We don't let the RobustTensionSpline do any extra work
-                nu = 3.0;
-                sigma = sqrt(self.noiseDistribution.variance*1000*(nu-2)/nu);
-                addedDistribution = AddedDistribution(1/100,StudentTDistribution(sigma,nu),self.noiseDistribution);
-                self.spline_x = TensionSpline(self.t,self.x_prime,addedDistribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-                self.spline_y = TensionSpline(self.t,self.y_prime,addedDistribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
+%                 nu = 3.0;
+%                 sigma = sqrt(self.noiseDistribution.variance*1000*(nu-2)/nu);
+%                 addedDistribution = AddedDistribution(1/100,StudentTDistribution(sigma,nu),self.noiseDistribution);
+                self.spline_x = TensionSpline(self.t,self.x_prime,self.noiseDistribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+                self.spline_y = TensionSpline(self.t,self.y_prime,self.noiseDistribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
                 self.lambda = self.spline_x.lambda;
                 
                 % Step 1---estimate the outlier distribution
                 self.estimateOutlierDistribution();
                 self.lambdaAtFullTension = self.lambda;
                 self.sigmaAtFullTension = self.spline_x.distribution.w(self.epsilon_d/sqrt(2));
-                return
+
                 % Step 2---minimize under current conditions
-                [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInNoiseRange();
-%                 [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInPercentileRange(1-1/100);
+%                 [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInNoiseRange();
+                [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInPercentileRange(1-1/100);
                 
                 % Step 3---apply outlier method
                 self.spline_x.sigma = self.sigmaAtFullTension;
                 self.spline_y.sigma = self.sigmaAtFullTension;
                 
                 % Step 4---re-compute minimum expected mean square error
-                [~,mse2] = self.minimizeExpectedMeanSquareErrorInNoiseRange();
-%                 [~,mse2] = self.minimizeExpectedMeanSquareErrorInPercentileRange(1-1/100);
+%                 [~,mse2] = self.minimizeExpectedMeanSquareErrorInNoiseRange();
+                [~,mse2] = self.minimizeExpectedMeanSquareErrorInPercentileRange(1-1/100);
                 
                 % Step 5---set to global minimum
                 if mse1 < mse2

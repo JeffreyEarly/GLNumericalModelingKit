@@ -585,24 +585,31 @@ classdef TensionSpline < BSpline
             self.sigmaAtFullTension = self.distribution.w(self.epsilon);
         end
         
-        function [newOutlierDistribution, newAlpha] = setToFullTensionWithIteratedIQAD(self)
+        function [newOutlierDistribution, newAlpha] = setToFullTensionWithIteratedIQAD(self,knownDistribution)
             % Set to full tension by minimizing the Anderson-Darling (AD)
             % error on the interquartile (IQ) range of epsilons. At each
             % iteration the outlier distribution is estimated and used to
             % refine the tension.
-            self.minimize(@(spline) self.distribution.andersonDarlingInterquartileError(spline.epsilon));
+            if nargin < 2
+                knownDistribution = self.distribution;
+            end
+            
+            self.minimize(@(spline) knownDistribution.andersonDarlingInterquartileError(spline.epsilon));
             lastAlpha = 0.0;
             totalIterations = 0;
-            [newOutlierDistribution, newAlpha] = TensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,self.distribution);
-            while (abs(lastAlpha-newAlpha) > 0.01 && totalIterations < 10)
+            [newOutlierDistribution, newAlpha] = TensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,knownDistribution);
+            % The estimateOutlierDistributionFromKnownNoise function always
+            % works from the same list of 100 alphas, so we can check with
+            % fairly high tolerance whether or not its the same.
+            while (abs(lastAlpha-newAlpha) > 1e-6 && totalIterations < 10)
                 if newAlpha > 0 && ~isempty(newOutlierDistribution)
-                    addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.distribution);
+                    addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,knownDistribution);
                 else
-                    addedDistribution = self.distribution;
+                    addedDistribution = knownDistribution;
                 end
                 self.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError(spline.epsilon));
                 lastAlpha = newAlpha;
-                [newOutlierDistribution, newAlpha] = TensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,self.distribution);
+                [newOutlierDistribution, newAlpha] = TensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,knownDistribution);
                 totalIterations = totalIterations + 1;
             end
         end
@@ -725,7 +732,7 @@ classdef TensionSpline < BSpline
             lambda = lambdas(index);
             aTensionSpline.lambda = lambda; 
             lambdaBelow = lambdas(index-1);
-            if length(lambda)>index
+            if length(lambdas)>index
                 lambdaAbove = lambdas(index+1);
             else
                 lambdaAbove = lambdas(index);
