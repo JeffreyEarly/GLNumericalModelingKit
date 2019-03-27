@@ -101,6 +101,7 @@ classdef BivariateTensionSpline < handle
             self.t = t;
             self.distribution = distribution;
             self.noiseDistribution = distribution;
+            self.noiseDistanceDistribution = TwoDimDistanceDistribution(self.noiseDistribution);
             
             t_knot = cat(1,min(t)*ones(self.K+1,1),max(t)*ones(self.K+1,1));
             self.spline_mean_x = ConstrainedSpline(self.t,self.x,self.K+1,t_knot,self.distribution,[]);
@@ -122,15 +123,27 @@ classdef BivariateTensionSpline < handle
                 self.spline_y = TensionSpline(self.t,self.y_prime,self.noiseDistribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
                 self.lambda = self.spline_x.lambda;
                 
-                % Step 1---estimate the outlier distribution
-                self.estimateOutlierDistribution();
-                self.lambdaAtFullTension = self.lambda;
-                self.sigmaAtFullTension = self.spline_x.distribution.w(self.epsilon_d/sqrt(2));
-
+                                self.spline_x.sigma = self.noiseDistribution.sigma;
+                self.spline_y.sigma = self.noiseDistribution.sigma;
+                
                 % Step 2---minimize under current conditions
 %                 [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInNoiseRange();
                 [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInPercentileRange(1-1/100);
                 
+                return
+                
+                % Step 1---estimate the outlier distribution
+                self.estimateOutlierDistribution();
+                self.lambdaAtFullTension = self.lambda;
+                self.sigmaAtFullTension = sqrt(self.spline_x.distribution.w(self.epsilon_d/sqrt(2)));
+
+                self.spline_x.sigma = self.noiseDistribution.sigma;
+                self.spline_y.sigma = self.noiseDistribution.sigma;
+                
+                % Step 2---minimize under current conditions
+%                 [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInNoiseRange();
+                [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInPercentileRange(1-1/100);
+                return
                 % Step 3---apply outlier method
                 self.spline_x.sigma = self.sigmaAtFullTension;
                 self.spline_y.sigma = self.sigmaAtFullTension;
@@ -156,6 +169,10 @@ classdef BivariateTensionSpline < handle
             
             
         end
+        
+%         function [Sx, Sy] = smoothingMatrices(self)
+%             Sbar = self.spline_mean_x.smo
+%         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
@@ -310,8 +327,9 @@ classdef BivariateTensionSpline < handle
             self.setToFullTensionWithIteratedIQAD();
             
             [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.noiseDistribution);
-            self.noiseDistanceDistribution = TwoDimDistanceDistribution(self.noiseDistribution);
-            self.outlierDistanceDistribution = TwoDimDistanceDistribution(self.outlierDistribution);
+            if self.alpha>0
+                self.outlierDistanceDistribution = TwoDimDistanceDistribution(self.outlierDistribution);
+            end
         end
         
         function setSigmaFromFullTensionSolution(self)

@@ -582,7 +582,7 @@ classdef TensionSpline < BSpline
         function estimateOutlierDistribution(self)
             [self.outlierDistribution, self.alpha] = self.setToFullTensionWithIteratedIQAD();
             self.lambdaAtFullTension = self.lambda;
-            self.sigmaAtFullTension = self.distribution.w(self.epsilon);
+            self.sigmaAtFullTension = sqrt(self.distribution.w(self.epsilon));
         end
         
         function [newOutlierDistribution, newAlpha] = setToFullTensionWithIteratedIQAD(self,knownDistribution)
@@ -822,7 +822,7 @@ classdef TensionSpline < BSpline
             % V         spline derivatives on the quadrature grid, QxM
             % sigma     errors of observations, either a scalar, Nx1, OR if 
             %           size(sigma)=[N N], then we assume it's the weight
-            %           matrix W
+            %           matrix W (essentially ~diag(1./sigma^2)
             % lambda    tension parameter
             % x         observations (Nx1)
             % mu        mean tension
@@ -926,7 +926,7 @@ classdef TensionSpline < BSpline
                 sigma2_previous=sigma_w2;
                 repeats = repeats+1;
                 
-                if (repeats == 150)
+                if (repeats == 250)
                     disp('Failed to converge after 150 iterations.');
                     break;
                 end
