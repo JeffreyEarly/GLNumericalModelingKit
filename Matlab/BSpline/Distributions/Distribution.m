@@ -43,7 +43,11 @@ classdef (Abstract) Distribution
         end
         
         function totalError = andersonDarlingInterquartileError(self,epsilon)
-            Y = sort(epsilon);
+            if issorted(epsilon)
+                Y = epsilon;
+            else
+                Y = sort(epsilon);
+            end
             n = length(Y);
             
             s = ((2*(1:n)'-1)/n) .* (log(self.cdf(Y)) + log(1-self.cdf(flip(Y))));
@@ -58,7 +62,11 @@ classdef (Abstract) Distribution
                 A = 1/(self.cdf(zmax)-self.cdf(zmin));
                 b = self.cdf(zmin);
             else
-                x = sort(epsilon);
+                if issorted(epsilon)
+                    x = epsilon;
+                else
+                    x = sort(epsilon);
+                end
                 A = 1;
                 b = 0;
             end
