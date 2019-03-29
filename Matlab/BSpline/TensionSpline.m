@@ -36,7 +36,7 @@ classdef TensionSpline < BSpline
         X
         V
         W,XWX,XWx,VV
-        F           % constraint matrix
+        constrainedSolution   % function handle to the constrained solution
         sigma       % initial weight (given as normal std dev.)
         
         
@@ -179,21 +179,18 @@ classdef TensionSpline < BSpline
             % Precompute some matrices that might be used again later,
             [XWX,XWx,VV] = TensionSpline.PrecomputeTensionSolutionMatrices(X,V,sqrt(distribution.variance),x);
             
+            % To compute a tension spline we need:
+            % t,x,t_knot,K,T,distribution
+            cachedVars = TensionSpline.PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,cachedVars)
+            
             % On the off-chance that the user requests a lambda that is too
             % large, we need to be prepared to use a constrained system.
-            tc = ConstrainedSpline.MinimumConstraintPoints(t_knot,K,T);
-            M = size(X,2);
-            NC = length(tc);
-            F = zeros(NC,M);
-            Xc = BSpline.Spline( tc, t_knot, K, K-1 );
-            for i=1:NC
-                F(i,:) = squeeze(Xc(i,:,T+1));
-            end
+            constrainedSolution = @() TensionSpline.CoefficientsForConstrainedSolution(t,x,T,distribution,X);
             
             if isa(distribution,'NormalDistribution')
-                [m,CmInv,~,~,~,isConstrained] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F);
+                [m,CmInv,~,~,~,isConstrained] = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV, constrainedSolution );
             elseif ~isempty(distribution.w)
-                [m,CmInv,W,XWX,XWx,VV,isConstrained] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,distribution.w,XWX,XWx,VV,t,distribution.rho,F);
+                [m,CmInv,W,XWX,XWx,VV,isConstrained] = TensionSpline.IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,distribution.w,XWX,XWx,VV,t,distribution.rho,constrainedSolution);
             else
                 error('No weight function given! Unable to proceed.');
             end
@@ -212,9 +209,9 @@ classdef TensionSpline < BSpline
             self.XWX=XWX;
             self.XWx=XWx;
             self.VV=VV;
-            self.F = F;
             self.t = t;
             self.x = x;
+            self.constrainedSolution = constrainedSolution;
             self.knot_dof = knot_dof;
             self.distribution = distribution;
             self.sigma = sigma;
@@ -233,6 +230,7 @@ classdef TensionSpline < BSpline
             end
         end
    
+
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
@@ -287,11 +285,12 @@ classdef TensionSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if isa(self.distribution,'NormalDistribution')
-                [self.m,CmInv,~,~,~,self.isConstrained] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.XWX,self.XWx,self.VV,self.F);
+                [self.m,CmInv,~,~,~,self.isConstrained] = TensionSpline.TensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,struct('XWX',self.XWX,'XWx',self.XWx,'VV',self.VV,'constrainedSolution',self.F));
             elseif ~isempty(self.distribution.w)
                 % do *not* feed in the previous values of self.XWX,self.XWx
                 % when the tension parameter changes for an iterated
                 % solution.
+                struct('XWX',self.XWX,'XWx',self.XWx,'VV',self.VV,'constrainedSolution',self.F)
                 [self.m,CmInv,self.W,self.XWX,self.XWx,self.VV,self.isConstrained] = TensionSpline.IteratedLeastSquaresTensionSolution(self.X,self.V,self.sigma,self.lambda,self.x,self.mu,self.distribution.w,[],[],self.VV,self.t,self.distribution.rho,self.F);
             else
                 error('No weight function given! Unable to proceed.'); 
@@ -794,25 +793,83 @@ classdef TensionSpline < BSpline
         % Methods for solving the least-squares problem
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        function [XWX,XWx,VV] = PrecomputeTensionSolutionMatrices(X,V,sigma,x)
-            N = length(x);
-            if size(sigma,1) == N && size(sigma,2) == N
-                XWX = X'*sigma*X;
-                XWx = X'*sigma*x;
-            elseif length(sigma) == 1
-                XWX = X'*X/(sigma*sigma);
-                XWx = X'*x/(sigma*sigma);
-            elseif length(sigma) == N
-                XWX = X'*diag(1./(sigma.^2))*X; % MxM
-                XWx = X'*diag(1./(sigma.^2))*x; % (MxN * NxN * Nx1) = Mx1
-            else
-                error('sigma must have the same length as x and t.');
+
+        function cachedVars = TensionSpline.PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,cachedVars)
+            if ~exist('cachedVars','var')
+                cachedVars = struct('t',t,'x',x,'t_knot',t_knot,'K',K,'T',T,'distribution',distribution,'X',[],'V',[],'rho_t',[],'W',W,'XWX',[],'XWx',[],'VV',[],'m_constrained',[],'Cm_constrained',[]);
             end
-            VV = V'*V;
+            
+            if isempty(cachedVars.X)
+                % These are the splines at the points of observation
+                cachedVars.X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
+            end
+            X = cachedVars.X;
+            N = length(x);
+            
+            if isempty(cachedVars.V)
+                % This is the value of the tensioned variable on the
+                % quadrature grid.
+                Q = 10*N; % number of points on the quadrature grid
+                tq = linspace(t(1),t(end),Q)';
+                B = BSpline.Spline( tq, t_knot, K, T );
+                cachedVars.V = squeeze(B(:,:,T+1)); % QxM
+            end
+            
+            if ~isempty(distribution.rho) && isempty(cachedVar.rho_t)
+                cachedVars.rho_t = distribution.rho(t - t.');
+            end
+            
+            if isempty(cachedVars.W)
+                % This is the weight matrix---generally the covariance
+                % matrix describing the expected relationship between
+                % observation points
+                if isempty(W)
+                    if isempty(distribution.rho)
+                        W = 1/(distribution.w0)^2;
+                    else
+                        rho_t = cachedVars.rho_t;
+                        sigma = ones(size(x))*distribution.w0;
+                        Sigma2 = (sigma * sigma.') .* rho_t;
+                        W = inv(Sigma2);
+                    end
+                end
+                cachedVars.W = W;
+            end
+            
+            if isempty(cachedVars.XWX)
+                if size(W,1) == N && size(W,2) == N
+                    XWX = X'*W*X;
+                elseif length(W) == 1
+                    XWX = X'*W*X;
+                elseif length(sigma) == N
+                    XWX = X'*diag(W)*X; % (MxN * NxN * Nx1) = Mx1
+                else
+                    error('W must have the same length as x and t.');
+                end
+                cachedVars.XWX = XWX;
+            end
+            
+            if isempty(cachedVars.XWx)
+                if size(W,1) == N && size(W,2) == N
+                    XWx = X'*W*x;
+                elseif length(W) == 1
+                    XWx = X'*W*x;
+                elseif length(sigma) == N
+                    XWx = X'*diag(W)*x; % (MxN * NxN * Nx1) = Mx1
+                else
+                    error('W must have the same length as x and t.');
+                end
+                cachedVars.XWx = XWx;
+            end
+            
+            if isempty(cachedVars.VV)
+                V = cachedVars.V;
+                cachedVars.VV = V'*V;
+            end
+            
         end
         
-        function [m,CmInv,XWX,XWx,VV,isConstrained] = TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F)
+        function [m,Cm,CmInv,isConstrained,cachedVars] = TensionSolution(lambda,t,x,t_knot,K,T,distribution,W,cachedVars)
             % N     # of observations
             % M     # of splines
             % Q     # of points in quadrature grid
@@ -833,80 +890,61 @@ classdef TensionSpline < BSpline
             % output:
             % m         coefficients of the splines, Mx1
             % CmInv     Inverse of the covariance of coefficients, MxM
+            
+            cachedVars = TensionSpline.PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,cachedVars);
+            
             N = length(x);
-            Q = size(V,1);
+            Q = size(cachedVars.V,1);
             
-            if ~exist('XWX','var') || isempty(XWX)
-                if size(sigma,1) == N && size(sigma,2) == N
-                    XWX = X'*sigma*X;
-                elseif length(sigma) == 1
-                    XWX = X'*X/(sigma*sigma);
-                elseif length(sigma) == N
-                    XWX = X'*diag(1./(sigma.^2))*X; % MxM
-                else
-                    error('sigma must have the same length as x and t.');
-                end
-            end
-            
-            if ~exist('XWx','var') || isempty(XWx)
-                if size(sigma,1) == N && size(sigma,2) == N
-                    XWx = X'*sigma*x;
-                elseif length(sigma) == 1
-                    XWx = X'*x/(sigma*sigma);
-                elseif length(sigma) == N
-                    XWx = X'*diag(1./(sigma.^2))*x; % (MxN * NxN * Nx1) = Mx1
-                else
-                    error('sigma must have the same length as x and t.');
-                end
-            end
-            
-            if ~exist('VV','var') || isempty(VV)
-                VV = V'*V;
-            end
-            
-%             if max(XWX(:))/((lambda*N/Q)*max(VV(:))) < 1e-12
-%                 warning('Matrix will probably be singular.\n');
-%                 lambda = 1e12*max(XWX(:))/((N/Q)*max(VV(:)));
-%             end
-            
+            XWX = cachedVars.XWX;
+            XWx = cachedVars.XWx;
+            VV = cachedVars.VV;
+ 
             E_x = XWX + (lambda*N/Q)*(VV);
             
             % add the mean tension value
             if mu ~= 0.0
+                V = cachedVars.V;
                 B = XWx + (lambda*N/Q)*mu*transpose(sum( V,1));
             else
                 B = XWx;
             end
             
-            % Now solve
+            % Check the tension is sufficiently high that we just need to
+            % use the constrained solution
             if rcond(E_x) < 5e-14
+                if isempty(cachedVars.m_constrained) || isempty(cachedVars.Cm_constrained)
+                    t_knot_constrained = cat(1,min(t)*ones(K,1),max(t)*ones(K,1));
+                    cspline = ConstrainedSpline(t,x,K,t_knot_constrained,distribution,[]);
+                    cachedVars.m_constrained = X\cspline(t);
+                    
+                    % if m_x = inv(X)*Y*m_y then,
+                    % Cm_x = G*Cm_y*G^T if G = inv(X)*Y
+                    Y = cspline.X;
+                    G = X\Y;
+                    cachedVars.Cm_constrained = G*(CmyInv\(G.'));
+                end
+                
                 isConstrained = 1;
-                [m,CmInv] = ConstrainedSpline.ConstrainedSolution(X,x,F,sigma,XWX,XWx);
+                m = cachedVars.m_constrained;
+                Cm = cachedVars.Cm_constrained;
+                CmInv = [];
             else
                 isConstrained = 0;
                 m = E_x\B;
+                Cm = [];
                 CmInv = E_x;
             end
             
-            
         end
         
-        function [m,CmInv,W,XWX,XWx,VV,isConstrained] = IteratedLeastSquaresTensionSolution(X,V,sigma,lambda,x,mu,w,XWX,XWx,VV,t,rho,F)
-            % Same calling sequence as the TensionSolution function, but
-            % also includes the weight factor, w
-            if exist('t','var') && exist('rho','var') && ~isempty(rho)
-                rho_t = rho(t - t.');   
-                if length(sigma) == 1
-                    sigma = ones(size(x))*sigma;
-                end      
-                Sigma2 = (sigma * sigma.') .* rho_t;
-                W = inv(Sigma2);
-                m = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,XWX,XWx,VV,F);
-            else
-                m = TensionSpline.TensionSolution(X,V,sigma,lambda,x,mu,XWX,XWx,VV,F);
-            end
-            
-            
+        % e
+        function [m,Cm,CmInv,isConstrained,cachedVars] = IteratedLeastSquaresTensionSolution(lambda,t,x,t_knot,K,T,distribution,W,cachedVars)
+            % Out first call is basically just a normal fit to a tension
+            % spline. If W is not set, it will be set to either 1/w0^2 or
+            % the correlated version
+            [m,Cm,CmInv,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,t,x,t_knot,K,T,distribution,W,cachedVars);
+      
             sigma2_previous = sigma.*sigma;
             rel_error = 1.0;
             repeats = 1;
@@ -914,24 +952,42 @@ classdef TensionSpline < BSpline
                 sigma_w2 = w(X*m - x);
                 
                 if exist('rho_t','var')
-                    Sigma2 = (sqrt(sigma_w2) * sqrt(sigma_w2).') .* rho_t;
+                    Sigma2 = (sqrt(sigma_w2) * sqrt(sigma_w2).') .* cachedVars.rho_t;
                     W = inv(Sigma2);
                 else
                     W = diag(1./sigma_w2);
                 end
                 
-                [m,CmInv,XWX,XWx,VV,isConstrained] = TensionSpline.TensionSolution(X,V,W,lambda,x,mu,[],[],VV,F);
+                % hose any cached variable associated with W
+                cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
+                
+                % and recompute the solution with this new weighting
+                [m,Cm,CmInv,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,t,x,t_knot,K,T,distribution,W,cachedVars);
                 
                 rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
                 sigma2_previous=sigma_w2;
                 repeats = repeats+1;
                 
                 if (repeats == 250)
-                    disp('Failed to converge after 150 iterations.');
+                    disp('Failed to converge after 250 iterations.');
                     break;
                 end
             end
             
+        end
+         
+        function [m,Cm] = CoefficientsForConstrainedSolution(t,x,K,distribution,X)
+            % The constrained solution is the solution where (d/dt)^(T) =
+            % 0, which is the same as a K=T spline.
+            t_knot = cat(1,min(t)*ones(K,1),max(t)*ones(K,1));
+            cspline = ConstrainedSpline(t,x,K,t_knot,distribution,[]);
+            m = X\cspline(t);
+            
+            % if m_x = inv(X)*Y*m_y then,
+            % Cm_x = G*Cm_y*G^T if G = inv(X)*Y
+            Y = cspline.X;
+            G = X\Y;
+            Cm = G*(CmyInv\(G.'));          
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

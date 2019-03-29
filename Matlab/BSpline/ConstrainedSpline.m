@@ -15,6 +15,9 @@ classdef ConstrainedSpline < BSpline
     
     properties (Access = public)
         distribution
+        
+        CmInv
+        X
     end
     
     methods
@@ -65,13 +68,15 @@ classdef ConstrainedSpline < BSpline
 
             end
             if isa(distribution,'NormalDistribution')
-                m = ConstrainedSpline.ConstrainedSolution(X,x,F,distribution.sigma);
+                [m,CmInv] = ConstrainedSpline.ConstrainedSolution(X,x,F,distribution.sigma);
             else
-                m = ConstrainedSpline.IteratedLeastSquaresConstrainedSolution(X,x,F,sqrt(distribution.variance),[],[],distribution.w);
+                [m,CmInv] = ConstrainedSpline.IteratedLeastSquaresConstrainedSolution(X,x,F,sqrt(distribution.variance),[],[],distribution.w);
             end
             
             self@BSpline(K,t_knot,m);
             self.distribution = distribution;
+            self.CmInv = CmInv;
+            self.X = X;
         end
 
     end

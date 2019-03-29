@@ -10,10 +10,12 @@ classdef (Abstract) Distribution
         
         variance    % total variance
 
-        w           % 'weight' function, 
+        w           % 'weight' function
+        w0          % initial seed for weight function (set by default)
         dPDFoverZ   % derivative of the pdf wrt z, divided by z
         logPDF      % log of the pdf
     end
+    
     
     methods
         function z = locationOfCDFPercentile(self, alpha)
@@ -31,6 +33,12 @@ classdef (Abstract) Distribution
             zmin = self.locationOfCDFPercentile(pctmin);
             zmax = self.locationOfCDFPercentile(pctmax);
             var = self.varianceInRange(zmin,zmax);
+        end
+        
+        % initial weighting should start at the inflection point of the
+        % weight function
+        function w0 = get.w0(self)
+            w0 = fminsearch( @(x) abs(self.w(x)-x^2),sqrt(self.variance));
         end
         
         function totalError = andersonDarlingError(self,epsilon)
@@ -100,7 +108,7 @@ classdef (Abstract) Distribution
             if nargin == 1
                 error('You must specify the size')
             elseif nargin == 2
-                sz = [varargin{1}, varargin{1}];
+                sz = varargin{1};
             else
                 sz = zeros(1,nargin-1);
                 for i=1:(nargin-1)
