@@ -267,7 +267,7 @@ classdef TensionSpline < BSpline
                 error('No weight function given! Unable to proceed.'); 
             end
 
-            [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
+            [self.C,self.t_pp,self.B] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K, self.B );
             
             self.outlierIndices = find(abs(self.epsilon) > self.outlierThreshold);
         end
@@ -811,14 +811,14 @@ classdef TensionSpline < BSpline
                 cachedVars = struct('t',t,'x',x,'t_knot',t_knot,'K',K,'T',T,'distribution',distribution,'X',[],'V',[],'rho_t',[],'W',W,'XWX',[],'XWx',[],'VV',[],'m_constrained',[],'Cm_constrained',[]);
             end
             
-            if ~exist('cachedVars.X','var') || isempty(cachedVars.X)
+            if ~isfield(cachedVars,'X') || isempty(cachedVars.X)
                 % These are the splines at the points of observation
                 cachedVars.X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             end
             X = cachedVars.X;
             N = length(x);
             
-            if ~exist('cachedVars.V','var') || isempty(cachedVars.V)
+            if ~isfield(cachedVars,'V') || isempty(cachedVars.V)
                 % This is the value of the tensioned variable on the
                 % quadrature grid.
                 Q = 10*N; % number of points on the quadrature grid
@@ -827,11 +827,11 @@ classdef TensionSpline < BSpline
                 cachedVars.V = squeeze(B(:,:,T+1)); % QxM
             end
             
-            if ~isempty(distribution.rho) && (~exist('cachedVars.rho_t','var') || isempty(cachedVar.rho_t))
+            if ~isempty(distribution.rho) && (~isfield(cachedVars,'rho_t') || isempty(cachedVar.rho_t))
                 cachedVars.rho_t = distribution.rho(t - t.');
             end
             
-            if ~exist('cachedVars.W','var') || isempty(cachedVars.W)
+            if ~isfield(cachedVars,'W') || isempty(cachedVars.W)
                 % The (W)eight matrix.
                 %
                 % For a normal distribution the weight matrix is the
@@ -853,7 +853,7 @@ classdef TensionSpline < BSpline
                 cachedVars.W = W;
             end
             
-            if ~exist('cachedVars.XWX','var') || isempty(cachedVars.XWX)
+            if ~isfield(cachedVars,'XWX') || isempty(cachedVars.XWX)
                 if size(W,1) == N && size(W,2) == N
                     XWX = X'*W*X;
                 elseif length(W) == 1
@@ -866,7 +866,7 @@ classdef TensionSpline < BSpline
                 cachedVars.XWX = XWX;
             end
             
-            if ~exist('cachedVars.XWx','var') || isempty(cachedVars.XWx)
+            if ~isfield(cachedVars,'XWx') || isempty(cachedVars.XWx)
                 if size(W,1) == N && size(W,2) == N
                     XWx = X'*W*x;
                 elseif length(W) == 1
@@ -879,7 +879,7 @@ classdef TensionSpline < BSpline
                 cachedVars.XWx = XWx;
             end
             
-            if ~exist('cachedVars.VV','var') || isempty(cachedVars.VV)
+            if ~isfield(cachedVars,'VV') || isempty(cachedVars.VV)
                 V = cachedVars.V;
                 cachedVars.VV = V'*V;
             end

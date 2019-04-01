@@ -12,6 +12,7 @@ classdef BSpline < handle
         K       % order of polynomial        
         m       % spline coefficients (MxD)
         t_knot  % spline knot points
+        B = [];
         
         t_pp    % pp break points. size(t_pp) = length(t_knot) - 2*K + 1
         C       % piecewise polynomial coefficients. size(C) = [length(t_pp)-1, K]
@@ -86,23 +87,27 @@ classdef BSpline < handle
         end
         
         function self = splineCoefficientsDidChange(self)
-            [self.C,self.t_pp] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K );
+            [self.C,self.t_pp,self.B] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K, self.B );
         end
     end
     
     
     methods (Static)
-        function [C,t_pp] = PPCoefficientsFromSplineCoefficients( m, t_knot, K )
+        function [C,t_pp,B] = PPCoefficientsFromSplineCoefficients( m, t_knot, K, B )
             %% PPCoefficientsFromSplineCoefficients
             % Returns the piecewise polynomial coefficients in matrix C
             % from spline coefficients in vector m.
+            %
+            % 'B' is optional.
             %
             % size(t_pp) = length(t_knot) - 2*K + 1
             % size(C) = [length(t_pp)-1, K]
             
             Nk = length(t_knot);
             t_pp = t_knot(K:(Nk-K));
-            B = BSpline.Spline( t_pp, t_knot, K, K-1 );
+            if ~exist('B','var') || isempty(B)
+                B = BSpline.Spline( t_pp, t_knot, K, K-1 );
+            end
             
             % Build an array of coefficients for polyval, highest order first.
             C = zeros(length(t_pp),K);
