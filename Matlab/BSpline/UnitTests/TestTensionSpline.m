@@ -8,7 +8,9 @@ x = linspace(0,L,N)';
 
 % now sample the function at the observation points
 sigma = 0.1;
-y = f(x) + sigma*randn(N,1);
+distribution = StudentTDistribution(sigma,4);
+distribution = NormalDistribution(sigma);
+y = f(x) + distribution.rand([N 1]);
 
 % create a dense grid of points to visualize the function 
 x_dense = linspace(0,L,10*N)';
@@ -20,7 +22,7 @@ legend('true function', 'noisy data')
 % print('-depsc2', '../figures/noisydata.eps')
 
 % now create a tension spline fit to the data
-spline = TensionSpline(x,y,NormalDistribution(sigma));
+spline = TensionSpline(x,y,distribution);
 
 figure
 plot(x_dense,f(x_dense)), hold on

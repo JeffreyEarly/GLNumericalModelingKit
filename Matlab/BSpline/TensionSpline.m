@@ -173,7 +173,7 @@ classdef TensionSpline < BSpline
             if isa(distribution,'NormalDistribution')                
                 [m,~,~,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,1/(distribution.sigma^2),[]);      
             elseif ~isempty(distribution.w)
-                [m,~,~,isConstrained,cachedVars] = IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[],[]);
+                [m,~,~,isConstrained,cachedVars] = TensionSpline.IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[]);
             else
                 error('No weight function given! Unable to proceed.');
             end
@@ -260,9 +260,9 @@ classdef TensionSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if isa(self.distribution,'NormalDistribution')
-                [self.m,~,~,self.isConstrained,self.variableCache] = TensionSpline.TensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,1/(self.distribution.sigma^2),[]);
+                [self.m,~,~,self.isConstrained,self.variableCache] = TensionSpline.TensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,1/(self.distribution.sigma^2),self.variableCache);
             elseif ~isempty(self.distribution.w)
-                [self.m,~,~,self.isConstrained,self.variableCache] = TensionSpline.IteratedLeastSquaresTensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,[],[]);
+                [self.m,~,~,self.isConstrained,self.variableCache] = TensionSpline.IteratedLeastSquaresTensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,self.variableCache);
             else
                 error('No weight function given! Unable to proceed.'); 
             end
@@ -811,14 +811,14 @@ classdef TensionSpline < BSpline
                 cachedVars = struct('t',t,'x',x,'t_knot',t_knot,'K',K,'T',T,'distribution',distribution,'X',[],'V',[],'rho_t',[],'W',W,'XWX',[],'XWx',[],'VV',[],'m_constrained',[],'Cm_constrained',[]);
             end
             
-            if isempty(cachedVars.X)
+            if ~exist('cachedVars.X','var') || isempty(cachedVars.X)
                 % These are the splines at the points of observation
                 cachedVars.X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             end
             X = cachedVars.X;
             N = length(x);
             
-            if isempty(cachedVars.V)
+            if ~exist('cachedVars.V','var') || isempty(cachedVars.V)
                 % This is the value of the tensioned variable on the
                 % quadrature grid.
                 Q = 10*N; % number of points on the quadrature grid
@@ -827,11 +827,11 @@ classdef TensionSpline < BSpline
                 cachedVars.V = squeeze(B(:,:,T+1)); % QxM
             end
             
-            if ~isempty(distribution.rho) && isempty(cachedVar.rho_t)
+            if ~isempty(distribution.rho) && (~exist('cachedVars.rho_t','var') || isempty(cachedVar.rho_t))
                 cachedVars.rho_t = distribution.rho(t - t.');
             end
             
-            if isempty(cachedVars.W)
+            if ~exist('cachedVars.W','var') || isempty(cachedVars.W)
                 % The (W)eight matrix.
                 %
                 % For a normal distribution the weight matrix is the
@@ -842,10 +842,10 @@ classdef TensionSpline < BSpline
                 % be changing as points are reweighted.
                 if isempty(W)
                     if isempty(distribution.rho)
-                        W = 1/(distribution.w0)^2;
+                        W = 1/(distribution.sigma0)^2;
                     else
                         rho_t = cachedVars.rho_t;
-                        sigma = ones(size(x))*distribution.w0;
+                        sigma = ones(size(x))*distribution.sigma0;
                         Sigma2 = (sigma * sigma.') .* rho_t;
                         W = inv(Sigma2);
                     end
@@ -853,7 +853,7 @@ classdef TensionSpline < BSpline
                 cachedVars.W = W;
             end
             
-            if isempty(cachedVars.XWX)
+            if ~exist('cachedVars.XWX','var') || isempty(cachedVars.XWX)
                 if size(W,1) == N && size(W,2) == N
                     XWX = X'*W*X;
                 elseif length(W) == 1
@@ -866,7 +866,7 @@ classdef TensionSpline < BSpline
                 cachedVars.XWX = XWX;
             end
             
-            if isempty(cachedVars.XWx)
+            if ~exist('cachedVars.XWx','var') || isempty(cachedVars.XWx)
                 if size(W,1) == N && size(W,2) == N
                     XWx = X'*W*x;
                 elseif length(W) == 1
@@ -879,7 +879,7 @@ classdef TensionSpline < BSpline
                 cachedVars.XWx = XWx;
             end
             
-            if isempty(cachedVars.VV)
+            if ~exist('cachedVars.VV','var') || isempty(cachedVars.VV)
                 V = cachedVars.V;
                 cachedVars.VV = V'*V;
             end
@@ -962,18 +962,19 @@ classdef TensionSpline < BSpline
         end
         
         % e
-        function [m,Cm,CmInv,isConstrained,cachedVars] = IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,cachedVars)
+        function [m,Cm,CmInv,isConstrained,cachedVars] = IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,cachedVars)
             % Out first call is basically just a normal fit to a tension
             % spline. If W is not set, it will be set to either 1/w0^2 or
             % the correlated version
             cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
-            [m,Cm,CmInv,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,cachedVars);
-      
-            sigma2_previous = sigma.*sigma;
+            [m,Cm,CmInv,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[],cachedVars);
+            
+            X = cachedVars.X;
+            sigma2_previous = (distribution.sigma0)^2;
             rel_error = 1.0;
             repeats = 1;
             while (rel_error > 0.01)
-                sigma_w2 = w(X*m - x);
+                sigma_w2 = distribution.w(X*m - x);
                 
                 if exist('rho_t','var')
                     Sigma2 = (sqrt(sigma_w2) * sqrt(sigma_w2).') .* cachedVars.rho_t;

@@ -11,7 +11,7 @@ classdef (Abstract) Distribution
         variance    % total variance
 
         w           % 'weight' function
-        w0          % initial seed for weight function (set by default)
+        sigma0      % initial seed for weight function (set by default to w(sigma0)=sigma0^2)
         dPDFoverZ   % derivative of the pdf wrt z, divided by z
         logPDF      % log of the pdf
     end
@@ -37,8 +37,8 @@ classdef (Abstract) Distribution
         
         % initial weighting should start at the inflection point of the
         % weight function
-        function w0 = get.w0(self)
-            w0 = fminsearch( @(x) abs(self.w(x)-x^2),sqrt(self.variance));
+        function sigma0 = get.sigma0(self)
+            sigma0 = fminsearch( @(x) abs(self.w(x)-x^2),sqrt(self.variance));
         end
         
         function totalError = andersonDarlingError(self,epsilon)
