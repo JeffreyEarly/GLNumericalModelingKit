@@ -17,7 +17,7 @@ figure
 plot(x_dense,f(x_dense)), hold on
 scatter(x,y,'k')
 legend('true function', 'noisy data')
-print('-depsc2', '../figures/noisydata.eps')
+% print('-depsc2', '../figures/noisydata.eps')
 
 % now create a tension spline fit to the data
 spline = TensionSpline(x,y,NormalDistribution(sigma));
@@ -27,4 +27,4 @@ plot(x_dense,f(x_dense)), hold on
 scatter(x,y,'k')
 plot(x_dense,spline(x_dense),'LineWidth',2)
 legend('true function', 'noisy data', 'tension spline fit')
-print('-depsc2', '../figures/noisydatawithtensionspline.eps')
+% print('-depsc2', '../figures/noisydatawithtensionspline.eps')
