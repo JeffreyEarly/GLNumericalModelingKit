@@ -943,6 +943,7 @@ classdef TensionSpline < BSpline
             % Out first call is basically just a normal fit to a tension
             % spline. If W is not set, it will be set to either 1/w0^2 or
             % the correlated version
+            cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
             [m,Cm,CmInv,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,t,x,t_knot,K,T,distribution,W,cachedVars);
       
             sigma2_previous = sigma.*sigma;
@@ -958,10 +959,9 @@ classdef TensionSpline < BSpline
                     W = diag(1./sigma_w2);
                 end
                 
-                % hose any cached variable associated with W
+                % hose any cached variable associated with W...
                 cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
-                
-                % and recompute the solution with this new weighting
+                % ...and recompute the solution with this new weighting
                 [m,Cm,CmInv,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,t,x,t_knot,K,T,distribution,W,cachedVars);
                 
                 rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
