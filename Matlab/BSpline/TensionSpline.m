@@ -737,7 +737,11 @@ classdef TensionSpline < BSpline
                     nLambdas = length(lambdas);
                 end
                 
-                [~,index] = min(err);
+                [minErr,index] = min(err);
+                if index <= 2
+                    % if we reach a plateau at the bottom, we need to stop
+                    index = find(err<=minErr,1,'last');
+                end
             end
             lambda = lambdas(index);
             aTensionSpline.lambda = lambda; 
