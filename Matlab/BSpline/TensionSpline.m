@@ -1117,13 +1117,13 @@ classdef TensionSpline < BSpline
         function n_eff = EffectiveSampleSizeFromUrms(u_rms, t, sigma)
             % These are the coefficients of the empirical best fits for
             % slopes [-2,-3,-4] to the model n_eff = exp(b)*gamma^m
-            m = [0.6652; 0.7904; 0.8339];
-            b = [1.6903; 2.1786; 2.3288];
+            m = [0.6935; 0.7147; 0.7016];
+            b = [2.2594; 2.6123; 2.7663];
             
             dt = median(abs(diff(t)));
             
             gamma = sigma/( u_rms*dt );
-            n_eff = max(1,exp(b(1))*gamma.^m(1));
+            n_eff = max(1,exp(b(2))*gamma.^m(2));
         end
                         
         function [a_rms, a_std, a_mean] = EstimateRMSDerivativeFromSpectrum( t, x, sigma, D, shouldPlotSpectra)
