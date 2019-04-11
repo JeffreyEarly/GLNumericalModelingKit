@@ -128,9 +128,9 @@ classdef BivariateTensionSpline < handle
                 self.spline_x = TensionSpline(self.t,self.x_prime,self.noiseDistribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
                 self.spline_y = TensionSpline(self.t,self.y_prime,self.noiseDistribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
                 self.lambda = self.spline_x.lambda;
-                
-                                self.spline_x.sigma = self.noiseDistribution.sigma;
-                self.spline_y.sigma = self.noiseDistribution.sigma;
+%                 
+%                 self.spline_x.sigma = self.noiseDistribution.sigma;
+%                 self.spline_y.sigma = self.noiseDistribution.sigma;
                 
                 % Step 2---minimize under current conditions
 %                 [mse1_lambda,mse1] = self.minimizeExpectedMeanSquareErrorInNoiseRange();
