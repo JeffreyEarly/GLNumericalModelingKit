@@ -15,9 +15,12 @@ classdef ConstrainedSpline < BSpline
     
     properties (Access = public)
         distribution
+        t
+        x
         
         CmInv
         X
+        W
     end
     
     methods
@@ -69,16 +72,32 @@ classdef ConstrainedSpline < BSpline
             end
             if isa(distribution,'NormalDistribution')
                 [m,CmInv] = ConstrainedSpline.ConstrainedSolution(X,x,F,distribution.sigma);
+                W = 1/(distribution.sigma0)^2;
             else
-                [m,CmInv] = ConstrainedSpline.IteratedLeastSquaresConstrainedSolution(X,x,F,sqrt(distribution.variance),[],[],distribution.w);
+                [m,CmInv,W] = ConstrainedSpline.IteratedLeastSquaresConstrainedSolution(X,x,F,sqrt(distribution.variance),[],[],distribution.w);
             end
             
             self@BSpline(K,t_knot,m);
             self.distribution = distribution;
+            self.t = t;
+            self.x = x;
             self.CmInv = CmInv;
             self.X = X;
+            self.W = W;
         end
-
+        
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Smoothing matrix and covariance matrix
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function S = smoothingMatrix(self)
+            % The smoothing matrix S takes the observations and maps them
+            % onto the estimated true values.
+            S = (self.X*(self.CmInv\(self.X.')))*self.W;
+        end
     end
     
     
@@ -184,7 +203,7 @@ classdef ConstrainedSpline < BSpline
             CmInv = XWX;
         end
         
-        function [m,CmInv] = IteratedLeastSquaresConstrainedSolution(X,x,F,sigma,XWX,XWx,w,t,rho)
+        function [m,CmInv,W] = IteratedLeastSquaresConstrainedSolution(X,x,F,sigma,XWX,XWx,w,t,rho)
             % Same calling sequence as the TensionSolution function, but
             % also includes the weight factor, w
             if exist('t','var') && exist('rho','var') && ~isempty(rho)

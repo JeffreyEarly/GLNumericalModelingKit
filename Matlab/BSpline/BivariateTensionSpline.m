@@ -39,6 +39,11 @@ classdef BivariateTensionSpline < handle
         outlierDistanceDistribution
         sigma
         
+        % These have no consequence to the fit, but can be useful for
+        % diagnostics.
+        outlierIndices = [] 
+        outlierThreshold % set to a distance with < 1/10000 odds
+        
         lambdaAtFullTension % what was the value of lambda at full tension
         sigmaAtFullTension % what was the set of 'sigmas' produced from the full tension solution
         
@@ -102,6 +107,7 @@ classdef BivariateTensionSpline < handle
             self.distribution = distribution;
             self.noiseDistribution = distribution;
             self.noiseDistanceDistribution = TwoDimDistanceDistribution(self.noiseDistribution);
+            self.outlierThreshold = self.noiseDistanceDistribution.locationOfCDFPercentile(1-1/10000/2);
             
             t_knot = cat(1,min(t)*ones(self.K+1,1),max(t)*ones(self.K+1,1));
             self.spline_mean_x = ConstrainedSpline(self.t,self.x,self.K+1,t_knot,self.distribution,[]);
@@ -206,6 +212,7 @@ classdef BivariateTensionSpline < handle
         function self = tensionParameterDidChange(self)
             self.spline_x.lambda = self.lambda;
             self.spline_y.lambda = self.lambda;
+            self.outlierIndices = find(self.epsilon_d > self.outlierThreshold);
         end
                 
                 
@@ -225,6 +232,24 @@ classdef BivariateTensionSpline < handle
         
         function a = isConstrained(self)
            a = self.spline_x.isConstrained && self.spline_y.isConstrained;
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % smoothing matrix
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function Sx = smoothingMatrixX(self)
+            Sbar = self.spline_mean_x.smoothingMatrix;
+            Sprime = self.spline_x.smoothingMatrix;
+            Sx = Sbar + Sprime - Sprime*Sbar;
+        end
+        
+        function Sy = smoothingMatrixY(self)
+            Sbar = self.spline_mean_y.smoothingMatrix;
+            Sprime = self.spline_y.smoothingMatrix;
+            Sy = Sbar + Sprime - Sprime*Sbar;
         end
         
         
