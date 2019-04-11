@@ -133,20 +133,20 @@ classdef TensionSpline < BSpline
                         n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
                         a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
                         lambda = (n_eff-1)/(n_eff*a_rms.^2);
-                    case {Lambda.fullTensionIterated, Lambda.fullTensionExpected, Lambda.optimalIterated}
+                    case {Lambda.fullTensionExpected, Lambda.optimalIterated}
                         % if you're going to optimize, it's best to start
                         % near the full tension solution, rather than
                         % (potentially) near zero
                         a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
                         lambda = 1/a_rms.^2;
-                    case  {Lambda.optimalExpectedRobust, Lambda.fullTensionExpectedRobust, Lambda.optimalRangedIterated}
+                    case  {Lambda.fullTensionIterated, Lambda.optimalExpectedRobust, Lambda.fullTensionExpectedRobust, Lambda.optimalRangedIterated}
                         if length(x)>33
                             x_filtered = TensionSpline.RunningFilter(x,11,'median');
                         else
                             x_filtered=x;
                         end
                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),T);
-                       if lambdaArgument == optimalExpectedRobust
+                       if lambdaArgument == Lambda.optimalExpectedRobust
                            u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),1);
                            n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
                            lambda = (n_eff-1)/(n_eff*a_rms.^2);
