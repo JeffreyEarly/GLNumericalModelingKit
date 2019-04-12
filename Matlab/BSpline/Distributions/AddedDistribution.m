@@ -1,6 +1,20 @@
 classdef AddedDistribution < Distribution
     %UNTITLED2 Summary of this class goes here
-    %   Detailed explanation goes here
+%     %   Detailed explanation goes here
+
+%     Given a summed distribution,
+% \begin{equation}
+%     p_S(z) = \sum_{i=1}^N \alpha_i p_i(z)
+% \end{equation}
+% where $p_i(z)$ are valid probability distributions and $\sum \alpha_i = 1$, then the summed cdf is given by,
+% \begin{equation}
+%     \textrm{cdf}_S(z) = \sum_{i=1}^N \alpha_i \textrm{cdf}_i(z).
+% \end{equation}
+% The weight function for the summed distribution just follows straight from the definition,
+% \begin{equation}
+%     w(z) = - z\frac{p_S}{\partial_z p_S}
+% \end{equation}
+% and can therefore be computed automatically from the distributions being added.
     
     properties
         scalings
