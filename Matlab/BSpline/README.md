@@ -62,13 +62,17 @@ The `GPSTensionSpline` class offers some GPS specific additions to the `TensionS
 Overview
 ------------
 
-The `Spline` classes are as follows,
+The `BSpline` class is a primitive class that creates b-splines given some set of knot points, and then evaluates the splines given some set of coefficients for the splines. This class is just for generating b-splines and doesn't do anything with data.
 
-- The `BSpline` class is a primitive class that creates b-splines given some set of knot points, and then evaluates the splines given some set of coefficients for the splines. This class is just for generating b-splines and doesn't do anything with data.
+The following three classes all directly inherit from `BSpline`  class,
+
 - An `InterpolatingSpline` uses local b-splines to interpolate between data points. The (K-1)th derivative of a K order spline is piecewise continuous. This is a generalization of Matlab's cubic spline interpolation function.
 - The `ConstrainedSpline` class does a least-squares fit to given data points with a chosen set of b-splines. Constraints can be added at any point in the domain and the class can also accommodate non-gaussian errors.
 - A `TensionSpline` can be used to smooth noisy data and attempt to recover the "true" underlying function.
-- A `RobustTensionSpline` adds additional functionality to  `TensionSpline` in order to accommodate the presence of outliers in the data.
+
+The `BivariateTensionSpline` essentially takes  (t,x,y) as input data and creates tension splines for both x, y *after* removing a mean  `ConstrainedSpline` fit from both directions. The idea is to make the data stationary and therefore treat tension parameter optimization isotropically. 
+
+The `GPSTensionSpline`  inherits from `BivariateTensionSpline` but takes latitude and longitude as arguments, and assume the noise follows a Student's t-distribution.
 
 
 
@@ -252,16 +256,20 @@ GPS Tension spline
 
 The `GPSTensionSpline` class is useful for smoothing noisy gps data and removing outliers. The class is initialized with,
 ```matlab
-spline = GPSTensionSpline(t,x,y);
+spline = GPSTensionSpline(t,lat,lon);
 ```
-where `t` is time, and `x,y` are *projected* positions in meters. By default, the class will,
+where `t` is time, and `lat,lon` . Internally, the latitude and longitude are *projected* using a transverse Mercator projection to positions in meters. By default, the class will,
 
 1. identify outliers and,
 2. smooth the data to the appropriate value.
 
 The results can then be evaluated at any time,
 ```matlab
-[x_smooth,y_smooth] = spline(t);
+[x_smooth,y_smooth] = spline.xyAtTime(t);
+```
+or
+```matlab
+[lat_smooth,lon_smooth] = spline.latLonAtTime(t);
 ```
 
 ### Properties

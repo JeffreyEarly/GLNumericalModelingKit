@@ -3,17 +3,15 @@ classdef TensionSpline < BSpline
     %   3 argument initialization
     %       f = TensionSpline(t,x,sigma);
     %   where
-    %       t       array of values for the independent axis
-    %       x       array of values for the dependent axis 
-    %       sigma   std deviation of noise
-    %       f       cubic spline interpolant
+    %       t               array of values for the independent axis
+    %       x               array of values for the dependent axis 
+    %       distribution    distribution of the noise
+    %   returns
+    %       f       spline interpolant
     %
     %   TensionSpline takes a number of optional input argument pairs.
     %
-    %   'weightFunction' the weight function should be specified when the
-    %   errors are non-guassian. The weight function should take a single
-    %   argument, the error, and map it to the Gaussian equivalent variance
-    %   for the error distribution of choice.
+    %   The distribution must be a subclass of Distribution class.
     %
     %   'lambda' lambda is the tension parameter, and can be given directly
     %   as a numeric value, or can be a function that takes this
