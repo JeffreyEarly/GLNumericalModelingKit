@@ -1,15 +1,15 @@
-classdef GPSTensionSpline < BivariateTensionSpline
-    % GPSTensionSpline Fit noisy GPS data with a tensioned interpolating
+classdef GPSSmoothingSpline < BivariateSmoothingSpline
+    % GPSSmoothingSpline Fit noisy GPS data with a tensioned interpolating
     % spline
     %   3 argument initialization
-    %       f = GPSTensionSpline(t,lat,lon);
+    %       f = GPSSmoothingSpline(t,lat,lon);
     %   where
     %       t       time (seconds or datetime)
     %       lat     latitude
     %       lon     longitude
     %       f       spline interpolant
     %
-    %   GPSTensionSpline takes a number of optional input argument pairs.
+    %   GPSSmoothingSpline takes a number of optional input argument pairs.
     
     
     properties
@@ -34,7 +34,7 @@ classdef GPSTensionSpline < BivariateTensionSpline
         % Initialization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function self = GPSTensionSpline(t,lat,lon,varargin)
+        function self = GPSSmoothingSpline(t,lat,lon,varargin)
             N = length(t);
             t_raw = reshape(t,[],1);
             lat = reshape(lat,[],1);
@@ -80,7 +80,7 @@ classdef GPSTensionSpline < BivariateTensionSpline
             x = x - x0;
             y = y - y0;
             
-            self@BivariateTensionSpline(t,x,y,gpsNoiseDistribution,varargin{:});
+            self@BivariateSmoothingSpline(t,x,y,gpsNoiseDistribution,varargin{:});
             self.gpsNoiseDistribution = gpsNoiseDistribution;
             self.t_raw = t_raw;
             self.lat = lat;
@@ -146,7 +146,7 @@ classdef GPSTensionSpline < BivariateTensionSpline
                     
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RESTRICT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 case '{}'
-                    error('The GPSTensionSpline class does not know what to do with {}.');
+                    error('The GPSSmoothingSpline class does not know what to do with {}.');
                 otherwise
                     error('Unexpected syntax');
             end

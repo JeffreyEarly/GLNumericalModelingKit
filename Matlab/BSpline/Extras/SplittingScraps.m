@@ -37,11 +37,11 @@ self.spline_y = cell(self.N_fits,1);
 for iFit=1:self.N_fits
     indices = (fit_starts(iFit):fit_ends(iFit))';
     if self.shouldUseRobustFit == 1
-        self.spline_x{iFit} = RobustTensionSpline(self.t(indices),self.q(indices),self.distribution,'K',self.K,'T',self.T);
-        self.spline_y{iFit} = RobustTensionSpline(self.t(indices),self.r(indices),self.distribution,'K',self.K,'T',self.T);
+        self.spline_x{iFit} = RobustSmoothingSpline(self.t(indices),self.q(indices),self.distribution,'K',self.K,'T',self.T);
+        self.spline_y{iFit} = RobustSmoothingSpline(self.t(indices),self.r(indices),self.distribution,'K',self.K,'T',self.T);
     else
-        self.spline_x{iFit} = TensionSpline(self.t(indices),self.q(indices),self.distribution,'K',self.K,'T',self.T);
-        self.spline_y{iFit} = TensionSpline(self.t(indices),self.r(indices),self.distribution,'K',self.K,'T',self.T);
+        self.spline_x{iFit} = SmoothingSpline(self.t(indices),self.q(indices),self.distribution,'K',self.K,'T',self.T);
+        self.spline_y{iFit} = SmoothingSpline(self.t(indices),self.r(indices),self.distribution,'K',self.K,'T',self.T);
     end
 end
 

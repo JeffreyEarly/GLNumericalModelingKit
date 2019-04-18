@@ -1,7 +1,7 @@
-classdef TensionSpline < BSpline
-    %TensionSpline Fit noisy data with a tensioned interpolating spline
+classdef SmoothingSpline < BSpline
+    %SmoothingSpline Fit noisy data with a tensioned interpolating spline
     %   3 argument initialization
-    %       f = TensionSpline(t,x,sigma);
+    %       f = SmoothingSpline(t,x,sigma);
     %   where
     %       t               array of values for the independent axis
     %       x               array of values for the dependent axis 
@@ -9,13 +9,13 @@ classdef TensionSpline < BSpline
     %   returns
     %       f       spline interpolant
     %
-    %   TensionSpline takes a number of optional input argument pairs.
+    %   SmoothingSpline takes a number of optional input argument pairs.
     %
     %   The distribution must be a subclass of Distribution class.
     %
     %   'lambda' lambda is the tension parameter, and can be given directly
     %   as a numeric value, or can be a function that takes this
-    %   TensionSpline object as an argument, and returns a numeric value.
+    %   SmoothingSpline object as an argument, and returns a numeric value.
     %
     % 
     
@@ -65,7 +65,7 @@ classdef TensionSpline < BSpline
         % Initialization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function self = TensionSpline(t,x,distribution,varargin)
+        function self = SmoothingSpline(t,x,distribution,varargin)
             N = length(t);
             t = reshape(t,[],1);
             x = reshape(x,[],1);
@@ -127,26 +127,26 @@ classdef TensionSpline < BSpline
             if isenum(lambdaArgument)
                 switch lambdaArgument
                     case {Lambda.optimalExpected}
-                        u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),1);
-                        n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
-                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
+                        u_rms = SmoothingSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),1);
+                        n_eff = SmoothingSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
+                        a_rms = SmoothingSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
                         lambda = (n_eff-1)/(n_eff*a_rms.^2);
                     case {Lambda.fullTensionExpected, Lambda.optimalIterated}
                         % if you're going to optimize, it's best to start
                         % near the full tension solution, rather than
                         % (potentially) near zero
-                        a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
+                        a_rms = SmoothingSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),T);
                         lambda = 1/a_rms.^2;
                     case  {Lambda.fullTensionIterated, Lambda.optimalExpectedRobust, Lambda.fullTensionExpectedRobust, Lambda.optimalRangedIterated}
                         if length(x)>33
-                            x_filtered = TensionSpline.RunningFilter(x,11,'median');
+                            x_filtered = SmoothingSpline.RunningFilter(x,11,'median');
                         else
                             x_filtered=x;
                         end
-                       a_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),T);
+                       a_rms = SmoothingSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),T);
                        if lambdaArgument == Lambda.optimalExpectedRobust
-                           u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),1);
-                           n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
+                           u_rms = SmoothingSpline.EstimateRMSDerivativeFromSpectrum(t,x_filtered,sqrt(distribution.variance),1);
+                           n_eff = SmoothingSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
                            lambda = (n_eff-1)/(n_eff*a_rms.^2);
                        else
                            lambda = 1/a_rms.^2;
@@ -160,8 +160,8 @@ classdef TensionSpline < BSpline
                         
             if shouldSetKnotDOFAutomatically == 1
                 if isempty(n_eff)
-                    u_rms = TensionSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),1);
-                    n_eff = TensionSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
+                    u_rms = SmoothingSpline.EstimateRMSDerivativeFromSpectrum(t,x,sqrt(distribution.variance),1);
+                    n_eff = SmoothingSpline.EffectiveSampleSizeFromUrms(u_rms, t, sqrt(distribution.variance));
                 end
                 % conservative estimate
                 knot_dof = max(1,floor(0.5*n_eff));
@@ -173,9 +173,9 @@ classdef TensionSpline < BSpline
             end
             
             if isa(distribution,'NormalDistribution')                
-                [m,~,~,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,1/(distribution.sigma^2),[]);      
+                [m,~,~,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,1/(distribution.sigma^2),[]);      
             elseif ~isempty(distribution.w)
-                [m,~,~,isConstrained,cachedVars] = TensionSpline.IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[]);
+                [m,~,~,isConstrained,cachedVars] = SmoothingSpline.IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[]);
             else
                 error('No weight function given! Unable to proceed.');
             end
@@ -262,9 +262,9 @@ classdef TensionSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if isa(self.distribution,'NormalDistribution')
-                [self.m,~,~,self.isConstrained,self.variableCache] = TensionSpline.TensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,1/(self.distribution.sigma^2),self.variableCache);
+                [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.TensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,1/(self.distribution.sigma^2),self.variableCache);
             elseif ~isempty(self.distribution.w)
-                [self.m,~,~,self.isConstrained,self.variableCache] = TensionSpline.IteratedLeastSquaresTensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,self.variableCache);
+                [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.IteratedLeastSquaresTensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,self.variableCache);
             else
                 error('No weight function given! Unable to proceed.'); 
             end
@@ -275,7 +275,7 @@ classdef TensionSpline < BSpline
         end
         
         function set.tensionValue(self,x_T)
-            TensionSpline.minimizeFunctionOfSpline(self,@(spline) abs(std(spline.uniqueValuesAtHighestDerivative)-x_T));
+            SmoothingSpline.minimizeFunctionOfSpline(self,@(spline) abs(std(spline.uniqueValuesAtHighestDerivative)-x_T));
         end
         
         function x_T = get.tensionValue(self)
@@ -583,7 +583,7 @@ classdef TensionSpline < BSpline
         %
         % 2019/02/26 - The preferred method for now is the iterated
         % interquartile Anderson-Darling test. Other methods are in the
-        % ExperimentalTensionSpline class
+        % ExperimentalSmoothingSpline class
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
@@ -605,7 +605,7 @@ classdef TensionSpline < BSpline
             self.minimize(@(spline) knownDistribution.andersonDarlingInterquartileError(spline.epsilon));
             lastAlpha = 0.0;
             totalIterations = 0;
-            [newOutlierDistribution, newAlpha] = TensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,knownDistribution);
+            [newOutlierDistribution, newAlpha] = SmoothingSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,knownDistribution);
             % The estimateOutlierDistributionFromKnownNoise function always
             % works from the same list of 100 alphas, so we can check with
             % fairly high tolerance whether or not its the same.
@@ -617,7 +617,7 @@ classdef TensionSpline < BSpline
                 end
                 self.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError(spline.epsilon));
                 lastAlpha = newAlpha;
-                [newOutlierDistribution, newAlpha] = TensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,knownDistribution);
+                [newOutlierDistribution, newAlpha] = SmoothingSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,knownDistribution);
                 totalIterations = totalIterations + 1;
             end
         end
@@ -632,8 +632,8 @@ classdef TensionSpline < BSpline
             % the penalty function *must* take a tension spline object and
             % return a scalar. The function will be minimized by varying
             % lambda.
-            [~,lambdaBelow,lambdaAbove] = TensionSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
-            lambda = TensionSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,lambdaBelow,lambdaAbove);
+            [~,lambdaBelow,lambdaAbove] = SmoothingSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
+            lambda = SmoothingSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,lambdaBelow,lambdaAbove);
             fval = penaltyFunction(self);
         end
         
@@ -645,21 +645,21 @@ classdef TensionSpline < BSpline
         
         function [lambda,mse] = minimizeMeanSquareError(self,t_true,x_true)
             % minimize against the true values
-            mse = @(aTensionSpline) mean((aTensionSpline.ValueAtPoints(t_true)-x_true).^2)/(aTensionSpline.distribution.variance);
+            mse = @(aSmoothingSpline) mean((aSmoothingSpline.ValueAtPoints(t_true)-x_true).^2)/(aSmoothingSpline.distribution.variance);
             [lambda,mse] = self.minimize(mse);
         end
         
         function [lambda,mse] = minimizeExpectedMeanSquareError(self)
             % minimize against the *expected* mean square error for the
             % given distribution
-            [lambda,mse] = self.minimize(@(aTensionSpline) aTensionSpline.expectedMeanSquareError);
+            [lambda,mse] = self.minimize(@(aSmoothingSpline) aSmoothingSpline.expectedMeanSquareError);
         end
         
         function [lambda,mse] = minimizeExpectedMeanSquareErrorInPercentileRange(self,pctmin,pctmax)
             zmin = self.distribution.locationOfCDFPercentile(pctmin);
             zmax = self.distribution.locationOfCDFPercentile(pctmax); 
             expectedVariance = self.distribution.varianceInRange(zmin,zmax);
-            [lambda,mse] = self.minimize( @(aTensionSpline) aTensionSpline.expectedMeanSquareErrorInRange(zmin,zmax,expectedVariance) );
+            [lambda,mse] = self.minimize( @(aSmoothingSpline) aSmoothingSpline.expectedMeanSquareErrorInRange(zmin,zmax,expectedVariance) );
         end
         
         function [lambda,mse] = minimizeExpectedMeanSquareErrorInNoiseRange(self,minimizationPDFRatio)
@@ -667,7 +667,7 @@ classdef TensionSpline < BSpline
                 minimizationPDFRatio = 1;
             end
             if ~isempty(self.alpha) && self.alpha > 0
-                [zoutlier,expectedVariance] = TensionSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistribution,self.distribution,minimizationPDFRatio);
+                [zoutlier,expectedVariance] = SmoothingSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistribution,self.distribution,minimizationPDFRatio);
                 [lambda,mse] = self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(-zoutlier,zoutlier,expectedVariance));
             else
                 [lambda,mse] = self.minimizeExpectedMeanSquareError();
@@ -691,10 +691,10 @@ classdef TensionSpline < BSpline
         %
         % This algorithm also *stops* looking at higher lambdas once the
         % problem becomes constrained.
-        function [lambda,lambdaBelow,lambdaAbove] = minimizeFunctionOfSplineWithGridSearch(aTensionSpline,functionOfSpline,dlog10lambda,n)
-            lambdas = aTensionSpline.lambda;
-            err = functionOfSpline(aTensionSpline);
-            isConstrained = aTensionSpline.isConstrained;
+        function [lambda,lambdaBelow,lambdaAbove] = minimizeFunctionOfSplineWithGridSearch(aSmoothingSpline,functionOfSpline,dlog10lambda,n)
+            lambdas = aSmoothingSpline.lambda;
+            err = functionOfSpline(aSmoothingSpline);
+            isConstrained = aSmoothingSpline.isConstrained;
             nLambdas = 1;
             index = 1;
             
@@ -711,9 +711,9 @@ classdef TensionSpline < BSpline
                     err = cat(1,zeros(n,1),err);
                     isConstrained = cat(1,zeros(n,1),isConstrained);
                     for iLambda = 1:n
-                        aTensionSpline.lambda = lambdas(iLambda);
-                        err(iLambda) =  functionOfSpline(aTensionSpline);
-                        isConstrained(iLambda) = aTensionSpline.isConstrained;
+                        aSmoothingSpline.lambda = lambdas(iLambda);
+                        err(iLambda) =  functionOfSpline(aSmoothingSpline);
+                        isConstrained(iLambda) = aSmoothingSpline.isConstrained;
                     end
                     
                     nLambdas = length(lambdas);
@@ -727,9 +727,9 @@ classdef TensionSpline < BSpline
                     err = cat(1,err,zeros(n,1));
                     isConstrained = cat(1,isConstrained,zeros(n,1));
                     for iLambda = (nLambdas+1):(nLambdas+n)
-                        aTensionSpline.lambda = lambdas(iLambda);
-                        err(iLambda) =  functionOfSpline(aTensionSpline);
-                        isConstrained(iLambda) = aTensionSpline.isConstrained;
+                        aSmoothingSpline.lambda = lambdas(iLambda);
+                        err(iLambda) =  functionOfSpline(aSmoothingSpline);
+                        isConstrained(iLambda) = aSmoothingSpline.isConstrained;
                     end
                     
                     nLambdas = length(lambdas);
@@ -742,7 +742,7 @@ classdef TensionSpline < BSpline
                 end
             end
             lambda = lambdas(index);
-            aTensionSpline.lambda = lambda; 
+            aSmoothingSpline.lambda = lambda; 
             lambdaBelow = lambdas(index-1);
             if length(lambdas)>index
                 lambdaAbove = lambdas(index+1);
@@ -751,33 +751,33 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function lambda = minimizeFunctionOfSplineBounded(aTensionSpline,functionOfSpline,x1,x2)
+        function lambda = minimizeFunctionOfSplineBounded(aSmoothingSpline,functionOfSpline,x1,x2)
             epsilon = 1e-15;
-            errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
+            errorFunction = @(log10lambdaPlusEpsilon) SmoothingSpline.FunctionOfSplineWrapper(aSmoothingSpline,log10lambdaPlusEpsilon,functionOfSpline);
             optimalLog10lambdaPlusEpsilon = fminbnd( errorFunction, log10(x1+epsilon), log10(x2+epsilon), optimset('TolX', 0.01, 'TolFun', 0.001) );
             lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
-            aTensionSpline.lambda = lambda;
+            aSmoothingSpline.lambda = lambda;
         end
         
-        function lambda = minimizeFunctionOfSpline(aTensionSpline,functionOfSpline)
+        function lambda = minimizeFunctionOfSpline(aSmoothingSpline,functionOfSpline)
             epsilon = 1e-15;
-            errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.FunctionOfSplineWrapper(aTensionSpline,log10lambdaPlusEpsilon,functionOfSpline);
-            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.001) );
+            errorFunction = @(log10lambdaPlusEpsilon) SmoothingSpline.FunctionOfSplineWrapper(aSmoothingSpline,log10lambdaPlusEpsilon,functionOfSpline);
+            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aSmoothingSpline.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.001) );
             lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
-            aTensionSpline.lambda = lambda;
+            aSmoothingSpline.lambda = lambda;
         end
         
-        function error = FunctionOfSplineWrapper(aTensionSpline, log10lambdaPlusEpsilon, functionOfSpline)
+        function error = FunctionOfSplineWrapper(aSmoothingSpline, log10lambdaPlusEpsilon, functionOfSpline)
             epsilon = 1e-15;
-            aTensionSpline.lambda = 10^log10lambdaPlusEpsilon-epsilon;              
-            error = functionOfSpline(aTensionSpline);
+            aSmoothingSpline.lambda = 10^log10lambdaPlusEpsilon-epsilon;              
+            error = functionOfSpline(aSmoothingSpline);
         end
         
         % Same thing as above, but for a bunch of splines given as a cell
         % array
         function lambda = minimizeFunctionOfSplines(tensionSplines,functionOfSplines)
             epsilon = 1e-15;
-            errorFunction = @(log10lambdaPlusEpsilon) TensionSpline.functionOfSplinesWrapper(tensionSplines,log10lambdaPlusEpsilon,functionOfSplines);
+            errorFunction = @(log10lambdaPlusEpsilon) SmoothingSpline.functionOfSplinesWrapper(tensionSplines,log10lambdaPlusEpsilon,functionOfSplines);
             optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(tensionSplines{1}.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.001) );
             lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
         end
@@ -910,7 +910,7 @@ classdef TensionSpline < BSpline
             % m         coefficients of the splines, Mx1
             % CmInv     Inverse of the covariance of coefficients, MxM
             
-            cachedVars = TensionSpline.PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,cachedVars);
+            cachedVars = SmoothingSpline.PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,cachedVars);
             
             N = length(x);
             Q = size(cachedVars.V,1);
@@ -969,7 +969,7 @@ classdef TensionSpline < BSpline
             % spline. If W is not set, it will be set to either 1/w0^2 or
             % the correlated version
             cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
-            [m,Cm,CmInv,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[],cachedVars);
+            [m,Cm,CmInv,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[],cachedVars);
             
             X = cachedVars.X;
             sigma2_previous = (distribution.sigma0)^2;
@@ -988,7 +988,7 @@ classdef TensionSpline < BSpline
                 % hose any cached variable associated with W...
                 cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
                 % ...and recompute the solution with this new weighting
-                [m,Cm,CmInv,isConstrained,cachedVars] = TensionSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,cachedVars);
+                [m,Cm,CmInv,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,cachedVars);
                 
                 rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
                 sigma2_previous=sigma_w2;
@@ -1134,7 +1134,7 @@ classdef TensionSpline < BSpline
             xin = x;
             tin = t;
             
-            if TensionSpline.IsEvenlySampled(t) ~= 1
+            if SmoothingSpline.IsEvenlySampled(t) ~= 1
                 %    fprintf('interpolating...\n');
                 dt = median(diff(t));
                 N = ceil((t(end)-t(1))/dt);
@@ -1172,7 +1172,7 @@ classdef TensionSpline < BSpline
                 
                 SpectralD = (2*(1-cos(dt*2*pi*f))/(dt^2)).^(D+1);
             else
-                [DiffMatrix,t_u] = TensionSpline.FiniteDifferenceMatrixNoBoundary(D,t,1);
+                [DiffMatrix,t_u] = SmoothingSpline.FiniteDifferenceMatrixNoBoundary(D,t,1);
                 
                 dt = t_u(2)-t_u(1);
                 T = t_u(end)-t_u(1);
@@ -1194,14 +1194,14 @@ classdef TensionSpline < BSpline
             % The factor of 10 is consistent with 80% confidence.
             % 95% confidence (actually, 97.5% ?) is 39.5
             alpha = 0.10;
-            cutoff = 2/TensionSpline.chi2inv(alpha/2,2);
+            cutoff = 2/SmoothingSpline.chi2inv(alpha/2,2);
             
             % There are two ways to think of this. Either you look for the
             % 95% range of the signal, or the 95% range of the expected
             % noise.
             alpha = 0.99999;
             dof = 2;
-            cutoff = 1*TensionSpline.chi2inv(alpha,dof)/dof;
+            cutoff = 1*SmoothingSpline.chi2inv(alpha,dof)/dof;
             
             u2 = sum((s_signal > cutoff*s_noise) .* s_signal)*df;
             a_std = sqrt(u2);
@@ -1249,15 +1249,15 @@ classdef TensionSpline < BSpline
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         
-        function [rmse,norm] = MeanSquareErrorAtAllOrders(aTensionSpline, t_true, x_true)
+        function [rmse,norm] = MeanSquareErrorAtAllOrders(aSmoothingSpline, t_true, x_true)
             if length(unique(diff(t_true))) > 1
                 error('This only works for evenly spaced data at the moment.');
             end
             
-            rmse = zeros(aTensionSpline.K,1);
-            norm = zeros(aTensionSpline.K,1);
+            rmse = zeros(aSmoothingSpline.K,1);
+            norm = zeros(aSmoothingSpline.K,1);
             dt = t_true(2)-t_true(1);
-            for D = 0:(aTensionSpline.K-1)
+            for D = 0:(aSmoothingSpline.K-1)
                 
                 % differentiate D times
                 % We remove the mean from *position*
@@ -1270,9 +1270,9 @@ classdef TensionSpline < BSpline
                      % points of accuracy move dt/2 further inside each D
                     t_signal = t_true(1:(length(t_true)-D)) + D*dt/2;
                     
-                    signal_obs = aTensionSpline.ValueAtPoints(t_signal,D);
+                    signal_obs = aSmoothingSpline.ValueAtPoints(t_signal,D);
                 else
-                    signal_obs = aTensionSpline.ValueAtPoints(t_true);
+                    signal_obs = aSmoothingSpline.ValueAtPoints(t_true);
                     for i=1:D
                         signal_obs = diff(signal_obs)/dt;
                     end
@@ -1286,8 +1286,8 @@ classdef TensionSpline < BSpline
             end
         end
         
-        function Q = QScore(aTensionSpline, t_true, x_true)
-            [rmse,norm] = TensionSpline.MeanSquareErrorAtAllOrders(aTensionSpline, t_true, x_true);
+        function Q = QScore(aSmoothingSpline, t_true, x_true)
+            [rmse,norm] = SmoothingSpline.MeanSquareErrorAtAllOrders(aSmoothingSpline, t_true, x_true);
             Q = mean(rmse./norm);
         end
         
@@ -1341,7 +1341,7 @@ classdef TensionSpline < BSpline
                     range = union(range_left,range_right);
                 end
                 
-                c = TensionSpline.weights( z(i), x(range), numDerivs );
+                c = SmoothingSpline.weights( z(i), x(range), numDerivs );
                 D(i,range) = c(numDerivs+1,:);
                 width(i) = max(x(range))-min(x(range));
             end
@@ -1440,7 +1440,7 @@ classdef TensionSpline < BSpline
             %   $Revision: 2.10.2.2 $  $Date: 2004/07/05 17:02:22 $
             
             % Call the gamma inverse function.
-            x = TensionSpline.gaminv(p,v/2,2);
+            x = SmoothingSpline.gaminv(p,v/2,2);
             
             % Return NaN if the degrees of freedom is not positive.
             k = (v <= 0);
@@ -1560,8 +1560,8 @@ classdef TensionSpline < BSpline
                     break
                 end
                 
-                F = TensionSpline.gamcdf(q,a,1);
-                f = max(TensionSpline.gampdf(q,a,1), realmin(class(p)));
+                F = SmoothingSpline.gamcdf(q,a,1);
+                f = max(SmoothingSpline.gampdf(q,a,1), realmin(class(p)));
                 dF = F-p;
                 h = dF ./ f;
                 qnew = q - h;

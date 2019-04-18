@@ -1,9 +1,9 @@
-classdef BivariateTensionSpline < handle
-    % BivariateTensionSpline Fit 2D (two-dependent, one-independent) data
+classdef BivariateSmoothingSpline < handle
+    % BivariateSmoothingSpline Fit 2D (two-dependent, one-independent) data
     % isotropically.
     %
     %   4 argument initialization
-    %       f = BivariateTensionSpline(t,x,y,distribution);
+    %       f = BivariateSmoothingSpline(t,x,y,distribution);
     %   where
     %       t               time (seconds or datetime)
     %       x               latitude
@@ -11,7 +11,7 @@ classdef BivariateTensionSpline < handle
     %       distribution    distribution of errors
     %       f               spline interpolant
     %
-    %   BivariateTensionSpline takes a number of optional input argument pairs.
+    %   BivariateSmoothingSpline takes a number of optional input argument pairs.
     
     properties
         x
@@ -30,7 +30,7 @@ classdef BivariateTensionSpline < handle
         
         shouldUseRobustFit = 0;
         % These are not used directly in minimization, only the
-        % 'distribution' property in the TensionSpline superclass is used
+        % 'distribution' property in the SmoothingSpline superclass is used
         % directly.
         noiseDistribution
         outlierDistribution
@@ -67,7 +67,7 @@ classdef BivariateTensionSpline < handle
         % Initialization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function self = BivariateTensionSpline(t,x,y,distribution,varargin)
+        function self = BivariateSmoothingSpline(t,x,y,distribution,varargin)
             N = length(t);
             t = reshape(t,[],1);
             x = reshape(x,[],1);
@@ -121,12 +121,12 @@ classdef BivariateTensionSpline < handle
              
             % initialize splines so that they have the same lambda
             if self.shouldUseRobustFit == 1
-                % We don't let the RobustTensionSpline do any extra work
+                % We don't let the RobustSmoothingSpline do any extra work
 %                 nu = 3.0;
 %                 sigma = sqrt(self.noiseDistribution.variance*1000*(nu-2)/nu);
 %                 addedDistribution = AddedDistribution(1/100,StudentTDistribution(sigma,nu),self.noiseDistribution);
-                self.spline_x = TensionSpline(self.t,self.x_prime,self.noiseDistribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
-                self.spline_y = TensionSpline(self.t,self.y_prime,self.noiseDistribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
+                self.spline_x = SmoothingSpline(self.t,self.x_prime,self.noiseDistribution,'K',self.K,'T',self.T,'lambda',Lambda.fullTensionIterated);
+                self.spline_y = SmoothingSpline(self.t,self.y_prime,self.noiseDistribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
                 self.lambda = self.spline_x.lambda;
 %                 
 %                 self.spline_x.sigma = self.noiseDistribution.sigma;
@@ -165,8 +165,8 @@ classdef BivariateTensionSpline < handle
                     self.lambda = mse1_lambda;
                 end
             else
-                self.spline_x = TensionSpline(self.t,self.x_prime,self.distribution,'K',self.K,'T',self.T);
-                self.spline_y = TensionSpline(self.t,self.y_prime,self.distribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
+                self.spline_x = SmoothingSpline(self.t,self.x_prime,self.distribution,'K',self.K,'T',self.T);
+                self.spline_y = SmoothingSpline(self.t,self.y_prime,self.distribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
                 self.lambda = self.spline_x.lambda;
                 
                 self.minimizeExpectedMeanSquareErrorInNoiseRange();
@@ -310,7 +310,7 @@ classdef BivariateTensionSpline < handle
             
             lastAlpha = 0.0;
             totalIterations = 0;
-            [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.distribution);
+            [newOutlierDistribution, newAlpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.distribution);
             while (abs(lastAlpha-newAlpha) > 0.01 && totalIterations < 10)
                 if newAlpha > 0 && ~isempty(newOutlierDistribution)
                     addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.distribution);
@@ -319,7 +319,7 @@ classdef BivariateTensionSpline < handle
                 end
                 self.minimize(@(spline) addedDistribution.andersonDarlingInterquartileError( reshape(spline.epsilon,[],1) ));
                 lastAlpha = newAlpha;
-                [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.distribution);
+                [newOutlierDistribution, newAlpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.distribution);
                 if newAlpha >= 0.5
                     fprintf('Alpha reached 0.5!\n'); break;
                 end
@@ -351,7 +351,7 @@ classdef BivariateTensionSpline < handle
         function estimateOutlierDistribution(self)
             self.setToFullTensionWithIteratedIQAD();
             
-            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.noiseDistribution);
+            [self.outlierDistribution,self.alpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.noiseDistribution);
             if self.alpha>0
                 self.outlierDistanceDistribution = TwoDimDistanceDistribution(self.outlierDistribution);
             end
@@ -360,7 +360,7 @@ classdef BivariateTensionSpline < handle
         function setSigmaFromFullTensionSolution(self)
             self.setToFullTensionWithIteratedIQAD();
             
-            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.noiseDistribution);
+            [self.outlierDistribution,self.alpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.noiseDistribution);
             self.noiseDistanceDistribution = TwoDimDistanceDistribution(self.noiseDistribution);
             self.outlierDistanceDistribution = TwoDimDistanceDistribution(self.outlierDistribution);
             
@@ -384,11 +384,11 @@ classdef BivariateTensionSpline < handle
             end
             self.setToFullTensionWithIteratedIQAD();
 
-            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.noiseDistribution);
+            [self.outlierDistribution,self.alpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(reshape(self.epsilon,[],1),self.noiseDistribution);
             self.noiseDistanceDistribution = TwoDimDistanceDistribution(self.noiseDistribution);
             self.outlierDistanceDistribution = TwoDimDistanceDistribution(self.outlierDistribution);
             if self.alpha > 0
-                self.sigma = RobustTensionSpline.sigmaFromOutlierDistribution(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,self.epsilon_d,rejectionPDFRatio);
+                self.sigma = RobustSmoothingSpline.sigmaFromOutlierDistribution(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,self.epsilon_d,rejectionPDFRatio);
                 self.spline_x.sigma = self.sigma;
                 self.spline_y.sigma = self.sigma;
             end
@@ -404,8 +404,8 @@ classdef BivariateTensionSpline < handle
             % the penalty function *must* take a bivariate tension spline
             % object and return a scalar. The function will be minimized by
             % varying lambda.
-            [~,lambdaBelow,lambdaAbove] = TensionSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
-            lambda = TensionSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,lambdaBelow,lambdaAbove);
+            [~,lambdaBelow,lambdaAbove] = SmoothingSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
+            lambda = SmoothingSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,lambdaBelow,lambdaAbove);
             fval = penaltyFunction(self);
         end
         
@@ -413,12 +413,12 @@ classdef BivariateTensionSpline < handle
             zmin = 0;
             zmax = self.noiseDistanceDistribution.locationOfCDFPercentile(pctmax);
             expectedVariance = self.noiseDistanceDistribution.varianceInRange(zmin,zmax);
-            [lambda,mse] = self.minimize( @(aTensionSpline) aTensionSpline.expectedMeanSquareErrorInDistanceRange(zmin,zmax,expectedVariance) );
+            [lambda,mse] = self.minimize( @(aSmoothingSpline) aSmoothingSpline.expectedMeanSquareErrorInDistanceRange(zmin,zmax,expectedVariance) );
         end
         
         function [lambda,mse] = minimizeExpectedMeanSquareErrorInNoiseRange(self)
             if ~isempty(self.alpha) && self.alpha > 0
-                [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,1);
+                [zoutlier,expectedVariance] = RobustSmoothingSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistanceDistribution,self.noiseDistanceDistribution,1);
                 [lambda,mse] =self.minimize( @(spline) spline.expectedMeanSquareErrorInDistanceRange(0,zoutlier,expectedVariance));
             else
                 [lambda,mse] =self.minimize( @(spline) spline.expectedMeanSquareError );
@@ -461,7 +461,7 @@ classdef BivariateTensionSpline < handle
                     
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RESTRICT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 case '{}'
-                    error('The BivariateTensionSpline class does not know what to do with {}.');
+                    error('The BivariateSmoothingSpline class does not know what to do with {}.');
                 otherwise
                     error('Unexpected syntax');
             end
@@ -517,10 +517,10 @@ classdef BivariateTensionSpline < handle
             % the penalty function *must* take a bivariate tension spline
             % object and return a scalar. The function will be minimized by
             % varying x_T across both directions
-            [~,tensionValueBelow,tensionValueAbove] = GPSTensionSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
+            [~,tensionValueBelow,tensionValueAbove] = GPSSmoothingSpline.minimizeFunctionOfSplineWithGridSearch(self,penaltyFunction);
             tensionValue = mean([tensionValueAbove,tensionValueBelow]);
             self.tensionValue = tensionValue;
-            %             tensionValue = GPSTensionSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,tensionValueBelow,tensionValueAbove);
+            %             tensionValue = GPSSmoothingSpline.minimizeFunctionOfSplineBounded(self,penaltyFunction,tensionValueBelow,tensionValueAbove);
         end
         
     end
@@ -591,7 +591,7 @@ classdef BivariateTensionSpline < handle
         
         function tensionValue = minimizeFunctionOfSplineBounded(aBivariateSpline,functionOfBivariateSpline,x1,x2)
             epsilon = 1e-15;
-            errorFunction = @(log10tensionValuePlusEpsilon) GPSTensionSpline.functionOfSplineWrapper(aBivariateSpline,log10tensionValuePlusEpsilon,functionOfBivariateSpline);
+            errorFunction = @(log10tensionValuePlusEpsilon) GPSSmoothingSpline.functionOfSplineWrapper(aBivariateSpline,log10tensionValuePlusEpsilon,functionOfBivariateSpline);
             optimalLog10tensionValuePlusEpsilon = fminbnd( errorFunction, log10(x1+epsilon), log10(x2+epsilon), optimset('TolX', 0.01, 'TolFun', 0.001) );
             tensionValue = 10^optimalLog10tensionValuePlusEpsilon - epsilon;
             aBivariateSpline.tensionValue = tensionValue;

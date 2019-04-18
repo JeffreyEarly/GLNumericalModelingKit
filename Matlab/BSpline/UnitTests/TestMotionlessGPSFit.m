@@ -5,7 +5,7 @@ lon = D.data(:,2);
 t = datetime(D.textdata(6:end,2));
 
 indices = 1:5:5*1200;
-spline = GPSTensionSpline(t(indices),lat(indices),lon(indices));
+spline = GPSSmoothingSpline(t(indices),lat(indices),lon(indices));
 
 tq = linspace(min(spline.t),max(spline.t),10*length(spline.t))';
 

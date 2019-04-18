@@ -1,10 +1,10 @@
-classdef RobustTensionSpline < TensionSpline
-    %RobustTensionSpline Allows for outliers to occur.
+classdef RobustSmoothingSpline < SmoothingSpline
+    %RobustSmoothingSpline Allows for outliers to occur.
     % 
     
     properties
         % These are not used directly in minimization, only the
-        % 'distribution' property in the TensionSpline superclass is used
+        % 'distribution' property in the SmoothingSpline superclass is used
         % directly.
         noiseDistribution
         
@@ -12,7 +12,7 @@ classdef RobustTensionSpline < TensionSpline
     end
 
     methods
-        function self = RobustTensionSpline(t,x,distribution,varargin)
+        function self = RobustSmoothingSpline(t,x,distribution,varargin)
             % Construct a new 'robust' distribution by adding a Student's
             % t-distribution with 1000 times the variance, but assuming
             % only .01 percent outliers.
@@ -51,7 +51,7 @@ classdef RobustTensionSpline < TensionSpline
                 distribution = AddedDistribution(alpha,outlierDistribution,noiseDistribution);
             end
             
-            self@TensionSpline(t,x,distribution,varargin{:});
+            self@SmoothingSpline(t,x,distribution,varargin{:});
             
             self.noiseDistribution = noiseDistribution;
             self.outlierDistribution = outlierDistribution;
@@ -164,7 +164,7 @@ classdef RobustTensionSpline < TensionSpline
                minimizationPDFRatio = 1;
            end
            if self.alpha > 0
-               [zoutlier,expectedVariance] = RobustTensionSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistribution,self.noiseDistribution,minimizationPDFRatio);
+               [zoutlier,expectedVariance] = RobustSmoothingSpline.locationOfNoiseToOutlierPDFRatio(self.alpha,self.outlierDistribution,self.noiseDistribution,minimizationPDFRatio);
                self.minimize( @(spline) spline.expectedMeanSquareErrorInRange(-zoutlier,zoutlier,expectedVariance));
                mse = self.expectedMeanSquareErrorInRange(-zoutlier,zoutlier,expectedVariance);
            else
@@ -274,7 +274,7 @@ classdef RobustTensionSpline < TensionSpline
            noise(1) = self.distribution.variance;
            
            for iDiff=1:(self.K-1)
-               Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
+               Diff = SmoothingSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
                DS = Diff*S;
                DminusDS = Diff - DS;
                MSE(iDiff+1) = (sum((DminusDS*self.x).^2) - sigma2*sum(sum(DminusDS.^2)) + sigma2*sum(sum(DS.^2)))/length(Diff);
@@ -291,7 +291,7 @@ classdef RobustTensionSpline < TensionSpline
             SNR = zeros(self.K,1);
             SNR(1) = mean(x_smoothed.^2)/sigma2;
             for iDiff=1:(self.K-1)
-               Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
+               Diff = SmoothingSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
                SNR(1+iDiff) = sum((Diff*x_smoothed).^2)/(sigma2*sum(sum(Diff.^2)) );
             end
         end
@@ -304,7 +304,7 @@ classdef RobustTensionSpline < TensionSpline
             SSER = zeros(self.K,1);
             SSER(1) = mean(x_smoothed.^2)/sigma2;
             for iDiff=1:(self.K-1)
-               Diff = TensionSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
+               Diff = SmoothingSpline.FiniteDifferenceMatrixNoBoundary(iDiff,self.t,1);
                SE = sigma2*sum(sum( Diff.*(Diff*S) ));
                SSER(1+iDiff) = sum((Diff*x_smoothed).^2)/SE;
             end
@@ -359,12 +359,12 @@ classdef RobustTensionSpline < TensionSpline
             self.setInnerVarianceToExpectedValue(pctRange,extraVarianceFactor*self.noiseDistribution.varianceInPercentileRange(pctRange/2,1-pctRange/2));
             lastAlpha = 0.0;
             totalIterations = 0;
-            [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,self.noiseDistribution);
+            [newOutlierDistribution, newAlpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,self.noiseDistribution);
             while (abs(lastAlpha-newAlpha) > 0.01 && totalIterations < 10)
                 addedDistribution = AddedDistribution(newAlpha,newOutlierDistribution,self.noiseDistribution);
                 self.setInnerVarianceToExpectedValue(pctRange,extraVarianceFactor*addedDistribution.varianceInPercentileRange(pctRange/2,1-pctRange/2));
                 lastAlpha = newAlpha;
-                [newOutlierDistribution, newAlpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,self.noiseDistribution);
+                [newOutlierDistribution, newAlpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(self.epsilon,self.noiseDistribution);
                 totalIterations = totalIterations + 1;
             end
         end
@@ -469,9 +469,9 @@ classdef RobustTensionSpline < TensionSpline
             end
             self.setToFullTensionWithIteratedIQAD();
             epsilon_full = self.epsilon;
-            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);
+            [self.outlierDistribution,self.alpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);
             if self.alpha > 0
-                self.sigma = RobustTensionSpline.sigmaFromOutlierDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution,epsilon_full,rejectionPDFRatio);
+                self.sigma = RobustSmoothingSpline.sigmaFromOutlierDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution,epsilon_full,rejectionPDFRatio);
             end
         end
         
@@ -483,7 +483,7 @@ classdef RobustTensionSpline < TensionSpline
             % outlier distribution.
             self.setToFullTensionWithIteratedIQAD();
             epsilon_full = self.epsilon;
-            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);  
+            [self.outlierDistribution,self.alpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);  
             if self.alpha > 0.0
                 self.distribution = AddedDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution);
             end
@@ -502,7 +502,7 @@ classdef RobustTensionSpline < TensionSpline
             end
             self.setToFullTensionWithIteratedIQAD();
             epsilon_full = self.epsilon;
-            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);            
+            [self.outlierDistribution,self.alpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);            
             if self.alpha > 0.0
                 self.distribution = AddedDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution);
                 f = @(z) abs( (self.alpha/(1-self.alpha))*self.outlierDistribution.pdf(-abs(z))/self.noiseDistribution.pdf(-abs(z)) - rejectionPDFRatio);
@@ -520,7 +520,7 @@ classdef RobustTensionSpline < TensionSpline
             % (using the default threshold), and then retension
             self.setToFullTensionWithIteratedIQAD();
             epsilon_full = self.epsilon;
-            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);
+            [self.outlierDistribution,self.alpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);
             
             if self.alpha < 0
                 return;
@@ -549,7 +549,7 @@ classdef RobustTensionSpline < TensionSpline
             self.V = squeeze(B(:,:,self.T+1)); % QxM
             
             % Precompute some matrices that might be used again later,
-            [self.XWX,self.XWx,self.VV] = TensionSpline.PrecomputeTensionSolutionMatrices(self.X,self.V,sqrt(self.distribution.variance),self.x);
+            [self.XWX,self.XWx,self.VV] = SmoothingSpline.PrecomputeTensionSolutionMatrices(self.X,self.V,sqrt(self.distribution.variance),self.x);
             
             self.tensionParameterDidChange();
         end
@@ -566,7 +566,7 @@ classdef RobustTensionSpline < TensionSpline
             % minimization.
             self.setToFullTensionWithIteratedIQAD();
             epsilon_full = self.epsilon;
-            [self.outlierDistribution,self.alpha] = RobustTensionSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);
+            [self.outlierDistribution,self.alpha] = RobustSmoothingSpline.estimateOutlierDistributionFromKnownNoise(epsilon_full,self.noiseDistribution);
             if self.alpha > 0.0
                 self.distribution = AddedDistribution(self.alpha,self.outlierDistribution,self.noiseDistribution);
                 self.w_epsilon = (1-self.alpha)*self.noiseDistribution.pdf(epsilon_full)./self.distribution.pdf(epsilon_full);

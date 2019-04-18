@@ -1,15 +1,15 @@
-classdef GPSTensionSpline < handle
-    % GPSTensionSpline Fit noisy GPS data with a tensioned interpolating
+classdef GPSSmoothingSpline < handle
+    % GPSSmoothingSpline Fit noisy GPS data with a tensioned interpolating
     % spline
     %   3 argument initialization
-    %       f = GPSTensionSpline(t,x,y);
+    %       f = GPSSmoothingSpline(t,x,y);
     %   where
     %       t       time (seconds or datetime)
     %       x       projected x-coordinate
     %       y       projected y-coordinate
     %       f       spline interpolant
     %
-    %   GPSTensionSpline takes a number of optional input argument pairs.
+    %   GPSSmoothingSpline takes a number of optional input argument pairs.
     
     
     properties
@@ -41,7 +41,7 @@ classdef GPSTensionSpline < handle
         % Initialization
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function self = GPSTensionSpline(t,x,y,varargin)
+        function self = GPSSmoothingSpline(t,x,y,varargin)
             N = length(t);
             self.t = reshape(t,[],1);
             self.x = reshape(x,[],1);
@@ -113,18 +113,18 @@ classdef GPSTensionSpline < handle
                 valid_range = [-1 1]*abs(outlierDistance);
                 
                 % start with a 'full tension' guess at the solution
-                self.spline_x = TensionSpline(self.t, self.x, sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.fullTensionExpected);
-                self.spline_y = TensionSpline(self.t, self.y, sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.fullTensionExpected);
+                self.spline_x = SmoothingSpline(self.t, self.x, sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.fullTensionExpected);
+                self.spline_y = SmoothingSpline(self.t, self.y, sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.fullTensionExpected);
                 
                 % now minimize the KS error with the expected distribution
                 % within the valid range (i.e., excluding outliers)
                 fprintf('Finding full tension solution by ignoring points with errors more than %.1f meters.\n',abs(outlierDistance));
-                self.spline_x.Minimize( @(spline) GPSTensionSpline.KolmogorovSmirnovErrorForTDistribution(spline.epsilon,sigma,nu,valid_range));
-                self.spline_y.Minimize( @(spline) GPSTensionSpline.KolmogorovSmirnovErrorForTDistribution(spline.epsilon,sigma,nu,valid_range));
+                self.spline_x.Minimize( @(spline) GPSSmoothingSpline.KolmogorovSmirnovErrorForTDistribution(spline.epsilon,sigma,nu,valid_range));
+                self.spline_y.Minimize( @(spline) GPSSmoothingSpline.KolmogorovSmirnovErrorForTDistribution(spline.epsilon,sigma,nu,valid_range));
                 
                 self.distanceError = sqrt( self.spline_x.epsilon.^2 + self.spline_y.epsilon.^2 );
                 
-                [r, ~, cdf] = GPSTensionSpline.TwoDimStudentTProbabilityDistributionFunction(sigma, nu);
+                [r, ~, cdf] = GPSSmoothingSpline.TwoDimStudentTProbabilityDistributionFunction(sigma, nu);
 %                 outlierCut = interp1(cdf,r,1-outlierThreshold,'spline'); % set to spline so that it extrapolates by default, which is better than returning NaN.
                 
                 % About 10% of the time we will have one legit point above
@@ -142,8 +142,8 @@ classdef GPSTensionSpline < handle
             
             self.goodIndices = setdiff((1:length(t))',self.indicesOfOutliers);
             
-            self.spline_x = TensionSpline(self.t(self.goodIndices), self.x(self.goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);
-            self.spline_y = TensionSpline(self.t(self.goodIndices), self.y(self.goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);         
+            self.spline_x = SmoothingSpline(self.t(self.goodIndices), self.x(self.goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);
+            self.spline_y = SmoothingSpline(self.t(self.goodIndices), self.y(self.goodIndices), sqrt(variance_of_the_noise), 'K', self.K, 'T', self.T, 'weightFunction', w, 'lambda', Lambda.optimalIterated);         
         end
         
         function varargout = subsref(self, index)
@@ -174,7 +174,7 @@ classdef GPSTensionSpline < handle
                     
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RESTRICT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 case '{}'
-                    error('The GPSTensionSpline class does not know what to do with {}.');
+                    error('The GPSSmoothingSpline class does not know what to do with {}.');
                 otherwise
                     error('Unexpected syntax');
             end
@@ -194,18 +194,18 @@ classdef GPSTensionSpline < handle
         % that it take log10(lambda) rather than lambda. This is much
         % better for the fminsearch algorithm.
 
-        function lambda = MinimizeFunctionOfTwoSplines(aTensionSpline1,aTensionSpline2,functionOfSplines)
+        function lambda = MinimizeFunctionOfTwoSplines(aSmoothingSpline1,aSmoothingSpline2,functionOfSplines)
             epsilon = 1e-15;
-            errorFunction = @(log10lambdaPlusEpsilon) GPSTensionSpline.FunctionOfSplineWrapper(aTensionSpline1,aTensionSpline2,log10lambdaPlusEpsilon,functionOfSplines);
-            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aTensionSpline1.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
+            errorFunction = @(log10lambdaPlusEpsilon) GPSSmoothingSpline.FunctionOfSplineWrapper(aSmoothingSpline1,aSmoothingSpline2,log10lambdaPlusEpsilon,functionOfSplines);
+            optimalLog10lambdaPlusEpsilon = fminsearch( errorFunction, log10(aSmoothingSpline1.lambda+epsilon), optimset('TolX', 0.01, 'TolFun', 0.01) );
             lambda = 10^optimalLog10lambdaPlusEpsilon - epsilon;
         end
         
-        function error = FunctionOfSplineWrapper(aTensionSpline1, aTensionSpline2, log10lambdaPlusEpsilon, functionOfSplines)
+        function error = FunctionOfSplineWrapper(aSmoothingSpline1, aSmoothingSpline2, log10lambdaPlusEpsilon, functionOfSplines)
             epsilon = 1e-15;
-            aTensionSpline1.lambda = 10^log10lambdaPlusEpsilon-epsilon;  
-            aTensionSpline2.lambda = 10^log10lambdaPlusEpsilon-epsilon;  
-            error = functionOfSplines(aTensionSpline1,aTensionSpline2);
+            aSmoothingSpline1.lambda = 10^log10lambdaPlusEpsilon-epsilon;  
+            aSmoothingSpline2.lambda = 10^log10lambdaPlusEpsilon-epsilon;  
+            error = functionOfSplines(aSmoothingSpline1,aSmoothingSpline2);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -219,7 +219,7 @@ classdef GPSTensionSpline < handle
 %             distance_pdf = @(epsilon) interp1(r,pdf,epsilon,'spline');
 %             acceleration_pdf = @(r) r.*exp(-r.*r/(2*sigma_T*sigma_T))/(sigma_T*sigma_T);
 
-            [r, pdf] = GPSTensionSpline.TwoDimStudentTProbabilityDistributionFunction(sigma_t, nu);
+            [r, pdf] = GPSSmoothingSpline.TwoDimStudentTProbabilityDistributionFunction(sigma_t, nu);
             pdf(pdf<1e-15)=1e-15; % avoid log(0).
             log_distance_pdf = @(epsilon) interp1(r,log(pdf),epsilon,'spline');
             log_acceleration_pdf = @(r) log(r) + (-r.*r/(2*sigma_g*sigma_g));
@@ -249,7 +249,7 @@ classdef GPSTensionSpline < handle
             % the range allows you to restrict the range (in meters) over which the
             % test is applied.
             
-            gps_cdf = @(z) GPSTensionSpline.tcdf(z/sigma,nu);
+            gps_cdf = @(z) GPSSmoothingSpline.tcdf(z/sigma,nu);
             
             if nargin == 4
                 x = sort(epsilon( epsilon > range(1) & epsilon < range(2) ));

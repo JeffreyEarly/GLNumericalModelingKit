@@ -14,7 +14,7 @@ plot(x_dense,f(x_dense)), hold on
 scatter(x,y,'k')
 legend('true function', 'observations')
 
-spline = TensionSpline(x,y,NormalDistribution(sigma),'S',3,'T',3);
+spline = SmoothingSpline(x,y,NormalDistribution(sigma),'S',3,'T',3);
 
 figure
 plot(x_dense,f(x_dense)), hold on

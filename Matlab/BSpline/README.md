@@ -3,7 +3,7 @@ Interpolating splines, tension splines and b-splines
 
 A series of classes for interpolating and smoothing data using b-splines.
 
-The `InterpolatingSpline` class is useful for interpolating between points when the data is not noisy, while the `TensionSpline` class is useful for smoothing noisy data. Both classes are subclasses of `BSpline`, which can be used to generate b-splines from any set of knot points. 
+The `InterpolatingSpline` class is useful for interpolating between points when the data is not noisy, while the `SmoothingSpline` class is useful for smoothing noisy data. Both classes are subclasses of `BSpline`, which can be used to generate b-splines from any set of knot points. 
 
 If you use these classes, please cite the following paper,
 - J. Early and A. Sykulski. Smoothing and interpolating noisy GPS data with tension splines. IEEE Transactions on Signal Processing. In prep.
@@ -40,7 +40,7 @@ spline = InterpolatingSpline(t,x,'K',5)
 
 ### Tension spline
 
-If your data is noisy, you'll want to use the `TensionSpline` class instead. In this example we sample a smooth function (sine) and contaminate it Gaussian noise,
+If your data is noisy, you'll want to use the `SmoothingSpline` class instead. In this example we sample a smooth function (sine) and contaminate it Gaussian noise,
 ```matlab
 N = 30;
 L = 10;
@@ -49,15 +49,15 @@ sigma = 0.1;
 x = linspace(0,L,N)';
 y = sin(2*pi*x/L) + sigma*randn(N,1);
 ```
-and then initialize the `TensionSpline` class with the data and the standard deviation of the noise,
+and then initialize the `SmoothingSpline` class with the data and the standard deviation of the noise,
 ```matlab
-spline = TensionSpline(x,y,sigma)
+spline = SmoothingSpline(x,y,sigma)
 ```
 That's it! The `spline` object can be evaluated at any point in the domain, just as with the interpolating spline class.
 
 ### GPS Tension spline
 
-The `GPSTensionSpline` class offers some GPS specific additions to the `TensionSpline` class including t-distributed errors and outlier detection.
+The `GPSSmoothingSpline` class offers some GPS specific additions to the `SmoothingSpline` class including t-distributed errors and outlier detection.
 
 Overview
 ------------
@@ -68,11 +68,11 @@ The following three classes all directly inherit from `BSpline`  class,
 
 - An `InterpolatingSpline` uses local b-splines to interpolate between data points. The (K-1)th derivative of a K order spline is piecewise continuous. This is a generalization of Matlab's cubic spline interpolation function.
 - The `ConstrainedSpline` class does a least-squares fit to given data points with a chosen set of b-splines. Constraints can be added at any point in the domain and the class can also accommodate non-gaussian errors.
-- A `TensionSpline` can be used to smooth noisy data and attempt to recover the "true" underlying function.
+- A `SmoothingSpline` can be used to smooth noisy data and attempt to recover the "true" underlying function.
 
-The `BivariateTensionSpline` essentially takes  (t,x,y) as input data and creates tension splines for both x, y *after* removing a mean  `ConstrainedSpline` fit from both directions. The idea is to make the data stationary and therefore treat tension parameter optimization isotropically. 
+The `BivariateSmoothingSpline` essentially takes  (t,x,y) as input data and creates tension splines for both x, y *after* removing a mean  `ConstrainedSpline` fit from both directions. The idea is to make the data stationary and therefore treat tension parameter optimization isotropically. 
 
-The `GPSTensionSpline`  inherits from `BivariateTensionSpline` but takes latitude and longitude as arguments, and assume the noise follows a Student's t-distribution.
+The `GPSSmoothingSpline`  inherits from `BivariateSmoothingSpline` but takes latitude and longitude as arguments, and assume the noise follows a Student's t-distribution.
 
 
 
@@ -222,7 +222,7 @@ legend('true function', 'noisy data')
 
 Finally, let's use a tension spline to try to smooth the data and plot the results,
 ```matlab
-spline = TensionSpline(x,y,sigma);
+spline = SmoothingSpline(x,y,sigma);
 
 figure
 plot(x_dense,f(x_dense)), hold on
@@ -235,7 +235,7 @@ legend('true function', 'noisy data', 'tension spline fit')
 
 ### Options
 
-The `TensionSpline` class takes name/value pairs at initialization to set the spline order (or degree).
+The `SmoothingSpline` class takes name/value pairs at initialization to set the spline order (or degree).
 
 - `'K'` spline order, default is 4.
 - `'S'` spline degree (order-1), default is 3.
@@ -254,9 +254,9 @@ The `Lambda` enumeration has the following values,
 GPS Tension spline
 ------------
 
-The `GPSTensionSpline` class is useful for smoothing noisy gps data and removing outliers. The class is initialized with,
+The `GPSSmoothingSpline` class is useful for smoothing noisy gps data and removing outliers. The class is initialized with,
 ```matlab
-spline = GPSTensionSpline(t,lat,lon);
+spline = GPSSmoothingSpline(t,lat,lon);
 ```
 where `t` is time, and `lat,lon` . Internally, the latitude and longitude are *projected* using a transverse Mercator projection to positions in meters. By default, the class will,
 
@@ -274,7 +274,7 @@ or
 
 ### Properties
 
-The  `GPSTensionSpline` class encapsulates two properties, `spline_x` and `spline_y` which are just independent `TensionSpline` objects for the x and y data.
+The  `GPSSmoothingSpline` class encapsulates two properties, `spline_x` and `spline_y` which are just independent `SmoothingSpline` objects for the x and y data.
 
 The `distanceError` property is root mean square of the spline errors under full tension. This property is only populated when looking for outliers.
 
@@ -282,7 +282,7 @@ The `indicesOfOutliers` contains the indices of the outliers that were detected.
 
 ### Options
 
-The `GPSTensionSpline` class takes name/value pairs at initialization to set the spline order (or degree).
+The `GPSSmoothingSpline` class takes name/value pairs at initialization to set the spline order (or degree).
 
 - `'K'` spline order, default is 4.
 - `'S'` spline degree (order-1), default is 3.
