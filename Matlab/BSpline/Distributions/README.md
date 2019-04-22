@@ -37,7 +37,7 @@ zdist = linspace(min(z),max(z),100)';
 hold on
 plot(zdist,distribution.pdf(zdist))
 ```
-<p align="center"><img src="figures/normaldistribution.eps" width="400" /></p>
+<p align="center"><img src="figures/normaldistribution.png" width="400" /></p>
 
 All distribution subclasses include the `cdf` as a function, as well as the total variance of the process.
 
@@ -53,7 +53,7 @@ and now generate a signal,
 t = (0:500).';
 z = distribution.noise(t);
 ```
-<p align="center"><img src="figures/correlatednoise" width="400" /></p>
+<p align="center"><img src="figures/correlatednoise.png" width="400" /></p>
 
 The signal now looks smooth on time scales less than O(tau).
 
