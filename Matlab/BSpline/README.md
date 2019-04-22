@@ -51,7 +51,7 @@ y = sin(2*pi*x/L) + sigma*randn(N,1);
 ```
 and then initialize the `SmoothingSpline` class with the data and the standard deviation of the noise,
 ```matlab
-spline = SmoothingSpline(x,y,sigma)
+spline = SmoothingSpline(x,y,NormalDistribution(sigma))
 ```
 That's it! The `spline` object can be evaluated at any point in the domain, just as with the interpolating spline class.
 
@@ -222,7 +222,7 @@ legend('true function', 'noisy data')
 
 Finally, let's use a smoothing spline to try to smooth the data and plot the results,
 ```matlab
-spline = SmoothingSpline(x,y,sigma);
+spline = SmoothingSpline(x,y,NormalDistribution(sigma));
 
 figure
 plot(x_dense,f(x_dense)), hold on
@@ -230,6 +230,7 @@ scatter(x,y,'k')
 plot(x_dense,spline(x_dense),'LineWidth',2)
 legend('true function', 'noisy data', 'smoothing spline fit')
 ```
+The `NormalDistribution` class indicates that the noise is expected to be normally distributed. In general, the arrgument must be a  [`Distribution`](../Distributions) subclass.
 
 <p align="center"><img src="figures/noisydatawithtensionspline.png" width="400" /></p>
 
@@ -242,7 +243,6 @@ The `SmoothingSpline` class takes name/value pairs at initialization to set the 
 - `'T'` tension degree , default is to use the same degree as the spline.
 - `'lambda'` tension parameter, either pass a numeric value, or the `Lambda` enumeration. Default is `Lambda.optimalIterated`.
 - `'mu'` mean tension.
-- `'weightFunction'` the reweighting function if the errors are not gaussian.
 - `'knot_dof'` number of degrees of freedom to be used in placing knot points. Either specify an integer, or `'auto'` to have the algorithm attempt to choose an appropriate number. Default is 1.
 
 The `Lambda` enumeration has the following values,
