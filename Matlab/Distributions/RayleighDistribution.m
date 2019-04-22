@@ -13,6 +13,7 @@ classdef RayleighDistribution < Distribution
             self.cdf = @(z) 1 - exp(-(z.*z)/(2*sigma*sigma));
 %             self.w = @(z) sigma*sigma*ones(size(z));
             self.variance = (4-pi)*sigma*sigma/2;
+            self.logPDF = @(z) log(z)-(z.*z)/(2*sigma*sigma);
             
 %             self.dPDFoverZ = @(z) -exp(-(z.*z)/(2*sigma*sigma))/(sigma*sqrt(2*pi))/(sigma*sigma);
         end
