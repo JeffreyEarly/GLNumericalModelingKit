@@ -21,7 +21,7 @@ classdef NormalDistribution < Distribution
         function y = rand(self,sz)
            y = self.sigma*randn(sz); 
         end
-        
+
     end
 end
 

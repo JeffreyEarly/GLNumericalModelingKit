@@ -128,6 +128,30 @@ classdef (Abstract) Distribution
             y = y(1:n);
             y = reshape(y,sz);
         end
+        
+        function y = noise(self,t)
+            y = self.rand(size(t));
+            
+            % Some notes:
+            % For a given autocorrelation function, the structure of C away
+            % from the end points is uniform for each row. Thus, it's
+            % possible to find this structure and convolve it as a kernal
+            % across the random increments. That'd be much faster/less
+            % memory.
+            if ~isempty(self.rho)
+                r = self.rho(t);
+                C = toeplitz(r);
+                
+                % this is from maternchol.m and helps keep the matrix
+                % positive definite.
+                eps=1e-12;
+                C=(C+eye(size(C))*eps)./(1+eps);
+                
+                
+                T = chol(C,'lower');
+                y = T*y;
+            end
+        end
     end
     
     methods (Static)
