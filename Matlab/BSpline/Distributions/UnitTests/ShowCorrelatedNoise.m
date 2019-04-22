@@ -1,10 +1,41 @@
-sigma = 2;
-tau = 10;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Create a figure with uncorrelated noise
+%
+sigma = 1;
 distribution = NormalDistribution(sigma);
+
+n = 1000;
+z = distribution.rand([n 1]);
+
+figure
+histogram(z,50,'Normalization','pdf')
+zdist = linspace(min(z),max(z),100)';
+hold on
+plot(zdist,distribution.pdf(zdist),'LineWidth', 2)
+
+print('-depsc2', '../figures/normaldistribution.eps')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Create a figure with *correlated* noise
+%
+
+tau = 10;
 distribution.rho = @(z) exp(-(z/tau).^2);
 
 t = (0:500).';
 z = distribution.noise(t);
+
+figure
+plot(t,z)
+
+print('-depsc2', '../figures/correlatednoise.eps')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Create a figure with a bunch of different metrics
+%
 
 % compute the autocorrelation
 tau = t(1:find(t<3*tau,1,'last'));
