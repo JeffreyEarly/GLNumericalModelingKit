@@ -1,4 +1,4 @@
-Interpolating splines, tension splines and b-splines 
+Interpolating splines, smothing splines and b-splines 
 ==============
 
 A series of classes for interpolating and smoothing data using b-splines.
@@ -6,14 +6,14 @@ A series of classes for interpolating and smoothing data using b-splines.
 The `InterpolatingSpline` class is useful for interpolating between points when the data is not noisy, while the `SmoothingSpline` class is useful for smoothing noisy data. Both classes are subclasses of `BSpline`, which can be used to generate b-splines from any set of knot points. 
 
 If you use these classes, please cite the following paper,
-- J. Early and A. Sykulski. Smoothing and interpolating noisy GPS data with tension splines. IEEE Transactions on Signal Processing. In prep.
+- J. Early and A. Sykulski. Smoothing and interpolating noisy GPS data with smoothing splines. IEEE Transactions on Signal Processing. In prep.
 
 ### Table of contents
 1. [Quick start](#quick-start)
 2. [Basis spline](#basis-spline)
 2. [Interpolating spline](#interpolating-spline)
-2. [Tension spline](#tension-spline)
-2. [GPS tension spline](#gps-tension-spline)
+2. [Tension spline](#smoothing-spline)
+2. [GPS tension spline](#gps-smoothing-spline)
 
 ------------------------
 
@@ -38,7 +38,7 @@ By default the class uses cubic spline, but you can initialize with whatever ord
 spline = InterpolatingSpline(t,x,'K',5)
 ```
 
-### Tension spline
+### Smoothing spline
 
 If your data is noisy, you'll want to use the `SmoothingSpline` class instead. In this example we sample a smooth function (sine) and contaminate it Gaussian noise,
 ```matlab
@@ -55,7 +55,7 @@ spline = SmoothingSpline(x,y,sigma)
 ```
 That's it! The `spline` object can be evaluated at any point in the domain, just as with the interpolating spline class.
 
-### GPS Tension spline
+### GPS smoothing spline
 
 The `GPSSmoothingSpline` class offers some GPS specific additions to the `SmoothingSpline` class including t-distributed errors and outlier detection.
 
@@ -70,7 +70,7 @@ The following three classes all directly inherit from `BSpline`  class,
 - The `ConstrainedSpline` class does a least-squares fit to given data points with a chosen set of b-splines. Constraints can be added at any point in the domain and the class can also accommodate non-gaussian errors.
 - A `SmoothingSpline` can be used to smooth noisy data and attempt to recover the "true" underlying function.
 
-The `BivariateSmoothingSpline` essentially takes  (t,x,y) as input data and creates tension splines for both x, y *after* removing a mean  `ConstrainedSpline` fit from both directions. The idea is to make the data stationary and therefore treat tension parameter optimization isotropically. 
+The `BivariateSmoothingSpline` essentially takes  (t,x,y) as input data and creates smoothing splines for both x, y *after* removing a mean  `ConstrainedSpline` fit from both directions. The idea is to make the data stationary and therefore treat tension parameter optimization isotropically. 
 
 The `GPSSmoothingSpline`  inherits from `BivariateSmoothingSpline` but takes latitude and longitude as arguments, and assume the noise follows a Student's t-distribution.
 
@@ -186,10 +186,10 @@ The `InterpolatingSpline` class takes name/value pairs at initialization to set 
 - `'K'` spline order, default is 4.
 - `'S'` spline degree (order-1), default is 3.
 
-Tension spline
+Smoothing spline
 ------------
 
-A tension spline can be used to smooth noisy data and attempt to recover the "true" underlying function.
+A smoothing spline can be used to smooth noisy data and attempt to recover the "true" underlying function.
 
 ### Example
 
@@ -220,7 +220,7 @@ legend('true function', 'noisy data')
 
 <p align="center"><img src="figures/noisydata.png" width="400" /></p>
 
-Finally, let's use a tension spline to try to smooth the data and plot the results,
+Finally, let's use a smoothing spline to try to smooth the data and plot the results,
 ```matlab
 spline = SmoothingSpline(x,y,sigma);
 
@@ -228,7 +228,7 @@ figure
 plot(x_dense,f(x_dense)), hold on
 scatter(x,y,'k')
 plot(x_dense,spline(x_dense),'LineWidth',2)
-legend('true function', 'noisy data', 'tension spline fit')
+legend('true function', 'noisy data', 'smoothing spline fit')
 ```
 
 <p align="center"><img src="figures/noisydatawithtensionspline.png" width="400" /></p>
@@ -251,7 +251,7 @@ The `Lambda` enumeration has the following values,
 - `optimalExpected`  which takes a guess at minimizing the mean-square error based on the effective sample-size.
 - `fullTensionExpected`  which takes a guess at the full tension solution assuming infinite effective sample size.
 
-GPS Tension spline
+GPS smoothing spline
 ------------
 
 The `GPSSmoothingSpline` class is useful for smoothing noisy gps data and removing outliers. The class is initialized with,
