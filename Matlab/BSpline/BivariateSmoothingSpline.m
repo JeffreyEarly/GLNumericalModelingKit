@@ -58,6 +58,7 @@ classdef BivariateSmoothingSpline < handle
     end
     
     properties (Dependent)
+        nonOutlierIndices
         tensionValue
     end
     
@@ -215,6 +216,9 @@ classdef BivariateSmoothingSpline < handle
             self.outlierIndices = find(self.epsilon_d > self.outlierThreshold);
         end
                 
+        function nonOutlierIndices = get.nonOutlierIndices(self)
+            nonOutlierIndices = setdiff(1:length(self.x),self.outlierIndices);
+        end
                 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
@@ -265,6 +269,14 @@ classdef BivariateSmoothingSpline < handle
             % include the mean.
             
             MSE = self.spline_x.expectedMeanSquareError + self.spline_y.expectedMeanSquareError;
+        end
+        
+        function MSE = expectedMeanSquareErrorFromCV(self)
+            % This is the *expected* mean-square error normalized by the
+            % variance, simply added together across dimensions. Does *not*
+            % include the mean.
+            
+            MSE = self.spline_x.expectedMeanSquareErrorFromCV + self.spline_y.expectedMeanSquareErrorFromCV;
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
