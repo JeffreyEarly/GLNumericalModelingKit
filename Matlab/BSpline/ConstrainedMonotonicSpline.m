@@ -70,12 +70,42 @@ classdef ConstrainedMonotonicSpline < BSpline
                 end
 
             end
+            
+           
+            
             if isa(distribution,'NormalDistribution')
-                [m,CmInv] = ConstrainedSpline.ConstrainedSolution(X,x,F,distribution.sigma);
+                [m0,CmInv] = ConstrainedSpline.ConstrainedSolution(X,x,F,distribution.sigma);
                 W = 1/(distribution.sigma0)^2;
             else
-                [m,CmInv,W] = ConstrainedSpline.IteratedLeastSquaresConstrainedSolution(X,x,F,sqrt(distribution.variance),[],[],distribution.w);
+                [m0,CmInv,W] = ConstrainedSpline.IteratedLeastSquaresConstrainedSolution(X,x,F,sqrt(distribution.variance),[],[],distribution.w);
             end
+            
+            M = size(X,2); % number of splines
+            
+            % monotonically increasing
+            S = tril(ones(M)); % lower triangle
+            
+            % monotonically decreasing
+            S = -tril(ones(M)); % upper triangle
+            S(:,1)=1;
+            
+            % force existing coefficients to be monotonic
+            
+            
+            xi = optimvar('xi',M,'LowerBound',0,'UpperBound',Inf);
+            xi(1).LowerBound = -Inf;
+            xi(1).UpperBound = Inf;
+            
+            B = X*S;
+            
+            f = sum(x.^2) - 2*sum(x.*(B*xi)) + sum((B*xi).^2);
+            xi0=S\m0;
+            
+            qprob = optimproblem('Objective',f);
+            opts = optimoptions('quadprog','Algorithm','trust-region-reflective','Display','off');
+            [sol,qfval,qexitflag,qoutput] = solve(qprob,struct('xi',xi0),'options',opts);
+            
+            m = S*sol.xi;
             
             self@BSpline(K,t_knot,m);
             self.distribution = distribution;
@@ -197,7 +227,7 @@ classdef ConstrainedMonotonicSpline < BSpline
                 m = m_x(1:size(X,2));
             else
                 m = E_x\F_x;
-                m = linprog(
+%                 m = linprog(
             end
             
             
