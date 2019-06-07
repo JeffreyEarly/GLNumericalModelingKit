@@ -86,26 +86,47 @@ classdef ConstrainedMonotonicSpline < BSpline
             S = tril(ones(M)); % lower triangle
             
             % monotonically decreasing
-            S = -tril(ones(M)); % upper triangle
-            S(:,1)=1;
+%             S = -tril(ones(M)); % upper triangle
+%             S(:,1)=1;
             
             % force existing coefficients to be monotonic
-            
-            
-            xi = optimvar('xi',M,'LowerBound',0,'UpperBound',Inf);
-            xi(1).LowerBound = -Inf;
-            xi(1).UpperBound = Inf;
-            
-            B = X*S;
-            
-            f = sum(x.^2) - 2*sum(x.*(B*xi)) + sum((B*xi).^2);
             xi0=S\m0;
             
-            qprob = optimproblem('Objective',f);
-            opts = optimoptions('quadprog','Algorithm','trust-region-reflective','Display','off');
-            [sol,qfval,qexitflag,qoutput] = solve(qprob,struct('xi',xi0),'options',opts);
+            phi = @(m) sum( (X*m - x).^2 );
             
-            m = S*sol.xi;
+            tic
+            if 0
+                xi = optimvar('xi',M,'LowerBound',0,'UpperBound',Inf);
+                xi(1).LowerBound = -Inf;
+                xi(1).UpperBound = Inf;
+                
+                B = X*S;
+                
+                f = sum(x.^2) - 2*sum(x.*(B*xi)) + sum((B*xi).^2);
+                
+                
+                qprob = optimproblem('Objective',f);
+                opts = optimoptions('quadprog','Algorithm','trust-region-reflective','Display','off');
+                [sol,qfval,qexitflag,qoutput] = solve(qprob,struct('xi',xi0),'options',opts);
+                qexitflag,qoutput.iterations,qoutput.cgiterations
+                
+                m = S*sol.xi;
+            else
+                XS = X*S;
+                H = 2*(XS.')*XS;
+                f = -2*(x.')*XS;
+                lb = zeros(M,1); lb(1) = -inf;
+                ub = inf*ones(M,1);
+                
+                options = optimoptions('quadprog','Algorithm','trust-region-reflective');
+                [x,fval,exitflag,output] = quadprog(H,f,[],[],[],[],lb,ub,xi0,options);
+                
+                exitflag,output.iterations,output.cgiterations
+                
+                m = S*x;
+            end
+            toc
+            phi(m)
             
             self@BSpline(K,t_knot,m);
             self.distribution = distribution;
