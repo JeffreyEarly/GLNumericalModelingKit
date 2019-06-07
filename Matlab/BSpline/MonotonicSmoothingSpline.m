@@ -20,44 +20,9 @@ classdef MonotonicSmoothingSpline < SmoothingSpline
     % 
     
     properties
-        x
-        t
-        distribution
-        
-        T           % degree at which tension is applied
-        lambda      % tension parameter
-        isConstrained % indicates whether or not lambda was so big that the solution is just a constrained solution
-        mu          % mean value of the tension variable
-        knot_dof    % knot dofs
-        
-        covariance  % computed from the given distribution, this is the covariance structure of the observations. It may be a scalar, vector, or matrix.
-        
-        variableCache % structure storing several cached variables, useful for quick tension spline computation.
-        
-        sigma       % initial weight (given as normal std dev.)
-        
-        
-        % These have no consequence to the fit, and are only populated if
-        % 'shouldEstimateOutlierDistribution' is set to 1.
-        outlierDistribution = []
-        alpha = []
-        lambdaAtFullTension % what was the value of lambda at full tension
-        sigmaAtFullTension % what was the set of 'sigmas' produced from the full tension solution
-        
-        % These have no consequence to the fit, but can be useful for
-        % diagnostics.
-        outlierIndices = [] 
-        outlierThreshold % set to a distance with < 1/10000 odds
+
     end
     
-    properties (Dependent)
-        X % Splines at observation points, NxM
-        W % Weight matrix at observation points, NxN
-        XWX
-        Cm % error in coefficients, MxMxD. This is retrieved from the variable cache.
-        nonOutlierIndices
-        tensionValue
-    end
 
     methods
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -67,6 +32,7 @@ classdef MonotonicSmoothingSpline < SmoothingSpline
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function self = MonotonicSmoothingSpline(t,x,distribution,varargin)
             self@SmoothingSpline(t,x,distribution,varargin{:});
+            self.tensionParameterDidChange();
         end
     
 
@@ -118,57 +84,53 @@ classdef MonotonicSmoothingSpline < SmoothingSpline
             % m         coefficients of the splines, Mx1
             % CmInv     Inverse of the covariance of coefficients, MxM
             
-            cachedVars = SmoothingSpline.PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,cachedVars);
+            [m0,Cm,CmInv,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,cachedVars);
             
-            N = length(x);
-            Q = size(cachedVars.V,1);
+            X = cachedVars.X;
+            V = cachedVars.V;
+            
+            N = length(x); % number of points
+            M = size(V,2); % number of splines
+            Q = size(cachedVars.V,1); % number of quadrature points
+             
+                        
+            % monotonically increasing
+%             S = tril(ones(M)); % lower triangle
+            
+            % monotonically decreasing
+            S = -tril(ones(M)); % upper triangle
+            S(:,1)=1;
+            
+            % force existing coefficients to be monotonic
+            
+            
+            xi = optimvar('xi',M,'LowerBound',0,'UpperBound',Inf);
+            xi(1).LowerBound = -Inf;
+            xi(1).UpperBound = Inf;
+            
+            XS = X*S;
+            VS = V*S;
+            
+%             f = sum(x.^2) - 2*sum(x.*(XS*xi)) + sum((XS*xi).^2) + (lambda*N/Q/W)*sum((VS*xi).^2);
+            f = W*sum( (XS*xi - x).^2 )/N + (lambda/Q)*sum((VS*xi).^2);
+            xi0=S\m0;
+            
+            qprob = optimproblem('Objective',f);
+%             opts = optimoptions('quadprog','Algorithm','trust-region-reflective','Display','off');
+%             [sol,qfval,qexitflag,qoutput] = solve(qprob,struct('xi',xi0),'options',opts);
+
+opts = optimoptions('quadprog','Algorithm','interior-point-convex','Display','off');
+            [sol,qfval,qexitflag,qoutput] = solve(qprob,'options',opts);
+
+            m = S*sol.xi;
             
             XWX = cachedVars.XWX;
             XWx = cachedVars.XWx;
             VV = cachedVars.VV;
  
             E_x = XWX + (lambda*N/Q)*(VV);
-            
-            % add the mean tension value
-            if mu ~= 0.0
-                V = cachedVars.V;
-                B = XWx + (lambda*N/Q)*mu*transpose(sum( V,1));
-            else
-                B = XWx;
-            end
-            
-            % Check if the tension is sufficiently high that we just need
-            % to use the constrained solution. This scenario only makes
-            % sense because we know we've used the interpolation points as
-            % knot points... otherwise rcond->0 could mean something else.
-            if rcond(E_x) < 5e-14
-                if isempty(cachedVars.m_constrained) || isempty(cachedVars.Cm_constrained)
-                    t_knot_constrained = cat(1,min(t)*ones(T,1),max(t)*ones(T,1));
-                    % T=2 indicates tension on acceleration, which we want
-                    % to be zero, so we would want K=2
-                    cspline = ConstrainedSpline(t,x,T,t_knot_constrained,distribution,[]);
-                    cachedVars.m_constrained = cachedVars.X\cspline(t);
-                    
-                    % if m_x = inv(X)*Y*m_y then,
-                    % Cm_x = G*Cm_y*G^T if G = inv(X)*Y
-                    Y = cspline.X;
-                    G = cachedVars.X\Y;
-                    cachedVars.Cm_constrained = G*(cspline.CmInv\(G.'));
-                end
-                
-                isConstrained = 1;
-                m = cachedVars.m_constrained;
-                Cm = cachedVars.Cm_constrained;
-                CmInv = [];
-            else
-                isConstrained = 0;
-                m = E_x\B;
-                Cm = [];
-                CmInv = E_x;
-            end
-            
-            cachedVars.Cm = Cm;
-            cachedVars.CmInv = CmInv;
+            cachedVars.Cm = [];
+            cachedVars.CmInv = E_x;
         end
         
         % e
