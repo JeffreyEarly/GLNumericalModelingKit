@@ -36,6 +36,8 @@ classdef SmoothingSpline < BSpline
         
         sigma       % initial weight (given as normal std dev.)
         
+        S % global shape constraint matrix, MxM (may be empty)
+        F % local constraint matrix, NCxM (may be empty)
         
         % These have no consequence to the fit, and are only populated if
         % 'shouldEstimateOutlierDistribution' is set to 1.
@@ -108,6 +110,40 @@ classdef SmoothingSpline < BSpline
                     t_knot = varargin{k+1};
                 elseif strcmp(varargin{k}, 'sigma')
                     sigma = varargin{k+1};
+                elseif strcmp(varargin{k}, 'constraints')
+                    % Deal with *local* constraints
+                    if ~isfield(constraints,'t') || ~isfield(constraints,'D')
+                        F=[];
+                    else
+                        M = size(X,2); % number of splines
+                        NC = length(constraints.t); % number of constraints
+                        if length(constraints.D) ~= NC
+                            error('t and D must have the same length in the constraints structure.');
+                        end
+                        F = zeros(NC,M);
+                        Xc = BSpline.Spline( constraints.t, t_knot, K, K-1 );
+                        for i=1:NC
+                            F(i,:) = squeeze(Xc(i,:,constraints.D(i)+1));
+                        end
+                    end
+                    
+                    % Deal with *global* constraints
+                    if ~isfield(constraints,'global')
+                        S = [];
+                    else
+                        M = size(X,2); % number of splines
+                        switch constraints.global
+                            case ShapeConstraint.none
+                                S = [];
+                            case ShapeConstraint.monotonicIncreasing
+                                S = tril(ones(M)); % positive lower triangle
+                            case ShapeConstraint.monotonicDecreasing
+                                S = -tril(ones(M)); % negative lower triangle
+                                S(:,1)=1; % except the first point
+                            otherwise
+                                error('Invalid global constraint.');
+                        end
+                    end
                 elseif strcmp(varargin{k}, 'knot_dof')
                     if ischar(varargin{k+1}) && strcmp(varargin{k+1}, 'auto')
                         shouldSetKnotDOFAutomatically = 1;
@@ -188,7 +224,10 @@ classdef SmoothingSpline < BSpline
             self.variableCache = cachedVars;
             self.t = t;
             self.x = x;
-
+            
+            self.S = S;
+            self.F = F;
+            
             self.knot_dof = knot_dof;
             self.distribution = distribution;
             self.sigma = sigma;
