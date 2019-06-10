@@ -98,9 +98,9 @@ classdef ConstrainedSpline < BSpline
             cachedVars.X = X;
                 
             if isa(distribution,'NormalDistribution')
-                [m,CmInv,cachedVars] = ConstrainedMonotonicSpline.ConstrainedSolution(t,x,K,t_knot,distribution,F,[],S,cachedVars);
+                [m,CmInv,cachedVars] = ConstrainedSpline.ConstrainedSolution(t,x,K,t_knot,distribution,F,[],S,cachedVars);
             else
-                [m,CmInv,cachedVars] = ConstrainedMonotonicSpline.IteratedLeastSquaresTensionSolution(t,x,t_knot,K,distribution,F,S,cachedVars);
+                [m,CmInv,cachedVars] = ConstrainedSpline.IteratedLeastSquaresTensionSolution(t,x,t_knot,K,distribution,F,S,cachedVars);
             end
           
             self@BSpline(K,t_knot,m);
@@ -263,7 +263,7 @@ classdef ConstrainedSpline < BSpline
             % m         coefficients of the splines, Mx1
             % CmInv     Inverse of the covariance of coefficients, MxM
             
-            cachedVars = ConstrainedMonotonicSpline.PrecomputeSolutionMatrices(t,x,K,t_knot,distribution,F,W,S,cachedVars);
+            cachedVars = ConstrainedSpline.PrecomputeSolutionMatrices(t,x,K,t_knot,distribution,F,W,S,cachedVars);
             
             NC = size(F,1);
             XWX = cachedVars.XWX;
@@ -315,16 +315,13 @@ classdef ConstrainedSpline < BSpline
             %                 xi = optimvar('xi',M,'LowerBound',0,'UpperBound',Inf);
             %                 xi(1).LowerBound = -Inf;
             %                 xi(1).UpperBound = Inf;
-            %
             %                 B = X*S;
             %
             %                 f = sum(x.^2) - 2*sum(x.*(B*xi)) + sum((B*xi).^2);
             %
-            %
             %                 qprob = optimproblem('Objective',f);
             %                 opts = optimoptions('quadprog','Algorithm','trust-region-reflective','Display','off');
             %                 [sol,qfval,qexitflag,qoutput] = solve(qprob,struct('xi',xi0),'options',opts);
-            %                 qexitflag,qoutput.iterations,qoutput.cgiterations
             %
             %                 m = S*sol.xi;
         end
@@ -334,7 +331,7 @@ classdef ConstrainedSpline < BSpline
             % spline. If W is not set, it will be set to either 1/w0^2 or
             % the correlated version
             cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
-            [m,CmInv,cachedVars] = ConstrainedMonotonicSpline.ConstrainedSolution(t,x,K,t_knot,distribution,F,[],S,cachedVars);
+            [m,CmInv,cachedVars] = ConstrainedSpline.ConstrainedSolution(t,x,K,t_knot,distribution,F,[],S,cachedVars);
             
             X = cachedVars.X;
             sigma2_previous = (distribution.sigma0)^2;
@@ -353,7 +350,7 @@ classdef ConstrainedSpline < BSpline
                 % hose any cached variable associated with W...
                 cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
                 % ...and recompute the solution with this new weighting
-                [m,CmInv,cachedVars] = ConstrainedMonotonicSpline.ConstrainedSolution(t,x,K,t_knot,distribution,F,W,S,cachedVars);
+                [m,CmInv,cachedVars] = ConstrainedSpline.ConstrainedSolution(t,x,K,t_knot,distribution,F,W,S,cachedVars);
                 
                 rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
                 sigma2_previous=sigma_w2;

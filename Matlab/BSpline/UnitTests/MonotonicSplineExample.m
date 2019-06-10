@@ -1,6 +1,6 @@
 % rng(1)
 distribution = NormalDistribution(0.2);
-% distribution = StudentTDistribution(1,3.0);
+distribution = StudentTDistribution(0.2,3.0);
 
 t = linspace(0,2,11)';
 f = @(x) tanh(x-1) + distribution.rand(size(x));
