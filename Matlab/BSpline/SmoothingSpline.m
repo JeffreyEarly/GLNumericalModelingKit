@@ -978,7 +978,7 @@ classdef SmoothingSpline < BSpline
             while (rel_error > 0.01)
                 sigma_w2 = distribution.w(X*m - x);
                 
-                if exist('rho_t','var')
+                if exist('cachedVars.rho_t','var')
                     Sigma2 = (sqrt(sigma_w2) * sqrt(sigma_w2).') .* cachedVars.rho_t;
                     W = inv(Sigma2);
                 else
