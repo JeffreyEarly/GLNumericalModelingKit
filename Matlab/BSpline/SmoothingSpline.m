@@ -36,8 +36,7 @@ classdef SmoothingSpline < BSpline
         
         sigma       % initial weight (given as normal std dev.)
         
-        S % global shape constraint matrix, MxM (may be empty)
-        F % local constraint matrix, NCxM (may be empty)
+        constraints
         
         % These have no consequence to the fit, and are only populated if
         % 'shouldEstimateOutlierDistribution' is set to 1.
@@ -94,6 +93,7 @@ classdef SmoothingSpline < BSpline
             outlierIndices = [];
             t_knot = [];
             sigma = sqrt(distribution.variance);
+            constraints = [];
             
             for k = 1:2:length(varargin)
                 if strcmp(varargin{k}, 'K')
@@ -111,39 +111,7 @@ classdef SmoothingSpline < BSpline
                 elseif strcmp(varargin{k}, 'sigma')
                     sigma = varargin{k+1};
                 elseif strcmp(varargin{k}, 'constraints')
-                    % Deal with *local* constraints
-                    if ~isfield(constraints,'t') || ~isfield(constraints,'D')
-                        F=[];
-                    else
-                        M = size(X,2); % number of splines
-                        NC = length(constraints.t); % number of constraints
-                        if length(constraints.D) ~= NC
-                            error('t and D must have the same length in the constraints structure.');
-                        end
-                        F = zeros(NC,M);
-                        Xc = BSpline.Spline( constraints.t, t_knot, K, K-1 );
-                        for i=1:NC
-                            F(i,:) = squeeze(Xc(i,:,constraints.D(i)+1));
-                        end
-                    end
-                    
-                    % Deal with *global* constraints
-                    if ~isfield(constraints,'global')
-                        S = [];
-                    else
-                        M = size(X,2); % number of splines
-                        switch constraints.global
-                            case ShapeConstraint.none
-                                S = [];
-                            case ShapeConstraint.monotonicIncreasing
-                                S = tril(ones(M)); % positive lower triangle
-                            case ShapeConstraint.monotonicDecreasing
-                                S = -tril(ones(M)); % negative lower triangle
-                                S(:,1)=1; % except the first point
-                            otherwise
-                                error('Invalid global constraint.');
-                        end
-                    end
+                    constraints = varargin{k+1};
                 elseif strcmp(varargin{k}, 'knot_dof')
                     if ischar(varargin{k+1}) && strcmp(varargin{k+1}, 'auto')
                         shouldSetKnotDOFAutomatically = 1;
@@ -207,11 +175,11 @@ classdef SmoothingSpline < BSpline
             if isempty(t_knot)
                 t_knot = InterpolatingSpline.KnotPointsForPoints(t,K,knot_dof);
             end
-            
+                        
             if isa(distribution,'NormalDistribution')                
-                [m,~,~,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,1/(distribution.sigma^2),[]);      
+                [m,~,~,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[],constraints,[]);      
             elseif ~isempty(distribution.w)
-                [m,~,~,isConstrained,cachedVars] = SmoothingSpline.IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[]);
+                [m,~,~,isConstrained,cachedVars] = SmoothingSpline.IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,constraints,[]);
             else
                 error('No weight function given! Unable to proceed.');
             end
@@ -225,8 +193,7 @@ classdef SmoothingSpline < BSpline
             self.t = t;
             self.x = x;
             
-            self.S = S;
-            self.F = F;
+            self.constraints = constraints;
             
             self.knot_dof = knot_dof;
             self.distribution = distribution;
@@ -301,9 +268,9 @@ classdef SmoothingSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if isa(self.distribution,'NormalDistribution')
-                [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.TensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,1/(self.distribution.sigma^2),self.variableCache);
+                [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.TensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,[],self.constraints,self.variableCache);
             elseif ~isempty(self.distribution.w)
-                [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.IteratedLeastSquaresTensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,self.variableCache);
+                [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.IteratedLeastSquaresTensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,self.constraints,self.variableCache);
             else
                 error('No weight function given! Unable to proceed.'); 
             end
@@ -846,26 +813,87 @@ classdef SmoothingSpline < BSpline
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        function cachedVars = PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,cachedVars)
+        function cachedVars = PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,constraints,cachedVars)
             % Computes several cachable variables.
             if ~exist('cachedVars','var') || isempty(cachedVars)
-                cachedVars = struct('t',t,'x',x,'t_knot',t_knot,'K',K,'T',T,'distribution',distribution,'X',[],'V',[],'rho_t',[],'W',W,'XWX',[],'XWx',[],'VV',[],'m_constrained',[],'Cm_constrained',[]);
+                cachedVars = struct('t',t,'x',x,'t_knot',t_knot,'K',K,'T',T,'distribution',distribution,'X',[],'XS',[],'VS',[],'rho_t',[],'W',W,'F',[],'SC',[],'XWX',[],'XWx',[],'VV',[],'m_constrained',[],'Cm_constrained',[]);
             end
             
             if ~isfield(cachedVars,'X') || isempty(cachedVars.X)
                 % These are the splines at the points of observation
                 cachedVars.X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             end
-            X = cachedVars.X;
+            
+            if ~isfield(cachedVars,'F') || isempty(cachedVars.F)
+                % Deal with *local* constraints
+                if ~isfield(constraints,'t') || ~isfield(constraints,'D')
+                    F=[];
+                else
+                    M = size(cachedVars.X,2); % number of splines
+                    NC = length(constraints.t); % number of constraints
+                    if length(constraints.D) ~= NC
+                        error('t and D must have the same length in the constraints structure.');
+                    end
+                    F = zeros(NC,M);
+                    Xc = BSpline.Spline( constraints.t, t_knot, K, K-1 );
+                    for i=1:NC
+                        F(i,:) = squeeze(Xc(i,:,constraints.D(i)+1));
+                    end
+                end
+                cachedVars.F = F;
+            end
+            
+            if ~isfield(cachedVars,'SC') || isempty(cachedVars.SC)
+                % Deal with *global* constraints
+                if ~isfield(constraints,'global')
+                    SC = [];
+                else
+                    M = size(cachedVars.X,2); % number of splines
+                    switch constraints.global
+                        case ShapeConstraint.none
+                            SC = [];
+                        case ShapeConstraint.monotonicIncreasing
+                            SC = tril(ones(M)); % positive lower triangle
+                        case ShapeConstraint.monotonicDecreasing
+                            SC = -tril(ones(M)); % negative lower triangle
+                            SC(:,1)=1; % except the first point
+                        otherwise
+                            error('Invalid global constraint.');
+                    end
+                end
+                cachedVars.SC = SC;
+            end
+            S = cachedVars.SC;
+            
+            if ~isfield(cachedVars,'XS') || isempty(cachedVars.XS)
+                if ~isempty(S)
+                    cachedVars.XS = cachedVars.X*S; % NxM
+                else
+                    cachedVars.XS = cachedVars.X;
+                end
+            end
+            
+            if ~isfield(cachedVars,'FS') || isempty(cachedVars.FS)
+                if ~isempty(S) && ~isempty(F)
+                    cachedVars.FS = F*S; % NxM
+                else
+                    cachedVars.FS = F;
+                end
+            end
+            
+            XS = cachedVars.XS;
             N = length(x);
             
-            if ~isfield(cachedVars,'V') || isempty(cachedVars.V)
+            if ~isfield(cachedVars,'VS') || isempty(cachedVars.VS)
                 % This is the value of the tensioned variable on the
                 % quadrature grid.
                 Q = 10*N; % number of points on the quadrature grid
                 tq = linspace(t(1),t(end),Q)';
                 B = BSpline.Spline( tq, t_knot, K, T );
-                cachedVars.V = squeeze(B(:,:,T+1)); % QxM
+                cachedVars.VS = squeeze(B(:,:,T+1)); % QxM
+                if ~isempty(S)
+                    cachedVars.VS = cachedVars.VS*S;
+                end
             end
             
             if ~isempty(distribution.rho) && (~isfield(cachedVars,'rho_t') || isempty(cachedVar.rho_t))
@@ -896,11 +924,11 @@ classdef SmoothingSpline < BSpline
             
             if ~isfield(cachedVars,'XWX') || isempty(cachedVars.XWX)
                 if size(W,1) == N && size(W,2) == N
-                    XWX = X'*W*X;
+                    XWX = XS'*W*XS;
                 elseif length(W) == 1
-                    XWX = X'*W*X;
+                    XWX = XS'*W*XS;
                 elseif length(W) == N
-                    XWX = X'*diag(W)*X; % (MxN * NxN * Nx1) = Mx1
+                    XWX = XS'*diag(W)*XS; % (MxN * NxN * Nx1) = Mx1
                 else
                     error('W must have the same length as x and t.');
                 end
@@ -909,11 +937,11 @@ classdef SmoothingSpline < BSpline
             
             if ~isfield(cachedVars,'XWx') || isempty(cachedVars.XWx)
                 if size(W,1) == N && size(W,2) == N
-                    XWx = X'*W*x;
+                    XWx = XS'*W*x;
                 elseif length(W) == 1
-                    XWx = X'*W*x;
+                    XWx = XS'*W*x;
                 elseif length(W) == N
-                    XWx = X'*diag(W)*x; % (MxN * NxN * Nx1) = Mx1
+                    XWx = XS'*diag(W)*x; % (MxN * NxN * Nx1) = Mx1
                 else
                     error('W must have the same length as x and t.');
                 end
@@ -921,13 +949,13 @@ classdef SmoothingSpline < BSpline
             end
             
             if ~isfield(cachedVars,'VV') || isempty(cachedVars.VV)
-                V = cachedVars.V;
-                cachedVars.VV = V'*V;
+                VS = cachedVars.VS;
+                cachedVars.VV = VS'*VS;
             end
             
         end
         
-        function [m,Cm,CmInv,isConstrained,cachedVars] = TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,cachedVars)
+        function [m,Cm,CmInv,isConstrained,cachedVars] = TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,constraints,cachedVars)
             % N     # of observations
             % M     # of splines
             % Q     # of points in quadrature grid
@@ -949,10 +977,14 @@ classdef SmoothingSpline < BSpline
             % m         coefficients of the splines, Mx1
             % CmInv     Inverse of the covariance of coefficients, MxM
             
-            cachedVars = SmoothingSpline.PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,cachedVars);
+            cachedVars = SmoothingSpline.PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,constraints,cachedVars);
+            
+            if ~isempty(cachedVars.F)
+                warning('Local constraint not added!!!')
+            end
             
             N = length(x);
-            Q = size(cachedVars.V,1);
+            Q = size(cachedVars.VS,1);
             
             XWX = cachedVars.XWX;
             XWx = cachedVars.XWx;
@@ -974,10 +1006,11 @@ classdef SmoothingSpline < BSpline
             % knot points... otherwise rcond->0 could mean something else.
             if rcond(E_x) < 5e-14
                 if isempty(cachedVars.m_constrained) || isempty(cachedVars.Cm_constrained)
+                    
                     t_knot_constrained = cat(1,min(t)*ones(T,1),max(t)*ones(T,1));
                     % T=2 indicates tension on acceleration, which we want
                     % to be zero, so we would want K=2
-                    cspline = ConstrainedSpline(t,x,T,t_knot_constrained,distribution,[]);
+                    cspline = ConstrainedSpline(t,x,T,t_knot_constrained,distribution,constraints);
                     cachedVars.m_constrained = cachedVars.X\cspline(t);
                     
                     % if m_x = inv(X)*Y*m_y then,
@@ -993,7 +1026,34 @@ classdef SmoothingSpline < BSpline
                 CmInv = [];
             else
                 isConstrained = 0;
-                m = E_x\B;
+                S = cachedVars.SC;
+                if isempty(S)
+                    m = E_x\B;
+                else
+                    M = size(XWX,2); % number of splines
+                    lb = zeros(M,1); lb(1) = -inf;
+                    ub = inf*ones(M,1);
+                    
+                    % These are the local constraints, exactly as above
+%                     Aeq = cachedVars.FS;
+%                     if isempty(Aeq)
+%                         beq = [];
+%                     else
+%                         beq = zeros(NC,1);
+%                     end
+                    
+                    % E_x should be symmetric, although sometimes it's not
+                    % exactly.
+                    H = (E_x+E_x')*0.5;
+                    
+                    % Note, switching to 'trust-region-reflective' algorithm
+                    % requires initial conditions. It seems to work to simply
+                    % use xi0=S\m0, where m0 is the unconstrained solution from
+                    % above.
+                    options = optimoptions('quadprog','Display','off','Algorithm','interior-point-convex');
+                    x = quadprog(2*H,-2*B,[],[],[],[],lb,ub,[],options);
+                    m = S*x;
+                end
                 Cm = [];
                 CmInv = E_x;
             end
@@ -1003,12 +1063,12 @@ classdef SmoothingSpline < BSpline
         end
         
         % e
-        function [m,Cm,CmInv,isConstrained,cachedVars] = IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,cachedVars)
+        function [m,Cm,CmInv,isConstrained,cachedVars] = IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,constraints,cachedVars)
             % Out first call is basically just a normal fit to a tension
             % spline. If W is not set, it will be set to either 1/w0^2 or
             % the correlated version
             cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
-            [m,Cm,CmInv,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[],cachedVars);
+            [m,Cm,CmInv,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[],constraints,cachedVars);
             
             X = cachedVars.X;
             sigma2_previous = (distribution.sigma0)^2;
@@ -1027,7 +1087,7 @@ classdef SmoothingSpline < BSpline
                 % hose any cached variable associated with W...
                 cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
                 % ...and recompute the solution with this new weighting
-                [m,Cm,CmInv,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,cachedVars);
+                [m,Cm,CmInv,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,constraints,cachedVars);
                 
                 rel_error = max( abs((sigma_w2-sigma2_previous)./sigma_w2) );
                 sigma2_previous=sigma_w2;
