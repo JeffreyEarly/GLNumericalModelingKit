@@ -16,11 +16,6 @@ rho = rhoFunc(z)+ distribution.rand(size(z));
 spline0 = SmoothingSpline(z,rho,distribution);
 spline = SmoothingSpline(z,rho,distribution,'constraints',struct('global',ShapeConstraint.monotonicDecreasing));
 
-
-% K = 3;
-% t_knot = cat(1,min(z)*ones(K,1),max(z)*ones(K,1));
-% spline = ConstrainedMonotonicSpline(z,rho,K,t_knot,distribution,[]);
-
 zq = linspace(min(z),max(z),10*length(z))';
 
 figure
