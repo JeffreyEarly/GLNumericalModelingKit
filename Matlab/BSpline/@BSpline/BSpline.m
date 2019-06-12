@@ -93,6 +93,30 @@ classdef BSpline < handle
     
     
     methods (Static)
+        function t = PointsOfSupport(t_knot,K,D)
+            % this function assumes that the spline are terminated at the
+            % boundary with repeat knot points.
+           interior_knots = t_knot(K+1:end-K);
+           if mod(K,2)==1
+               interior_support = interior_knots(1:(end-1))+diff(interior_knots)/2;
+               
+               n = K/2;
+               
+               dt_start = (interior_knots(1)-t_knot(1))/n;
+               dt_end = (t_knot(end)-interior_knots(end))/n;
+               n = ceil(n);
+               t = cat(1,t_knot(1)+dt_start*(0:(n-1))', interior_support, t_knot(end)-dt_end*((n-1):-1:0)');
+           else
+               interior_support = interior_knots;
+               
+               n = floor((K+1)/2);
+               dt_start = (interior_knots(1)-t_knot(1))/n;
+               dt_end = (t_knot(end)-interior_knots(end))/n;
+               t = cat(1,t_knot(1)+dt_start*(0:(n-1))', interior_support, t_knot(end)-dt_end*((n-1):-1:0)');
+           end
+
+        end
+        
         function [C,t_pp,B] = PPCoefficientsFromSplineCoefficients( m, t_knot, K, B )
             %% PPCoefficientsFromSplineCoefficients
             % Returns the piecewise polynomial coefficients in matrix C
