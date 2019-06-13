@@ -128,18 +128,18 @@ classdef BSpline < handle
             % size(C) = [length(t_pp)-1, K]
             
             Nk = length(t_knot);
-            t_pp = t_knot(K:(Nk-K));
+            t_pp = t_knot(K:(Nk-K+1));
             if ~exist('B','var') || isempty(B)
                 B = BSpline.Spline( t_pp, t_knot, K, K-1 );
             end
             
             % Build an array of coefficients for polyval, highest order first.
-            C = zeros(length(t_pp),K);
+            C = zeros(length(t_pp)-1,K);
             for i=1:K
-                C(:,K-i+1) = B(:,:,i)*m;
+                C(:,K-i+1) = B(1:end-1,:,i)*m;
             end
             
-            t_pp = t_knot(K:(Nk-K+1));
+            
         end
         
         function f = EvaluateFromPPCoefficients(t,C,t_pp, D)

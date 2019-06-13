@@ -1,5 +1,5 @@
-function intspline = integral(spline)
-%INTEGRAL Integral of a BSpline
+function intspline = cumsum(spline)
+%CUMSUM Indefinite integral of a BSpline
 
 ts = BSpline.PointsOfSupport(spline.t_knot,spline.K,0);
 t_knot = cat(1,spline.t_knot(1),spline.t_knot,spline.t_knot(end));
