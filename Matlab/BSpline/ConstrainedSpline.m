@@ -180,7 +180,7 @@ classdef ConstrainedSpline < BSpline
                 end
             end
             
-            XS = cachedVars.XS;
+            
             N = length(x);
                         
             if ~isempty(distribution.rho) && (~isfield(cachedVars,'rho_t') || isempty(cachedVar.rho_t))
@@ -209,13 +209,14 @@ classdef ConstrainedSpline < BSpline
                 cachedVars.W = W;
             end
             
+            X = cachedVars.X;
             if ~isfield(cachedVars,'XWX') || isempty(cachedVars.XWX)
                 if size(W,1) == N && size(W,2) == N
-                    XWX = XS'*W*XS;
+                    XWX = X'*W*X;
                 elseif length(W) == 1
-                    XWX = XS'*W*XS;
+                    XWX = X'*W*X;
                 elseif length(W) == N
-                    XWX = XS'*diag(W)*XS; % (MxN * NxN * Nx1) = Mx1
+                    XWX = X'*diag(W)*X; % (MxN * NxN * Nx1) = Mx1
                 else
                     error('W must have the same length as x and t.');
                 end
@@ -224,15 +225,44 @@ classdef ConstrainedSpline < BSpline
             
             if ~isfield(cachedVars,'XWx') || isempty(cachedVars.XWx)
                 if size(W,1) == N && size(W,2) == N
-                    XWx = XS'*W*x;
+                    XWx = X'*W*x;
                 elseif length(W) == 1
-                    XWx = XS'*W*x;
+                    XWx = X'*W*x;
                 elseif length(W) == N
-                    XWx = XS'*diag(W)*x; % (MxN * NxN * Nx1) = Mx1
+                    XWx = X'*diag(W)*x; % (MxN * NxN * Nx1) = Mx1
                 else
                     error('W must have the same length as x and t.');
                 end
                 cachedVars.XWx = XWx;
+            end
+            
+            if ~isempty(S)
+                XS = cachedVars.XS;
+                if ~isfield(cachedVars,'SXWXS') || isempty(cachedVars.SXWXS)
+                    if size(W,1) == N && size(W,2) == N
+                        SXWXS = XS'*W*XS;
+                    elseif length(W) == 1
+                        SXWXS = XS'*W*XS;
+                    elseif length(W) == N
+                        SXWXS = XS'*diag(W)*XS; % (MxN * NxN * Nx1) = Mx1
+                    else
+                        error('W must have the same length as x and t.');
+                    end
+                    cachedVars.SXWXS = SXWXS;
+                end
+                
+                if ~isfield(cachedVars,'SXWx') || isempty(cachedVars.SXWx)
+                    if size(W,1) == N && size(W,2) == N
+                        SXWx = XS'*W*x;
+                    elseif length(W) == 1
+                        SXWx = XS'*W*x;
+                    elseif length(W) == N
+                        SXWx = XS'*diag(W)*x; % (MxN * NxN * Nx1) = Mx1
+                    else
+                        error('W must have the same length as x and t.');
+                    end
+                    cachedVars.SXWx = SXWx;
+                end
             end
                         
         end
@@ -273,41 +303,49 @@ classdef ConstrainedSpline < BSpline
             E_x = XWX; % MxM
             F_x = XWx;
             
-            if isempty(S)
-                % No global constraints
-                if NC > 0
-                    E_x = cat(1,E_x,F); % (M+NC)xM
-                    E_x = cat(2,E_x,cat(1,F',zeros(NC)));
-                    F_x = cat(1,F_x,zeros(NC,1));
-                    m_x = E_x\F_x;
-                    m = m_x(1:size(X,2));
-                else
-                    m = E_x\F_x;
-                end
+            % No global constraints
+            if NC > 0
+                E_x = cat(1,E_x,F); % (M+NC)xM
+                E_x = cat(2,E_x,cat(1,F',zeros(NC)));
+                F_x = cat(1,F_x,zeros(NC,1));
+                m_x = E_x\F_x;
+                m = m_x(1:size(X,2));
             else
-                M = size(XWX,2); % number of splines
-                lb = zeros(M,1); lb(1) = -inf;
-                ub = inf*ones(M,1);
-                
-                % These are the local constraints, exactly as above
-                Aeq = cachedVars.FS;
-                if isempty(Aeq)
-                    beq = [];
-                else
-                    beq = zeros(NC,1);
+                m = E_x\F_x;
+            end
+            
+            if ~isempty(S)
+                m0 = m;
+                x0 = S\m0;
+                if any(x0<0)
+                    E_x = cachedVars.SXWXS; % MxM
+                    F_x = cachedVars.SXWx;
+                    
+                    M = size(XWX,2); % number of splines
+                    lb = zeros(M,1); lb(1) = -inf;
+                    ub = inf*ones(M,1);
+                    
+                    % These are the local constraints, exactly as above
+                    Aeq = cachedVars.FS;
+                    if isempty(Aeq)
+                        beq = [];
+                    else
+                        beq = zeros(NC,1);
+                    end
+                    
+                    % E_x should be symmetric, although sometimes it's not
+                    % exactly.
+                    H = (E_x+E_x')*0.5;
+                    
+                    if NC == 0
+                        options = optimoptions('quadprog','Display','off','Algorithm','trust-region-reflective');
+                        x = quadprog(2*H,-2*F_x,[],[],Aeq,beq,lb,ub,xi0,options);
+                    else
+                        options = optimoptions('quadprog','Display','off','Algorithm','interior-point-convex');
+                        x = quadprog(2*H,-2*F_x,[],[],Aeq,beq,lb,ub,[],options);
+                    end
+                    m = S*x;
                 end
-                
-                % E_x should be symmetric, although sometimes it's not
-                % exactly.
-                H = (E_x+E_x')*0.5;
-                
-                % Note, switching to 'trust-region-reflective' algorithm
-                % requires initial conditions. It seems to work to simply
-                % use xi0=S\m0, where m0 is the unconstrained solution from
-                % above.
-                options = optimoptions('quadprog','Algorithm','interior-point-convex');
-                x = quadprog(2*H,-2*F_x,[],[],Aeq,beq,lb,ub,[],options);
-                m = S*x;
             end
             CmInv = E_x;
             
@@ -330,7 +368,7 @@ classdef ConstrainedSpline < BSpline
             % Out first call is basically just a normal fit to a tension
             % spline. If W is not set, it will be set to either 1/w0^2 or
             % the correlated version
-            cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = [];
+            cachedVars.W = []; cachedVars.XWX = []; cachedVars.XWx = []; cachedVars.SXWXS = []; cachedVars.SXWx = [];
             [m,CmInv,cachedVars] = ConstrainedSpline.ConstrainedSolution(t,x,K,t_knot,distribution,F,[],S,cachedVars);
             
             X = cachedVars.X;
