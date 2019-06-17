@@ -56,6 +56,7 @@ classdef SmoothingSpline < BSpline
         W % Weight matrix at observation points, NxN
         XWX
         Cm % error in coefficients, MxMxD. This is retrieved from the variable cache.
+        CmInv % error in coefficients, MxMxD. This is retrieved from the variable cache.
         nonOutlierIndices
         tensionValue
     end
@@ -329,6 +330,10 @@ classdef SmoothingSpline < BSpline
             end
         end
         
+        
+        function CmInv = get.CmInv(self)
+            CmInv = self.variableCache.CmInv;
+        end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
         % Smoothing matrix and covariance matrix
@@ -338,7 +343,11 @@ classdef SmoothingSpline < BSpline
         function S = smoothingMatrix(self)
             % The smoothing matrix S takes the observations and maps them
             % onto the estimated true values.
-            S = (self.X*self.Cm*self.X.')*self.W;
+            if size(self.W,1) == length(self.t) && size(self.W,2) == 1
+                S = (self.X*(self.CmInv\(self.X.'))).*(self.W.');
+            else
+                S = (self.X*(self.CmInv\(self.X.')))*self.W;
+            end
         end
         
         function S = errorMatrixAtPointsForDerivative(self,t,numDerivs)
@@ -908,11 +917,15 @@ classdef SmoothingSpline < BSpline
                 F_x = cat(1,F_x,zeros(NC,1));
             end
             
-            % Check if the tension is sufficiently high that we just need
-            % to use the constrained solution. This scenario only makes
-            % sense because we know we've used the interpolation points as
-            % knot points... otherwise rcond->0 could mean something else.
-            if rcond(E_x) < 5e-14
+            lastwarn('');
+            m = E_x\F_x;
+            [~,msgID] = lastwarn;
+            
+            if strcmp(msgID,'MATLAB:nearlySingularMatrix')
+                % Check if the tension is sufficiently high that we just need
+                % to use the constrained solution. This scenario only makes
+                % sense because we know we've used the interpolation points as
+                % knot points... otherwise rcond->0 could mean something else.
                 if isempty(cachedVars.m_constrained) || isempty(cachedVars.Cm_constrained)
                     
                     t_knot_constrained = cat(1,min(t)*ones(T,1),max(t)*ones(T,1));
@@ -934,7 +947,7 @@ classdef SmoothingSpline < BSpline
                 CmInv = [];
             else
                 isConstrained = 0;
-                m = E_x\F_x;
+                
                 if NC > 0
                     M = size(cachedVars.X,2);
                     m = m(1:M);                    

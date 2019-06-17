@@ -77,7 +77,11 @@ classdef ConstrainedSpline < BSpline
         function S = smoothingMatrix(self)
             % The smoothing matrix S takes the observations and maps them
             % onto the estimated true values.
-            S = (self.X*(self.CmInv\(self.X.')))*self.W;
+            if size(self.W,1) == length(self.t) && size(self.W,2) == 1
+                S = (self.X*(self.CmInv\(self.X.'))).*(self.W.');
+            else
+                S = (self.X*(self.CmInv\(self.X.')))*self.W;
+            end
         end
     end
     
@@ -170,9 +174,12 @@ classdef ConstrainedSpline < BSpline
                 if size(W,1) == N && size(W,2) == N
                     XWX = X'*W*X;
                 elseif length(W) == 1
-                    XWX = X'*W*X;
+                    if ~isfield(cachedVars,'XX') || isempty(cachedVars.XX)
+                        cachedVars.XX = X'*X;
+                    end
+                    XWX = cachedVars.XX*W;
                 elseif length(W) == N
-                    XWX = X'*diag(W)*X; % (MxN * NxN * Nx1) = Mx1
+                    XWX = X'*(W.*X); % (MxN * NxN * Nx1) = Mx1
                 else
                     error('W must have the same length as x and t.');
                 end
@@ -185,7 +192,7 @@ classdef ConstrainedSpline < BSpline
                 elseif length(W) == 1
                     XWx = X'*W*x;
                 elseif length(W) == N
-                    XWx = X'*diag(W)*x; % (MxN * NxN * Nx1) = Mx1
+                    XWx = X'*(W.*x); % (MxN * NxN * Nx1) = Mx1
                 else
                     error('W must have the same length as x and t.');
                 end
