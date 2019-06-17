@@ -814,145 +814,43 @@ classdef SmoothingSpline < BSpline
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         function cachedVars = PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,constraints,cachedVars)
-            % Computes several cachable variables.
-            if ~exist('cachedVars','var') || isempty(cachedVars)
-                cachedVars = struct('t',t,'x',x,'t_knot',t_knot,'K',K,'T',T,'distribution',distribution,'X',[],'XS',[],'VS',[],'rho_t',[],'W',W,'F',[],'SC',[],'XWX',[],'XWx',[],'VV',[],'m_constrained',[],'Cm_constrained',[]);
+            cachedVars = ConstrainedSpline.PrecomputeSolutionMatrices(t,x,K,t_knot,distribution,W,constraints,cachedVars);
+            
+            if ~isfield(cachedVars,'m_constrained') || ~isfield(cachedVars,'Cm_constrained')
+                cachedVars.m_constrained = [];
+                cachedVars.Cm_constrained = [];
             end
             
-            if ~isfield(cachedVars,'X') || isempty(cachedVars.X)
-                % These are the splines at the points of observation
-                cachedVars.X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
-            end
-            
-            if ~isfield(cachedVars,'F') || isempty(cachedVars.F)
-                % Deal with *local* constraints
-                if ~isfield(constraints,'t') || ~isfield(constraints,'D')
-                    F=[];
-                else
-                    M = size(cachedVars.X,2); % number of splines
-                    NC = length(constraints.t); % number of constraints
-                    if length(constraints.D) ~= NC
-                        error('t and D must have the same length in the constraints structure.');
-                    end
-                    F = zeros(NC,M);
-                    Xc = BSpline.Spline( constraints.t, t_knot, K, K-1 );
-                    for i=1:NC
-                        F(i,:) = squeeze(Xc(i,:,constraints.D(i)+1));
-                    end
-                end
-                cachedVars.F = F;
-            end
-            
-            if ~isfield(cachedVars,'SC') || isempty(cachedVars.SC)
-                % Deal with *global* constraints
-                if ~isfield(constraints,'global')
-                    SC = [];
-                else
-                    M = size(cachedVars.X,2); % number of splines
-                    switch constraints.global
-                        case ShapeConstraint.none
-                            SC = [];
-                        case ShapeConstraint.monotonicIncreasing
-                            SC = tril(ones(M)); % positive lower triangle
-                        case ShapeConstraint.monotonicDecreasing
-                            SC = -tril(ones(M)); % negative lower triangle
-                            SC(:,1)=1; % except the first point
-                        otherwise
-                            error('Invalid global constraint.');
-                    end
-                end
-                cachedVars.SC = SC;
-            end
-            S = cachedVars.SC;
-            
-            if ~isfield(cachedVars,'XS') || isempty(cachedVars.XS)
-                if ~isempty(S)
-                    cachedVars.XS = cachedVars.X*S; % NxM
-                else
-                    cachedVars.XS = cachedVars.X;
-                end
-            end
-            
-            if ~isfield(cachedVars,'FS') || isempty(cachedVars.FS)
-                if ~isempty(S) && ~isempty(F)
-                    cachedVars.FS = F*S; % NxM
-                else
-                    cachedVars.FS = F;
-                end
-            end
-            
-            XS = cachedVars.XS;
             N = length(x);
-            
-            if ~isfield(cachedVars,'VS') || isempty(cachedVars.VS)
+            if ~isfield(cachedVars,'V') || isempty(cachedVars.V)
                 % This is the value of the tensioned variable on the
                 % quadrature grid.
                 Q = 10*N; % number of points on the quadrature grid
                 tq = linspace(t(1),t(end),Q)';
                 B = BSpline.Spline( tq, t_knot, K, T );
-                cachedVars.VS = squeeze(B(:,:,T+1)); % QxM
-                if ~isempty(S)
-                    cachedVars.VS = cachedVars.VS*S;
-                end
-            end
-            
-            if ~isempty(distribution.rho) && (~isfield(cachedVars,'rho_t') || isempty(cachedVar.rho_t))
-                cachedVars.rho_t = distribution.rho(t - t.');
-            end
-            
-            if ~isfield(cachedVars,'W') || isempty(cachedVars.W)
-                % The (W)eight matrix.
-                %
-                % For a normal distribution the weight matrix is the
-                % covariance matrix.
-                %
-                % For anything other than a normal distribution, it is
-                % *not* the covariance matrix. During IRLS this matrix will
-                % be changing as points are reweighted.
-                if isempty(W)
-                    if isempty(distribution.rho)
-                        W = 1/(distribution.sigma0)^2;
-                    else
-                        rho_t = cachedVars.rho_t;
-                        sigma = ones(size(x))*distribution.sigma0;
-                        Sigma2 = (sigma * sigma.') .* rho_t;
-                        W = inv(Sigma2);
-                    end
-                end
-                cachedVars.W = W;
-            end
-            
-            if ~isfield(cachedVars,'XWX') || isempty(cachedVars.XWX)
-                if size(W,1) == N && size(W,2) == N
-                    XWX = XS'*W*XS;
-                elseif length(W) == 1
-                    XWX = XS'*W*XS;
-                elseif length(W) == N
-                    XWX = XS'*diag(W)*XS; % (MxN * NxN * Nx1) = Mx1
-                else
-                    error('W must have the same length as x and t.');
-                end
-                cachedVars.XWX = XWX;
-            end
-            
-            if ~isfield(cachedVars,'XWx') || isempty(cachedVars.XWx)
-                if size(W,1) == N && size(W,2) == N
-                    XWx = XS'*W*x;
-                elseif length(W) == 1
-                    XWx = XS'*W*x;
-                elseif length(W) == N
-                    XWx = XS'*diag(W)*x; % (MxN * NxN * Nx1) = Mx1
-                else
-                    error('W must have the same length as x and t.');
-                end
-                cachedVars.XWx = XWx;
+                cachedVars.V = squeeze(B(:,:,T+1)); % QxM
             end
             
             if ~isfield(cachedVars,'VV') || isempty(cachedVars.VV)
-                VS = cachedVars.VS;
-                cachedVars.VV = VS'*VS;
+                V = cachedVars.V;
+                cachedVars.VV = V'*V;
             end
             
+ 
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Repeat above, but now with shape constraints
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            S = cachedVars.SC;
+            if ~isempty(S)    
+                if ~isfield(cachedVars,'VS') || isempty(cachedVars.VS)
+                    cachedVars.VS = cachedVars.V*S;
+                end        
+                
+                if ~isfield(cachedVars,'SVVS') || isempty(cachedVars.SVVS)
+                    VS = cachedVars.VS;
+                    cachedVars.SVVS = VS'*VS;
+                end
+            end
         end
         
         function [m,Cm,CmInv,isConstrained,cachedVars] = TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,W,constraints,cachedVars)
@@ -982,22 +880,32 @@ classdef SmoothingSpline < BSpline
             if ~isempty(cachedVars.F)
                 warning('Local constraint not added!!!')
             end
-            
-            N = length(x);
-            Q = size(cachedVars.VS,1);
-            
+                        
+            F = cachedVars.F;
             XWX = cachedVars.XWX;
             XWx = cachedVars.XWx;
             VV = cachedVars.VV;
- 
+            
+            N = length(x); % number of points
+            M = size(XWX,2); % number of splines
+            Q = size(cachedVars.V,1); % number of quadrature points
+            
+            % set up inverse matrices
             E_x = XWX + (lambda*N/Q)*(VV);
+            F_x = XWx;
             
             % add the mean tension value
             if mu ~= 0.0
                 V = cachedVars.V;
-                B = XWx + (lambda*N/Q)*mu*transpose(sum( V,1));
-            else
-                B = XWx;
+                F_x = F_x + (lambda*N/Q)*mu*transpose(sum( V,1));
+            end
+            
+            % Expand with local constraints
+            NC = size(F,1);
+            if NC > 0
+                E_x = cat(1,E_x,F); % (M+NC)xM
+                E_x = cat(2,E_x,cat(1,F',zeros(NC)));
+                F_x = cat(1,F_x,zeros(NC,1));
             end
             
             % Check if the tension is sufficiently high that we just need
@@ -1026,34 +934,46 @@ classdef SmoothingSpline < BSpline
                 CmInv = [];
             else
                 isConstrained = 0;
-                S = cachedVars.SC;
-                if isempty(S)
-                    m = E_x\B;
-                else
-                    M = size(XWX,2); % number of splines
-                    lb = zeros(M,1); lb(1) = -inf;
-                    ub = inf*ones(M,1);
-                    
-                    % These are the local constraints, exactly as above
-%                     Aeq = cachedVars.FS;
-%                     if isempty(Aeq)
-%                         beq = [];
-%                     else
-%                         beq = zeros(NC,1);
-%                     end
-                    
-                    % E_x should be symmetric, although sometimes it's not
-                    % exactly.
-                    H = (E_x+E_x')*0.5;
-                    
-                    % Note, switching to 'trust-region-reflective' algorithm
-                    % requires initial conditions. It seems to work to simply
-                    % use xi0=S\m0, where m0 is the unconstrained solution from
-                    % above.
-                    options = optimoptions('quadprog','Display','off','Algorithm','interior-point-convex');
-                    x = quadprog(2*H,-2*B,[],[],[],[],lb,ub,[],options);
-                    m = S*x;
+                m = E_x\F_x;
+                if NC > 0
+                    M = size(cachedVars.X,2);
+                    m = m(1:M);                    
                 end
+                
+                S = cachedVars.SC;
+                if ~isempty(S)
+                    m0 = m;
+                    x0 = S\m0;
+                    if any(x0<0)
+                        E_x = cachedVars.SXWXS + (lambda*N/Q)*(cachedVars.SVVS); % MxM
+                        F_x = cachedVars.SXWx;
+                        
+                        lb = zeros(M,1); lb(1) = -inf;
+                        ub = inf*ones(M,1);
+                        
+                        % These are the local constraints, exactly as above
+                        Aeq = cachedVars.FS;
+                        if isempty(Aeq)
+                            beq = [];
+                        else
+                            beq = zeros(NC,1);
+                        end
+                        
+                        % E_x should be symmetric, although sometimes it's not
+                        % exactly.
+                        H = (E_x+E_x')*0.5;
+                        
+                        if NC == 0
+                            options = optimoptions('quadprog','Display','off','Algorithm','trust-region-reflective');
+                            x = quadprog(2*H,-2*F_x,[],[],Aeq,beq,lb,ub,xi0,options);
+                        else
+                            options = optimoptions('quadprog','Display','off','Algorithm','interior-point-convex');
+                            x = quadprog(2*H,-2*F_x,[],[],Aeq,beq,lb,ub,[],options);
+                        end
+                        m = S*x;
+                    end
+                end
+                
                 Cm = [];
                 CmInv = E_x;
             end
@@ -1081,7 +1001,7 @@ classdef SmoothingSpline < BSpline
                     Sigma2 = (sqrt(sigma_w2) * sqrt(sigma_w2).') .* cachedVars.rho_t;
                     W = inv(Sigma2);
                 else
-                    W = diag(1./sigma_w2);
+                    W = 1./sigma_w2;
                 end
                 
                 % hose any cached variable associated with W...
