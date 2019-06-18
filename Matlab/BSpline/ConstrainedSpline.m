@@ -123,6 +123,10 @@ classdef ConstrainedSpline < BSpline
                 cachedVars.X = BSpline.Spline( t, t_knot, K, 0 ); % NxM
             end
             
+            if ~isfield(cachedVars,'XT') || isempty(cachedVars.XT)
+                cachedVars.XT = cachedVars.X';
+            end
+            
             if ~isfield(cachedVars,'F') || isempty(cachedVars.F)
                 % Deal with *local* constraints
                 if ~isfield(constraints,'t') || ~isfield(constraints,'D')
@@ -169,17 +173,18 @@ classdef ConstrainedSpline < BSpline
             end
             
             X = cachedVars.X;
+            XT = cachedVars.XT;
             N = length(x);
             if ~isfield(cachedVars,'XWX') || isempty(cachedVars.XWX)
                 if size(W,1) == N && size(W,2) == N
-                    XWX = X'*W*X;
+                    XWX = XT*W*X;
                 elseif length(W) == 1
                     if ~isfield(cachedVars,'XX') || isempty(cachedVars.XX)
-                        cachedVars.XX = X'*X;
+                        cachedVars.XX = XT*X;
                     end
                     XWX = cachedVars.XX*W;
                 elseif length(W) == N
-                    XWX = X'*(W.*X); % (MxN * NxN * Nx1) = Mx1
+                    XWX = XT*(W.*X); % (MxN * NxN * Nx1) = Mx1
                 else
                     error('W must have the same length as x and t.');
                 end
@@ -188,11 +193,11 @@ classdef ConstrainedSpline < BSpline
             
             if ~isfield(cachedVars,'XWx') || isempty(cachedVars.XWx)
                 if size(W,1) == N && size(W,2) == N
-                    XWx = X'*W*x;
+                    XWx = XT*W*x;
                 elseif length(W) == 1
-                    XWx = X'*W*x;
+                    XWx = XT*W*x;
                 elseif length(W) == N
-                    XWx = X'*(W.*x); % (MxN * NxN * Nx1) = Mx1
+                    XWx = XT*(W.*x); % (MxN * NxN * Nx1) = Mx1
                 else
                     error('W must have the same length as x and t.');
                 end
@@ -225,7 +230,11 @@ classdef ConstrainedSpline < BSpline
                 if ~isfield(cachedVars,'XS') || isempty(cachedVars.XS)
                     cachedVars.XS = cachedVars.X*S;
                 end
+                if ~isfield(cachedVars,'XST') || isempty(cachedVars.XST)
+                    cachedVars.XST = cachedVars.XS';
+                end
                 XS = cachedVars.XS;
+                XST = cachedVars.XST;
                 
                 if ~isfield(cachedVars,'FS') || isempty(cachedVars.FS)
                     if ~isempty(cachedVars.F)
@@ -237,11 +246,11 @@ classdef ConstrainedSpline < BSpline
                 
                 if ~isfield(cachedVars,'SXWXS') || isempty(cachedVars.SXWXS)
                     if size(W,1) == N && size(W,2) == N
-                        SXWXS = XS'*W*XS;
+                        SXWXS = XST*W*XS;
                     elseif length(W) == 1
-                        SXWXS = XS'*W*XS;
+                        SXWXS = XST*W*XS;
                     elseif length(W) == N
-                        SXWXS = XS'*diag(W)*XS; % (MxN * NxN * Nx1) = Mx1
+                        SXWXS = XST*(W.*XS); % (MxN * NxN * Nx1) = Mx1
                     else
                         error('W must have the same length as x and t.');
                     end
@@ -250,11 +259,11 @@ classdef ConstrainedSpline < BSpline
                 
                 if ~isfield(cachedVars,'SXWx') || isempty(cachedVars.SXWx)
                     if size(W,1) == N && size(W,2) == N
-                        SXWx = XS'*W*x;
+                        SXWx = XST*W*x;
                     elseif length(W) == 1
-                        SXWx = XS'*W*x;
+                        SXWx = XST*W*x;
                     elseif length(W) == N
-                        SXWx = XS'*diag(W)*x; % (MxN * NxN * Nx1) = Mx1
+                        SXWx = XST'*(W.*x); % (MxN * NxN * Nx1) = Mx1
                     else
                         error('W must have the same length as x and t.');
                     end
