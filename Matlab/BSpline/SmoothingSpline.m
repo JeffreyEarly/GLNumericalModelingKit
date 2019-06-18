@@ -956,8 +956,8 @@ classdef SmoothingSpline < BSpline
                 S = cachedVars.SC;
                 if ~isempty(S)
                     m0 = m;
-                    x0 = S\m0;
-                    if any(x0<0)
+                    xi0 = S\m0;
+                    if any(xi0<0)
                         E_x = cachedVars.SXWXS + (lambda*N/Q)*(cachedVars.SVVS); % MxM
                         F_x = cachedVars.SXWx;
                         
