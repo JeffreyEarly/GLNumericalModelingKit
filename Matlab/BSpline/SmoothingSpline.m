@@ -886,10 +886,6 @@ classdef SmoothingSpline < BSpline
             
             cachedVars = SmoothingSpline.PrecomputeTensionSolutionMatrices(t,x,t_knot,K,T,distribution,W,constraints,cachedVars);
             
-            if ~isempty(cachedVars.F)
-                warning('Local constraint not added!!!')
-            end
-                        
             F = cachedVars.F;
             XWX = cachedVars.XWX;
             XWx = cachedVars.XWx;
@@ -988,7 +984,12 @@ classdef SmoothingSpline < BSpline
                 end
                 
                 Cm = [];
-                CmInv = E_x;
+                if NC > 0
+                    CmInv = XWX + (lambda*N/Q)*(VV);
+                else
+                    CmInv = E_x;
+                end
+                
             end
             
             cachedVars.Cm = Cm;
