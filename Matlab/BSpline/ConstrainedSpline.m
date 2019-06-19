@@ -35,6 +35,7 @@ classdef ConstrainedSpline < BSpline
             t = reshape(t,[],1);
             N = length(t);
             x = reshape(x,[],1);
+            
             if length(x) ~= N
                 error('x and t must have the same length.');
             end
@@ -51,7 +52,11 @@ classdef ConstrainedSpline < BSpline
             nl = find(t_knot <= t_knot(1),1,'last');
             nr = length(t_knot)- find(t_knot == t_knot(end),1,'first')+1;
             t_knot = [repmat(t_knot(1),K-nl,1); t_knot; repmat(t_knot(end),K-nr,1)];
-                            
+            
+            x_mean = mean(x);
+            x_std = std(x-x_mean);
+            x = (x-x_mean)/x_std;
+            
             if isa(distribution,'NormalDistribution')
                 [m,CmInv,cachedVars] = ConstrainedSpline.ConstrainedSolution(t,x,K,t_knot,distribution,[],constraints,[]);
             else
@@ -62,6 +67,8 @@ classdef ConstrainedSpline < BSpline
             self.distribution = distribution;
             self.t = t;
             self.x = x;
+            self.x_mean = x_mean;
+            self.x_std = x_std;
             self.CmInv = CmInv;
             self.X = cachedVars.X;
             self.W = cachedVars.W;
@@ -326,8 +333,8 @@ classdef ConstrainedSpline < BSpline
             S = cachedVars.SC;
             if ~isempty(S)
                 m0 = m;
-                x0 = S\m0;
-                if any(x0<0)
+                xi0 = S\m0;
+                if any(xi0<0)
                     E_x = cachedVars.SXWXS; % MxM
                     F_x = cachedVars.SXWx;
                     
@@ -347,7 +354,7 @@ classdef ConstrainedSpline < BSpline
                     % exactly.
                     H = (E_x+E_x')*0.5;
                     
-                    if NC == 0
+                    if 0 %if NC == 0
                         options = optimoptions('quadprog','Display','off','Algorithm','trust-region-reflective');
                         x = quadprog(2*H,-2*F_x,[],[],Aeq,beq,lb,ub,xi0,options);
                     else

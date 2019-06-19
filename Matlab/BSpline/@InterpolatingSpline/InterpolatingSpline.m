@@ -58,12 +58,23 @@ classdef InterpolatingSpline < BSpline
             % create knot points for a canonical interpolating spline
             t_knot = InterpolatingSpline.KnotPointsForPoints(t,K);
             
+            x_mean = mean(x);
+            x = x - x_mean;
+            
+            x_std = std(x);
+            if x_std > 0
+                x = x/x_std;
+            else
+                x_std = 1;
+            end
+            
             % Find the spline coefficients
             X = BSpline.Spline( t, t_knot, K, 0 );
             m = X\x;
             
             self@BSpline(K,t_knot,m);
-            
+            self.x_mean = x_mean;
+            self.x_std = x_std;
         end
 
     end

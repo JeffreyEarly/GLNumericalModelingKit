@@ -3,6 +3,8 @@ classdef BSplineUnitTests < matlab.unittest.TestCase
 
     methods (Test)
         function plusTest(testCase)
+            import matlab.unittest.constraints.IsEqualTo
+            import matlab.unittest.constraints.AbsoluteTolerance
             f = @(x) x;
             N = 11; % number of points
             K = 2; % order of spline
@@ -16,10 +18,12 @@ classdef BSplineUnitTests < matlab.unittest.TestCase
             expSolution = f(x)+1;
             actSolution = spline(x);
             
-            testCase.verifyEqual(actSolution,expSolution)
+            testCase.assertThat(actSolution, IsEqualTo(expSolution, 'Within', AbsoluteTolerance(2*eps))) 
         end
         
         function timesTest(testCase)
+            import matlab.unittest.constraints.IsEqualTo
+            import matlab.unittest.constraints.AbsoluteTolerance
             f = @(x) x;
             N = 11; % number of points
             K = 2; % order of spline
@@ -28,12 +32,12 @@ classdef BSplineUnitTests < matlab.unittest.TestCase
             x = linspace(-1,1,N)';
             spline = InterpolatingSpline(x,f(x),K);
             
-            spline = 2*spline;
+            spline = -2*spline;
             
-            expSolution = 2*f(x);
+            expSolution = -2*f(x);
             actSolution = spline(x);
             
-            testCase.verifyEqual(actSolution,expSolution)
+            testCase.assertThat(actSolution, IsEqualTo(expSolution, 'Within', AbsoluteTolerance(2*eps))) 
         end
         
         function integrationTest(testCase)
@@ -75,7 +79,7 @@ classdef BSplineUnitTests < matlab.unittest.TestCase
             expSolution = g(x);
             actSolution = spline(x);
             
-            testCase.assertThat(actSolution, IsEqualTo(expSolution, 'Within', RelativeTolerance(10*eps))) 
+            testCase.assertThat(actSolution, IsEqualTo(expSolution, 'Within', RelativeTolerance(100*eps))) 
         end
         
         function squareRootTest(testCase)

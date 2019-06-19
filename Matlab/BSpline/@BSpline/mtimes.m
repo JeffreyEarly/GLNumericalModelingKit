@@ -7,7 +7,10 @@ if ( ~isa(f, 'BSpline') )
 elseif ( isempty(g) )          % BSpline * []
     f = [];
 elseif ( isnumeric(g) && isscalar(g) )
-    f = BSpline(f.K,f.t_knot,g*f.m);
+    h = BSpline(f.K,f.t_knot,f.m);
+    h.x_std = g*f.x_std;
+    h.x_mean = g*f.x_mean;
+    f = h;
 else
     error('This case is not handled!')
 end

@@ -14,6 +14,9 @@ classdef BSpline < handle
         t_knot  % spline knot points
         B = [];
         
+        x_mean = 0 % if set, these will be used to scale the output
+        x_std = 1 % x_out = x_std*(X*m)+x_mean;
+        
         t_pp    % pp break points. size(t_pp) = length(t_knot) - 2*K + 1
         C       % piecewise polynomial coefficients. size(C) = [length(t_pp)-1, K]
     end
@@ -58,7 +61,7 @@ classdef BSpline < handle
                         NumDerivatives = 0;
                     end
                     
-                    varargout{1} = BSpline.EvaluateFromPPCoefficients(t,self.C,self.t_pp,NumDerivatives);
+                    varargout{1} = self.ValueAtPoints(t, NumDerivatives);
                     
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GET %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 case '.'       
@@ -79,6 +82,12 @@ classdef BSpline < handle
                 NumDerivatives = 0;
             end
             x_out = BSpline.EvaluateFromPPCoefficients(t,self.C,self.t_pp,NumDerivatives);
+            if ~isempty(self.x_std)
+                x_out = self.x_std*x_out;
+            end
+            if ~isempty(self.x_mean) && NumDerivatives == 0
+                x_out = x_out + self.x_mean;
+            end
         end
         
         function set.m(self,newM)
