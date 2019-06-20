@@ -53,7 +53,12 @@ classdef ConstrainedSpline < BSpline
             nr = length(t_knot)- find(t_knot == t_knot(end),1,'first')+1;
             t_knot = [repmat(t_knot(1),K-nl,1); t_knot; repmat(t_knot(end),K-nr,1)];
             
-            x_mean = mean(x);
+            if isfield(constraints,'global') && constraints.global == ShapeConstraint.positive
+                x_mean = 0;
+            else
+                x_mean = mean(x);
+            end
+            
             x_std = std(x-x_mean);
             x = (x-x_mean)/x_std;
             
@@ -220,6 +225,8 @@ classdef ConstrainedSpline < BSpline
                     switch constraints.global
                         case ShapeConstraint.none
                             SC = [];
+                        case ShapeConstraint.positive
+                            SC =eye(M);
                         case ShapeConstraint.monotonicIncreasing
                             SC = tril(ones(M)); % positive lower triangle
                         case ShapeConstraint.monotonicDecreasing
