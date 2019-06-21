@@ -1,4 +1,4 @@
-function splineb = power(spline,b)
+function splineb = power(spline,b,constraints)
 %POWER Power of a BSpline
 
 if b == 1
@@ -10,10 +10,13 @@ else
 %     splineb = InterpolatingSpline(ts,(g.^b),ceil(b*spline.K));
     K = ceil(b*spline.K);
     t_knot = InterpolatingSpline.KnotPointsForPoints(ts,K);
-    splineb = ConstrainedSpline(ts,(g.^b),K,t_knot,[],struct('global',ShapeConstraint.positive));
-%     X = BSpline.Spline(ts,spline.t_knot,spline.K);
-%     g = spline.ValueAtPoints(ts);
-%     m = X\(g.^b);
-%     splineb = BSpline(spline.K,spline.t_knot,m);
+    if exist('constraints','var') && ~isempty(constraints)
+        splineb = ConstrainedSpline(ts,(g.^b),K,t_knot,[],struct('global',ShapeConstraint.positive));
+    else
+        X = BSpline.Spline(ts,t_knot,K);
+        m = X\(g.^b);
+        splineb = BSpline(spline.K,spline.t_knot,m);
+    end
+
 end
 
