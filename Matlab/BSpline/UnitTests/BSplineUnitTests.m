@@ -101,6 +101,26 @@ classdef BSplineUnitTests < matlab.unittest.TestCase
             testCase.assertThat(actSolution, IsEqualTo(expSolution, 'Within', AbsoluteTolerance(2*eps))) 
         end
         
+        
+        function rootsTest(testCase)
+            import matlab.unittest.constraints.IsEqualTo
+            import matlab.unittest.constraints.AbsoluteTolerance
+            f = @(x) mod(x,2)-0.5;
+            N = 11; % number of points
+            K = 2; % order of spline
+            
+            % first let's do a uniform grid, lower order
+            x = linspace(0,10,N)';
+            spline = InterpolatingSpline(x,f(x),K);
+            
+            r = roots(spline);
+            
+            expSolution = (0:9)' + 0.5;
+            actSolution = r;
+            
+            testCase.assertThat(actSolution, IsEqualTo(expSolution, 'Within', AbsoluteTolerance(2*eps)))
+        end
+        
     end
 
 end

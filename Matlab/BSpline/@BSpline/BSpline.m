@@ -23,6 +23,7 @@ classdef BSpline < handle
     
     properties (Dependent)
         S
+        domain
     end
     
     methods
@@ -40,6 +41,10 @@ classdef BSpline < handle
         
         function S = get.S(self)
             S = self.K-1;
+        end
+        
+        function domain = get.domain(self)
+            domain = [self.t_knot(1) self.t_knot(end)];
         end
         
         function varargout = subsref(self, index)
