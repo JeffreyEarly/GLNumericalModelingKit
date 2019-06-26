@@ -1,27 +1,27 @@
 function intspline = cumsum(spline)
 %CUMSUM Indefinite integral of a BSpline
 
+m = spline.m;
+K = spline.K;
+t_knot = spline.t_knot;
+M = length(m);
 
-% ts = BSpline.PointsOfSupport(spline.t_knot,spline.K,0);
+if abs(spline.x_mean) > 0
+    X = spline.B(:,:,1);
+    if isempty(X)
+        X = BSpline.Spline( spline.t_pp, t_knot, K );
+    end
+    m0 = X\((spline.x_mean/spline.x_std)*ones(size(spline.t_pp)));
+    m = m+m0;
+end
+
+
+dt = (t_knot(1+K:M+K)-t_knot(1:M))/K;
+beta = zeros(length(m)+1,1);
+for i=2:length(beta)
+   beta(i) = beta(i-1) + m(i-1)*dt(i-1); 
+end
 
 t_knot = cat(1,spline.t_knot(1),spline.t_knot,spline.t_knot(end));
-ts = BSpline.PointsOfSupport(t_knot,spline.K+1,0);
-B = BSpline.Spline(ts,t_knot,spline.K+1,1);
-X = squeeze(B(:,:,1));
-V = squeeze(B(:,:,2));
-
-% This makes the first derivative match
-g = spline.ValueAtPoints(ts);
-V(1,:) = X(1,:);
-g(1) = 0;
-m = V\g;
-
-% % Now compute the value at the LHS.
-% const = X(1,:)*m;
-% 
-% % And subtract that value
-% m1 = X\ones(size(X,1),1);
-% m = m - const*m1;
-
-intspline = BSpline(spline.K+1,t_knot,m);
-
+intspline = BSpline(spline.K+1,t_knot,beta);
+intspline.x_std = spline.x_std;
