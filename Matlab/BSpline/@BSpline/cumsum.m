@@ -6,13 +6,14 @@ K = spline.K;
 t_knot = spline.t_knot;
 M = length(m);
 
-if abs(spline.x_mean) > 0
-    X = spline.B(:,:,1);
-    if isempty(X)
-        X = BSpline.Spline( spline.t_pp, t_knot, K );
-    end
-    m0 = X\((spline.x_mean/spline.x_std)*ones(size(spline.t_pp)));
-    m = m+m0;
+if abs(spline.x_mean) > 0 || abs(spline.x_std - 1) > 0
+%     X = spline.B(:,:,1);
+%     if isempty(X)
+%         X = BSpline.Spline( spline.t_pp, t_knot, K );
+%     end
+    t = BSpline.PointsOfSupport(spline.t_knot,spline.K);
+    X = BSpline.Spline(t,spline.t_knot,spline.K);
+    m = spline.x_std*spline.m + X\(spline.x_mean*ones(length(t),1));
 end
 
 
@@ -24,4 +25,4 @@ end
 
 t_knot = cat(1,spline.t_knot(1),spline.t_knot,spline.t_knot(end));
 intspline = BSpline(spline.K+1,t_knot,beta);
-intspline.x_std = spline.x_std;
+% intspline.x_std = spline.x_std;

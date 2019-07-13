@@ -43,8 +43,8 @@ classdef BSplineUnitTests < matlab.unittest.TestCase
         function integrationTest(testCase)
             import matlab.unittest.constraints.IsEqualTo
             import matlab.unittest.constraints.AbsoluteTolerance
-            f = @(x) x;
-            g = @(x) 0.5*x.^2;
+            f = @(x) x + ones(size(x));
+            g = @(x) 0.5*x.^2 + x; % \int (x+1) dx = x^2/2 + x + const
             N = 11; % number of points
             K = 4; % order of spline
             
@@ -52,14 +52,14 @@ classdef BSplineUnitTests < matlab.unittest.TestCase
             x = linspace(-1,1,N)';
             spline = InterpolatingSpline(x,f(x),K);
             
-            spline = cumsum(spline);
+            intspline = cumsum(spline);
             
             expSolution = g(x)-g(x(1));
-            actSolution = spline(x);
+            actSolution = intspline(x);
             
             % There's a zero here, so we have to use absolute tolerance
             % only.
-            testCase.assertThat(actSolution, IsEqualTo(expSolution, 'Within', AbsoluteTolerance(2*eps)))            
+            testCase.assertThat(actSolution, IsEqualTo(expSolution, 'Within', AbsoluteTolerance(10*eps)))            
         end
         
         function differentiationTest(testCase)

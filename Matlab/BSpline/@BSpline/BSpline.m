@@ -111,6 +111,17 @@ classdef BSpline < handle
             % this function assumes that the spline are terminated at the
             % boundary with repeat knot points.
            interior_knots = t_knot(K+1:end-K);
+           
+           if isempty(interior_knots)
+              if K == 1
+                  t = t_knot;
+              else
+                 dt = (t_knot(end)-t_knot(1))/(K-1);
+                 t = t_knot(1)+dt*(0:K)';
+              end
+              return
+           end
+           
            if mod(K,2)==1
                interior_support = interior_knots(1:(end-1))+diff(interior_knots)/2;
                
