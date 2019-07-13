@@ -117,7 +117,7 @@ classdef BSpline < handle
                   t = t_knot;
               else
                  dt = (t_knot(end)-t_knot(1))/(K-1);
-                 t = t_knot(1)+dt*(0:K)';
+                 t = t_knot(1)+dt*(0:K-1)';
               end
               return
            end
