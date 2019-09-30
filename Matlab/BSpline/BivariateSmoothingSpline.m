@@ -256,6 +256,18 @@ classdef BivariateSmoothingSpline < handle
             Sy = Sbar + Sprime - Sprime*Sbar;
         end
         
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % effective sample size
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function [n_eff_x, n_eff_y] = effectiveSampleSize(self)
+            Sx = self.smoothingMatrixX;
+            Sy = self.smoothingMatrixY;
+            n_eff_x = length(Sx)/trace(Sx);
+            n_eff_y = length(Sy)/trace(Sy);
+        end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
