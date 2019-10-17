@@ -1,7 +1,10 @@
-function [overlap,area1,area2] = ellipse_ellipse_overlap(a1,b1,theta1,a2,b2,theta2)
+function [overlap,area1,area2] = ellipse_ellipse_overlap(a1,b1,theta1,a2,b2,theta2,shouldShowFigure)
+if nargin < 7
+    shouldShowFigure = 0;
+end
 
 L = min(max(a1,b1),max(a2,b2));
-n = 1001;
+n = 101;
 
 x=linspace(-L,L,n)';
 y=linspace(-L,L,n)';
@@ -21,5 +24,15 @@ ellipse2 = sqrt((XT/a2).^2 + (YT/b2).^2) < 1;
 area2 = pi*a2*b2;
 
 overlap = sum(sum(ellipse1 & ellipse2))*dx*dy;
+
+if shouldShowFigure == 1
+    figure
+    subplot(1,3,1)
+    pcolor(X,Y,double(ellipse1)), shading flat
+    subplot(1,3,2)
+    pcolor(X,Y,double(ellipse2)), shading flat
+    subplot(1,3,3)
+    pcolor(X,Y,double(ellipse1 & ellipse2)), shading flat
+end
 
 end
