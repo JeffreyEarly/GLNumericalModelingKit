@@ -10,22 +10,22 @@
 #import <netcdf.h>
 
 // Keys of the fileProperties dictionary
-NSString *GLNumberOfDimensionsKey;
-NSString *GLNumberOfVariablesKey;
-NSString *GLGlobalAttributesKey;
-NSString *GLUnlimitedDimensionsArrayKey;
+extern NSString *GLNumberOfDimensionsKey;
+extern NSString *GLNumberOfVariablesKey;
+extern NSString *GLGlobalAttributesKey;
+extern NSString *GLUnlimitedDimensionsArrayKey;
 
 // Keys of the dimensionProperties dictionary
-NSString *GLDimensionNameKey;
-NSString *GLDimensionLengthKey;
-NSString *GLDimensionIDKey;
+extern NSString *GLDimensionNameKey;
+extern NSString *GLDimensionLengthKey;
+extern NSString *GLDimensionIDKey;
 
 // Keys of the variableProperties dictionary
-NSString *GLVariableNameKey;
-NSString *GLVariableTypeKey;
-NSString *GLVariableIDKey;
-NSString *GLVariableDimensionsArrayKey;
-NSString *GLVariableAttributesKey;
+extern NSString *GLVariableNameKey;
+extern NSString *GLVariableTypeKey;
+extern NSString *GLVariableIDKey;
+extern NSString *GLVariableDimensionsArrayKey;
+extern NSString *GLVariableAttributesKey;
 
 // This is a *simple* objective-c wrapper to NetCDF's C interface that requires no external classes.
 // GLNetCDFFile provides a higher level interface and may be more appropriate to use for some cases.
