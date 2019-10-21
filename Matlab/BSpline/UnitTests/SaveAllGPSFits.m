@@ -13,7 +13,7 @@ distances = zeros(length(offsets),length(drifters.date));
 for iOffset = 1:length(offsets)
     offset = offsets(iOffset);
     for iDrifter=1:length(drifters.date)
-        t_zero = drifters.lastDeployment*24*60 - offset;
+        t_zero = drifters.lastDeployment*24*60 + offset;
         t_drifter = drifters.date{iDrifter}*24*60 - t_zero;
         t_drifter_mod = mod(t_drifter,30);
         t_drifter_mod(t_drifter_mod>15)=t_drifter_mod(t_drifter_mod>15)-15;
@@ -24,7 +24,7 @@ end
 % offset of 2 appears to be minimum distances.
 [val,idx] = min(median(distances,2));
 
-t_zero = drifters.lastDeployment*24*60*60 - offsets(idx)*60;
+t_zero = drifters.lastDeployment*24*60*60 + offsets(idx)*60;
 t_end = drifters.firstRetrieval*24*60*60 - t_zero;
 t_interp = (0:1800:t_end).';
 
