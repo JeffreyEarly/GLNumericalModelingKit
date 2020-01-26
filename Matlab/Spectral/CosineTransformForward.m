@@ -1,5 +1,5 @@
 function [xbar, f] = CosineTransformForward( t, x, varargin )
-% CosineTransformForward  Fast Discrete Cosine Transform (DST-I)
+% CosineTransformForward  Fast Discrete Cosine Transform (DCT-I)
 % 
 % xbar is returned in the same units as x. This is the finite length
 % definition of a Fourier transform.
