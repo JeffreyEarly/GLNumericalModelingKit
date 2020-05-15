@@ -56,6 +56,14 @@ classdef ArrayIntegrator < handle
             y = self.currentY;
         end
         
+        function y = IncrementForward(self)
+            self.currentY = self.StepForward(self.currentY,self.currentTime,self.stepSize);
+            self.currentTime = self.currentTime + self.stepSize;
+            self.totalIterations = self.totalIterations + 1;
+            
+            y = self.currentY;
+        end
+        
         function yo = StepForward(self,yi,t,dt)
             F1 = feval(self.fFromTY,t,yi);
             
