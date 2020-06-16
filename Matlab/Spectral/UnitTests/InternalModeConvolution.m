@@ -38,3 +38,27 @@ a_out = M\(f.*g);
 figure
 plot(f.*g,z)
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% We are going to compute the interaction sum between F, F and F modes.
+% The ordering will be such that the third index is the destination.
+
+C = ConstructInteractionMatrix(F,F,F);
+
+fn = randn(N,1);
+gn = randn(N,1);
+
+f = F*fn;
+g = F*gn;
+
+hn_spatial = F\(f.*g);
+
+hn_spectral = zeros(N,1);
+for i=1:N
+   hn_spectral(i) = (fn.')*C(:,:,i)*gn ;
+end
+
+%%%%%%%%%%%%%%%%
+% cool plot
+figure, pcolor(log10(abs(C(2:end,2:end,5))))
+colorbar('eastoutside')
