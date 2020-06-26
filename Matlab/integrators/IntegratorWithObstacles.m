@@ -47,12 +47,7 @@ classdef IntegratorWithObstacles < Integrator
             self.kappa = kappa;
             self.isPeriodic = isPeriodic;
 
-            self.obstacles = obstacles;
-            bufferRadius = 7*max(sqrt(2*kappa*dt));
-            fprintf('based on your step size, we have to set the obstacle buffer radius to %f\n',bufferRadius);
-            if ~isempty(self.obstacles)
-                self.obstacleBuffers = polybuffer(self.obstacles,bufferRadius);
-            end
+            self.SetObstacles(obstacles);
             
             self.diffusivityFlux = cell(length(ymin),1);
             for i = 1:length(ymin)
@@ -143,6 +138,19 @@ classdef IntegratorWithObstacles < Integrator
             yo = yi + dy;
         end
         
+        function self = SetObstacles(self,obstacles)
+            for iObstacle = 1:length(obstacles)
+                self.obstacles(iObstacle).Vertices = obstacles(iObstacle).Vertices;
+                self.obstacles(iObstacle).Vertices(end+1,:) = obstacles(iObstacle).Vertices(1,1:2); % close the polygon. Matlab needs this for speed, unfortunately.
+                self.obstacles(iObstacle).polyshape = obstacles(iObstacle);
+            end
+%             self.obstacles = obstacles;
+%             bufferRadius = 7*max(sqrt(2*kappa*dt));
+%             fprintf('based on your step size, we have to set the obstacle buffer radius to %f\n',bufferRadius);
+%             if ~isempty(self.obstacles)
+%                 self.obstacleBuffers = polybuffer(self.obstacles,bufferRadius);
+%             end
+        end
 
         function [yi,dy,didReflect] = UpdateWithReflection(self,obstacle,yi,yo_wrapped,dy)
             % yi and dy will contain updated values for indices where
@@ -203,7 +211,7 @@ classdef IntegratorWithObstacles < Integrator
             p_intersection = zeros(size(p_f));
             
             % Information needed to determine whether or not we reflect
-            isPfInterior = isinterior(polygon,p_f(:,1),p_f(:,2));
+            isPfInterior = isinterior(polygon.polyshape,p_f(:,1),p_f(:,2));
             isPiOnBorder = false(size(p_i,1),1);
             numCrossings = zeros(size(p_i,1),1);
             
@@ -212,13 +220,11 @@ classdef IntegratorWithObstacles < Integrator
             dist_to_first_nonzero_crossing = nan(size(p_i,1),1);
             
             zeroThreshold = 0; % this should be a relative value.
-            for i=1:length(polygon.Vertices)
-                if i == length(polygon.Vertices)
-                    polyedge = [polygon.Vertices(end,1:2); polygon.Vertices(1,1:2)];
-                else
-                    polyedge = polygon.Vertices(i:(i+1),1:2);
-                end
-                [doesIntersect,p_intersect,r2] = IntegratorWithObstacles.DoesIntersect( p_i, p_f, polyedge(1,:), polyedge(2,:) );
+            doesIntersect = false(size(p_i,1),1);
+            p_intersect = nan(size(p_i));
+            r2 = nan(size(p_i,1),1);
+            for i=1:(length(polygon.Vertices)-1)
+                [doesIntersect,p_intersect,r2] = IntegratorWithObstacles.DoesIntersect( p_i, p_f, polygon.Vertices(i,1:2), polygon.Vertices(i+1,1:2), doesIntersect,p_intersect,r2 );
                 
                 numCrossings = numCrossings + doesIntersect;
                 isPiOnBorder = isPiOnBorder | r2 <= zeroThreshold;
@@ -248,8 +254,8 @@ classdef IntegratorWithObstacles < Integrator
                     px = p_f(shouldReflect,1) - p_intersect(shouldReflect,1);
                     py = p_f(shouldReflect,2) - p_intersect(shouldReflect,2);
                     
-                    dx = polyedge(2,1)-polyedge(1,1);
-                    dy = polyedge(2,2)-polyedge(1,2);
+                    dx = polygon.Vertices(i+1,1)-polygon.Vertices(i,1);
+                    dy = polygon.Vertices(i+1,2)-polygon.Vertices(i,2);
                     
                     a = dx*dx-dy*dy;
                     b = 2*dx*dy;
@@ -264,7 +270,7 @@ classdef IntegratorWithObstacles < Integrator
 %             end
         end
         
-        function [doesIntersect,p_intersect,r2] = DoesIntersect(p_i,p_f,vi,vf)
+        function [doesIntersect,p_intersect,r2] = DoesIntersect(p_i,p_f,vi,vf,doesIntersect,p_intersect,r2)
             % somewhat vectorized intersection algorithm
             % pi and pf are the initial and final positions, given as [x y]
             % with as many rows as you want.
@@ -272,7 +278,13 @@ classdef IntegratorWithObstacles < Integrator
             % in the same format, but only one row.
             % https://en.wikipedia.org/wiki/Line–line_intersection
             
-            % flag will indicate whether the line intersects the vertex.
+            % doesIntersect will indicate whether the line intersects the vertex.
+            % p_intersect and r2 are meaningless garbage unless
+            % doesIntersect is set to true for that index.
+            
+            % NOTE: including doesIntersect,p_intersect,r2 in the function
+            % argument allows Matlab to re-use their memory. I can confirm
+            % that this technique does make a significant performance difference.
             
             x1x2 = p_i(:,1)-p_f(:,1);   % x1 - x2
             y3y4 = vi(2)-vf(2);         % y3 - y4
@@ -285,19 +297,12 @@ classdef IntegratorWithObstacles < Integrator
             a = x1x3 .* y3y4 - y1y3 .* x3x4;
             b = x1x2 .* y1y3 - y1y2 .* x1x3;
             
-            p_intersect = nan(size(p_i));
-            r2 = nan(size(p_i,1),1);
-            doesIntersect = false(size(p_i,1),1);
-            t = zeros(size(p_i,1),1);
-            u = zeros(size(p_i,1),1);
-            
-            valid = denom ~= 0;
-            t(valid) = a(valid)./denom(valid);
-            u(valid) = -b(valid)./denom(valid);
+            t = a./denom;
+            u = -b./denom;
             
             % if t==0, then the initial point is *on* a vertex. This should
             % not be used for a reflection
-            doesIntersect(valid) = logical(t(valid) >= 0 & t(valid) <= 1 & u(valid) >= 0 & u(valid) <= 1);
+            doesIntersect = t >= 0 & t <= 1 & u >= 0 & u <= 1 & denom ~= 0;
             if any(doesIntersect)
                 dx = - 0.999*t(doesIntersect).*x1x2(doesIntersect);
                 dy = - 0.999*t(doesIntersect).*y1y2(doesIntersect);
