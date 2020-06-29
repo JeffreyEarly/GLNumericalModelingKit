@@ -143,6 +143,9 @@ classdef IntegratorWithObstacles < Integrator
                 self.obstacles(iObstacle).Vertices = obstacles(iObstacle).Vertices;
                 self.obstacles(iObstacle).Vertices(end+1,:) = obstacles(iObstacle).Vertices(1,1:2); % close the polygon. Matlab needs this for speed, unfortunately.
                 self.obstacles(iObstacle).polyshape = obstacles(iObstacle);
+                
+                self.obstacles(iObstacle).dx = self.obstacles(iObstacle).Vertices(2:end,1) - self.obstacles(iObstacle).Vertices(1:(end-1),1);
+                self.obstacles(iObstacle).dy = self.obstacles(iObstacle).Vertices(2:end,2) - self.obstacles(iObstacle).Vertices(1:(end-1),2);
             end
 %             self.obstacles = obstacles;
 %             bufferRadius = 7*max(sqrt(2*kappa*dt));
@@ -211,10 +214,10 @@ classdef IntegratorWithObstacles < Integrator
             p_intersection = zeros(size(p_f));
             
             % Information needed to determine whether or not we reflect
-            isPfInterior = isinterior(polygon.polyshape,p_f(:,1),p_f(:,2));
+            isPfInterior = IntegratorWithObstacles.isInterior( polygon,p_f(:,1),p_f(:,2));
             isPiOnBorder = false(size(p_i,1),1);
             numCrossings = zeros(size(p_i,1),1);
-            
+                        
             % Information needed to do the actual reflection
             first_non_zero_crossing = zeros(size(p_f));
             dist_to_first_nonzero_crossing = nan(size(p_i,1),1);
@@ -268,6 +271,28 @@ classdef IntegratorWithObstacles < Integrator
 %             if any(isPfInterior & ~didReflect)
 %                fprintf('What happened here?'); 
 %             end
+        end
+
+        function isLeft = isLeft(polygon,i,x,y)
+            isLeft = (polygon.dx(i)*(y-polygon.Vertices(i,2)) - (x-polygon.Vertices(i,1))*polygon.dy(i) );
+        end
+
+        function isinterior = isInterior(polygon, x, y)
+            % In my tests this was a 6-7x speedup over matlabs
+            % implementation.
+            windingNumber = zeros(size(x));
+            for i=1:(length(polygon.Vertices)-1)
+                isless = polygon.Vertices(i,2) <= y;
+                upwardCrossing = isless & polygon.Vertices(i+1,2) > y;
+                if any(upwardCrossing)
+                    windingNumber(upwardCrossing) = windingNumber(upwardCrossing) + (IntegratorWithObstacles.isLeft(polygon,i,x(upwardCrossing),y(upwardCrossing)) > 0);
+                end
+                downwardCrossing = ~isless & polygon.Vertices(i+1,2) <= y;
+                if any(downwardCrossing)
+                    windingNumber(downwardCrossing) = windingNumber(downwardCrossing) - (IntegratorWithObstacles.isLeft(polygon,i,x(downwardCrossing),y(downwardCrossing)) < 0);
+                end
+            end
+            isinterior = abs(windingNumber) > 0;
         end
         
         function [doesIntersect,p_intersect,r2] = DoesIntersect(p_i,p_f,vi,vf,doesIntersect,p_intersect,r2)
