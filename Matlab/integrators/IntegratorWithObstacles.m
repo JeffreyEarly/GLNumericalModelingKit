@@ -8,8 +8,6 @@ classdef IntegratorWithObstacles < Integrator
         isPeriodic = [0 0];
         
         obstacles
-        obstacleBuffers
-        obstacleBoundingBoxes
         
         diffusivityFlux
     end
@@ -146,13 +144,15 @@ classdef IntegratorWithObstacles < Integrator
                 
                 self.obstacles(iObstacle).dx = self.obstacles(iObstacle).Vertices(2:end,1) - self.obstacles(iObstacle).Vertices(1:(end-1),1);
                 self.obstacles(iObstacle).dy = self.obstacles(iObstacle).Vertices(2:end,2) - self.obstacles(iObstacle).Vertices(1:(end-1),2);
+                
+                [xbb, ybb] = boundingbox(obstacles(iObstacle));
+                boundingBox.polyshape = polyshape([min(xbb);min(xbb);max(xbb);max(xbb)],[max(ybb);min(ybb);min(ybb);max(ybb)]);
+                boundingBox.Vertices = boundingBox.polyshape.Vertices;
+                boundingBox.Vertices(end+1,:) = boundingBox.Vertices(1,:); % close the polygon.
+                boundingBox.dx = boundingBox.Vertices(2:end,1) - boundingBox.Vertices(1:(end-1),1);
+                boundingBox.dy = boundingBox.Vertices(2:end,2) - boundingBox.Vertices(1:(end-1),2);
+                self.obstacles(iObstacle).boundingBox = boundingBox;
             end
-%             self.obstacles = obstacles;
-%             bufferRadius = 7*max(sqrt(2*kappa*dt));
-%             fprintf('based on your step size, we have to set the obstacle buffer radius to %f\n',bufferRadius);
-%             if ~isempty(self.obstacles)
-%                 self.obstacleBuffers = polybuffer(self.obstacles,bufferRadius);
-%             end
         end
 
         function [yi,dy,didReflect] = UpdateWithReflection(self,obstacle,yi,yo_wrapped,dy)
@@ -162,15 +162,26 @@ classdef IntegratorWithObstacles < Integrator
             % defined using the increment, yi will be wrapped
             % the same number of times as yo.
             yi_wrapped = yo_wrapped - dy;
-            [yo_fixed,p_intersect,didReflect] = IntegratorWithObstacles.Reflect(obstacle,yi_wrapped,yo_wrapped);
-            if any(didReflect)
-                dintersect = p_intersect(didReflect,:)- yi_wrapped(didReflect,:);
-                dreflection = yo_fixed(didReflect,:) - p_intersect(didReflect,:);
+            
+            % Do a quick bounding box check
+            mayIntersect = IntegratorWithObstacles.doesIntersectPolygon(obstacle.boundingBox,yi_wrapped,yo_wrapped);
+            mayIntersect = mayIntersect | IntegratorWithObstacles.isInterior(obstacle.boundingBox, yo_wrapped(:,1), yo_wrapped(:,2));
+            
+            didReflect = false(size(yi,1),1);
+            
+            if any(mayIntersect)
+                [yo_fixed,p_intersect,didReflectSubset] = IntegratorWithObstacles.Reflect(obstacle,yi_wrapped(mayIntersect,:),yo_wrapped(mayIntersect,:));
+                didReflect(mayIntersect) = didReflectSubset;
                 
-                % The 'initial' point needs to becomes the
-                % point of reflection
-                yi(didReflect,:) = yi(didReflect,:) + dintersect;
-                dy(didReflect,:) = dreflection;
+                if any(didReflectSubset)
+                    dintersect = p_intersect(didReflectSubset,:)- yi_wrapped(mayIntersect(didReflectSubset),:);
+                    dreflection = yo_fixed(didReflectSubset,:) - p_intersect(didReflectSubset,:);
+                    
+                    % The 'initial' point needs to becomes the
+                    % point of reflection
+                    yi(mayIntersect(didReflectSubset),:) = yi(mayIntersect(didReflectSubset),:) + dintersect;
+                    dy(mayIntersect(didReflectSubset),:) = dreflection;
+                end
             end
         end
         
@@ -223,12 +234,44 @@ classdef IntegratorWithObstacles < Integrator
             dist_to_first_nonzero_crossing = nan(size(p_i,1),1);
             
             zeroThreshold = 0; % this should be a relative value.
-            doesIntersect = false(size(p_i,1),1);
             p_intersect = nan(size(p_i));
             r2 = nan(size(p_i,1),1);
             for i=1:(length(polygon.Vertices)-1)
-                [doesIntersect,p_intersect,r2] = IntegratorWithObstacles.DoesIntersect( p_i, p_f, polygon.Vertices(i,1:2), polygon.Vertices(i+1,1:2), doesIntersect,p_intersect,r2 );
+%                 [doesIntersect,p_intersect,r2] = IntegratorWithObstacles.DoesIntersect( p_i, p_f, polygon.Vertices(i,1:2), polygon.Vertices(i+1,1:2), doesIntersect,p_intersect,r2 );
                 
+                % *********************************************************
+                % Manually inlining the DoesIntersect function.
+                % This has big performance gains due to Matlab memory
+                % management
+                % *********************************************************
+                x1x2 = p_i(:,1)-p_f(:,1);   % x1 - x2
+                y3y4 = -polygon.dy(i);      % y3 - y4
+                y1y2 = p_i(:,2)-p_f(:,2);   % y1 - y2
+                x3x4 = -polygon.dx(i);      % x3 - x4
+                x1x3 = p_i(:,1)-polygon.Vertices(i,1);    % x1 - x3
+                y1y3 = p_i(:,2)-polygon.Vertices(i,2);    % y1 - y3
+                
+                denom = x1x2 * y3y4 - y1y2 * x3x4;
+                a = x1x3 .* y3y4 - y1y3 .* x3x4;
+                b = x1x2 .* y1y3 - y1y2 .* x1x3;
+                
+                t = a./denom;
+                u = -b./denom;
+                
+                % if t==0, then the initial point is *on* a vertex. This should
+                % not be used for a reflection
+                doesIntersect = t >= 0 & t <= 1 & u >= 0 & u <= 1 & denom ~= 0;
+                if any(doesIntersect)
+                    dx = - 0.999*t(doesIntersect).*x1x2(doesIntersect);
+                    dy = - 0.999*t(doesIntersect).*y1y2(doesIntersect);
+                    r2(doesIntersect) = dx.^2+dy.^2;
+                    p_intersect(doesIntersect,1) = p_i(doesIntersect,1) + dx;
+                    p_intersect(doesIntersect,2) = p_i(doesIntersect,2) + dy;
+                end
+                % *********************************************************
+                % End manually inlining
+                % *********************************************************
+
                 numCrossings = numCrossings + doesIntersect;
                 isPiOnBorder = isPiOnBorder | r2 <= zeroThreshold;
                 
@@ -274,6 +317,8 @@ classdef IntegratorWithObstacles < Integrator
         end
 
         function isLeft = isLeft(polygon,i,x,y)
+            % using the notation above,
+            % -x3x4*y2y3 + x2x3*y3y4
             isLeft = (polygon.dx(i)*(y-polygon.Vertices(i,2)) - (x-polygon.Vertices(i,1))*polygon.dy(i) );
         end
 
@@ -293,6 +338,29 @@ classdef IntegratorWithObstacles < Integrator
                 end
             end
             isinterior = abs(windingNumber) > 0;
+        end
+        
+        function doesIntersect = doesIntersectPolygon(polygon,p_i,p_f)
+            doesIntersect = false(size(p_i,1),1);
+            for i=1:(length(polygon.Vertices)-1)
+                x1x2 = p_i(:,1)-p_f(:,1);   % x1 - x2
+                y3y4 = -polygon.dy(i);      % y3 - y4
+                y1y2 = p_i(:,2)-p_f(:,2);   % y1 - y2
+                x3x4 = -polygon.dx(i);      % x3 - x4
+                x1x3 = p_i(:,1)-polygon.Vertices(i,1);    % x1 - x3
+                y1y3 = p_i(:,2)-polygon.Vertices(i,2);    % y1 - y3
+                
+                denom = x1x2 * y3y4 - y1y2 * x3x4;
+                a = x1x3 .* y3y4 - y1y3 .* x3x4;
+                b = x1x2 .* y1y3 - y1y2 .* x1x3;
+                
+                t = a./denom;
+                u = -b./denom;
+                
+                % if t==0, then the initial point is *on* a vertex. This should
+                % not be used for a reflection
+                doesIntersect = doesIntersect | (t >= 0 & t <= 1 & u >= 0 & u <= 1 & denom ~= 0);
+            end
         end
         
         function [doesIntersect,p_intersect,r2] = DoesIntersect(p_i,p_f,vi,vf,doesIntersect,p_intersect,r2)
