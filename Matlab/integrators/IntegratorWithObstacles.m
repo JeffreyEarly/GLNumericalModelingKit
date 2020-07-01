@@ -163,6 +163,8 @@ classdef IntegratorWithObstacles < Integrator
             % the same number of times as yo.
             yi_wrapped = yo_wrapped - dy;
             
+            
+            
             % Do a quick bounding box check
             mayIntersect = IntegratorWithObstacles.doesIntersectPolygon(obstacle.boundingBox,yi_wrapped,yo_wrapped);
             mayIntersect = mayIntersect | IntegratorWithObstacles.isInterior(obstacle.boundingBox, yo_wrapped(:,1), yo_wrapped(:,2));
@@ -174,13 +176,18 @@ classdef IntegratorWithObstacles < Integrator
                 didReflect(mayIntersect) = didReflectSubset;
                 
                 if any(didReflectSubset)
-                    dintersect = p_intersect(didReflectSubset,:)- yi_wrapped(mayIntersect(didReflectSubset),:);
+                    
+                    allIndices = 1:size(yo_wrapped,1);
+                    subIndices = allIndices(mayIntersect);
+                    subIndices = subIndices(didReflectSubset);
+                    
+                    dintersect = p_intersect(didReflectSubset,:)- yi_wrapped(subIndices,:);
                     dreflection = yo_fixed(didReflectSubset,:) - p_intersect(didReflectSubset,:);
                     
                     % The 'initial' point needs to becomes the
                     % point of reflection
-                    yi(mayIntersect(didReflectSubset),:) = yi(mayIntersect(didReflectSubset),:) + dintersect;
-                    dy(mayIntersect(didReflectSubset),:) = dreflection;
+                    yi(subIndices,:) = yi(subIndices,:) + dintersect;
+                    dy(subIndices,:) = dreflection;
                 end
             end
         end

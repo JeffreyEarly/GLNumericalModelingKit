@@ -2,8 +2,8 @@ reps = 500;
 nDims = 2;
 kappa = 1;
 
-t = (0:10:300)';
-deltaT = t(2)-t(1);
+t = (0:5:900)';
+deltaT = 1;
 N = length(t);
 
 % Notation is that f is the flux.
@@ -22,12 +22,16 @@ D2 = x(end,:).^2 + y(end,:).^2;
 kappa_out = mean(D2)/(4*t(end))
 
 figure
-plot(x,y)
+plot(t,x)
 
 
 % Notation is that f is the flux.
 % first column, x, second column u
-tau = 30;
+%
+% dx = (\bar{u} + u)*dt
+% du = -(u/T)*dt + sigma*dW_t
+
+tau = 60;
 sigma = sqrt(2*kappa)/tau;
 f = @(t,x) cat(2,x(:,2),-x(:,2)/tau);
 g = @(t,x) cat(2,zeros(size(x(:,1))), sigma*ones(size(x(:,2))));

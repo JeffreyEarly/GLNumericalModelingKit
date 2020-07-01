@@ -10,6 +10,8 @@ classdef IntegratorEulerMaruyama < handle
         fFromTYVector
         gFromTYVector
         currentY
+        lastY
+        lastTime;
         
         nReps
         nDims
@@ -45,6 +47,8 @@ classdef IntegratorEulerMaruyama < handle
             self.fFromTYVector = f;
             self.gFromTYVector = g;
             self.currentY = y0;
+            self.lastY = [];
+            self.lastTime = [];
             
             self.F = zeros(self.nReps,self.nDims,4);
         end
@@ -60,13 +64,22 @@ classdef IntegratorEulerMaruyama < handle
         end
         
         function y = StepForwardToTime(self, time )
-            while self.currentTime < time                
+            while self.currentTime < time
+                self.lastY = self.currentY;
+                self.lastTime = self.currentTime;
                 self.currentY = self.StepForward(self.currentY,self.currentTime,self.stepSize);
                 self.currentTime = self.currentTime + self.stepSize;
                 self.totalIterations = self.totalIterations + 1;
             end
             
-            y = self.currentY;
+            if isempty(self.lastY)
+                y = self.currentY;
+            else
+                % Euler-Maruyama is 1st order, which means we can do linear
+                % interpolation without formally losing accuracy.
+                alpha = (self.currentTime-time)/(self.currentTime-self.lastTime);
+                y = alpha*self.lastY + (1-alpha)*self.currentY;
+            end
         end
         
         function yo = StepForward(self,yi,t,dt)
