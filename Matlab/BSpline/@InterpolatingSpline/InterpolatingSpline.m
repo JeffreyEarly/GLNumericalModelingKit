@@ -152,7 +152,7 @@ classdef InterpolatingSpline < BSpline
                 N_splines = K;
             end
             
-            t_knot = BSpline.KnotPointsForPoints(t, K, ceil(length(t)/N_splines));
+            t_knot = InterpolatingSpline.KnotPointsForPoints(t, K, ceil(length(t)/N_splines));
         end
   
     end

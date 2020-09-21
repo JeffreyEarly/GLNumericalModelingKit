@@ -35,11 +35,11 @@ overlap = sum(sum(ellipse1 & ellipse2))*dx*dy;
 if shouldShowFigure == 1
     figure
     subplot(1,3,1)
-    pcolor(X,Y,double(ellipse1)), shading flat
+    pcolor(X,Y,double(ellipse1)), shading flat, axis equal
     subplot(1,3,2)
-    pcolor(X,Y,double(ellipse2)), shading flat
+    pcolor(X,Y,double(ellipse2)), shading flat, axis equal
     subplot(1,3,3)
-    pcolor(X,Y,double(ellipse1 & ellipse2)), shading flat
+    pcolor(X,Y,double(ellipse1 & ellipse2)), shading flat, axis equal
 end
 
 end
