@@ -40,12 +40,12 @@ switch ndims(x)
     case 2
         dctScratch = cat(1,x,x(N-1:-1:2,:));
         dctScratch = ifft(dctScratch,2*N-2,1);
-        xbar = 2*real(dctScratch(1:N,:));
+        xbar = 2*(dctScratch(1:N,:));
         xbar(end,:) = xbar(end,:)/2;
     case 3
         dctScratch = cat(1,x,x(N-1:-1:2,:,:));
         dctScratch = ifft(dctScratch,2*N-2,1);
-        xbar = 2*real(dctScratch(1:N,:,:));
+        xbar = 2*(dctScratch(1:N,:,:));
         xbar(end,:,:) = xbar(end,:,:)/2;
     otherwise
         error('Not yet implemented for more than 3 dimensions.')
@@ -54,6 +54,10 @@ end
 % now move the dim back to where it was
 % [dim x y]
 xbar = shiftdim(xbar,ndims(xbar)-(dim-1));
+
+if (max(abs(imag(xbar(:))))/max(abs(real(xbar(:)))) < 1e-14)
+    xbar = real(xbar);
+end
 
 df = 1/(2*(N-1)*(t(2)-t(1)));
 f = df*(0:(N-1))';

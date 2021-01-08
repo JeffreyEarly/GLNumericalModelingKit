@@ -136,15 +136,19 @@ dstScratch = ifft(dstScratch,2*N,1);
 
 switch ndims(x)
     case 2
-        xbar = 2*imag(dstScratch(2:N,:));
+        xbar = -2*sqrt(-1)*(dstScratch(2:N,:));
     case 3
-        xbar = 2*imag(dstScratch(2:N,:,:));
+        xbar = -2*sqrt(-1)*(dstScratch(2:N,:,:));
     otherwise
         error('Not yet implemented for more than 3 dimensions.')
 end
 % now move the dim back to where it was
 % [dim x y]
 xbar = shiftdim(xbar,ndims(xbar)-(dim-1));
+
+if (max(abs(imag(xbar(:))))/max(abs(real(xbar(:)))) < 1e-14)
+    xbar = real(xbar);
+end
 
 df = 1/(2*N*(t(2)-t(1)));
 f = ((1:N-1)*df)';
