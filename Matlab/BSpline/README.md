@@ -6,7 +6,7 @@ A series of classes for interpolating and smoothing data using b-splines.
 The `InterpolatingSpline` class is useful for interpolating between points when the data is not noisy, while the `SmoothingSpline` class is useful for smoothing noisy data. Both classes are subclasses of `BSpline`, which can be used to generate b-splines from any set of knot points. 
 
 If you use these classes, please cite the following paper,
-- J. Early and A. Sykulski. Smoothing and interpolating noisy GPS data with smoothing splines. IEEE Transactions on Signal Processing. In prep.
+- Early, J. J., & Sykulski, A. M. (2020). [Smoothing and Interpolating Noisy GPS Data with Smoothing Splines](https://journals.ametsoc.org/view/journals/atot/37/3/JTECH-D-19-0087.1.xml), *Journal of Atmospheric and Oceanic Technology*, 37(3), 449-465.
 
 ### Table of contents
 1. [Quick start](#quick-start)
