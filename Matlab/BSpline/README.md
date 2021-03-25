@@ -235,6 +235,12 @@ The `NormalDistribution` class indicates that the noise is expected to be normal
 
 <p align="center"><img src="figures/noisydatawithtensionspline.png" width="400" /></p>
 
+If you don't know the error distribution, you can use cross-validation (CV) to estimated the expected mean-square error and minimize that instead.
+```matlab
+spline.minimize( @(aSmoothingSpline) aSmoothingSpline.expectedMeanSquareErrorFromCV );
+```
+The result will still be senstive to which distribution you choose, e.g., a `SmoothingSpline` intialized with a t-distribution will produce different results than a `SmoothingSpline` initialized with a normal distribution, even when using cross-validation.
+
 ### Options
 
 The `SmoothingSpline` class takes name/value pairs at initialization to set the spline order (or degree).
