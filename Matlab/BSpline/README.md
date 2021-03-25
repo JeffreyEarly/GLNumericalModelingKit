@@ -7,6 +7,7 @@ The `InterpolatingSpline` class is useful for interpolating between points when 
 
 If you use these classes, please cite the following paper,
 - Early, J. J., & Sykulski, A. M. (2020). [Smoothing and Interpolating Noisy GPS Data with Smoothing Splines](https://journals.ametsoc.org/view/journals/atot/37/3/JTECH-D-19-0087.1.xml), *Journal of Atmospheric and Oceanic Technology*, 37(3), 449-465.
+There is a [five minute overview of the smoothing and interpolating noisy GPS data](https://jeffreyearly.com/smoothing-and-interpolating-noisy-gps-data/) paper.
 
 ### Table of contents
 1. [Quick start](#quick-start)
