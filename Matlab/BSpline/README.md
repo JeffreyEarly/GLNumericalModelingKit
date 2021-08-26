@@ -14,8 +14,8 @@ There is a [five minute overview of the smoothing and interpolating noisy GPS da
 1. [Quick start](#quick-start)
 2. [Basis spline](#basis-spline)
 2. [Interpolating spline](#interpolating-spline)
-2. [Tension spline](#smoothing-spline)
-2. [GPS tension spline](#gps-smoothing-spline)
+2. [Smoothing spline](#smoothing-spline)
+2. [GPS smoothing spline](#gps-smoothing-spline)
 
 ------------------------
 
@@ -60,6 +60,21 @@ That's it! The `spline` object can be evaluated at any point in the domain, just
 ### GPS smoothing spline
 
 The `GPSSmoothingSpline` class offers some GPS specific additions to the `SmoothingSpline` class including t-distributed errors and outlier detection.
+
+If your data does not contain any obvious outliers, just initialize the  `GPSSmoothingSpline` with the time, latitude, and longitude,
+```matlab
+spline = GPSSmoothingSpline(t,lat,lon);
+```
+but if you suspect outliers, then you should add the additional flag to detect outliers,
+```matlab
+spline = GPSSmoothingSpline(t,lat,lon,'shouldUseRobustFit',1);
+```
+The smoothed and interpolated data can then be returned in either projected coordinates (x,y), or geographic coordinates (lat,lon),
+```matlab
+[x,y] = spline.xyAtTime(t);
+[lat,lon] = spline.latLonAtTime(t);
+```
+The default projection used is a transverse Mercator projector with central meridian chosen to be the central longitude of the dataset. This value, as well as the false northing and false easting, can be overriden by setting flags at initialization.
 
 Overview
 ------------
@@ -249,15 +264,38 @@ The `SmoothingSpline` class takes name/value pairs at initialization to set the 
 - `'K'` spline order, default is 4.
 - `'S'` spline degree (order-1), default is 3.
 - `'T'` tension degree , default is to use the same degree as the spline.
-- `'lambda'` tension parameter, either pass a numeric value, or the `Lambda` enumeration. Default is `Lambda.optimalIterated`.
+- `'lambda'` smoothing parameter, either pass a numeric value, or the `Lambda` enumeration. Default is `Lambda.optimalIterated`.
 - `'mu'` mean tension.
 - `'knot_dof'` number of degrees of freedom to be used in placing knot points. Either specify an integer, or `'auto'` to have the algorithm attempt to choose an appropriate number. Default is 1.
+-`'t_knot'` array of manually placed knot points.
 
 The `Lambda` enumeration has the following values,
 
 - `optimalIterated`  which minimize the expected mean-square error, but may take a while for lots of data.
 - `optimalExpected`  which takes a guess at minimizing the mean-square error based on the effective sample-size.
 - `fullTensionExpected`  which takes a guess at the full tension solution assuming infinite effective sample size.
+
+### Methods
+
+Minimization. A smoothing spline varies the smoothing parameter `smoothing' to minimize some penalty function, often the mean square error or expected mean square error. The primary method for this is,
+```matlab
+[lambda,fval] = minimize(self,penaltyFunction)
+```
+which takes a `penaltyFunction` functional handle. This function handle *must* take a smoothing spline object as its argument (so it can adjust the smoothing parameter) and return a scalar value (presumably your measure of error). 
+
+Bivariate smoothing spline
+------------
+
+The `BivariateSmoothingSpline` assume that there is one indepent variable (time) and two isotropic dependent variables (x,y). The class encapsulates two properties, `spline_x` and `spline_y` which are just independent `SmoothingSpline` objects for the x and y data. The smoothing parameter `lambda` is always set isotropically and the noise is assumed to be isotropic as well.
+
+
+### Methods for outliers
+
+These have no consequence on the fit, but can be useful for diagnostics.
+
+- `outlierThreshold` sets the distance at which something is considered an outlier
+- `outlierIndices` contains the indices of the outliers that were detected.
+- `nonOutlierIndices` contains the indices of points not considered outliers
 
 GPS smoothing spline
 ------------
@@ -268,7 +306,7 @@ spline = GPSSmoothingSpline(t,lat,lon);
 ```
 where `t` is time, and `lat,lon` . Internally, the latitude and longitude are *projected* using a transverse Mercator projection to positions in meters. By default, the class will,
 
-1. identify outliers and,
+1. identify outliers if you pass `'shouldUseRobustFit',1` and,
 2. smooth the data to the appropriate value.
 
 The results can then be evaluated at any time,
@@ -282,11 +320,12 @@ or
 
 ### Properties
 
-The  `GPSSmoothingSpline` class encapsulates two properties, `spline_x` and `spline_y` which are just independent `SmoothingSpline` objects for the x and y data.
+The  `GPSSmoothingSpline` it inherits from `BivariateSmoothingSpline` and primarily adds built-in projection between geographic (lat,lon) and projected coordinates (x,y). It also assumes the GPS noise follows a t-distribution, `StudentTDistribution(8.5,4.5);`, although this can be overriden at initialization.
 
 The `distanceError` property is root mean square of the spline errors under full tension. This property is only populated when looking for outliers.
 
-The `indicesOfOutliers` contains the indices of the outliers that were detected. The outliers are not used in the final fits.
+
+
 
 ### Options
 
@@ -295,8 +334,7 @@ The `GPSSmoothingSpline` class takes name/value pairs at initialization to set t
 - `'K'` spline order, default is 4.
 - `'S'` spline degree (order-1), default is 3.
 - `'T'` tension degree , default is to use the same degree as the spline.
-- `'sigma'` sigma parameter in the student t distribution. Default is 8.5.
-- `'nu'` nu parameter in the student t distribution. Default is 4.5.
-- `'shouldIdentifyOutliers'` either 1 or 0. Default is 1.
+- `'gpsNoiseDistribution'` an instance of the `Distribution` class characterizing the GPS noise.
+- `'shouldUseRobustFit'` either 1 or 0. Default is 0.
 
 

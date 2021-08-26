@@ -60,6 +60,14 @@ classdef Integrator < handle
             y = self.currentY;
         end
         
+        function y = StepForwardOneIncrement(self )
+            self.currentY = self.StepForward(self.currentY,self.currentTime,self.stepSize);
+            self.currentTime = self.currentTime + self.stepSize;
+            self.totalIterations = self.totalIterations + 1;
+            
+            y = self.currentY;
+        end
+        
         function yo = StepForward(self,yi,t,dt)
             self.F(:,:,1) = feval(self.fFromTYVector,t,yi);
             self.F(:,:,2) = feval(self.fFromTYVector,t+0.5*dt,yi+0.5*dt*self.F(:,:,1));
