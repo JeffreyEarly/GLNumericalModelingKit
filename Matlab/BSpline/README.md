@@ -263,11 +263,11 @@ The `SmoothingSpline` class takes name/value pairs at initialization to set the 
 
 - `'K'` spline order, default is 4.
 - `'S'` spline degree (order-1), default is 3.
-- `'T'` tension degree , default is to use the same degree as the spline.
+- `'T'` tension degree, default is to use the same degree as the spline.
 - `'lambda'` smoothing parameter, either pass a numeric value, or the `Lambda` enumeration. Default is `Lambda.optimalIterated`.
 - `'mu'` mean tension.
 - `'knot_dof'` number of degrees of freedom to be used in placing knot points. Either specify an integer, or `'auto'` to have the algorithm attempt to choose an appropriate number. Default is 1.
--`'t_knot'` array of manually placed knot points.
+- `'t_knot'` array of manually placed knot points.
 
 The `Lambda` enumeration has the following values,
 
@@ -288,14 +288,35 @@ Bivariate smoothing spline
 
 The `BivariateSmoothingSpline` assume that there is one indepent variable (time) and two isotropic dependent variables (x,y). The class encapsulates two properties, `spline_x` and `spline_y` which are just independent `SmoothingSpline` objects for the x and y data. The smoothing parameter `lambda` is always set isotropically and the noise is assumed to be isotropic as well.
 
+The class is initialized with,
+```matlab
+spline = BivariateSmoothingSpline(t,x,y,distribution);
+```
+where the argument `distribution` must be a  [`Distribution`](../Distributions) subclass describing the expected distribution of errors.
+
+Note that upon initialization, this class uses the `ConstrainedSpline` to remove a mean flow from (x,y), with the intention of isotropizing the velocity. It is not clear if this is always appropriate.
+
+### Options
+
+The `BivariateSmoothingSpline` class takes name/value pairs at initialization to set the spline order (or degree).
+
+- `'K'` spline order, default is 4.
+- `'S'` spline degree (order-1), default is 3.
+- `'T'` tension degree , default is to use the same degree as the spline.
+- `'gpsNoiseDistribution'` an instance of the `Distribution` class characterizing the GPS noise.
+- `'shouldUseRobustFit'` either 1 or 0. Default is 0.
 
 ### Methods for outliers
 
 These have no consequence on the fit, but can be useful for diagnostics.
 
-- `outlierThreshold` sets the distance at which something is considered an outlier
-- `outlierIndices` contains the indices of the outliers that were detected.
-- `nonOutlierIndices` contains the indices of points not considered outliers
+- `outlierThreshold` [get/set] the distance at which something is considered an outlier. By default this is set using the CDF to find the value at 1-1/10000.
+- `outlierIndices` [get] contains the indices of the outliers that were detected.
+- `nonOutlierIndices` [get] contains the indices of points not considered outliers
+
+This methods are especially useful for plotting and visualization, where you may want to highlight outliers in some fashion.
+
+
 
 GPS smoothing spline
 ------------
@@ -325,16 +346,29 @@ The  `GPSSmoothingSpline` it inherits from `BivariateSmoothingSpline` and primar
 The `distanceError` property is root mean square of the spline errors under full tension. This property is only populated when looking for outliers.
 
 
-
-
 ### Options
 
-The `GPSSmoothingSpline` class takes name/value pairs at initialization to set the spline order (or degree).
+The `GPSSmoothingSpline` class takes the same name/value pairs at initialization as `BivariateSmoothingSpline` above, as well as the following:
 
-- `'K'` spline order, default is 4.
-- `'S'` spline degree (order-1), default is 3.
-- `'T'` tension degree , default is to use the same degree as the spline.
+- `'lon0'` central meridian used for the transverse Mercator projection.
+- `'x0'` false easting.
+- `'y0'` false northing.
 - `'gpsNoiseDistribution'` an instance of the `Distribution` class characterizing the GPS noise.
-- `'shouldUseRobustFit'` either 1 or 0. Default is 0.
 
-
+Note that if you are processing multiple GPS tracks with the intention of using projected coordinates (x,y), then you *must* set `lon0`, `x0`, and `y0` to be the same for all the tracks in order for them to share the same coordinate system. For example in my code to process multiple drifters, I grab these values from the first drifter, then apply them to the remaining drifters,
+```matlab
+if iDrifter == 1
+        spline = GPSSmoothingSpline(t_drifter,drifters.lat{iDrifter},drifters.lon{iDrifter},'shouldUseRobustFit',1);
+        [x,y] = spline.xyAtTime(t_interp);
+        
+        lon0 = spline.lon0;
+        x0 = min(x);
+        y0 = min(y);
+        x = x-x0;
+        y = y-y0;
+    else
+        spline = GPSSmoothingSpline(t_drifter,drifters.lat{iDrifter},drifters.lon{iDrifter},'shouldUseRobustFit',1,'lon0',lon0,'x0',x0,'y0',y0);
+        [x,y] = spline.xyAtTime(t_interp(nonExtrapIndices));
+    end
+```
+If you only ever use geographic coordinates (lat,lon), then this doesn't matter.
