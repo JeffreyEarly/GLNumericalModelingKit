@@ -1,7 +1,7 @@
 classdef SmoothingSpline < BSpline
     %SmoothingSpline Fit noisy data with a tensioned interpolating spline
     %   3 argument initialization
-    %       f = SmoothingSpline(t,x,sigma);
+    %       f = SmoothingSpline(t,x,distribution);
     %   where
     %       t               array of values for the independent axis
     %       x               array of values for the dependent axis 
@@ -20,12 +20,12 @@ classdef SmoothingSpline < BSpline
     % 
     
     properties
-        x
-        t
-        distribution
+        x           % array of values for the dependent axis
+        t           % array of values for the independent axis
+        distribution % distribution of the noise, must be an instance of a Distribution sublcass.
         
         T           % degree at which tension is applied
-        lambda      % tension parameter
+        lambda      % smoothing parameter, either pass a numeric value, or the Lambda enumeration. Default is Lambda.optimalIterated
         isConstrained % indicates whether or not lambda was so big that the solution is just a constrained solution
         mu          % mean value of the tension variable
         knot_dof    % knot dofs
@@ -36,7 +36,7 @@ classdef SmoothingSpline < BSpline
         
         sigma       % initial weight (given as normal std dev.)
         
-        constraints
+        constraints % constraints = struct('t',[],'D',[]); such that f^(D)(t)=0.
         
         % These have no consequence to the fit, and are only populated if
         % 'shouldEstimateOutlierDistribution' is set to 1.
