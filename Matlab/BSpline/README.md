@@ -91,7 +91,7 @@ The `BivariateSmoothingSpline` essentially takes  (t,x,y) as input data and crea
 
 The `GPSSmoothingSpline`  inherits from `BivariateSmoothingSpline` but takes latitude and longitude as arguments, and assume the noise follows a Student's t-distribution.
 
-
+All of these classes include extensive documentation within the code itself.
 
 Basis spline
 ------------
@@ -130,7 +130,7 @@ figure, plot(tq,B(tq),'LineWidth',2)
 Here's an image of all the splines and their first derivatives plotted,
 <p align="center"><img src="figures/bspline.png" width="400" /></p>
 
-Note the usage here that calling `B(t)` evaluates the splines at points `t`.
+**Note the usage here that calling `B(t)` evaluates the splines at points `t`.** This same notation also works for derivatives where  `B(t,n)` will return the `n`-th derivative the spline at points `t`.
 
 This class serves as a useful building block for other classes.
 
@@ -275,13 +275,24 @@ The `Lambda` enumeration has the following values,
 - `optimalExpected`  which takes a guess at minimizing the mean-square error based on the effective sample-size.
 - `fullTensionExpected`  which takes a guess at the full tension solution assuming infinite effective sample size.
 
-### Methods
+### Methods for minimization
 
-Minimization. A smoothing spline varies the smoothing parameter `smoothing' to minimize some penalty function, often the mean square error or expected mean square error. The primary method for this is,
+A smoothing spline varies the smoothing parameter `smoothing' to minimize some penalty function, such as the mean square error or expected mean square error. The primary method for this is,
 ```matlab
 [lambda,fval] = minimize(self,penaltyFunction)
 ```
-which takes a `penaltyFunction` functional handle. This function handle *must* take a smoothing spline object as its argument (so it can adjust the smoothing parameter) and return a scalar value (presumably your measure of error). 
+which takes a `penaltyFunction` functional handle. This function handle *must* take a smoothing spline object as its argument (so it can adjust the smoothing parameter) and return a scalar value (presumably your measure of error). A simple example is given above with,
+```matlab
+spline.minimize( @(aSmoothingSpline) aSmoothingSpline.expectedMeanSquareErrorFromCV );
+```
+
+The class also includes several convenience functions that make use of the `minimization` function.
+```matlab
+[lambda,mse] = minimizeMeanSquareError(self,t_true,x_true) % minimize against true values
+[lambda,mse] = minimizeExpectedMeanSquareError(self) % minimize using the expected MSE from the distribution.
+[lambda,mse] = minimizeExpectedMeanSquareErrorInPercentileRange(self,pctmin,pctmax); % minimize the expected MSE, but only using points within given the CDF percentile range.
+```
+The method `minimizeExpectedMeanSquareErrorInPercentileRange` is remarkably good at excluding outliers.
 
 Bivariate smoothing spline
 ------------
@@ -325,7 +336,7 @@ The `GPSSmoothingSpline` class is useful for smoothing noisy gps data and removi
 ```matlab
 spline = GPSSmoothingSpline(t,lat,lon);
 ```
-where `t` is time, and `lat,lon` . Internally, the latitude and longitude are *projected* using a transverse Mercator projection to positions in meters. By default, the class will,
+where `t` is time, and `lat,lon` are the latitude and longitude. Internally, the latitude and longitude are *projected* using a transverse Mercator projection to positions in meters `x,y`. By default, the class will,
 
 1. identify outliers if you pass `'shouldUseRobustFit',1` and,
 2. smooth the data to the appropriate value.
