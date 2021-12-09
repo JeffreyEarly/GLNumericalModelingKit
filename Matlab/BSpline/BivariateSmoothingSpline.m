@@ -170,7 +170,8 @@ classdef BivariateSmoothingSpline < handle
                 self.spline_y = SmoothingSpline(self.t,self.y_prime,self.distribution,'K',self.K,'T',self.T,'lambda',self.spline_x.lambda);
                 self.lambda = self.spline_x.lambda;
                 
-                self.minimizeExpectedMeanSquareErrorInNoiseRange();
+%                 self.minimizeExpectedMeanSquareErrorInNoiseRange();
+                self.minimize( @(aSmoothingSpline) aSmoothingSpline.expectedMeanSquareError);
             end
             
             
