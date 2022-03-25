@@ -34,6 +34,7 @@ classdef SmoothingSpline < BSpline
         
         variableCache % structure storing several cached variables, useful for quick tension spline computation.
         
+        didOverrideSigma
         sigma       % initial weight (given as normal std dev.)
         
         constraints % constraints = struct('t',[],'D',[]); such that f^(D)(t)=0.
@@ -94,6 +95,7 @@ classdef SmoothingSpline < BSpline
             outlierIndices = [];
             t_knot = [];
             sigma = sqrt(distribution.variance);
+            didOverrideSigma = 0;
             constraints = [];
             
             for k = 1:2:length(varargin)
@@ -111,6 +113,7 @@ classdef SmoothingSpline < BSpline
                     t_knot = varargin{k+1};
                 elseif strcmp(varargin{k}, 'sigma')
                     sigma = varargin{k+1};
+                    didOverrideSigma = 1;
                 elseif strcmp(varargin{k}, 'constraints')
                     constraints = varargin{k+1};
                 elseif strcmp(varargin{k}, 'knot_dof')
@@ -177,8 +180,12 @@ classdef SmoothingSpline < BSpline
                 t_knot = InterpolatingSpline.KnotPointsForPoints(t,K,knot_dof);
             end
                         
-            if isa(distribution,'NormalDistribution')                
-                [m,~,~,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[],constraints,[]);      
+            if isa(distribution,'NormalDistribution')       
+                if didOverrideSigma == 1
+                    [m,~,~,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,1./(sigma.^2),constraints,[]);
+                else
+                    [m,~,~,isConstrained,cachedVars] = SmoothingSpline.TensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,[],constraints,[]);
+                end
             elseif ~isempty(distribution.w)
                 [m,~,~,isConstrained,cachedVars] = SmoothingSpline.IteratedLeastSquaresTensionSolution(lambda,mu,t,x,t_knot,K,T,distribution,constraints,[]);
             else
@@ -198,6 +205,7 @@ classdef SmoothingSpline < BSpline
             
             self.knot_dof = knot_dof;
             self.distribution = distribution;
+            self.didOverrideSigma = didOverrideSigma;
             self.sigma = sigma;
             self.outlierIndices = outlierIndices;
             self.outlierThreshold = self.distribution.locationOfCDFPercentile(1-1/10000/2);
@@ -269,7 +277,11 @@ classdef SmoothingSpline < BSpline
             % solution, then then compute the PP coefficients for that
             % solution.
             if isa(self.distribution,'NormalDistribution')
-                [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.TensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,[],self.constraints,self.variableCache);
+                if self.didOverrideSigma == 1
+                    [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.TensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,1./(self.sigma.^2),self.constraints,self.variableCache);
+                else
+                    [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.TensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,[],self.constraints,self.variableCache);
+                end
             elseif ~isempty(self.distribution.w)
                 [self.m,~,~,self.isConstrained,self.variableCache] = SmoothingSpline.IteratedLeastSquaresTensionSolution(self.lambda,self.mu,self.t,self.x,self.t_knot,self.K,self.T,self.distribution,self.constraints,self.variableCache);
             else
@@ -927,7 +939,14 @@ classdef SmoothingSpline < BSpline
                     t_knot_constrained = cat(1,min(t)*ones(T,1),max(t)*ones(T,1));
                     % T=2 indicates tension on acceleration, which we want
                     % to be zero, so we would want K=2
-                    cspline = ConstrainedSpline(t,x,T,t_knot_constrained,distribution,constraints);
+                    % BUT, this also means we need to remove any
+                    % constraints that specify this condition.
+                    if isempty(constraints)
+                        newconstraints = [];
+                    else
+                        newconstraints = struct('t',constraints.t(constraints.D~=T),'D',constraints.D(constraints.D~=T));
+                    end
+                    cspline = ConstrainedSpline(t,x,T,t_knot_constrained,distribution,newconstraints);
                     cachedVars.m_constrained = cachedVars.X\cspline(t);
                     
                     % if m_x = inv(X)*Y*m_y then,
@@ -940,7 +959,7 @@ classdef SmoothingSpline < BSpline
                 isConstrained = 1;
                 m = cachedVars.m_constrained;
                 Cm = cachedVars.Cm_constrained;
-                CmInv = [];
+                CmInv = inv(Cm);
             else
                 isConstrained = 0;
                 
@@ -991,7 +1010,7 @@ classdef SmoothingSpline < BSpline
                 end
                 
             end
-            
+
             cachedVars.Cm = Cm;
             cachedVars.CmInv = CmInv;
         end
@@ -1091,7 +1110,7 @@ classdef SmoothingSpline < BSpline
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
-        % Estimating the outleir distribution
+        % Estimating the outlier distribution
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
