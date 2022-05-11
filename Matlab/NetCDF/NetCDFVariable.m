@@ -1,4 +1,4 @@
-classdef NetCDFVariable
+classdef NetCDFVariable < handle
     %UNTITLED2 Summary of this class goes here
     %   Detailed explanation goes here
 
@@ -7,15 +7,17 @@ classdef NetCDFVariable
         name
         dimensions
         attributes
-        isComplex
+        type
+        isComplex=0
     end
 
     methods
-        function self = NetCDFVariable(name,dimensions,attributes,varID)
+        function self = NetCDFVariable(name,dimensions,attributes,type,varID)
             self.name = name;
             self.dimensions = dimensions;
             self.attributes = attributes;
             self.varID = varID;
+            self.type = type;
         end
 
     end

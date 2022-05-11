@@ -1,4 +1,4 @@
-classdef NetCDFDimension
+classdef NetCDFDimension < handle
     %UNTITLED2 Summary of this class goes here
     %   Detailed explanation goes here
 
@@ -6,7 +6,7 @@ classdef NetCDFDimension
         dimID
         name
         nPoints
-        isUnlimited = 0
+        isMutable = 0
     end
 
     methods
