@@ -12,27 +12,36 @@ classdef NetCDFFile < handle
 
         dimensionWithName
         variableWithName
+
+        complexVariables
+        complexVariableWithName
     end
 
     properties (Constant)
         GLNetCDFSchemaVersionKey = "GLNetCDFSchemaVersion";
-        GLNetCDFSchemaDimensionIDKey = "dimensionID";
+
+        % attributes for coordinate variables (dimensions)
         GLNetCDFSchemaIsCoordinateVariableKey = "isCoordinateVariable";
         GLNetCDFSchemaIsPeridiocKey = "isPeriodic";
         GLNetCDFSchemaMutableKey = "isMutable";
-        GLNetCDFSchemaIsEvenlySampledKey = "isEvenlySampled";
         GLNetCDFSchemaDomainMinimumKey = "domainMin";
+        GLNetCDFSchemaBasisFunctionKey = "basisFunction";
+        GLNetCDFSchemaDomainLengthKey = "domainLength";
+        GLNetCDFSchemaIsEvenlySampledKey = "isEvenlySampled";
         GLNetCDFSchemaSampleIntervalKey = "sampleInterval";
+        GLNetCDFSchemaGridTypeKey = "gridType";
         GLNetCDFSchemaIsFrequencyDomainKey = "isFrequencyDomain";
+
+        % attributes for variables and dimensions
+        GLNetCDFSchemaUnitsKey = "units";
+
+        % attributes for variables
         GLNetCDFSchemaIsComplexKey = "isComplex";
         GLNetCDFSchemaProperNameKey = "properName";
         GLNetCDFSchemaIsRealPartKey = "isRealPart";
         GLNetCDFSchemaIsImaginaryPartKey = "isImaginaryPart";
-        GLNetCDFSchemaUnitsKey = "units";
+        
         GLNetCDFSchemaUniqueVariableIDKey = "uniqueVariableID";
-        GLNetCDFSchemaBasisFunctionKey = "basisFunction";
-        GLNetCDFSchemaGridTypeKey = "gridType";
-        GLNetCDFSchemaDomainLengthKey = "domainLength";
     end
 
     methods
@@ -44,6 +53,8 @@ classdef NetCDFFile < handle
             self.variables = NetCDFVariable.empty(0,0);
             self.variableWithName = containers.Map;
             self.attributes = containers.Map;
+            self.complexVariables = NetCDFComplexVariable.empty(0,0);
+            self.complexVariableWithName = containers.Map;
 
             if nargin == 2 && strcmp(overwriteExisting,'OVERWRITE_EXISTING')
                 shouldOverwrite = 1;
@@ -102,6 +113,12 @@ classdef NetCDFFile < handle
             [dimension,variable] = self.addDimension([],name,properties,1);
         end
 
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Dimensions
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
         function [dimension,variable] = addDimension(self,data,name,properties,isMutable)
             
             if nargin < 5
@@ -144,7 +161,35 @@ classdef NetCDFFile < handle
             self.variableWithName(name) = variable;
         end
 
-        function variable = addVariable(self,data,name,dimNames,properties)
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Variables
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        function complexVariable = initComplexVariable(self,name,dimNames,ncType,properties)
+            if isKey(self.complexVariableWithName,name)
+                error('A variable with that name already exists.');
+            end
+            if nargin < 5 || isempty(properties)
+                properties = containers.Map;
+            end
+            properties(self.GLNetCDFSchemaIsComplexKey) = 1;
+
+            properties(self.GLNetCDFSchemaIsRealPartKey) = 1;
+            properties(self.GLNetCDFSchemaIsImaginaryPartKey) = 0;
+            realVar = self.initVariable(strcat(name,"_realp"),dimNames,ncType,properties);
+
+            properties(self.GLNetCDFSchemaIsRealPartKey) = 0;
+            properties(self.GLNetCDFSchemaIsImaginaryPartKey) = 1;
+            imagVar = self.initVariable(strcat(name,"_imagp"),dimNames,ncType,properties);
+            
+            complexVariable = NetCDFComplexVariable(name,realVar,imagVar);
+            self.complexVariables(end+1) = complexVariable;
+            self.complexVariableWithName(name) = complexVariable;
+        end
+
+        function variable = initVariable(self,name,dimNames,ncType,properties)
             if isKey(self.variableWithName,name)
                 error('A variable with that name already exists.');
             end
@@ -153,12 +198,8 @@ classdef NetCDFFile < handle
                 if ~isKey(self.dimensionWithName,dimNames{iDim})
                     error('Unable to find a dimension with the name %s',dimNames{iDim});
                 end
-                if ~isempty(data) && size(data,iDim) ~= self.dimensionWithName(dimNames{iDim}).nPoints
-                    error('Incorrect dimension size: dimension %d of the data is length %d, but the dimension %s has length %d.',iDim,size(data,iDim),dimNames{iDim},self.dimensionWithName(dimNames{iDim}).nPoints);
-                end
                 dimIDs(iDim) = self.dimensionWithName(dimNames{iDim}).dimID;
             end
-            ncType = self.netCDFTypeForData(data);
 
             netcdf.reDef(self.ncid);
             varID = netcdf.defVar(self.ncid, name, ncType, dimIDs);
@@ -169,31 +210,88 @@ classdef NetCDFFile < handle
                 end
             end
             netcdf.endDef(self.ncid);
-            if ~isempty(data)
-                netcdf.putVar(self.ncid, varID, data);
-            end
 
             variable = NetCDFVariable(name,self.dimensionsForDimIDs(dimIDs),properties,ncType,varID);
             self.variables(varID+1) = variable;
             self.variableWithName(name) = variable;
         end
 
-        function concatenateVariableAlongDimension(self,data,name,dimName,index)
-            variable = self.variableWithName(name);
-            start = zeros(1,length(variable.dimensions));
-            count = zeros(1,length(variable.dimensions));
-            for iDim=1:length(variable.dimensions)
-                if strcmp(variable.dimensions(iDim).name,dimName)
-                    start(iDim) = index-1;
-                    count(iDim) = 1;
-                else
-                    start(iDim) = 0;
-                    count(iDim) = variable.dimensions(iDim).nPoints;
+        function setVariable(data,name)
+            if isKey(self.complexVariableWithName,name)
+                complexVariable = self.complexVariableWithName(name);
+                variable = complexVariable.realVar;
+                for iDim=1:length(variable.dimensions)
+                    if size(data,iDim) ~= variable.dimensions(iDim).nPoints
+                        error('Incorrect dimension size: dimension %d of the data is length %d, but the dimension %s has length %d.',iDim,size(data,iDim),variable.dimensions(iDim).name,variable.dimensions(iDim).nPoints);
+                    end
                 end
+                netcdf.putVar(self.ncid, complexVariable.realVar.varID, real(data));
+                netcdf.putVar(self.ncid, complexVariable.imagVar.varID, imag(data));
+            else
+                variable = self.variableWithName(name);
+                for iDim=1:length(variable.dimensions)
+                    if size(data,iDim) ~= variable.dimensions(iDim).nPoints
+                        error('Incorrect dimension size: dimension %d of the data is length %d, but the dimension %s has length %d.',iDim,size(data,iDim),variable.dimensions(iDim).name,variable.dimensions(iDim).nPoints);
+                    end
+                end
+                netcdf.putVar(self.ncid, variable.varID, data);
             end
-            netcdf.putVar(self.ncid, variable.varID, start, count, data);
+
         end
 
+        function variable = addVariable(self,data,name,dimNames,properties)
+            if isreal(data)
+                ncType = self.netCDFTypeForData(data);
+                variable = self.initVariable(name,dimNames,ncType,properties);
+                self.setVariable(data,name);
+            else
+                ncType = self.netCDFTypeForData(data);
+                variable = self.complexVariable(name,dimNames,ncType,properties);
+                self.setVariable(data,name);
+            end
+        end
+
+        function concatenateVariableAlongDimension(self,data,name,dimName,index)
+            if isKey(self.complexVariableWithName,name)
+                complexVariable = self.complexVariableWithName(name);
+                variable = complexVariable.realVar;
+                start = zeros(1,length(variable.dimensions));
+                count = zeros(1,length(variable.dimensions));
+                for iDim=1:length(variable.dimensions)
+                    if strcmp(variable.dimensions(iDim).name,dimName)
+                        start(iDim) = index-1;
+                        count(iDim) = 1;
+                    else
+                        start(iDim) = 0;
+                        count(iDim) = variable.dimensions(iDim).nPoints;
+                    end
+                end
+                netcdf.putVar(self.ncid, complexVariable.realVar.varID, start, count, real(data));
+                netcdf.putVar(self.ncid, complexVariable.imagVar.varID, start, count, imag(data));
+            elseif isKey(self.variableWithName,name)
+                variable = self.variableWithName(name);
+                start = zeros(1,length(variable.dimensions));
+                count = zeros(1,length(variable.dimensions));
+                for iDim=1:length(variable.dimensions)
+                    if strcmp(variable.dimensions(iDim).name,dimName)
+                        start(iDim) = index-1;
+                        count(iDim) = 1;
+                    else
+                        start(iDim) = 0;
+                        count(iDim) = variable.dimensions(iDim).nPoints;
+                    end
+                end
+                netcdf.putVar(self.ncid, variable.varID, start, count, data);
+            else
+                error('Unable to find a variable with the name %s',name);
+            end
+        end
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Utilities
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         function dims = dimensionsForDimIDs(self,dimids)
             dims = NetCDFDimension.empty(length(dimids),0);
