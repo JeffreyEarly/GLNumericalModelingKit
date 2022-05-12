@@ -40,6 +40,7 @@ classdef NetCDFFile < handle
         GLNetCDFSchemaProperNameKey = "properName";
         GLNetCDFSchemaIsRealPartKey = "isRealPart";
         GLNetCDFSchemaIsImaginaryPartKey = "isImaginaryPart";
+        GLNetCDFSchemaIsRowVectorKey = "isRowVector";
         
         GLNetCDFSchemaUniqueVariableIDKey = "uniqueVariableID";
     end
@@ -80,7 +81,8 @@ classdef NetCDFFile < handle
             self.open();
 
             [ndims,nvars,ngatts,unlimdimid] = netcdf.inq(self.ncid);
-
+            
+            % Fetch all dimensions and convert to NetCDFDimension objects
             for iDim=0:(ndims-1)
                 [dimname,dimlen] = netcdf.inqDim(self.ncid,iDim);
                 self.dimensions(iDim+1) = NetCDFDimension(dimname,dimlen,iDim);
@@ -91,6 +93,7 @@ classdef NetCDFFile < handle
             end
             self.dimensions = self.dimensions.';
 
+            % Fetch all variables and convert to NetCDFVariable objects
             for iVar=0:(nvars-1)
                 [varname, xtype, dimids, numatts] = netcdf.inqVar(self.ncid,iVar);
                 variableAttributes = containers.Map;
@@ -103,9 +106,25 @@ classdef NetCDFFile < handle
             end
             self.variables = self.variables.';
  
+            % Grab all the global attributes
             for iAtt=0:(ngatts-1)
                 gattname = netcdf.inqAttName(self.ncid,netcdf.getConstant('NC_GLOBAL'),iAtt);
                 self.attributes(gattname) = netcdf.getAtt(self.ncid,netcdf.getConstant('NC_GLOBAL'),gattname);
+            end
+
+            % Now check to see if any variables form a complex variable
+            for iVar=1:length(self.variables)
+                if isKey(self.variables(iVar).attributes,{self.GLNetCDFSchemaIsComplexKey,self.GLNetCDFSchemaIsRealPartKey})
+                    if self.variables(iVar).attributes(self.GLNetCDFSchemaIsComplexKey) == 1 && self.variables(iVar).attributes(self.GLNetCDFSchemaIsRealPartKey) == 1
+                        complexName = extractBefore(self.variables(iVar).name,"_realp");
+                        imagName = strcat(complexName,"_imagp");
+                        if isKey(self.variableWithName,imagName)
+                            complexVariable = NetCDFComplexVariable(complexName,self.variables(iVar),self.variableWithName(imagName));
+                            self.complexVariables(end+1) = complexVariable;
+                            self.complexVariableWithName(complexName) = complexVariable;
+                        end
+                    end
+                end
             end
         end
 
@@ -193,6 +212,9 @@ classdef NetCDFFile < handle
             if isKey(self.variableWithName,name)
                 error('A variable with that name already exists.');
             end
+            if ischar(dimNames)
+                dimNames = {dimNames};
+            end
             dimIDs = nan(length(dimNames),1);
             for iDim=1:length(dimNames)
                 if ~isKey(self.dimensionWithName,dimNames{iDim})
@@ -216,27 +238,106 @@ classdef NetCDFFile < handle
             self.variableWithName(name) = variable;
         end
 
-        function setVariable(data,name)
+        function setVariable(self,data,name)
             if isKey(self.complexVariableWithName,name)
                 complexVariable = self.complexVariableWithName(name);
                 variable = complexVariable.realVar;
                 for iDim=1:length(variable.dimensions)
-                    if size(data,iDim) ~= variable.dimensions(iDim).nPoints
+                    if (isvector(data) && length(data) ~= variable.dimensions(iDim).nPoints) || (~isvector(data) && size(data,iDim) ~= variable.dimensions(iDim).nPoints)
                         error('Incorrect dimension size: dimension %d of the data is length %d, but the dimension %s has length %d.',iDim,size(data,iDim),variable.dimensions(iDim).name,variable.dimensions(iDim).nPoints);
                     end
                 end
                 netcdf.putVar(self.ncid, complexVariable.realVar.varID, real(data));
                 netcdf.putVar(self.ncid, complexVariable.imagVar.varID, imag(data));
+                if isvector(data)
+                    complexVariable.realVar.attributes(self.GLNetCDFSchemaIsRowVectorKey) = isrow(data);
+                    complexVariable.imagVar.attributes(self.GLNetCDFSchemaIsRowVectorKey) = isrow(data);
+                    netcdf.reDef(self.ncid);
+                    netcdf.putAtt(self.ncid,complexVariable.realVar.varID, self.GLNetCDFSchemaIsRowVectorKey, uint8(isrow(data)));
+                    netcdf.putAtt(self.ncid,complexVariable.imagVar.varID, self.GLNetCDFSchemaIsRowVectorKey, uint8(isrow(data)));
+                    netcdf.endDef(self.ncid);
+                end
             else
                 variable = self.variableWithName(name);
                 for iDim=1:length(variable.dimensions)
-                    if size(data,iDim) ~= variable.dimensions(iDim).nPoints
+                    if (isvector(data) && length(data) ~= variable.dimensions(iDim).nPoints) || (~isvector(data) && size(data,iDim) ~= variable.dimensions(iDim).nPoints)
                         error('Incorrect dimension size: dimension %d of the data is length %d, but the dimension %s has length %d.',iDim,size(data,iDim),variable.dimensions(iDim).name,variable.dimensions(iDim).nPoints);
                     end
                 end
                 netcdf.putVar(self.ncid, variable.varID, data);
+                if isvector(data)
+                    variable.attributes(self.GLNetCDFSchemaIsRowVectorKey) = isrow(data);
+                    netcdf.reDef(self.ncid);
+                    netcdf.putAtt(self.ncid,variable.varID, self.GLNetCDFSchemaIsRowVectorKey, uint8(isrow(data)));
+                    netcdf.endDef(self.ncid);
+                end
             end
 
+        end
+
+        function varargout = readVariables(self,varargin)
+            varargout = cell(size(varargin));
+            for iArg=1:length(varargin)
+                if isKey(self.complexVariableWithName,varargin{iArg})
+                    varargout{iArg} = complex(netcdf.getVar(self.ncid,self.complexVariableWithName(varargin{iArg}).realVar.varID),netcdf.getVar(self.ncid,self.complexVariableWithName(varargin{iArg}).imagVar.varID));
+                    if isvector(varargout{iArg}) && isKey(self.complexVariableWithName(varargin{iArg}).realVar.attributes, self.GLNetCDFSchemaIsRowVectorKey)
+                        if self.complexVariableWithName(varargin{iArg}).realVar.attributes(self.GLNetCDFSchemaIsRowVectorKey) == 1
+                            varargout{iArg}=reshape(varargout{iArg},1,[]);
+                        else
+                            varargout{iArg}=reshape(varargout{iArg},[],1);
+                        end
+                    end
+                elseif isKey(self.variableWithName,varargin{iArg})
+                    varargout{iArg} = netcdf.getVar(self.ncid,self.variableWithName(varargin{iArg}).varID);
+                    if isvector(varargout{iArg}) && isKey(self.variableWithName(varargin{iArg}).attributes, self.GLNetCDFSchemaIsRowVectorKey)
+                        if self.variableWithName(varargin{iArg}).attributes(self.GLNetCDFSchemaIsRowVectorKey) == 1
+                            varargout{iArg}=reshape(varargout{iArg},1,[]);
+                        else
+                            varargout{iArg}=reshape(varargout{iArg},[],1);
+                        end
+                    end
+                else
+                    error('Unable to find a variable with the name %s',varargin{iArg});
+                end
+            end
+        end
+
+        function varargout = readVariablesAtIndexAlongDimension(self,dimName,index,varargin)
+            varargout = cell(size(varargin));
+            for iArg=1:length(varargin)
+                if isKey(self.complexVariableWithName,varargin{iArg})
+                    complexVariable = self.complexVariableWithName(varargin{iArg});
+                    variable = complexVariable.realVar;
+                    start = zeros(1,length(variable.dimensions));
+                    count = zeros(1,length(variable.dimensions));
+                    for iDim=1:length(variable.dimensions)
+                        if strcmp(variable.dimensions(iDim).name,dimName)
+                            start(iDim) = index-1;
+                            count(iDim) = 1;
+                        else
+                            start(iDim) = 0;
+                            count(iDim) = variable.dimensions(iDim).nPoints;
+                        end
+                    end
+                varargout{iArg} = complex(netcdf.getVar(self.ncid, complexVariable.realVar.varID, start, count),netcdf.getVar(self.ncid, complexVariable.imagVar.varID, start, count));
+                elseif isKey(self.variableWithName,varargin{iArg})
+                    variable = self.variableWithName(varargin{iArg});
+                    start = zeros(1,length(variable.dimensions));
+                    count = zeros(1,length(variable.dimensions));
+                    for iDim=1:length(variable.dimensions)
+                        if strcmp(variable.dimensions(iDim).name,dimName)
+                            start(iDim) = index-1;
+                            count(iDim) = 1;
+                        else
+                            start(iDim) = 0;
+                            count(iDim) = variable.dimensions(iDim).nPoints;
+                        end
+                    end
+                    varargout{iArg} = netcdf.getVar(self.ncid, variable.varID, start, count);
+                else
+                    error('Unable to find a variable with the name %s',name);
+                end
+            end
         end
 
         function variable = addVariable(self,data,name,dimNames,properties)
@@ -246,7 +347,7 @@ classdef NetCDFFile < handle
                 self.setVariable(data,name);
             else
                 ncType = self.netCDFTypeForData(data);
-                variable = self.complexVariable(name,dimNames,ncType,properties);
+                variable = self.initComplexVariable(name,dimNames,ncType,properties);
                 self.setVariable(data,name);
             end
         end
