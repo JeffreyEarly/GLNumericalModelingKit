@@ -128,9 +128,7 @@ classdef NetCDFFile < handle
             end
         end
 
-        function [dimension,variable] = addMutableDimension(self,name,properties)
-            [dimension,variable] = self.addDimension([],name,properties,1);
-        end
+
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
@@ -138,19 +136,21 @@ classdef NetCDFFile < handle
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        function [dimension,variable] = addDimension(self,data,name,properties,isMutable)
+        function [dimension,variable] = addDimension(self,data,name,properties,dimLength)
             
             if nargin < 5
-                isMutable = 0;
+                dimLength = 0;
             end
             if isKey(self.dimensionWithName,name) || isKey(self.variableWithName,name)
                 error('A dimension with that name already exists.');
             end
-            if (isMutable == 0 && isempty(data)) || isempty(name)
+            if (dimLength == 0 && isempty(data)) || isempty(name)
                 error('You must specify a name and data');
             end
-            if isMutable == 1
+            if isinf(dimLength)
                 n = netcdf.getConstant('NC_UNLIMITED');
+            elseif isempty(data)
+                n = dimLength;
             else
                 n = length(data);
             end
@@ -166,7 +166,7 @@ classdef NetCDFFile < handle
                 end
             end
             netcdf.endDef(self.ncid);
-            if isMutable == 0 && ~isempty(data)
+            if ~isempty(data)
                 netcdf.putVar(self.ncid, varID, data);
             end
             
@@ -178,6 +178,10 @@ classdef NetCDFFile < handle
             self.dimensionWithName(name) = dimension;
             self.variables(varID+1) = variable;
             self.variableWithName(name) = variable;
+        end
+
+        function [dimension,variable] = addMutableDimension(self,name,properties)
+            [dimension,variable] = self.addDimension([],name,properties,inf);
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
