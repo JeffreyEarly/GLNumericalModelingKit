@@ -1,20 +1,21 @@
 classdef NetCDFFile < handle
-    %UNTITLED2 Summary of this class goes here
-    %   Detailed explanation goes here
+    %NetCDFFile Class for reading and writing to NetCDF files
+    %   Simplifies and improves the consistency of reading and writing to
+    %   NetCDF files compared to the built-in Matlab options.
 
     properties
-        path
-        ncid
+        path    % path the NetCDF file
+        ncid    % NetCDF file handle
 
-        dimensions
-        variables
-        attributes
+        dimensions  % array of NetCDFDimension objects
+        variables   % array of NetCDFVariable objects
+        attributes  % key-value Map of global attributes
 
-        dimensionWithName
-        variableWithName
+        dimensionWithName   % key-value Map to retrieve a NetCDFDimension object by name
+        variableWithName    % key-value Map to retrieve a NetCDFVariable object by name
 
-        complexVariables
-        complexVariableWithName
+        complexVariables            % array of NetCDFComplexVariable objects
+        complexVariableWithName     % key-value Map to retrieve a NetCDFComplexVariable object by name
     end
 
     properties (Constant)
@@ -47,6 +48,16 @@ classdef NetCDFFile < handle
 
     methods
         function self = NetCDFFile(path,overwriteExisting)
+            % NetCDFFile initialize an from existing or create new file
+            %
+            % Calling,
+            %   ncfile = NetCDFFile(path)
+            % will load an existing file (if one exists) or create a new
+            % file (if none exists).
+            %
+            %   ncfile = NetCDFFile(path,'OVERWRITE_EXISTING')
+            % will delete any existing file and create a new file.
+
             self.path = path;
             shouldOverwrite = 0;
             self.dimensions = NetCDFDimension.empty(0,0);
@@ -128,7 +139,19 @@ classdef NetCDFFile < handle
             end
         end
 
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % Attributes
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+        function addAttribute(self,name,data)
+            netcdf.reDef(self.ncid);
+            netcdf.putAtt(self.ncid,netcdf.getConstant('NC_GLOBAL'), name, data);
+            netcdf.endDef(self.ncid);
+            self.attributes(name) = data;
+        end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %
@@ -136,7 +159,7 @@ classdef NetCDFFile < handle
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        function [dimension,variable] = addDimension(self,data,name,properties,dimLength)
+        function [dimension,variable] = addDimension(self,name,data,properties,dimLength)
             
             if nargin < 5
                 dimLength = 0;
@@ -181,7 +204,7 @@ classdef NetCDFFile < handle
         end
 
         function [dimension,variable] = addMutableDimension(self,name,properties)
-            [dimension,variable] = self.addDimension([],name,properties,inf);
+            [dimension,variable] = self.addDimension(name,[],properties,inf);
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -344,19 +367,21 @@ classdef NetCDFFile < handle
             end
         end
 
-        function variable = addVariable(self,data,name,dimNames,properties)
-            if isreal(data)
+        function variable = addVariable(self,name,data,dimNames,properties,ncType)
+            if nargin < 6 || isempty(ncType)
                 ncType = self.netCDFTypeForData(data);
-                variable = self.initVariable(name,dimNames,ncType,properties);
-                self.setVariable(data,name);
-            else
-                ncType = self.netCDFTypeForData(data);
-                variable = self.initComplexVariable(name,dimNames,ncType,properties);
-                self.setVariable(data,name);
             end
+
+            if isreal(data)
+                variable = self.initVariable(name,dimNames,ncType,properties);
+            else
+                variable = self.initComplexVariable(name,dimNames,ncType,properties);
+            end
+
+            self.setVariable(data,name);
         end
 
-        function concatenateVariableAlongDimension(self,data,name,dimName,index)
+        function concatenateVariableAlongDimension(self,name,data,dimName,index)
             if isKey(self.complexVariableWithName,name)
                 complexVariable = self.complexVariableWithName(name);
                 variable = complexVariable.realVar;
