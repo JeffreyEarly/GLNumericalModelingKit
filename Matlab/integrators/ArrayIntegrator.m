@@ -14,14 +14,20 @@ classdef ArrayIntegrator < handle
     end
     
     methods
-        function self = ArrayIntegrator( f, y0, dt ) 
-
-            try
-                f0 = feval(f,0,y0);
-            catch theError
-                msg = ['Unable to evaluate the ODEFUN at t0,y0. ',theError];
-                error(msg);
+        function self = ArrayIntegrator( f, y0, dt, options ) 
+            arguments
+                f function_handle
+                y0 cell
+                dt double
+                options.currentTime = 0
             end
+f0 = feval(f,options.currentTime,y0);
+%             try
+%                 f0 = feval(f,0,y0);
+%             catch theError
+%                 msg = ['Unable to evaluate the ODEFUN at t0,y0. ',theError];
+%                 error(msg);
+%             end
             
             for i=1:length(y0)
                 if ~isequal(size(y0{i}),size(f0{i}))
@@ -34,6 +40,7 @@ classdef ArrayIntegrator < handle
             self.totalIterations = 0;
             self.fFromTY = f;
             self.currentY = y0;  
+            self.currentTime = options.currentTime;
         end
         
         function [y, t] = IntegrateAlongDimension(self,time)
