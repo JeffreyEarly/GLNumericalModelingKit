@@ -35,7 +35,7 @@ classdef WindowedSmoothingSpline < handle
                     endIndex = length(t);
                 end
                 indices = startIndex:endIndex;
-                self.splines{iWindow} = SmoothingSpline(t(indices),x(indices),distribution,'lambda',0);
+                self.splines{iWindow} = SmoothingSpline(t(indices),x(indices),distribution,'shouldUseRobustFit',1);
                 if nWindows == 1
                     self.pointSplineIndex(:) = 1;
                 elseif nWindows == 2
@@ -76,6 +76,8 @@ classdef WindowedSmoothingSpline < handle
                         NumDerivatives = 0;
                     end
                     splineIndices = interp1(self.t,self.pointSplineIndex,t_requested,'nearest');
+                    splineIndices(t_requested>max(self.t)) = self.pointSplineIndex(end);
+                    splineIndices(t_requested<min(self.t)) = self.pointSplineIndex(1);
                     x_out = zeros(size(t_requested));
                     uniqueIndices = unique(splineIndices);
                     for iUnique=1:length(uniqueIndices)
