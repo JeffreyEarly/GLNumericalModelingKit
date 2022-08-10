@@ -56,6 +56,7 @@ classdef WindowedSmoothingSpline < handle
                 startIndex = startIndex + self.minOverlap;
             end
         end
+        
 
         function varargout = subsref(self, index)
             %% Subscript overload
