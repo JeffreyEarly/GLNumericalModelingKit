@@ -3,6 +3,7 @@ classdef Lambda
     %upper boundary conditions for the InternalModes classes.
     enumeration
         crossValidation         % minimize the expected mean-square error with cross-validation
+        loglikelihood           % minimize using the log-likelihood
         optimalIterated         % minimize the expected mean-square error.
         
         optimalExpected         % take a guess at minimizing the mean-square error based on the effective sample-size.
