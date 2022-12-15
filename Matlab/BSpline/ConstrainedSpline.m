@@ -59,8 +59,8 @@ classdef ConstrainedSpline < BSpline
                 x_mean = mean(x);
             end
             
-            x_std = std(x-x_mean);
-            x = (x-x_mean)/x_std;
+%             x_std = std(x-x_mean);
+%             x = (x-x_mean)/x_std;
             
             if isa(distribution,'NormalDistribution')
                 [m,CmInv,cachedVars] = ConstrainedSpline.ConstrainedSolution(t,x,K,t_knot,distribution,[],constraints,[]);
@@ -72,8 +72,8 @@ classdef ConstrainedSpline < BSpline
             self.distribution = distribution;
             self.t = t;
             self.x = x;
-            self.x_mean = x_mean;
-            self.x_std = x_std;
+%             self.x_mean = x_mean;
+%             self.x_std = x_std;
             self.CmInv = CmInv;
             self.X = cachedVars.X;
             self.W = cachedVars.W;
