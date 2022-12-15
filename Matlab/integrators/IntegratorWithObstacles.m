@@ -34,7 +34,7 @@ classdef IntegratorWithObstacles < Integrator
                 error('This integrator is only valid for 2D.')
             end
             
-            if ~isempty(obstacles) && any( overlaps(obstacles)-eye(length(obstacles)))
+            if ~isempty(obstacles) && any(any( overlaps(obstacles)-eye(length(obstacles))))
                 error('You have overlapping polygons! This is not allowed. To proceed use union to combine them.');
             end
                        
