@@ -69,7 +69,7 @@ classdef WindowedRotatedGPSSpline < handle
             end       
             self.t = t;
                
-            [x,y] = LatitudeLongitudeToTransverseMercator( self.lat, self.lon, self.lon0, self.k0 );  
+            [x,y] = LatitudeLongitudeToTransverseMercator( self.lat, self.lon, lon0=self.lon0, k0=self.k0 );  
             x = x - self.x0;
             y = y - self.y0;
 
@@ -135,8 +135,24 @@ classdef WindowedRotatedGPSSpline < handle
 
 
             splineY = SmoothingSpline(t,yp,self.gpsNoiseDistribution,'lambda',Lambda.fullTensionExpected);
-            alpha = 1/1000;
+            alpha = 1/10000;
             splineY.minimizeExpectedMeanSquareErrorInPercentileRange(alpha/2,1-alpha/2);
+
+            % I like this argument on theoretical grounds, but it doesn't
+            % seem to to do better than just letting things minimize. The
+            % idea was to pick the tension in the x-direction, using the
+            % tension deduced from the y-direction.
+%             ny_eff = splineY.effectiveSampleSizeFromVarianceOfTheMean();
+%             v_rms = sqrt(mean(splineY(t,1).^2));
+%             % n_eff = c*u^{-2/3}
+%             c = ny_eff*v_rms^(2/3);
+%             nx_eff = max(1,c*(u+v_rms)^(-2/3));
+% 
+%             lambdaY = splineY.lambda;
+%             xT2 = (1-1/ny_eff)/lambdaY;
+%             lambdaX = (1-1/nx_eff)/xT2;
+
+
 
             splineX = SmoothingSpline(t,xp,self.gpsNoiseDistribution);
 %             alpha = 1/10000000;

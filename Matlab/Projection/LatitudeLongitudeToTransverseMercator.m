@@ -1,4 +1,17 @@
-function [x,y] = LatitudeLongitudeToTransverseMercator(lat, lon, lon0, k0)
+function [x,y] = LatitudeLongitudeToTransverseMercator(lat, lon, options)
+arguments
+    lat (:,1) double {mustBeNumeric,mustBeReal}
+    lon (:,1) double {mustBeNumeric,mustBeReal}
+    options.lon0 (1,1) double {mustBeNumeric,mustBeReal}
+    options.k0 (1,1) double {mustBeNumeric,mustBeReal} = 0.9996;
+end
+k0 = options.k0;
+if ~isfield(options.lon0)
+    lon0 = min(lon) + (max(lon)-min(lon))/2;
+else
+    lon0 = options.lon0;
+end
+
 % These are the *defined* values for WGS84
 WGS84a=6378137;
 WGS84invf=298.257223563;

@@ -65,7 +65,7 @@ classdef WindowedGPSSpline < handle
                 t = t_raw;
             end        
                
-            [x,y] = LatitudeLongitudeToTransverseMercator( self.lat, self.lon, self.lon0, self.k0 );  
+            [x,y] = LatitudeLongitudeToTransverseMercator( self.lat, self.lon, lon0=self.lon0, k0=self.k0 );  
             x = x - self.x0;
             y = y - self.y0;
             self.spline_x = WindowedSmoothingSpline(t,x,self.gpsNoiseDistribution, minOverlap=self.minOverlap);
