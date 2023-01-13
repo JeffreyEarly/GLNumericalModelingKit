@@ -6,7 +6,7 @@ arguments
     options.k0 (1,1) double {mustBeNumeric,mustBeReal} = 0.9996;
 end
 k0 = options.k0;
-if ~isfield(options.lon0)
+if ~isfield(options,'lon0')
     lon0 = min(lon) + (max(lon)-min(lon))/2;
 else
     lon0 = options.lon0;
