@@ -95,6 +95,8 @@ classdef InterpolatingSpline < BSpline
             t_pseudo = interp1((0:N-1)',t,linspace(0,N-1,options.M).');
             K = options.K;
 
+% need to handle small M cases
+
             if length(t_pseudo) > 2
                 if mod(K,2) == 1
                     % Odd spline order, so knots go in between points.
