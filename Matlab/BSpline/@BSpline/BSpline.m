@@ -33,8 +33,7 @@ classdef BSpline < handle
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function self = BSpline(K,t_knot,m)
-            self.K = K;
-            
+            self.K = K;   
             self.t_knot = t_knot;
             self.m = m;            
         end
@@ -95,12 +94,24 @@ classdef BSpline < handle
             end
         end
         
+        function set.t_knot(self,newTKnot)
+            self.t_knot = newTKnot;
+            self.knotPointsDidChange();
+        end
+
         function set.m(self,newM)
             self.m = newM;
-            self.splineCoefficientsDidChange();
+            if ~isempty(newM)
+                self.splineCoefficientsDidChange();
+            end
+        end
+
+        function knotPointsDidChange(self)
+            self.B = [];
+            self.m = [];
         end
         
-        function self = splineCoefficientsDidChange(self)
+        function splineCoefficientsDidChange(self)
             [self.C,self.t_pp,self.B] = BSpline.PPCoefficientsFromSplineCoefficients( self.m, self.t_knot, self.K, self.B );
         end
     end
