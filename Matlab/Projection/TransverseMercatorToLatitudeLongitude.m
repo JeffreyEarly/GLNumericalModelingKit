@@ -1,4 +1,13 @@
-function [lat,lon] = TransverseMercatorToLatitudeLongitude(x, y, lon0, k0)
+function [lat,lon] = TransverseMercatorToLatitudeLongitude(x, y, options)
+arguments
+    x (:,1) double {mustBeNumeric,mustBeReal}
+    y (:,1) double {mustBeNumeric,mustBeReal}
+    options.lon0 (1,1) double {mustBeNumeric,mustBeReal}
+    options.k0 (1,1) double {mustBeNumeric,mustBeReal} = 0.9996;
+end
+lon0 = options.lon0;
+k0 = options.k0;
+
 % These are the *defined* values for WGS84
 WGS84a=6378137;
 WGS84invf=298.257223563;
