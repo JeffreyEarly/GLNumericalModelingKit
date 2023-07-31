@@ -74,7 +74,7 @@ classdef GPSSmoothingSpline < BivariateSmoothingSpline
                 end
             end
             
-            [x,y] = LatitudeLongitudeToTransverseMercator( lat, lon, lon0=lon0 );
+            [x,y] = LatitudeLongitudeToTransverseMercator( lat, lon, "lon0", lon0 );
             
             x = x - x0;
             y = y - y0;

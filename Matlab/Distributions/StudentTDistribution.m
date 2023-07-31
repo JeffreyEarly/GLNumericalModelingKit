@@ -19,8 +19,13 @@ classdef StudentTDistribution < Distribution
             a = gamma((nu+1)/2)./(sqrt(pi*nu)*sigma*gamma(nu/2));
             c = nu*sigma*sigma;
             m = (nu+1)/2;
+            % so that
+            % pdf = gamma(m)./(sqrt(c)*gamma(m-1/2)*(1+(z.*z)/c).^(m));
+            % log(pdf) = - m*log(1+(z.*z)/c) + log(gamma(m))-log(gamma(m-1/2)) - log(sqrt(c))  
             self.dPDFoverZ = @(z) -2*(a*m/c)*(1+z.*z/c).^(-m-1);
-            self.logPDF = @(z) -m*log(1+z.*z/c) + length(z)*(log(m)+log(sqrt(pi*nu)*sigma*gamma(nu/2)));
+            self.logPDF = @(z) -m*log(1+z.*z/c) + length(z)*(log(gamma(m))-log(sqrt(pi*nu)*sigma*gamma(nu/2)));
+            % ln \Gamma(z) = \ln \Gamma(z+1) - \ln z
+            % ln \Gamma(z) = \ln \Gamma(z+1) - \ln z
         end
         
     end
