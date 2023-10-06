@@ -12,7 +12,7 @@ t=T*(0:(N-1))'/N;
 % The lowest resolved frequency is one cycle per unit time
 x = 1*ones(size(t)) + 3*sin(0.5*(2*pi)*t);
 
-[xbar, f] = FourierTransformForward(t,x,1);
+[xbar, f] = FourierTransformForward(t,x);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -51,7 +51,7 @@ for i = (N/2 + 1):(3*N/2)
     xconvN(i-N/2) = sum ( xbar(indices) .* xbar(flip(indices)) );
 end
 
-xpseudo = fftshift(FourierTransformForward(t,x.*x,1));
+xpseudo = fftshift(FourierTransformForward(t,x.*x));
 
 % Now repeat, but without shifting, and only doing the first half
 % [0  1  2  3 -4 -3 -2 -1]

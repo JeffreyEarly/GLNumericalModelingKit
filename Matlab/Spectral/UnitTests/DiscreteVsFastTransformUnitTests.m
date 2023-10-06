@@ -79,7 +79,7 @@ t=T*(0:(N-1))'/N;
 
 x = randn(size(t));
 
-[xbar, f] = FourierTransformForward(t,x,1);
+[xbar, f] = FourierTransformForward(t,x);
 DFT = FourierTransformForwardMatrix(N);
 rDFT = FourierTransformForwardMatrixReal(N);
 xbar2 = DFT*x;

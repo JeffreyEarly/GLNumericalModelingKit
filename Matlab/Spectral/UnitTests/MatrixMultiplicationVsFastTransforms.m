@@ -1,35 +1,46 @@
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %
-% %   Cosine transform
-% %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-% N = 1025;
-% t=(0:(N-1))'/(N-1);
-% 
-% DCT = CosineTransformForwardMatrix(N);
-% iDCT = CosineTransformBackMatrix(N);
-% 
-% NyNz = 128*128;
-% x = rand(N,NyNz);
-% nLoops = 1;
-% 
-% fprintf('%d point DCT/iDCT with matrix transform:\n\t', N)
-% tic
-% for i=1:nLoops
-%     xbar = DCT*x;
-%     xback = iDCT*xbar;
-% end
-% toc
-% 
-% fprintf('%d point DCT/iDCT via FFT:\n\t', N)
-% tic
-% for i=1:nLoops
-%     xbar2 = CosineTransformForward(t,x);
-%     xback2 = CosineTransformBack(t,xbar2);
-% end
-% toc
-% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%   Cosine transform
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+N = 1025;
+t=(0:(N-1))'/(N-1);
+
+DCT = CosineTransformForwardMatrix(N);
+iDCT = CosineTransformBackMatrix(N);
+
+NyNz = 128*128;
+x = rand(N,NyNz);
+nLoops = 1;
+
+fprintf('%d point DCT/iDCT with matrix transform:\n\t', N)
+tic
+for i=1:nLoops
+    xbar = DCT*x;
+    xback = iDCT*xbar;
+end
+toc
+
+fprintf('%d point DCT/iDCT via FFT:\n\t', N)
+tic
+for i=1:nLoops
+    xbar2 = CosineTransformForward(t,x);
+    xback2 = CosineTransformBack(t,xbar2);
+end
+toc
+
+dct = CosineTransformFFTW(N);
+fprintf('%d point DCT/iDCT via FFTW:\n\t', N)
+tic
+for i=1:nLoops
+    xbar2 = dct.transformForward(x);
+    xback2 = dct.transformBack(xbar2);
+end
+toc
+
+return
+
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %
 % %   Fourier transform
@@ -61,7 +72,7 @@
 % fprintf('%d point DFT via FFT:\n\t', N)
 % tic
 % for i=1:nLoops
-%     xbar2 = FourierTransformForward(t,x,1);
+%     xbar2 = FourierTransformForward(t,x);
 % end
 % toc
 % 
@@ -84,10 +95,10 @@
 % toc
 % 
 % fprintf('%d point iDFT via FFT:\n\t', N)
-% xbar2 = FourierTransformForward(t,x,1);
+% xbar2 = FourierTransformForward(t,x);
 % tic
 % for i=1:nLoops
-% %     xbar2 = FourierTransformForward(t,x,1);
+% %     xbar2 = FourierTransformForward(t,x);
 %     xback2 = ifft(xbar2,'symmetric')*N;
 % end
 % toc
@@ -145,7 +156,7 @@ for iN=1:length(Ns)
     fprintf('\n\n%d point DFT/iDFT via FFT:\n\t', N)
     tic
     for i=1:nLoops
-        xbar2 = FourierTransformForward(t,x,1);
+        xbar2 = FourierTransformForward(t,x);
         xback2 = ifft(xbar2,'symmetric')*N;
     end
     method(1,iN)=toc;

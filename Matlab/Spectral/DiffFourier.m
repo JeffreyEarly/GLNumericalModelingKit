@@ -20,7 +20,7 @@ else
     end
 end
 
-[xbar, f] = FourierTransformForward( t, x, dim );
+[xbar, f] = FourierTransformForward( t, x, dim=dim );
 
 % reshape the dimension so that we can multiply
 newdims = ones(1,ndims(x));

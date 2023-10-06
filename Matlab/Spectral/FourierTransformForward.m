@@ -8,7 +8,12 @@
 % [t2, b] = TransformBack( fn, c, 2);
 % figure, plot(t, a, 'blue'), hold on, plot(t,real(b),'red')
 
-function [xbar, f] = FourierTransformForward( t, x, dim )
+function [xbar, f] = FourierTransformForward( t, x, options )
+arguments
+    t (:,1)
+    x
+    options.dim = 1
+end
 % FourierTransformForward Fast Fourier Transform
 %
 % xbar is returned in the same units as x. This is the finite length
@@ -31,4 +36,8 @@ function [xbar, f] = FourierTransformForward( t, x, dim )
 
 nT = length(t);
 f = FFTFrequenciesFromTimeSeries( t );
-xbar = fft( x, nT, dim )/nT;
+if isvector(x)
+    xbar = fft( x, nT )/nT;
+else
+    xbar = fft( x, nT, options.dim )/nT;
+end

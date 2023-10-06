@@ -12,7 +12,7 @@ t=T*(0:(N-1))'/N;
 % The lowest resolved frequency is one cycle per unit time
 x = 1*ones(size(t)) + 3*sin(2*(2*pi)*t);
 
-[xbar, f] = FourierTransformForward(t,x,1);
+[xbar, f] = FourierTransformForward(t,x);
 
 S = T*(xbar .* conj(xbar));
 

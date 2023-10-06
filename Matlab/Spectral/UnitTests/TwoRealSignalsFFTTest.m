@@ -13,11 +13,11 @@ t=T*(0:(N-1))'/N;
 x = 1*ones(size(t)) + 3*cos(16*(2*pi)*t);
 y = 5*ones(size(t)) + 2*cos(16*(2*pi)*t);
 
-xbar = FourierTransformForward(t,x,1);
-ybar = FourierTransformForward(t,y,1);
+xbar = FourierTransformForward(t,x);
+ybar = FourierTransformForward(t,y);
 
 c=x+sqrt(-1)*y;
-[cbar, f] = FourierTransformForward(t,c,1);
+[cbar, f] = FourierTransformForward(t,c);
 
 xbar2 = zeros(N/2+1,1);
 ybar2 = zeros(N/2+1,1);
