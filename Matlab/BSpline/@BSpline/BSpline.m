@@ -118,6 +118,9 @@ classdef BSpline < handle
     
     
     methods (Static)
+
+        t_knot = knotPointsForDataPoints( t, options)
+
         function t = PointsOfSupport(t_knot,K,D)
             % this function assumes that the spline are terminated at the
             % boundary with repeat knot points.
