@@ -1,6 +1,7 @@
 classdef CosineTransformFFTW < handle
     properties
         plan
+        scaleFactor = 1;
     end
 
     methods
@@ -14,17 +15,43 @@ classdef CosineTransformFFTW < handle
                 loadlibrary('libmwfftw3','fftw3.h')
             end
 
-            % Structure indicate the dimensions to be transformed
-            rank = 1;
-            dims.n = sz(1);
-            dims.is = 1;
-            dims.os = 1;
+            % The logic here is complicated by the fact that we might have
+            % singleton dimension, which we need to ignore.
+            lastDim = 0;
+            iDim = 0;
+            for iSize=1:length(sz)
+                if sz(iSize)==1
+                    continue;
+                end
+                iDim = iDim+1;
+                if iDim==1
+                    alldims(iDim).n = sz(iSize);
+                    alldims(iDim).is = 1;
+                    alldims(iDim).os = 1;
+                else
+                    alldims(iDim).n = sz(iSize);
+                    alldims(iDim).is = alldims(lastDim).is*alldims(lastDim).n;
+                    alldims(iDim).os = alldims(lastDim).os*alldims(lastDim).n;
+                end
+                lastDim = iDim;
+            end
 
-            % Structure indicating the dimensions to be looped over
+            rank = 0;
             howmany_rank = 0;
-            howmany_dims.n = 0;
-            howmany_dims.is = 1;
-            howmany_dims.os = 1;
+            for iDim=1:length(alldims)
+                if iDim==options.dim
+                    rank = rank + 1;
+                    dims(rank).n = alldims(iDim).n;
+                    dims(rank).is = alldims(iDim).is;
+                    dims(rank).os = alldims(iDim).os;
+                    self.scaleFactor = 1/(dims(rank).n -1);
+                else
+                    howmany_rank = howmany_rank + 1;
+                    howmany_dims(howmany_rank).n = alldims(iDim).n;
+                    howmany_dims(howmany_rank).is = alldims(iDim).is;
+                    howmany_dims(howmany_rank).os = alldims(iDim).os;
+                end
+            end
 
 % See GLBasisTransformationOperation for how to actually do this.
 
@@ -44,6 +71,7 @@ classdef CosineTransformFFTW < handle
 
             transformKind = 3; % FFTW_REDFT00
             planner = bitshift(1,6);
+            planner = 0;
 
             in = zeros(sz);
             out = zeros(sz);
@@ -59,7 +87,7 @@ classdef CosineTransformFFTW < handle
         function fbar = transformForward(self,f)
             outp = libpointer('doublePtr',zeros(size(f)));
             calllib('libmwfftw3','fftw_execute_r2r', self.plan, f, outp );
-            fbar = outp.Value/(length(f)-1);
+            fbar = self.scaleFactor*outp.Value;
         end
     end
 end

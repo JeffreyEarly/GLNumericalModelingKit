@@ -7,30 +7,30 @@
 N = 1025;
 t=(0:(N-1))'/(N-1);
 
-DCT = CosineTransformForwardMatrix(N);
-iDCT = CosineTransformBackMatrix(N);
+DCT = WVTransformConstantStratification.CosineTransformForwardMatrix(N);
+iDCT = WVTransformConstantStratification.CosineTransformBackMatrix(N);
 
 NyNz = 128*128;
 x = rand(N,NyNz);
-nLoops = 1;
+nLoops = 100;
 
-fprintf('%d point DCT/iDCT with matrix transform:\n\t', N)
-tic
-for i=1:nLoops
-    xbar = DCT*x;
-    xback = iDCT*xbar;
-end
-toc
+% fprintf('%d point DCT/iDCT with matrix transform:\n\t', N)
+% tic
+% for i=1:nLoops
+%     xbar = DCT*x;
+%     xback = iDCT*xbar;
+% end
+% toc
+% 
+% fprintf('%d point DCT/iDCT via FFT:\n\t', N)
+% tic
+% for i=1:nLoops
+%     xbar2 = CosineTransformForward(t,x);
+%     xback2 = CosineTransformBack(t,xbar2);
+% end
+% toc
 
-fprintf('%d point DCT/iDCT via FFT:\n\t', N)
-tic
-for i=1:nLoops
-    xbar2 = CosineTransformForward(t,x);
-    xback2 = CosineTransformBack(t,xbar2);
-end
-toc
-
-dct = CosineTransformFFTW(N);
+dct = CosineTransformFFTW(size(x),dim=1);
 fprintf('%d point DCT/iDCT via FFTW:\n\t', N)
 tic
 for i=1:nLoops

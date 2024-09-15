@@ -37,5 +37,5 @@ inp = libpointer('doublePtr',in);
 calllib('libmwfftw3','fftw_execute_r2r', plan, inp, outp );
 outp.Value/2
 
-D = CosineTransformBackMatrix(iodim.n);
-DCT*in
+D = WVTransformConstantStratification.CosineTransformBackMatrix(iodim.n);
+D*in
