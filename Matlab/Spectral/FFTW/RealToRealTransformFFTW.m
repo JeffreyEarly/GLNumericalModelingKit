@@ -12,15 +12,20 @@ classdef RealToRealTransformFFTW < handle
                 options.dim double = 1
                 options.transform char {mustBeMember(options.transform,["cosine","sine"])}
                 options.planner char {mustBeMember(options.planner,["estimate","measure","patient","exhaustive"])} = "estimate"
+                options.nCores = 1
             end
             if ~isfield(options,'transform')
                 error('You must specify a transform type.');
             end
 
-            if not(libisloaded('libmwfftw3'))
-                addpath(fullfile(matlabroot,'bin','maca64'))
-                addpath(fullfile(matlabroot,'bin','maci64'))
-                loadlibrary('libmwfftw3','fftw3.h')
+            % if not(libisloaded('libmwfftw3'))
+            %     addpath(fullfile(matlabroot,'bin','maca64'))
+            %     addpath(fullfile(matlabroot,'bin','maci64'))
+            %     loadlibrary('libmwfftw3','fftw3.h')
+            % end
+            if not(libisloaded('libfftw3_omp'))
+                addpath('/opt/homebrew/opt/fftw/lib')
+                loadlibrary('libfftw3_omp','fftw3.h')
             end
 
             % The logic here is complicated by the fact that we might have
@@ -96,18 +101,19 @@ classdef RealToRealTransformFFTW < handle
 
             in = zeros(sz);
             out = zeros(sz);
-            self.plan = calllib('libmwfftw3','fftw_plan_guru_r2r',rank,dims,howmany_rank,howmany_dims,in,out,transformKind,planner);
+            calllib('libfftw3_omp','fftw_plan_with_nthreads',options.nCores);
+            self.plan = calllib('libfftw3_omp','fftw_plan_guru_r2r',rank,dims,howmany_rank,howmany_dims,in,out,transformKind,uint32(planner));
             self.outp = libpointer('doublePtr',zeros(sz));
         end
 
         function f = transformBack(self,fbar)
             
-            calllib('libmwfftw3','fftw_execute_r2r', self.plan, fbar, self.outp );
+            calllib('libfftw3_omp','fftw_execute_r2r', self.plan, fbar, self.outp );
             f = self.outp.Value/2;
         end
 
         function fbar = transformForward(self,f)
-            calllib('libmwfftw3','fftw_execute_r2r', self.plan, f, self.outp );
+            calllib('libfftw3_omp','fftw_execute_r2r', self.plan, f, self.outp );
             fbar = self.scaleFactor*self.outp.Value;
         end
     end

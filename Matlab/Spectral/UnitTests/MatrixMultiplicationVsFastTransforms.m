@@ -4,16 +4,16 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-N = 256;
+N = 257;
 t=(0:(N-1))'/(N-1);
 
 DCT = WVTransformConstantStratification.CosineTransformForwardMatrix(N);
 iDCT = WVTransformConstantStratification.CosineTransformBackMatrix(N);
 
-NyNz = 128*128;
+NyNz = 256*256;
 x = rand(N,NyNz);
-nLoops = 1;
-dct = RealToRealTransformFFTW(size(x),dim=1,transform="cosine",planner="measure");
+nLoops = 20;
+dct = RealToRealTransformFFTW(size(x),dim=1,transform="cosine",planner="exhaustive",nCores=8);
 
 %%
 fprintf('%d point DCT/iDCT with matrix transform:\n\t', N)
@@ -24,21 +24,31 @@ for i=1:nLoops
 end
 toc
 
-fprintf('%d point DCT/iDCT via FFT:\n\t', N)
-tic
-for i=1:nLoops
-    xbar2 = CosineTransformForward(t,x);
-    xback2 = CosineTransformBack(t,xbar2);
-end
-toc
+% fprintf('%d point DCT/iDCT via FFT:\n\t', N)
+% tic
+% for i=1:nLoops
+%     xbar2 = CosineTransformForward(t,x);
+%     xback2 = CosineTransformBack(t,xbar2);
+% end
+% toc
 
 fprintf('%d point DCT/iDCT via FFTW:\n\t', N)
 
+%%
+x_ptr = libpointer('doublePtr',x);
+x_bar2_ptr = libpointer('doublePtr',zeros(size(x)));
+xback2_ptr = libpointer('doublePtr',zeros(size(x)));
+a = zeros(size(x));
+b = zeros(size(x));
 tic
 % profile on
 for i=1:nLoops
-    xbar2 = dct.transformForward(x);
-    xback2 = dct.transformBack(xbar2);
+    calllib('libfftw3_omp','fftw_execute_r2r', dct.plan, x_ptr, x_bar2_ptr );
+    a = dct.scaleFactor*x_bar2_ptr.Value; % this .Value kills performance. It's copying data.
+    calllib('libfftw3_omp','fftw_execute_r2r', dct.plan, x_bar2_ptr, xback2_ptr );
+    b = xback2_ptr.Value/2;
+    % xbar2 = dct.transformForward(x);
+    % xback2 = dct.transformBack(xbar2);
 end
 % profile viewer
 toc
