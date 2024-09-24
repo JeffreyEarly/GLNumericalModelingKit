@@ -4,7 +4,7 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-N = 1025;
+N = 256;
 t=(0:(N-1))'/(N-1);
 
 DCT = WVTransformConstantStratification.CosineTransformForwardMatrix(N);
@@ -12,31 +12,35 @@ iDCT = WVTransformConstantStratification.CosineTransformBackMatrix(N);
 
 NyNz = 128*128;
 x = rand(N,NyNz);
-nLoops = 100;
+nLoops = 1;
+dct = RealToRealTransformFFTW(size(x),dim=1,transform="cosine",planner="measure");
 
-% fprintf('%d point DCT/iDCT with matrix transform:\n\t', N)
-% tic
-% for i=1:nLoops
-%     xbar = DCT*x;
-%     xback = iDCT*xbar;
-% end
-% toc
-% 
-% fprintf('%d point DCT/iDCT via FFT:\n\t', N)
-% tic
-% for i=1:nLoops
-%     xbar2 = CosineTransformForward(t,x);
-%     xback2 = CosineTransformBack(t,xbar2);
-% end
-% toc
-
-dct = CosineTransformFFTW(size(x),dim=1);
-fprintf('%d point DCT/iDCT via FFTW:\n\t', N)
+%%
+fprintf('%d point DCT/iDCT with matrix transform:\n\t', N)
 tic
+for i=1:nLoops
+    xbar = DCT*x;
+    xback = iDCT*xbar;
+end
+toc
+
+fprintf('%d point DCT/iDCT via FFT:\n\t', N)
+tic
+for i=1:nLoops
+    xbar2 = CosineTransformForward(t,x);
+    xback2 = CosineTransformBack(t,xbar2);
+end
+toc
+
+fprintf('%d point DCT/iDCT via FFTW:\n\t', N)
+
+tic
+% profile on
 for i=1:nLoops
     xbar2 = dct.transformForward(x);
     xback2 = dct.transformBack(xbar2);
 end
+% profile viewer
 toc
 
 return

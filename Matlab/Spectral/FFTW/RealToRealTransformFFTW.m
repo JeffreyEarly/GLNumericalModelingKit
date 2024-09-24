@@ -1,17 +1,25 @@
-classdef CosineTransformFFTW < handle
+classdef RealToRealTransformFFTW < handle
     properties
         plan
         scaleFactor = 1;
+        outp
     end
 
     methods
-        function self = CosineTransformFFTW(sz,options)
+        function self = RealToRealTransformFFTW(sz,options)
             arguments
                 sz
                 options.dim double = 1
+                options.transform char {mustBeMember(options.transform,["cosine","sine"])}
+                options.planner char {mustBeMember(options.planner,["estimate","measure","patient","exhaustive"])} = "estimate"
             end
+            if ~isfield(options,'transform')
+                error('You must specify a transform type.');
+            end
+
             if not(libisloaded('libmwfftw3'))
                 addpath(fullfile(matlabroot,'bin','maca64'))
+                addpath(fullfile(matlabroot,'bin','maci64'))
                 loadlibrary('libmwfftw3','fftw3.h')
             end
 
@@ -69,25 +77,38 @@ classdef CosineTransformFFTW < handle
 % FFTW_REDFT00=3, FFTW_REDFT01=4, FFTW_REDFT10=5, FFTW_REDFT11=6,
 % FFTW_RODFT00=7, FFTW_RODFT01=8, FFTW_RODFT10=9, FFTW_RODFT11=10
 
-            transformKind = 3; % FFTW_REDFT00
-            planner = bitshift(1,6);
-            planner = 0;
+            switch options.transform
+                case "cosine"
+                    transformKind = 3;
+                case "sine"
+                    transformKind = 7;
+            end
+            switch options.planner
+                case "estimate"
+                    planner = bitshift(1,6);
+                case "measure"
+                    planner = 0;
+                case "patient"
+                    planner = bitshift(1,5);
+                case "exhaustive"
+                    planner = bitshift(1,3);
+            end
 
             in = zeros(sz);
             out = zeros(sz);
             self.plan = calllib('libmwfftw3','fftw_plan_guru_r2r',rank,dims,howmany_rank,howmany_dims,in,out,transformKind,planner);
+            self.outp = libpointer('doublePtr',zeros(sz));
         end
 
         function f = transformBack(self,fbar)
-            outp = libpointer('doublePtr',zeros(size(fbar)));
-            calllib('libmwfftw3','fftw_execute_r2r', self.plan, fbar, outp );
-            f = outp.Value/2;
+            
+            calllib('libmwfftw3','fftw_execute_r2r', self.plan, fbar, self.outp );
+            f = self.outp.Value/2;
         end
 
         function fbar = transformForward(self,f)
-            outp = libpointer('doublePtr',zeros(size(f)));
-            calllib('libmwfftw3','fftw_execute_r2r', self.plan, f, outp );
-            fbar = self.scaleFactor*outp.Value;
+            calllib('libmwfftw3','fftw_execute_r2r', self.plan, f, self.outp );
+            fbar = self.scaleFactor*self.outp.Value;
         end
     end
 end
