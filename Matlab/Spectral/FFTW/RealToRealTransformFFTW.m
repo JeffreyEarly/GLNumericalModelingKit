@@ -19,8 +19,7 @@ classdef RealToRealTransformFFTW < handle
             end
 
             % if not(libisloaded('libmwfftw3'))
-            %     addpath(fullfile(matlabroot,'bin','maca64'))
-            %     addpath(fullfile(matlabroot,'bin','maci64'))
+            %     addpath(fullfile(matlabroot,'bin','computer('arch')))
             %     loadlibrary('libmwfftw3','fftw3.h')
             % end
             if not(libisloaded('libfftw3_omp'))
