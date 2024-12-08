@@ -45,7 +45,7 @@ public:
 
         // Retrieve the input data
 //        mat::TypedArray<double> inputArray = std::move(inputs[1]);
-        mat::TypedArray<double> inputArray = inputs[1];
+        mat::TypedArray<double> inputArray = std::move(inputs[1]);
 //        size_t dataSize = inputArray.getNumberOfElements();
 
 //        mxArray* mxInputArray = mat::getMATLABObject(inputArray);
@@ -63,10 +63,10 @@ public:
 
         // Execute the FFTW plan
         // Getting the pointer causes the copy... probably for safety?
-//        double* dataPtr = &(*inputArray.begin());
-        auto itA = inputArray.begin();
+        double* dataPtr = &(*inputArray.begin());
+//        auto itA = inputArray.begin();
 //        mat::TypedArray<double> outputArray = factory.createArray<double>(inputArray.getDimensions());
-//        fftw_execute_r2r(handle->plan, dataPtr, dataPtr);
+        fftw_execute_r2r(handle->plan, dataPtr, dataPtr);
 
         // Create MATLAB output array
 //        mat::ArrayFactory factory;
