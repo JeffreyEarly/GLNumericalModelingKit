@@ -1,12 +1,16 @@
-classdef RealToRealTransformFFTW < handle
+classdef RealToRealTransform < handle
     properties
         plan
         scaleFactor = 1;
-        outp
+        transformKind
+        planner
+
+        dims
+        howmany_dims
     end
 
     methods
-        function self = RealToRealTransformFFTW(sz,options)
+        function self = RealToRealTransform(sz,options)
             arguments
                 sz
                 options.dim double = 1
@@ -16,15 +20,6 @@ classdef RealToRealTransformFFTW < handle
             end
             if ~isfield(options,'transform')
                 error('You must specify a transform type.');
-            end
-
-            % if not(libisloaded('libmwfftw3'))
-            %     addpath(fullfile(matlabroot,'bin','computer('arch')))
-            %     loadlibrary('libmwfftw3','fftw3.h')
-            % end
-            if not(libisloaded('libfftw3_omp'))
-                addpath('/opt/homebrew/opt/fftw/lib')
-                loadlibrary('libfftw3_omp','fftw3.h')
             end
 
             % The logic here is complicated by the fact that we might have
@@ -53,15 +48,15 @@ classdef RealToRealTransformFFTW < handle
             for iDim=1:length(alldims)
                 if iDim==options.dim
                     rank = rank + 1;
-                    dims(rank).n = alldims(iDim).n;
-                    dims(rank).is = alldims(iDim).is;
-                    dims(rank).os = alldims(iDim).os;
-                    self.scaleFactor = 1/(dims(rank).n -1);
+                    self.dims(rank).n = alldims(iDim).n;
+                    self.dims(rank).is = alldims(iDim).is;
+                    self.dims(rank).os = alldims(iDim).os;
+                    self.scaleFactor = 1/(self.dims(rank).n -1);
                 else
                     howmany_rank = howmany_rank + 1;
-                    howmany_dims(howmany_rank).n = alldims(iDim).n;
-                    howmany_dims(howmany_rank).is = alldims(iDim).is;
-                    howmany_dims(howmany_rank).os = alldims(iDim).os;
+                    self.howmany_dims(howmany_rank).n = alldims(iDim).n;
+                    self.howmany_dims(howmany_rank).is = alldims(iDim).is;
+                    self.howmany_dims(howmany_rank).os = alldims(iDim).os;
                 end
             end
 
@@ -83,37 +78,25 @@ classdef RealToRealTransformFFTW < handle
 
             switch options.transform
                 case "cosine"
-                    transformKind = 3;
+                    self.transformKind = 3;
                 case "sine"
-                    transformKind = 7;
+                    self.transformKind = 7;
             end
             switch options.planner
                 case "estimate"
-                    planner = bitshift(1,6);
+                    self.planner = bitshift(1,6);
                 case "measure"
-                    planner = 0;
+                    self.planner = 0;
                 case "patient"
-                    planner = bitshift(1,5);
+                    self.planner = bitshift(1,5);
                 case "exhaustive"
-                    planner = bitshift(1,3);
+                    self.planner = bitshift(1,3);
             end
-
-            in = zeros(sz);
-            out = zeros(sz);
-            calllib('libfftw3_omp','fftw_plan_with_nthreads',options.nCores);
-            self.plan = calllib('libfftw3_omp','fftw_plan_guru_r2r',rank,dims,howmany_rank,howmany_dims,in,out,transformKind,uint32(planner));
-            self.outp = libpointer('doublePtr',zeros(sz));
         end
+    end
 
-        function f = transformBack(self,fbar)
-            
-            calllib('libfftw3_omp','fftw_execute_r2r', self.plan, fbar, self.outp );
-            f = self.outp.Value/2;
-        end
-
-        function fbar = transformForward(self,f)
-            calllib('libfftw3_omp','fftw_execute_r2r', self.plan, f, self.outp );
-            fbar = self.scaleFactor*self.outp.Value;
-        end
+    methods (Abstract)
+        f = transformBack(self,fbar);
+        fbar = transformForward(self,f);
     end
 end

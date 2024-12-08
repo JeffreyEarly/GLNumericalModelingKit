@@ -13,7 +13,12 @@ iDCT = WVTransformConstantStratification.CosineTransformBackMatrix(N);
 NyNz = 256*256;
 x = rand(N,NyNz);
 nLoops = 20;
-dct = RealToRealTransformFFTW(size(x),dim=1,transform="cosine",planner="exhaustive",nCores=8);
+% dct = RealToRealTransformLibPointerFFTW(size(x),dim=1,transform="cosine",planner="exhaustive",nCores=8);
+% dct = RealToRealTransformLibPointerFFTW(size(x),dim=1,transform="cosine",planner="measure",nCores=8,libname='libfftw3_omp',libpath='/opt/homebrew/opt/fftw/lib');
+
+% RealToRealTransformMexFFTW.makeMexFiles();
+% RealToRealTransformMexFFTW.makeOMPMexFiles();
+% dct = RealToRealTransformMexFFTW(size(x),dim=1,transform="cosine",planner="exhaustive",nCores=8);
 
 %%
 fprintf('%d point DCT/iDCT with matrix transform:\n\t', N)
@@ -35,20 +40,32 @@ toc
 fprintf('%d point DCT/iDCT via FFTW:\n\t', N)
 
 %%
-x_ptr = libpointer('doublePtr',x);
-x_bar2_ptr = libpointer('doublePtr',zeros(size(x)));
-xback2_ptr = libpointer('doublePtr',zeros(size(x)));
-a = zeros(size(x));
-b = zeros(size(x));
+% x_ptr = libpointer('doublePtr',x);
+% x_bar2_ptr = libpointer('doublePtr',zeros(size(x)));
+% xback2_ptr = libpointer('doublePtr',zeros(size(x)));
+% a = zeros(size(x));
+% b = zeros(size(x));
+
+N = 257;
+NyNz = 256*256;
+x = rand(N,NyNz);
+nLoops = 20;
+
+y = zeros(size(x));
 tic
 % profile on
 for i=1:nLoops
-    calllib('libfftw3_omp','fftw_execute_r2r', dct.plan, x_ptr, x_bar2_ptr );
-    a = dct.scaleFactor*x_bar2_ptr.Value; % this .Value kills performance. It's copying data.
-    calllib('libfftw3_omp','fftw_execute_r2r', dct.plan, x_bar2_ptr, xback2_ptr );
-    b = xback2_ptr.Value/2;
-    % xbar2 = dct.transformForward(x);
-    % xback2 = dct.transformBack(xbar2);
+    % calllib('libfftw3_omp','fftw_execute_r2r', dct.plan, x_ptr, x_bar2_ptr );
+    % a = dct.scaleFactor*x_bar2_ptr.Value; % this .Value kills performance. It's copying data.
+    % calllib('libfftw3_omp','fftw_execute_r2r', dct.plan, x_bar2_ptr, xback2_ptr );
+    % b = xback2_ptr.Value/2;
+    % x = dct.transformForward(x);
+    % x = dct.transformBack(x);
+    % x(x<0) = 0;
+    x = unaryOperation(x);
+    % y = simple_add(y,x);
+    % x = execute_dct_plan_mex(dct.plan,x);
+    % x = execute_dct_plan_mex(dct.plan,x);
 end
 % profile viewer
 toc
