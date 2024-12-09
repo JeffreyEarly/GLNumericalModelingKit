@@ -25,6 +25,13 @@ private:
     };
     std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr;
     
+    template <typename T>
+    const T* getDataPtr(matlab::data::Array arr) {
+      const matlab::data::TypedArray<T> arr_t = arr;
+      matlab::data::TypedIterator<const T> it(arr_t.begin());
+      return it.operator->();
+    }
+    
 public:
     void operator()(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs) override {
         namespace mat = matlab::data;
@@ -43,6 +50,19 @@ public:
         double* dataPtr = &(*inputArray.begin());
         fftw_execute_r2r(handle->plan, dataPtr, dataPtr);
         outputs[0] = inputArray;
+                
+//        mat::TypedArray<double> inputArray = inputs[1];
+//        mat::TypedArray<double> outputArray = std::move(inputs[2]);
+//
+////        double* inPtr = &(*inputArray.begin());
+//        auto inPtr = getDataPtr<double>(inputArray);
+//        double* outPtr = &(*outputArray.begin());
+////        auto outPtr = getDataPtr<double>(outputArray);
+//
+//        fftw_execute_r2r(handle->plan, (double *) inPtr, outPtr);
+//        outputs[0] = outputArray;
     }
+    
+
 };
 

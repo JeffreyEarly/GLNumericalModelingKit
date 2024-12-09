@@ -12,7 +12,7 @@ classdef RealToRealTransformMexFFTW < RealToRealTransform
             scArgs = namedargs2cell(options);
             self@RealToRealTransform(sz,scArgs{:});
 
-            self.plan = create_dct_plan_mex(length(self.dims), self.dims, length(self.howmany_dims), self.howmany_dims, options.nCores);
+            self.plan = create_dct_plan_mex(self.dims, self.howmany_dims, options.nCores, self.transformKind, self.planner);
         end
 
         function f = transformBack(self,fbar)     
@@ -23,6 +23,8 @@ classdef RealToRealTransformMexFFTW < RealToRealTransform
         %     fbar = self.scaleFactor*execute_dct_plan_mex(self.plan,f);
         % end
         function f = transformForward(self,f)
+            % fout = zeros(size(f));
+            % fout = self.scaleFactor*execute_dct_plan_mex(self.plan,f,fout);
             f = self.scaleFactor*execute_dct_plan_mex(self.plan,f);
         end
     end

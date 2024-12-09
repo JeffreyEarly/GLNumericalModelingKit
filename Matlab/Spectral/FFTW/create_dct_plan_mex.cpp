@@ -69,23 +69,17 @@ public:
         stream << "Here 1\n";
         displayOnMATLAB(stream);
         // Extract inputs
-        int rank = static_cast<int>(inputs[0][0]);
-        const mat::StructArray dimsStructArray = inputs[1];
-        int howmany_rank = static_cast<int>(inputs[2][0]);
-        const mat::StructArray howmany_dimsStructArray = inputs[3];
-        int nCores = static_cast<int>(inputs[4][0]);
-//        const fftw_r2r_kind kind = static_cast<const fftw_r2r_kind>(inputs[3][0]);
-//        fftw_r2r_kind kind = kind2;
-        
-        const fftw_r2r_kind kind = FFTW_REDFT00;
+        const mat::StructArray dimsStructArray = inputs[0];
+        const mat::StructArray howmany_dimsStructArray = inputs[1];
+        int nCores = static_cast<int>(inputs[2][0]);
+        fftw_r2r_kind kind = (fftw_r2r_kind) static_cast<int>(inputs[3][0]);
+        unsigned planner = static_cast<unsigned>(inputs[4][0]);
   
-        if (dimsStructArray.getNumberOfElements() != static_cast<size_t>(rank)) {
-            displayError("Size of dims struct array must match rank.");
-            return;
-        }
         stream << "Here 2\n";
         displayOnMATLAB(stream);
+        
         // Convert dimsStructArray to FFTW's fftw_iodim structure
+        int rank = static_cast<int>(dimsStructArray.getNumberOfElements());
         std::vector<fftw_iodim> dims(rank);
         for (int i = 0; i < rank; ++i) {
             matlab::data::TypedArray<double> field1 = dimsStructArray[i]["n"];
@@ -96,6 +90,7 @@ public:
             dims[i].os = (int) field3[0];
         }
 
+        int howmany_rank = static_cast<int>(howmany_dimsStructArray.getNumberOfElements());
         std::vector<fftw_iodim> howmany_dims(howmany_rank);
         for (int i = 0; i < rank; ++i) {
             matlab::data::TypedArray<double> field1 = howmany_dimsStructArray[i]["n"];
