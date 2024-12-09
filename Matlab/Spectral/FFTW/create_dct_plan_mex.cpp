@@ -70,9 +70,9 @@ public:
         displayOnMATLAB(stream);
         // Extract inputs
         int rank = static_cast<int>(inputs[0][0]);
-        mat::StructArray dimsStructArray = inputs[1];
+        const mat::StructArray dimsStructArray = inputs[1];
         int howmany_rank = static_cast<int>(inputs[2][0]);
-        mat::StructArray howmany_dimsStructArray = inputs[3];
+        const mat::StructArray howmany_dimsStructArray = inputs[3];
         int nCores = static_cast<int>(inputs[4][0]);
 //        const fftw_r2r_kind kind = static_cast<const fftw_r2r_kind>(inputs[3][0]);
 //        fftw_r2r_kind kind = kind2;
@@ -88,48 +88,19 @@ public:
         // Convert dimsStructArray to FFTW's fftw_iodim structure
         std::vector<fftw_iodim> dims(rank);
         for (int i = 0; i < rank; ++i) {
-//            mat::TypedArray<Struct> dimsStruct = dimsStructArray[i];
-//
-//            if (!dimsStruct.hasField(u"n") || !dimsStruct.hasField(u"is") || !dimsStruct.hasField(u"os")) {
-//                displayError("Each struct in dims must have fields 'n', 'is', and 'os'.");
-//                return;
-//            }
-            stream << "Here 2.3\n";
-            displayOnMATLAB(stream);
             matlab::data::TypedArray<double> field1 = dimsStructArray[i]["n"];
             matlab::data::TypedArray<double> field2 = dimsStructArray[i]["is"];
             matlab::data::TypedArray<double> field3 = dimsStructArray[i]["os"];
-            stream << "Here 2.5\n";
-            displayOnMATLAB(stream);
             dims[i].n = (int) field1[0];
             dims[i].is = (int) field2[0];
             dims[i].os = (int) field3[0];
-            
-//            dims[i].n = static_cast<int>((dimsStructArray[i]["n"][0]);
-//            dims[i].is = static_cast<int>(dimsStructArray[i]["is"][0]);
-//            dims[i].os = static_cast<int>(dimsStructArray[i]["os"][0]);
         }
-        stream << "Here 3\n";
-        displayOnMATLAB(stream);
-//        // Validate dims input
-//        if (dimsArray.getNumberOfElements() != static_cast<size_t>(rank)) {
-//            displayError("Size of dims must match rank.");
-//            return;
-//        }
-//
-//        // Convert dims to FFTW's fftw_iodim structure
-//        std::vector<fftw_iodim> dims(rank);
-//        for (int i = 0; i < rank; ++i) {
-//            dims[i].n = dimsArray[i];
-//            dims[i].is = 1;  // Input stride (default)
-//            dims[i].os = 1;  // Output stride (default)
-//        }
-        
-        std::vector<fftw_iodim> howmany_dims(rank);
+
+        std::vector<fftw_iodim> howmany_dims(howmany_rank);
         for (int i = 0; i < rank; ++i) {
-            matlab::data::TypedArray<double> field1 = dimsStructArray[i]["n"];
-            matlab::data::TypedArray<double> field2 = dimsStructArray[i]["is"];
-            matlab::data::TypedArray<double> field3 = dimsStructArray[i]["os"];
+            matlab::data::TypedArray<double> field1 = howmany_dimsStructArray[i]["n"];
+            matlab::data::TypedArray<double> field2 = howmany_dimsStructArray[i]["is"];
+            matlab::data::TypedArray<double> field3 = howmany_dimsStructArray[i]["os"];
             howmany_dims[i].n = (int) field1[0];
             howmany_dims[i].is = (int) field2[0];
             howmany_dims[i].os = (int) field3[0];
@@ -141,11 +112,15 @@ public:
         int totalSize = 1;
         for (const auto& dim : dims) {
             totalSize *= dim.n;
+            stream << "dim size " << dim.n << "\n";
+            displayOnMATLAB(stream);
         }
         for (const auto& dim : howmany_dims) {
             totalSize *= dim.n;
+            stream << "dim size " << dim.n << "\n";
+            displayOnMATLAB(stream);
         }
-        stream << "Here 5 and allocated size of " << totalSize;
+        stream << "Here 5 and allocated size of " << totalSize << "\n";
         displayOnMATLAB(stream);
         
 //        omp_set_num_threads(nCores);
@@ -157,10 +132,6 @@ public:
         fftw_plan plan = fftw_plan_guru_r2r(rank, dims.data(), howmany_rank, howmany_dims.data(), in, out, &kind, FFTW_MEASURE);
         fftw_free(in);
         fftw_free(out);
-        
-//        int nThreads = omp_get_max_threads(); //fftw_planner_nthreads();
-//        stream << "nThreads " << nThreads;
-//        displayOnMATLAB(stream);
         
         stream << "Here 6\n";
         displayOnMATLAB(stream);

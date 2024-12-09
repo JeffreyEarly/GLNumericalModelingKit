@@ -22,10 +22,7 @@ class MexFunction : public matlab::mex::Function {
 private:
     struct PlanHandle {
         fftw_plan plan;
-//        double* in;
-//        double* out;
     };
-
     std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr;
     
 public:
@@ -42,49 +39,10 @@ public:
         // Retrieve the FFTW plan handle
         uint64_t handleValue = inputs[0][0];
         PlanHandle* handle = reinterpret_cast<PlanHandle*>(handleValue);
-
-        // Retrieve the input data
-//        mat::TypedArray<double> inputArray = std::move(inputs[1]);
         mat::TypedArray<double> inputArray = std::move(inputs[1]);
-//        size_t dataSize = inputArray.getNumberOfElements();
-
-//        mxArray* mxInputArray = mat::getMATLABObject(inputArray);
-//        mxArray* mxUnsharedArray = mxUnshareArray(mxInputArray);
-        
-        // Validate input size
-//        size_t expectedSize = handle->dims.n;  // Example: adjust to match plan's dimension
-//        if (dataSize != expectedSize) {
-//            matlabPtr->feval(u"error", {factory.createScalar("Input size does not match plan dimensions.")});
-//            return;
-//        }
-
-        // Copy input data to FFTW input buffer
-//        std::copy(inputArray.begin(), inputArray.end(), handle->in);
-
-        // Execute the FFTW plan
-        // Getting the pointer causes the copy... probably for safety?
         double* dataPtr = &(*inputArray.begin());
-//        auto itA = inputArray.begin();
-//        mat::TypedArray<double> outputArray = factory.createArray<double>(inputArray.getDimensions());
         fftw_execute_r2r(handle->plan, dataPtr, dataPtr);
-
-        // Create MATLAB output array
-//        mat::ArrayFactory factory;
-//        mat::TypedArray<double> outputArray = factory.createArray<double>(mxUnsharedArray);
-//        std::copy(handle->out, handle->out + dataSize, outputArray.begin());
-
-        // Return the result
         outputs[0] = inputArray;
     }
-
-//private:
-//    struct PlanHandle {
-//        fftw_plan plan;
-//        double* in;
-//        double* out;
-//        fftw_iodim dims;
-//    };
-//
-//    std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
 };
 
