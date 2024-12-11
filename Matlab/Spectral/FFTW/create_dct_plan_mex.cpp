@@ -69,8 +69,6 @@ public:
         stream << "Here 1\n";
         displayOnMATLAB(stream);
         // Extract inputs
-        const mat::StructArray dimsStructArray = inputs[0];
-        const mat::StructArray howmany_dimsStructArray = inputs[1];
         int nCores = static_cast<int>(inputs[2][0]);
         fftw_r2r_kind kind = (fftw_r2r_kind) static_cast<int>(inputs[3][0]);
         unsigned planner = static_cast<unsigned>(inputs[4][0]);
@@ -79,6 +77,7 @@ public:
         displayOnMATLAB(stream);
         
         // Convert dimsStructArray to FFTW's fftw_iodim structure
+        const mat::StructArray dimsStructArray = inputs[0];
         int rank = static_cast<int>(dimsStructArray.getNumberOfElements());
         std::vector<fftw_iodim> dims(rank);
         for (int i = 0; i < rank; ++i) {
@@ -89,16 +88,25 @@ public:
             dims[i].is = (int) field2[0];
             dims[i].os = (int) field3[0];
         }
-
-        int howmany_rank = static_cast<int>(howmany_dimsStructArray.getNumberOfElements());
-        std::vector<fftw_iodim> howmany_dims(howmany_rank);
-        for (int i = 0; i < rank; ++i) {
-            matlab::data::TypedArray<double> field1 = howmany_dimsStructArray[i]["n"];
-            matlab::data::TypedArray<double> field2 = howmany_dimsStructArray[i]["is"];
-            matlab::data::TypedArray<double> field3 = howmany_dimsStructArray[i]["os"];
-            howmany_dims[i].n = (int) field1[0];
-            howmany_dims[i].is = (int) field2[0];
-            howmany_dims[i].os = (int) field3[0];
+        stream << "Here 3\n";
+        displayOnMATLAB(stream);
+        
+        int howmany_rank = 0;
+        std::vector<fftw_iodim> howmany_dims(0);
+        if (inputs[1].getNumberOfElements() != 0) {
+            stream << "Here 3.5\n";
+            displayOnMATLAB(stream);
+            const mat::StructArray howmany_dimsStructArray = inputs[1];
+            howmany_rank = static_cast<int>(howmany_dimsStructArray.getNumberOfElements());
+            howmany_dims.resize(howmany_rank);
+            for (int i = 0; i < rank; ++i) {
+                matlab::data::TypedArray<double> field1 = howmany_dimsStructArray[i]["n"];
+                matlab::data::TypedArray<double> field2 = howmany_dimsStructArray[i]["is"];
+                matlab::data::TypedArray<double> field3 = howmany_dimsStructArray[i]["os"];
+                howmany_dims[i].n = (int) field1[0];
+                howmany_dims[i].is = (int) field2[0];
+                howmany_dims[i].os = (int) field3[0];
+            }
         }
         
         stream << "Here 4\n";
@@ -124,7 +132,7 @@ public:
         
         double* in = fftw_alloc_real(totalSize);
         double* out = fftw_alloc_real(totalSize);
-        fftw_plan plan = fftw_plan_guru_r2r(rank, dims.data(), howmany_rank, howmany_dims.data(), in, out, &kind, FFTW_MEASURE);
+        fftw_plan plan = fftw_plan_guru_r2r(rank, dims.data(), howmany_rank, howmany_dims.data(), in, out, &kind, planner);
         fftw_free(in);
         fftw_free(out);
         
