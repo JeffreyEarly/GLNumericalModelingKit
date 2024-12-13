@@ -1,9 +1,12 @@
 classdef RealToComplexTransform < handle
     properties
-        sz
-        plan
+        realSize
+        complexSize
         scaleFactor = 1;
-        planner
+    end
+
+    properties (Access=private)
+        plan
     end
 
     methods
@@ -14,7 +17,7 @@ classdef RealToComplexTransform < handle
                 options.planner char {mustBeMember(options.planner,["estimate","measure","patient","exhaustive"])} = "estimate"
                 options.nCores = 1
             end
-            self.sz = sz;
+            self.realSize = sz;
 
             % #define FFTW_MEASURE (0U)
             % #define FFTW_DESTROY_INPUT (1U << 0)
@@ -27,21 +30,21 @@ classdef RealToComplexTransform < handle
             % #define FFTW_WISDOM_ONLY (1U << 21)
             switch options.planner
                 case "estimate"
-                    self.planner = bitshift(1,6);
+                    planner = bitshift(1,6);
                 case "measure"
-                    self.planner = 0;
+                    planner = 0;
                 case "patient"
-                    self.planner = bitshift(1,5);
+                    planner = bitshift(1,5);
                 case "exhaustive"
-                    self.planner = bitshift(1,3);
+                    planner = bitshift(1,3);
             end
 
             % self.plan = fftw_plan_guru_dft_r2c(sz, options.dims, options.nCores, self.planner);
-            self.plan = fftw_plan_guru_dft_r2c(sz, options.dims);
+            [self.plan, self.complexSize, self.scaleFactor] = fftw_plan_guru_dft_r2c(sz, options.dims, options.nCores, planner);
         end
 
         function xbar = transformForward(self,x)
-            xbar = self.scaleFactor*fftw_execute_dft_r2c(self.plan,x);
+            xbar = fftw_execute_dft_r2c(self.plan,x);
         end
     end
 

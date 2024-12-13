@@ -25,7 +25,7 @@ private:
 
 //    std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr;
     
-    ArrayDimensions createFFTWIODim(const std::vector<size_t>& indims, std::vector<size_t>& transformDims, std::vector<fftw_iodim>& iodims, std::vector<fftw_iodim>& howmany_dims) {
+    ArrayDimensions createFFTWIODim(const std::vector<size_t>& indims, std::vector<size_t>& transformDims, std::vector<fftw_iodim>& iodims, std::vector<fftw_iodim>& howmany_dims, double *scaleFactor) {
         // Validate transformDim
 //        if (transformDims < 1 || transformDims > static_cast<int>(indims.size())) {
 //            throw std::invalid_argument("Invalid transform dimension");
@@ -81,17 +81,7 @@ private:
             }
             alldims.push_back(newdim);
         }
-        matlab::data::ArrayFactory factory;
-        std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
-        for (size_t i = 0; i < alldims.size(); i++) {
-            matlabPtr->feval(u"fprintf", 0,
-                     std::vector<matlab::data::Array>(
-                      {factory.createScalar("alldims (%d, %d, %d)\n"),
-                          factory.createScalar(alldims[i].n),
-                          factory.createScalar(alldims[i].is),
-                          factory.createScalar(alldims[i].os)}));
-        }
-        
+
         iodims.clear();
         howmany_dims.clear();
         size_t iTransformDim = 0;
@@ -99,32 +89,13 @@ private:
             if (iTransformDim < transformDims.size() && i == transformDims[iTransformDim]) {
                 iodims.push_back(alldims[i]);
                 iTransformDim += 1;
+                *scaleFactor *= 1.0 / ((double) alldims[i].n);
             } else {
                 howmany_dims.push_back(alldims[i]);
                 
             }
         }
-        
 
-//        matlabPtr->feval(u"fprintf", 0, std::vector<matlab::data::Array>( {factory.createScalar("iodims (%i, %i, %i)\n")}));
-        for (size_t i = 0; i < iodims.size(); i++) {
-            matlabPtr->feval(u"fprintf", 0,
-                     std::vector<matlab::data::Array>(
-                      {factory.createScalar("iodims (%d, %d, %d)\n"),
-                          factory.createScalar(iodims[i].n),
-                          factory.createScalar(iodims[i].is),
-                          factory.createScalar(iodims[i].os)}));
-        }
-        
-        for (size_t i = 0; i < howmany_dims.size(); i++) {
-            matlabPtr->feval(u"fprintf", 0,
-                     std::vector<matlab::data::Array>(
-                      {factory.createScalar("howmany_dims (%d, %d, %d)\n"),
-                          factory.createScalar(howmany_dims[i].n),
-                          factory.createScalar(howmany_dims[i].is),
-                          factory.createScalar(howmany_dims[i].os)}));
-        }
-        
         return outputMatrixDims;
     }
     
@@ -148,12 +119,9 @@ public:
         std::vector<size_t> transformDims = typedArrayToSizeTVector(inputs[1]);
         std::vector<fftw_iodim> iodims;
         std::vector<fftw_iodim> howmany_dims;
-        ArrayDimensions outputDims = createFFTWIODim(inputDims, transformDims, iodims, howmany_dims);
+        double scaleFactor = 1.0;
+        ArrayDimensions outputDims = createFFTWIODim(inputDims, transformDims, iodims, howmany_dims, &scaleFactor);
         
-        // Create output matrix
-        ArrayFactory factory;
-        TypedArray<std::complex<double>> outputMatrix = factory.createArray<std::complex<double>>(outputDims);
-
         int totalSize = 1;
         for (const auto& dim : inputDims) {
             totalSize *= dim;
@@ -167,10 +135,15 @@ public:
         fftw_complex* out = fftw_alloc_complex(totalSize);
 
         // Create FFTW plan
+        int nCores = static_cast<int>(inputs[2][0]);
+        fftw_init_threads();
+        fftw_plan_with_nthreads(nCores);
+        
+        unsigned planner = static_cast<unsigned>(inputs[3][0]);
         fftw_plan plan = fftw_plan_guru_dft_r2c(
             static_cast<int>(iodims.size()), iodims.data(),
             static_cast<int>(howmany_dims.size()), howmany_dims.data(),
-            in, out, FFTW_ESTIMATE);
+            in, out, planner);
         fftw_free(in);
         fftw_free(out);
         
@@ -178,7 +151,19 @@ public:
         PlanHandle* handle = new PlanHandle{plan, inputDims, outputDims};
 
         // Return the handle as an opaque pointer
+        ArrayFactory factory;
         outputs[0] = factory.createScalar(reinterpret_cast<uint64_t>(handle));
+        
+        // Return the size of the complex output array
+        TypedArray<double> dimsArray = factory.createArray<double>({outputDims.size()});
+        size_t index = 0;
+        for (const auto& dim : outputDims) {
+            dimsArray[index++] = static_cast<double>(dim); // MATLAB uses doubles for numeric values
+        }
+        outputs[1] = dimsArray;
+        
+        // Return the scale factor for the forward transform
+        outputs[2] = factory.createScalar(scaleFactor);
     }
 
 private:
@@ -205,3 +190,14 @@ private:
     }
 };
 
+// Useful debugging code
+//matlab::data::ArrayFactory factory;
+//std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
+//for (size_t i = 0; i < alldims.size(); i++) {
+//    matlabPtr->feval(u"fprintf", 0,
+//             std::vector<matlab::data::Array>(
+//              {factory.createScalar("alldims (%d, %d, %d)\n"),
+//                  factory.createScalar(alldims[i].n),
+//                  factory.createScalar(alldims[i].is),
+//                  factory.createScalar(alldims[i].os)}));
+//}
