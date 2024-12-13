@@ -3,6 +3,9 @@ classdef RealToRealTransformLibPointerFFTW < RealToRealTransform
         libname 
         libpath
         outp
+
+        dims
+        howmany_dims
     end
 
     methods
@@ -20,6 +23,44 @@ classdef RealToRealTransformLibPointerFFTW < RealToRealTransform
 
             scArgs = namedargs2cell(options);
             self@RealToRealTransform(sz,scArgs{:});
+
+             % The logic here is complicated by the fact that we might have
+            % singleton dimension, which we need to ignore.
+            lastDim = 0;
+            iDim = 0;
+            for iSize=1:length(sz)
+                if sz(iSize)==1
+                    continue;
+                end
+                iDim = iDim+1;
+                if iDim==1
+                    alldims(iDim).n = sz(iSize);
+                    alldims(iDim).is = 1;
+                    alldims(iDim).os = 1;
+                else
+                    alldims(iDim).n = sz(iSize);
+                    alldims(iDim).is = alldims(lastDim).is*alldims(lastDim).n;
+                    alldims(iDim).os = alldims(lastDim).os*alldims(lastDim).n;
+                end
+                lastDim = iDim;
+            end
+
+            rank = 0;
+            howmany_rank = 0;
+            for iDim=1:length(alldims)
+                if iDim==options.dim
+                    rank = rank + 1;
+                    self.dims(rank).n = alldims(iDim).n;
+                    self.dims(rank).is = alldims(iDim).is;
+                    self.dims(rank).os = alldims(iDim).os;
+                    self.scaleFactor = 1/(self.dims(rank).n -1);
+                else
+                    howmany_rank = howmany_rank + 1;
+                    self.howmany_dims(howmany_rank).n = alldims(iDim).n;
+                    self.howmany_dims(howmany_rank).is = alldims(iDim).is;
+                    self.howmany_dims(howmany_rank).os = alldims(iDim).os;
+                end
+            end
 
             self.libname = newoptions.libname;
             if isfield(newoptions,'libpath')

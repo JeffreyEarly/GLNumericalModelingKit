@@ -22,7 +22,8 @@ classdef RealToRealTransformMexFFTW < RealToRealTransform
             scArgs = namedargs2cell(options);
             self@RealToRealTransform(sz,scArgs{:});
 
-            self.plan = create_dct_plan_mex(self.dims, self.howmany_dims, options.nCores, self.transformKind, self.planner);
+            % self.plan = create_dct_plan_mex(self.dims, self.howmany_dims, options.nCores, self.transformKind, self.planner);
+            self.plan = fftw_plan_guru_r2r(sz, options.dim, options.nCores, self.transformKind, self.planner);
         end
 
         function x = transformBack(self,x)
@@ -51,7 +52,8 @@ classdef RealToRealTransformMexFFTW < RealToRealTransform
             % fftwheader = fullfile(matlabroot,'extern','include','fftw3.h');
             ipath = ['-I' fullfile(matlabroot,'extern','include')];
 
-            mex(ipath,'create_dct_plan_mex.cpp',fftwlibpath);
+            % mex(ipath,'create_dct_plan_mex.cpp',fftwlibpath);
+            mex(ipath,'fftw_plan_guru_r2r.cpp',fftwlibpath);
             mex(ipath,'execute_dct_plan_mex.cpp',fftwlibpath);
             mex(ipath,'execute_dct_plan_inout_mex.cpp',fftwlibpath);
         end

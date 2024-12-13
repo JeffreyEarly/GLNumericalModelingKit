@@ -1,34 +1,20 @@
-classdef RealToRealTransform < handle
+classdef RealToComplexTransform < handle
     properties
         sz
         plan
         scaleFactor = 1;
-        transformKind
         planner
     end
 
     methods
-        function self = RealToRealTransform(sz,options)
+        function self = RealToComplexTransform(sz,options)
             arguments
                 sz
-                options.dim double = 1
-                options.transform char {mustBeMember(options.transform,["cosine","sine"])}
+                options.dims double = 1
                 options.planner char {mustBeMember(options.planner,["estimate","measure","patient","exhaustive"])} = "estimate"
                 options.nCores = 1
             end
             self.sz = sz;
-            if ~isfield(options,'transform')
-                error('You must specify a transform type.');
-            end
-            % FFTW_R2HC=0, FFTW_HC2R=1, FFTW_DHT=2,
-            % FFTW_REDFT00=3, FFTW_REDFT01=4, FFTW_REDFT10=5, FFTW_REDFT11=6,
-            % FFTW_RODFT00=7, FFTW_RODFT01=8, FFTW_RODFT10=9, FFTW_RODFT11=10
-            switch options.transform
-                case "cosine"
-                    self.transformKind = 3;
-                case "sine"
-                    self.transformKind = 7;
-            end
 
             % #define FFTW_MEASURE (0U)
             % #define FFTW_DESTROY_INPUT (1U << 0)
@@ -49,11 +35,27 @@ classdef RealToRealTransform < handle
                 case "exhaustive"
                     self.planner = bitshift(1,3);
             end
+
+            % self.plan = fftw_plan_guru_dft_r2c(sz, options.dims, options.nCores, self.planner);
+            self.plan = fftw_plan_guru_dft_r2c(sz, options.dims);
+        end
+
+        function xbar = transformForward(self,x)
+            xbar = self.scaleFactor*fftw_execute_dft_r2c(self.plan,x);
         end
     end
 
-    methods (Abstract)
-        f = transformBack(self,fbar);
-        fbar = transformForward(self,f);
+    methods (Static)
+        function makeMexFiles(fftwlibpath)
+            arguments
+                fftwlibpath = fullfile(matlabroot,'bin',computer('arch'),'libmwfftw3.3.dylib')
+            end
+            ipath = ['-I' fullfile(matlabroot,'extern','include')];
+
+            % mex(ipath,'create_dct_plan_mex.cpp',fftwlibpath);
+            mex(ipath,'fftw_plan_guru_dft_r2c.cpp',fftwlibpath);
+            mex(ipath,'fftw_execute_dft_r2c.cpp',fftwlibpath);
+            % mex(ipath,'execute_dct_plan_inout_mex.cpp',fftwlibpath);
+        end
     end
 end
