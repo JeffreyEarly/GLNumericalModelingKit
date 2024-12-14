@@ -41,15 +41,18 @@ classdef RealToComplexTransform < handle
             end
 
             % self.plan = fftw_plan_guru_dft_r2c(sz, options.dims, options.nCores, self.planner);
-            [self.plan, self.complexSize, self.scaleFactor] = fftw_plan_guru_dft_r2c(sz, options.dims, options.nCores, planner);
+            % [self.plan, self.complexSize, self.scaleFactor] = fftw_plan_guru_dft_r2c(sz, options.dims, options.nCores, planner);
+            [self.plan, self.complexSize, self.scaleFactor] = fftw_dft('create', sz, options.dims, options.nCores, planner);
         end
 
         function xbar = transformForward(self,x)
-            xbar = fftw_execute_dft_r2c(self.plan,x);
+            % xbar = fftw_execute_dft_r2c(self.plan,x);
+            xbar = fftw_dft('r2c', self.plan, x);
         end
 
         function x = transformBack(self,xbar)
-            x = fftw_execute_dft_c2r(self.plan,xbar);
+            % x = fftw_execute_dft_c2r(self.plan,xbar);
+            x = fftw_dft('c2r', self.plan, xbar);
         end
     end
 
@@ -59,10 +62,10 @@ classdef RealToComplexTransform < handle
                 fftwlibpath = fullfile(matlabroot,'bin',computer('arch'),'libmwfftw3.3.dylib')
             end
             ipath = ['-I' fullfile(matlabroot,'extern','include')];
-
-            mex(ipath,'fftw_plan_guru_dft_r2c.cpp',fftwlibpath);
-            mex(ipath,'fftw_execute_dft_r2c.cpp',fftwlibpath);
-            mex(ipath,'fftw_execute_dft_c2r.cpp',fftwlibpath);
+mex(ipath,'fftw_dft.cpp',fftwlibpath);
+            % mex(ipath,'fftw_plan_guru_dft_r2c.cpp',fftwlibpath);
+            % mex(ipath,'fftw_execute_dft_r2c.cpp',fftwlibpath);
+            % mex(ipath,'fftw_execute_dft_c2r.cpp',fftwlibpath);
         end
     end
 end
