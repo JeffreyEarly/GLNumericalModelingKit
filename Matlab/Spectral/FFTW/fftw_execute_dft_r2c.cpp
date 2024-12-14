@@ -21,9 +21,10 @@ using namespace matlab::data;
 class MexFunction : public matlab::mex::Function {
 private:
     struct PlanHandle {
-        fftw_plan plan;
-        std::vector<size_t> inputMatrixDims;
-        std::vector<size_t> outputMatrixDims;
+        fftw_plan planForward;
+        fftw_plan planInverse;
+        std::vector<size_t> realMatrixDims;
+        std::vector<size_t> complexMatrixDims;
     };
     std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr;
     
@@ -50,12 +51,12 @@ public:
         PlanHandle* handle = reinterpret_cast<PlanHandle*>(handleValue);
         
         mat::TypedArray<double> inputArray = inputs[1];
-        TypedArray<std::complex<double>> outputArray = factory.createArray<std::complex<double>>(handle->outputMatrixDims);
+        TypedArray<std::complex<double>> outputArray = factory.createArray<std::complex<double>>(handle->complexMatrixDims);
 
         auto inPtr = getDataPtr<double>(inputArray);
         std::complex<double> * outPtr = &(*outputArray.begin());
         
-        fftw_execute_dft_r2c(handle->plan, (double *) inPtr, (fftw_complex*) outPtr);
+        fftw_execute_dft_r2c(handle->planForward, (double *) inPtr, (fftw_complex*) outPtr);
         outputs[0] = outputArray;
                 
 //        mat::TypedArray<double> inputArray = inputs[1];
