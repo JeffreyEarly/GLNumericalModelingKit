@@ -13,7 +13,7 @@ classdef RealToRealTransform < handle
                 sz
                 options.dim double = 1
                 options.transform char {mustBeMember(options.transform,["cosine","sine"])}
-                options.planner char {mustBeMember(options.planner,["estimate","measure","patient","exhaustive"])} = "estimate"
+                options.planner char {mustBeMember(options.planner,["estimate","measure","patient","exhaustive"])} = "measure"
                 options.nCores = 1
             end
             self.sz = sz;

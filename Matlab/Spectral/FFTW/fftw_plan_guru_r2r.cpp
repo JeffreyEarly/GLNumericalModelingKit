@@ -23,8 +23,63 @@ private:
         fftw_plan plan;
     };
 
-    std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr;
+    std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
     std::ostringstream stream;
+    
+    void flattenDimensionsAndTransformIndices(std::vector<size_t>& indims, std::vector<size_t>& transformDims) {
+        for (auto& num : transformDims) {
+            num -= 1; // Convert 1-based to 0-based indexing
+        }
+
+        std::vector<size_t> dims;
+        for (size_t i = 0; i < indims.size(); ++i) {
+            if (indims[i] != 1) {
+                dims.push_back(indims[i]);
+            } else {
+                for (auto& tDim : transformDims) {
+                    if (tDim == i) throw std::invalid_argument("Transform dimension has length 1.");
+                    if (tDim > i) --tDim;
+                }
+            }
+        }
+        indims = dims;
+    }
+
+    void flattenDimensions(std::vector<size_t>& indims) {
+        indims.erase(std::remove(indims.begin(), indims.end(), 1), indims.end());
+    }
+    
+    void fftwDimsSetup(const std::vector<size_t>& dims, const std::vector<size_t>& transformDims,
+                       std::vector<fftw_iodim>& iodims, std::vector<fftw_iodim>& howmany_dims) {
+        std::vector<size_t> outdims(dims);
+
+        std::vector<fftw_iodim> alldims;
+        for (size_t i = 0; i < dims.size(); i++) {
+            fftw_iodim newdim;
+            newdim.n = dims[i];
+            if (alldims.size() == 0) {
+                newdim.is = 1;
+                newdim.os = 1;
+            } else {
+                size_t n = alldims.size();
+                newdim.is = alldims[n-1].is*dims[n-1];
+                newdim.os = alldims[n-1].os*outdims[n-1];
+            }
+            alldims.push_back(newdim);
+        }
+
+        iodims.clear();
+        howmany_dims.clear();
+
+        for (size_t i = 0, t = 0; i < alldims.size(); ++i) {
+            if (t < transformDims.size() && i == transformDims[t]) {
+                iodims.push_back(alldims[i]);
+                ++t;
+            } else {
+                howmany_dims.push_back(alldims[i]);
+            }
+        }
+    }
     
     // Function to compute FFTW iodim structure based on a vector of dimensions
     void createFFTWIODim(const std::vector<size_t>& dims, int transformDim, std::vector<fftw_iodim>& iodims, std::vector<fftw_iodim>& howmany_dims) {
@@ -79,25 +134,6 @@ private:
         }
         return dims;
     }
-    
-    std::vector<size_t> arrayToSizeTVector(const matlab::data::Array& inputArray) {
-        if (inputArray.getType() != matlab::data::ArrayType::DOUBLE) {
-            throw std::invalid_argument("Input array must be of type double.");
-        }
-
-        const matlab::data::TypedArray<double>& typedArray = static_cast<const matlab::data::TypedArray<double>&>(inputArray);
-        std::vector<size_t> dims(typedArray.getNumberOfElements());
-
-        size_t index = 0;
-        for (const auto& val : typedArray) {
-            if (val < 0) {
-                throw std::invalid_argument("Dimensions must be non-negative.");
-            }
-            dims[index++] = static_cast<size_t>(val);
-        }
-
-        return dims;
-    }
 
     
 public:
@@ -142,11 +178,13 @@ public:
         stream << "Here 1\n";
         displayOnMATLAB(stream);
         
-        std::vector<size_t> dims = typedArrayToSizeTVector(inputs[0]);
-        size_t transformDim = static_cast<size_t>(inputs[1][0]);
-        std::vector<fftw_iodim> iodims;
-        std::vector<fftw_iodim> howmany_dims;
-        createFFTWIODim(dims, transformDim, iodims, howmany_dims);
+        auto realMatrixDims = typedArrayToSizeTVector(inputs[0]);
+        auto transformDims = typedArrayToSizeTVector(inputs[1]);
+        std::vector<size_t> flatRealMatrixDims = realMatrixDims;
+        flattenDimensionsAndTransformIndices(flatRealMatrixDims, transformDims);
+        
+        std::vector<fftw_iodim> iodims, howmany_dims;
+        fftwDimsSetup(flatRealMatrixDims, transformDims, iodims, howmany_dims);
         
         // Extract inputs
         int nCores = static_cast<int>(inputs[2][0]);
@@ -169,6 +207,9 @@ public:
         }
         stream << "Here 5 and allocated size of " << totalSize << "\n";
         displayOnMATLAB(stream);
+        
+        printDims(iodims);
+        printDims(howmany_dims);
         
         fftw_init_threads();
         fftw_plan_with_nthreads(nCores);
@@ -193,6 +234,18 @@ public:
         outputs[0] = factory.createScalar(reinterpret_cast<uint64_t>(handle));
     }
 
+    void printDims(const std::vector<fftw_iodim>& alldims) {
+        matlab::data::ArrayFactory factory;
+        std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
+        for (size_t i = 0; i < alldims.size(); i++) {
+            matlabPtr->feval(u"fprintf", 0,
+                     std::vector<matlab::data::Array>(
+                      {factory.createScalar("alldims (%d, %d, %d)\n"),
+                          factory.createScalar(alldims[i].n),
+                          factory.createScalar(alldims[i].is),
+                          factory.createScalar(alldims[i].os)}));
+        }
+    }
 
 };
 

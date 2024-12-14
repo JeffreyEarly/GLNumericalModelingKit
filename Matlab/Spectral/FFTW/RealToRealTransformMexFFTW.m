@@ -23,23 +23,28 @@ classdef RealToRealTransformMexFFTW < RealToRealTransform
             self@RealToRealTransform(sz,scArgs{:});
 
             % self.plan = create_dct_plan_mex(self.dims, self.howmany_dims, options.nCores, self.transformKind, self.planner);
-            self.plan = fftw_plan_guru_r2r(sz, options.dim, options.nCores, self.transformKind, self.planner);
+            % self.plan = fftw_plan_guru_r2r(sz, options.dim, options.nCores, self.transformKind, self.planner);
+            self.plan = fftw_dft2('createR2RPlan', sz, options.dim, options.nCores, self.transformKind, self.planner);
         end
 
         function x = transformBack(self,x)
-            x = execute_dct_plan_mex(self.plan,x)/2;
+            % x = execute_dct_plan_mex(self.plan,x); %/2;
+            x = fftw_dft2('r2r', self.plan, x);
         end
 
         function f = transformBackIntoArray(self,fbar,f)     
-            f = execute_dct_plan_inout_mex(self.plan,fbar,f)/2;
+            % f = execute_dct_plan_inout_mex(self.plan,fbar,f); %/2;
+            f = fftw_dft2('r2r_inout', self.plan,fbar,f);
         end
 
         function x = transformForward(self,x)
-            x = self.scaleFactor*execute_dct_plan_mex(self.plan,x);
+            % x = execute_dct_plan_mex(self.plan,x); % self.scaleFactor*
+            x = fftw_dft2('r2r', self.plan, x);
         end
 
         function fbar = transformForwardIntoArray(self,f,fbar)
-            fbar = self.scaleFactor*execute_dct_plan_inout_mex(self.plan,f,fbar);
+            % fbar = execute_dct_plan_inout_mex(self.plan,f,fbar); % self.scaleFactor*
+            fbar = fftw_dft2('r2r_inout', self.plan,f,fbar);
         end
     end
 
