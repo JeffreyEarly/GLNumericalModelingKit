@@ -54,6 +54,10 @@ classdef RealToComplexTransform < handle
             % x = fftw_execute_dft_c2r(self.plan,xbar);
             x = fftw_dft2('c2r', self.plan, xbar);
         end
+
+        function delete(self)
+            fftw_dft2('free', self.plan);
+        end
     end
 
     methods (Static)
