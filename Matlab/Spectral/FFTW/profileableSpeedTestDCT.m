@@ -13,27 +13,27 @@ for i=1:nLoops
     x = DCT*x;
 end
 val = toc;
-fprintf('%.2f: in-place, matrix DCT\n', val);
+fprintf('%.2fs: in-place, matrix DCT\n', val);
 
 tic
 for i=1:nLoops
     y = dct.transformForward(x);
 end
 val = toc;
-fprintf('%.2f: out-of-place, fast DCT\n', val);
+fprintf('%.2fs: out-of-place, fast DCT\n', val);
 
 tic
 for i=1:nLoops
     x = dct.transformForward(x);
 end
 val = toc;
-fprintf('%.2f: in-place, fast DCT\n', val);
+fprintf('%.2fs: in-place, fast DCT\n', val);
 
 tic
 for i=1:nLoops
     xout = dct.transformForwardIntoArray(x,xout);
 end
 val = toc;
-fprintf('%.2f: out-of-place preallocated, fast DCT\n', val);
+fprintf('%.2fs: out-of-place preallocated, fast DCT\n', val);
 
 end
