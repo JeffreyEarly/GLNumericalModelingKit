@@ -57,10 +57,11 @@ classdef RealToRealTransformMexFFTW < RealToRealTransform
             % fftwheader = fullfile(matlabroot,'extern','include','fftw3.h');
             ipath = ['-I' fullfile(matlabroot,'extern','include')];
 
+            mex(ipath,'fftw_dft2.cpp',fftwlibpath)
             % mex(ipath,'create_dct_plan_mex.cpp',fftwlibpath);
-            mex(ipath,'fftw_plan_guru_r2r.cpp',fftwlibpath);
-            mex(ipath,'execute_dct_plan_mex.cpp',fftwlibpath);
-            mex(ipath,'execute_dct_plan_inout_mex.cpp',fftwlibpath);
+            % mex(ipath,'fftw_plan_guru_r2r.cpp',fftwlibpath);
+            % mex(ipath,'execute_dct_plan_mex.cpp',fftwlibpath);
+            % mex(ipath,'execute_dct_plan_inout_mex.cpp',fftwlibpath);
         end
 
         function makeOMPMexFiles(fftwpath,omppath)

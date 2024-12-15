@@ -1,6 +1,16 @@
 //  fftw_plan_guru_dft_r2c.cpp
 //  Created by Jeffrey Early on 12/10/24.
 
+// The most important thing about the whole exercise, is PREVENT MEMORY COPIES. It is so hard to *not* trigger a memory copy in Matlab, but if you do, then you will destroy your performance. The difference between getDataPtr<double>, and (*inputArray.begin()) --- is enormous!! The former can avoid a memory copy, the latter, cannot.
+// Method 1: no memory copy, fast
+//        TypedArray<double> inputArray = inputs[2];
+//        const double* inPtr = getDataPtr<double>(inputArray);
+// Method 2: no memory copy, requires known array sizes, fast
+//        TypedArray<double> inputArray = std::move(inputs[2]);
+//        double* inPtr = & inputArray[0][0].operator double &();
+// Method 3: memory copy, slow, super simple
+//        double* inPtr = &(*inputArray.begin());
+
 #include "mex.hpp"
 #include "mexAdapter.hpp"
 #include <fftw3.h>
@@ -64,6 +74,7 @@ private:
         return outputMatrixDims;
     }
 
+    // The most important function: https://www.mathworks.com/matlabcentral/answers/1573713-c-mex-data-api-how-can-i-get-the-raw-pointer-of-an-array-input-without-copying-it
     template <typename T>
     const T* getDataPtr(matlab::data::Array arr) {
         const matlab::data::TypedArray<T> arr_t = arr;
@@ -153,7 +164,14 @@ private:
 
         // Return the handle as an opaque pointer
         outputs[0] = factory.createScalar(reinterpret_cast<uint64_t>(handle));
-        
+    }
+    
+    void freeR2RPlan(ArgumentList outputs, ArgumentList inputs) {
+        auto handle = reinterpret_cast<R2RPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
+        if (handle) {
+            fftw_destroy_plan(handle->plan);
+            delete handle;
+        }
     }
     
     void r2r(ArgumentList outputs, ArgumentList inputs) {
@@ -187,10 +205,6 @@ private:
         std::vector<fftw_iodim> iodims, howmany_dims;
         double scaleFactor = 1.0;
         fftwDimsSetup(flatRealMatrixDims, transformDims, iodims, howmany_dims, TransformTypeDFTForward, &scaleFactor);
-        printDims(iodims);
-        printDims(howmany_dims);
-        printVec(flatRealMatrixDims);
-        printVec(flatComplexMatrixDims);
         
         int totalRealSize = std::accumulate(flatRealMatrixDims.begin(), flatRealMatrixDims.end(), 1, std::multiplies<>());
         int totalComplexSize = std::accumulate(flatComplexMatrixDims.begin(), flatComplexMatrixDims.end(), 1, std::multiplies<>());
@@ -220,7 +234,7 @@ private:
     }
 
     void freeDFTPlan(ArgumentList outputs, ArgumentList inputs) {
-        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[0][0]));
+        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
         if (handle) {
             fftw_destroy_plan(handle->planForward);
             fftw_destroy_plan(handle->planInverse);
@@ -231,8 +245,10 @@ private:
     void r2c(ArgumentList outputs, ArgumentList inputs) {
         auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
         TypedArray<double> inputArray = inputs[2];
+        const double* inPtr = getDataPtr<double>(inputArray);
         auto outputArray = ArrayFactory().createArray<std::complex<double>>(handle->complexMatrixDims);
-        fftw_execute_dft_r2c(handle->planForward, const_cast<double*>(inputArray.begin().operator->()), reinterpret_cast<fftw_complex*>(outputArray.begin().operator->()));
+        std::complex<double> * outPtr = &(*outputArray.begin());
+        fftw_execute_dft_r2c(handle->planForward, (double*) inPtr, (fftw_complex *) outPtr);
         outputs[0] = outputArray;
     }
 
@@ -241,6 +257,16 @@ private:
         TypedArray<std::complex<double>> inputArray = inputs[2];
         auto outputArray = ArrayFactory().createArray<double>(handle->realMatrixDims);
         fftw_execute_dft_c2r(handle->planInverse, reinterpret_cast<fftw_complex*>(inputArray.begin().operator->()), outputArray.begin().operator->());
+        outputs[0] = outputArray;
+    }
+    
+    void r2c_inout(ArgumentList outputs, ArgumentList inputs) {
+        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
+        TypedArray<double> inputArray = inputs[2];
+        const double* inPtr = getDataPtr<double>(inputArray);
+        TypedArray<std::complex<double>> outputArray = std::move(inputs[3]); // Necessary! Prevents a memory copy
+        const std::complex<double> * outPtr = getDataPtr<std::complex<double>>(outputArray); // Also necessary! Prevents a memory copy.
+        fftw_execute_dft_r2c(handle->planForward, (double *) inPtr, (fftw_complex *) outPtr);
         outputs[0] = outputArray;
     }
 
@@ -253,6 +279,7 @@ public:
             else if (command == "free") freeDFTPlan(outputs, inputs);
             else if (command == "r2c") r2c(outputs, inputs);
             else if (command == "c2r") c2r(outputs, inputs);
+            else if (command == "r2c_inout") r2c_inout(outputs, inputs);
             else if (command == "createR2RPlan") createR2RPlan(outputs, inputs);
             else if (command == "r2r") r2r(outputs, inputs);
             else if (command == "r2r_inout") r2r_inout(outputs, inputs);

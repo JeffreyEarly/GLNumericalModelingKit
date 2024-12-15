@@ -1,7 +1,7 @@
 classdef RealToComplexTransform < handle
     properties
         realSize
-        complexSize
+        complexSize (1,:) double 
         scaleFactor = 1;
         plan
     end
@@ -15,7 +15,7 @@ classdef RealToComplexTransform < handle
             arguments
                 sz
                 options.dims double = 1
-                options.planner char {mustBeMember(options.planner,["estimate","measure","patient","exhaustive"])} = "estimate"
+                options.planner char {mustBeMember(options.planner,["estimate","measure","patient","exhaustive"])} = "measure"
                 options.nCores = 1
             end
             self.realSize = sz;
@@ -46,8 +46,11 @@ classdef RealToComplexTransform < handle
         end
 
         function xbar = transformForward(self,x)
-            % xbar = fftw_execute_dft_r2c(self.plan,x);
             xbar = fftw_dft2('r2c', self.plan, x);
+        end
+
+        function fbar = transformForwardIntoArray(self,f,fbar)
+            fbar = fftw_dft2('r2c_inout', self.plan,f,fbar);
         end
 
         function x = transformBack(self,xbar)
@@ -66,7 +69,8 @@ classdef RealToComplexTransform < handle
                 fftwlibpath = fullfile(matlabroot,'bin',computer('arch'),'libmwfftw3.3.dylib')
             end
             ipath = ['-I' fullfile(matlabroot,'extern','include')];
-mex(ipath,'fftw_dft.cpp',fftwlibpath);
+            mex(ipath,'fftw_dft2.cpp',fftwlibpath)
+            % mex(ipath,'fftw_dft.cpp',fftwlibpath);
             % mex(ipath,'fftw_plan_guru_dft_r2c.cpp',fftwlibpath);
             % mex(ipath,'fftw_execute_dft_r2c.cpp',fftwlibpath);
             % mex(ipath,'fftw_execute_dft_c2r.cpp',fftwlibpath);
