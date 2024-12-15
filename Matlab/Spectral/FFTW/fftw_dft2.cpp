@@ -251,14 +251,6 @@ private:
         fftw_execute_dft_r2c(handle->planForward, (double*) inPtr, (fftw_complex *) outPtr);
         outputs[0] = outputArray;
     }
-
-    void c2r(ArgumentList outputs, ArgumentList inputs) {
-        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
-        TypedArray<std::complex<double>> inputArray = inputs[2];
-        auto outputArray = ArrayFactory().createArray<double>(handle->realMatrixDims);
-        fftw_execute_dft_c2r(handle->planInverse, reinterpret_cast<fftw_complex*>(inputArray.begin().operator->()), outputArray.begin().operator->());
-        outputs[0] = outputArray;
-    }
     
     void r2c_inout(ArgumentList outputs, ArgumentList inputs) {
         auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
@@ -270,6 +262,25 @@ private:
         outputs[0] = outputArray;
     }
 
+    void c2r(ArgumentList outputs, ArgumentList inputs) {
+        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
+        TypedArray<std::complex<double>> inputArray = inputs[2];
+        const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(inputArray);
+        auto outputArray = ArrayFactory().createArray<double>(handle->realMatrixDims);
+        fftw_execute_dft_c2r(handle->planInverse, (fftw_complex *) inPtr, outputArray.begin().operator->());
+        outputs[0] = outputArray;
+    }
+    
+    void c2r_inout(ArgumentList outputs, ArgumentList inputs) {
+        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
+        TypedArray<std::complex<double>> inputArray = inputs[2];
+        const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(inputArray);
+        TypedArray<double> outputArray = std::move(inputs[3]); // Necessary! Prevents a memory copy
+        const double * outPtr = getDataPtr<double>(outputArray); // Also necessary! Prevents a memory copy.
+        fftw_execute_dft_c2r(handle->planInverse, (fftw_complex *) inPtr, (double *) outPtr);
+        outputs[0] = outputArray;
+    }
+
 public:
     void operator()(ArgumentList outputs, ArgumentList inputs) override {
         if (inputs[0].getType() == matlab::data::ArrayType::CHAR) {
@@ -278,8 +289,9 @@ public:
             if (command == "create") createDFTPlan(outputs, inputs);
             else if (command == "free") freeDFTPlan(outputs, inputs);
             else if (command == "r2c") r2c(outputs, inputs);
-            else if (command == "c2r") c2r(outputs, inputs);
             else if (command == "r2c_inout") r2c_inout(outputs, inputs);
+            else if (command == "c2r") c2r(outputs, inputs);
+            else if (command == "c2r_inout") c2r_inout(outputs, inputs);
             else if (command == "createR2RPlan") createR2RPlan(outputs, inputs);
             else if (command == "r2r") r2r(outputs, inputs);
             else if (command == "r2r_inout") r2r_inout(outputs, inputs);

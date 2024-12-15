@@ -5,7 +5,7 @@ x = rand(N,NyNz);
 nLoops = 10;
 
 % DCT = WVTransformConstantStratification.CosineTransformForwardMatrix(N);
-dft = RealToComplexTransform(size(x),dims=1,nCores=8); % ,planner="measure"
+dft = RealToComplexTransform(size(x),dims=1,nCores=8,planner="measure");
 % xout = zeros(size(x));
 
 tic
@@ -30,25 +30,26 @@ end
 val = toc;
 fprintf('%.2f: fftw out-of-place, preallocated r2c\n', val);
 
-% tic
-% for i=1:nLoops
-%     xout = dct.transformForwardIntoArray(x,xout);
-% end
-% val = toc;
-% fprintf('%.2f: out-of-place preallocated, fast DFT\n', val);
+tic
+for i=1:nLoops
+    x1back = ifft(y1,N,1,'symmetric');
+end
+val = toc;
+fprintf('%.2f: matlab out-of-place, ifft\n', val);
 
+tic
+for i=1:nLoops
+    x2back = dft.transformBack(y2);
+end
+val = toc;
+fprintf('%.2f: fftw out-of-place, c2r\n', val);
 
-% tic
-% for i=1:nLoops
-%     % x = dct.transformForward(x);
-%     % x = execute_dct_plan_mex(dct.plan,x);
-%     % xout = execute_dct_plan_inout_mex(dct.plan,x,xout);
-%     % xout = dct.transformForwardIntoArray(x,xout);
-%     % x = dct.transformForward(x);
-%     % x = applyMatrixDCT(x,DCT);
-%     % y = unaryOperation(x);
-%     % y = removeNegativeNumbers(x);
-% end
-% toc
+xout2 = zeros(dft.realSize);
+tic
+for i=1:nLoops
+    xout2 = dft.transformBackIntoArray(xout,xout2);
+end
+val = toc;
+fprintf('%.2f: fftw out-of-place, preallocated c2r\n', val);
 
 end
