@@ -1,5 +1,5 @@
 function profileableSpeedTestDFT
-N = 512;
+N = 1024;
 NyNz = 256*256;
 x = rand(N,NyNz);
 nLoops = 10;
@@ -51,5 +51,32 @@ for i=1:nLoops
 end
 val = toc;
 fprintf('%.2fs: fftw out-of-place, preallocated c2r\n', val);
+
+N = 1024;
+x = rand(N,N);
+nLoops = 1000;
+tic
+for i=1:nLoops
+    y1 = fft2(x);
+end
+val = toc;
+fprintf('%.2fs: matlab out-of-place, fft2\n', val);
+
+dft = RealToComplexTransform(size(x),dims=[1 2],nCores=8,planner="measure");
+
+tic
+for i=1:nLoops
+    y2 = dft.transformForward(x);
+end
+val = toc;
+fprintf('%.2fs: fftw out-of-place, r2c\n', val);
+
+xout = complex(zeros(dft.complexSize));
+tic
+for i=1:nLoops
+    xout = dft.transformForwardIntoArray(x,xout);
+end
+val = toc;
+fprintf('%.2fs: fftw out-of-place, preallocated r2c\n', val);
 
 end

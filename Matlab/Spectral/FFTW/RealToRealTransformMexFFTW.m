@@ -44,7 +44,7 @@ classdef RealToRealTransformMexFFTW < RealToRealTransform
 
         function fbar = transformForwardIntoArray(self,f,fbar)
             % fbar = execute_dct_plan_inout_mex(self.plan,f,fbar); % self.scaleFactor*
-            fbar = fftw_dft2('r2r_inout', self.plan,f,fbar);
+            fbar = fftw_dft2('r2r', self.plan,f,fbar);
         end
     end
 

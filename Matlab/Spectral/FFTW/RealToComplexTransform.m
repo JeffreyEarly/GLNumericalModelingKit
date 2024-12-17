@@ -3,6 +3,7 @@ classdef RealToComplexTransform < handle
         realSize
         complexSize (1,:) double 
         scaleFactor = 1;
+        scratch
     end
 
     properties (Access=private)
@@ -40,6 +41,7 @@ classdef RealToComplexTransform < handle
             end
 
             [self.plan, self.complexSize, self.scaleFactor] = fftw_dft2('create', sz, options.dims, options.nCores, planner);
+            self.scratch = complex(zeros(self.complexSize));
         end
 
         function xbar = transformForward(self,x)
@@ -47,14 +49,18 @@ classdef RealToComplexTransform < handle
         end
 
         function fbar = transformForwardIntoArray(self,f,fbar)
-            fbar = fftw_dft2('r2c_inout', self.plan,f,fbar);
+            fbar = fftw_dft2('r2c', self.plan,f,fbar);
         end
 
         function x = transformBack(self,xbar)
+            % self.scratch = reshape(xbar(1:end), size(xbar));
+            % x = fftw_dft2('c2r', self.plan, self.scratch);
             x = fftw_dft2('c2r', self.plan, xbar);
         end
 
         function x = transformBackIntoArray(self,xbar,x)
+            % self.scratch = reshape(xbar(1:end), size(xbar));
+            % x = fftw_dft2('c2r_inout', self.plan, self.scratch,x);
             x = fftw_dft2('c2r_inout', self.plan, xbar,x);
         end
 

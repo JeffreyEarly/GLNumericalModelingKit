@@ -174,22 +174,25 @@ private:
         }
     }
     
+    // Three ways to call this:
+    // 1. y = fftw_dft2('r2r', self.plan, x); // memory copy required
+    // 2. x = fftw_dft2('r2r', self.plan, x); // in-place fft
+    // 3. xbar = fftw_dft2('r2r', self.plan, x, xbar); // pre-allocated out-of-place fft
     void r2r(ArgumentList outputs, ArgumentList inputs) {
         auto handle = reinterpret_cast<R2RPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
-        TypedArray<double> inputArray = std::move(inputs[2]);
-        double* dataPtr = &(*inputArray.begin());
-        fftw_execute_r2r(handle->plan, dataPtr, dataPtr);
-        outputs[0] = inputArray;
-    }
-    
-    void r2r_inout(ArgumentList outputs, ArgumentList inputs) {
-        auto handle = reinterpret_cast<R2RPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
-        TypedArray<double> inputArray = inputs[2];
-        TypedArray<double> outputArray = std::move(inputs[3]); // Necessary! Prevents a memory copy
-        auto inPtr = getDataPtr<double>(inputArray); // Necessary! Prevents a memory copy.
-        double* outPtr = &(*outputArray.begin());
-        fftw_execute_r2r(handle->plan, (double *) inPtr, outPtr);
-        outputs[0] = outputArray;
+        if (inputs.size() == 3) {
+            TypedArray<double> inputArray = std::move(inputs[2]);
+            double* dataPtr = &(*inputArray.begin());
+            fftw_execute_r2r(handle->plan, dataPtr, dataPtr);
+            outputs[0] = inputArray;
+        } else if (inputs.size() == 4) {
+            TypedArray<double> inputArray = inputs[2];
+            TypedArray<double> outputArray = std::move(inputs[3]); // Necessary! Prevents a memory copy
+            auto inPtr = getDataPtr<double>(inputArray); // Necessary! Prevents a memory copy.
+            double* outPtr = &(*outputArray.begin());
+            fftw_execute_r2r(handle->plan, (double *) inPtr, outPtr);
+            outputs[0] = outputArray;
+        }
     }
     
     void createDFTPlan(ArgumentList outputs, ArgumentList inputs) {
@@ -215,6 +218,8 @@ private:
         fftw_init_threads();
         fftw_plan_with_nthreads(nCores);
 
+        // c2r destroys the complex input
+        // FFTW_PRESERVE_INPUT only works if the fft is in a single dimension.
         unsigned planner = static_cast<unsigned>(inputs[4][0]);
         fftw_plan planForward = fftw_plan_guru_dft_r2c(iodims.size(), iodims.data(), howmany_dims.size(), howmany_dims.data(), in, out, planner);
         fftwDimsSetup(flatComplexMatrixDims, transformDims, iodims, howmany_dims, TransformTypeDFTInverse);
@@ -243,32 +248,64 @@ private:
     }
 
     void r2c(ArgumentList outputs, ArgumentList inputs) {
-        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
-        TypedArray<double> inputArray = inputs[2];
+        enum r2rArguments {planArg = 1, inMatrixArg = 2, inoutMatrixArg = 3};
+        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[planArg][0]));
+        if (!handle) {
+            matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("Invalid plan provided")}));
+        }
+        if (inputs[inMatrixArg].getType() != matlab::data::ArrayType::DOUBLE) {
+            matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({ factory.createScalar("Input matrix must be a double") }));
+        }
+        TypedArray<double> inputArray = inputs[inMatrixArg];
+        if (inputArray.getDimensions() != handle->realMatrixDims) {
+            matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("Input matrix dimensions do not match expected dimensions")}));
+        }
+        
         const double* inPtr = getDataPtr<double>(inputArray);
-        auto outputArray = ArrayFactory().createArray<std::complex<double>>(handle->complexMatrixDims);
-        std::complex<double> * outPtr = &(*outputArray.begin());
-        fftw_execute_dft_r2c(handle->planForward, (double*) inPtr, (fftw_complex *) outPtr);
-        outputs[0] = outputArray;
-    }
-    
-    void r2c_inout(ArgumentList outputs, ArgumentList inputs) {
-        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
-        TypedArray<double> inputArray = inputs[2];
-        const double* inPtr = getDataPtr<double>(inputArray);
-        TypedArray<std::complex<double>> outputArray = std::move(inputs[3]); // Necessary! Prevents a memory copy
-        const std::complex<double> * outPtr = getDataPtr<std::complex<double>>(outputArray); // Also necessary! Prevents a memory copy.
-        fftw_execute_dft_r2c(handle->planForward, (double *) inPtr, (fftw_complex *) outPtr);
-        outputs[0] = outputArray;
+        std::complex<double>* outPtr = nullptr;
+        
+        if (inputs.size() == 3) {
+            TypedArray<std::complex<double>> outputArray = ArrayFactory().createArray<std::complex<double>>(handle->complexMatrixDims);
+            outPtr = &(*outputArray.begin());
+            fftw_execute_dft_r2c(handle->planForward, (double*) inPtr, (fftw_complex *) outPtr);
+            outputs[0] = outputArray;
+        } else if (inputs.size() == 4) {
+            if (inputs[inoutMatrixArg].getType() != matlab::data::ArrayType::COMPLEX_DOUBLE) {
+                matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({ factory.createScalar("In/out matrix must be a complex double") }));
+            }
+            TypedArray<std::complex<double>> outputArray = std::move(inputs[inoutMatrixArg]);
+            if (outputArray.getDimensions() != handle->complexMatrixDims) {
+                matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("In/out matrix dimensions do not match expected dimensions")}));
+            }
+            outPtr = (std::complex<double> *) getDataPtr<std::complex<double>>(outputArray); // Also necessary! Prevents a memory copy.
+            fftw_execute_dft_r2c(handle->planForward, (double*) inPtr, (fftw_complex *) outPtr);
+            outputs[0] = outputArray;
+        }
+
     }
 
     void c2r(ArgumentList outputs, ArgumentList inputs) {
-        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
-        TypedArray<std::complex<double>> inputArray = inputs[2];
-        const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(inputArray);
-        auto outputArray = ArrayFactory().createArray<double>(handle->realMatrixDims);
-        fftw_execute_dft_c2r(handle->planInverse, (fftw_complex *) inPtr, outputArray.begin().operator->());
-        outputs[0] = outputArray;
+        enum r2rArguments {planArg = 1, inMatrixArg = 2, inoutMatrixArg = 3};
+        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[planArg][0]));
+        if (!handle) {
+            matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("Invalid plan provided")}));
+        }
+        if (inputs[inMatrixArg].getType() != matlab::data::ArrayType::COMPLEX_DOUBLE) {
+            matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({ factory.createScalar("Input matrix must be a complex double") }));
+        }
+        TypedArray<std::complex<double>> inputArray = inputs[inMatrixArg];
+        if (inputArray.getDimensions() != handle->complexMatrixDims) {
+            matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("Input matrix dimensions do not match expected dimensions")}));
+        }
+        
+        if (inputs.size() == 3 && outputs.size() == 1) {
+            // in this scenario we have to copy memory, otherwise we'll destroy the input.
+            std::complex<double> * inPtr = &(*inputArray.begin());
+            auto outputArray = ArrayFactory().createArray<double>(handle->realMatrixDims);
+            fftw_execute_dft_c2r(handle->planInverse, (fftw_complex *) inPtr, outputArray.begin().operator->());
+            outputs[0] = outputArray;
+        } else if (inputs.size() == 4 && outputs.size() == 2) {
+        }
     }
     
     void c2r_inout(ArgumentList outputs, ArgumentList inputs) {
@@ -289,13 +326,19 @@ public:
             if (command == "create") createDFTPlan(outputs, inputs);
             else if (command == "free") freeDFTPlan(outputs, inputs);
             else if (command == "r2c") r2c(outputs, inputs);
-            else if (command == "r2c_inout") r2c_inout(outputs, inputs);
             else if (command == "c2r") c2r(outputs, inputs);
             else if (command == "c2r_inout") c2r_inout(outputs, inputs);
             else if (command == "createR2RPlan") createR2RPlan(outputs, inputs);
-            else if (command == "r2r") r2r(outputs, inputs);
-            else if (command == "r2r_inout") r2r_inout(outputs, inputs);
+            else if (command == "r2r") {
+                r2r(outputs, inputs);
+//                if (inputs.size() == 3 && outputs.size() == 1) {
+//                    r2r(outputs, inputs);
+//                } else if (inputs.size() == 4 && outputs.size() == 1) {
+//                    r2r_inout(outputs, inputs);
+//                }
+            }
             else matlabPtr->feval(u"error", 0, {ArrayFactory().createScalar("Unknown command.")});
+            //            else if (command == "r2r_inout") r2r_inout(outputs, inputs);
         } else {
             matlabPtr->feval(u"error", 0, {ArrayFactory().createScalar("Invalid input.")});
         }
