@@ -198,8 +198,10 @@ private:
     }
     
     void createDFTPlan(ArgumentList outputs, ArgumentList inputs) {
-        auto realMatrixDims = typedArrayToSizeTVector(inputs[1]);
-        auto transformDims = typedArrayToSizeTVector(inputs[2]);
+        enum dftPlanArguments {dimArg = 1, transformDimArg = 2, nCoresArg = 3, plannerArg = 4};
+        
+        auto realMatrixDims = typedArrayToSizeTVector(inputs[dimArg]);
+        auto transformDims = typedArrayToSizeTVector(inputs[transformDimArg]);
         auto complexMatrixDims = outputDimensionsFromInputDimensions(realMatrixDims, transformDims);
 
         std::vector<size_t> flatRealMatrixDims = realMatrixDims;
@@ -216,13 +218,13 @@ private:
         double* in = fftw_alloc_real(totalRealSize);
         fftw_complex* out = fftw_alloc_complex(totalComplexSize);
         
-        int nCores = static_cast<int>(inputs[3][0]);
+        int nCores = static_cast<int>(inputs[nCoresArg][0]);
         fftw_init_threads();
         fftw_plan_with_nthreads(nCores);
 
         // c2r destroys the complex input
         // FFTW_PRESERVE_INPUT only works if the fft is in a single dimension.
-        unsigned planner = static_cast<unsigned>(inputs[4][0]);
+        unsigned planner = static_cast<unsigned>(inputs[plannerArg][0]);
         fftw_plan planForward = fftw_plan_guru_dft_r2c(iodims.size(), iodims.data(), howmany_dims.size(), howmany_dims.data(), in, out, planner);
         fftwDimsSetup(flatComplexMatrixDims, transformDims, iodims, howmany_dims, TransformTypeDFTInverse);
         printDims(iodims);
@@ -251,7 +253,7 @@ private:
     }
 
     void r2c(ArgumentList outputs, ArgumentList inputs) {
-        enum r2rArguments {planArg = 1, inMatrixArg = 2, inoutMatrixArg = 3};
+        enum r2cArguments {planArg = 1, inMatrixArg = 2, inoutMatrixArg = 3};
         auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[planArg][0]));
         if (!handle) {
             matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("Invalid plan provided")}));
@@ -288,7 +290,7 @@ private:
     }
 
     void c2r(ArgumentList outputs, ArgumentList inputs) {
-        enum r2rArguments {planArg = 1, inMatrixArg = 2, inoutMatrixArg = 3};
+        enum c2rArguments {planArg = 1, inMatrixArg = 2, inoutMatrixArg = 3};
         auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[planArg][0]));
         if (!handle) {
             matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("Invalid plan provided")}));
@@ -329,16 +331,6 @@ private:
             outputs[0] = outputComplexArray;
             outputs[1] = outputRealArray;
         }
-    }
-    
-    void c2r_inout(ArgumentList outputs, ArgumentList inputs) {
-        auto handle = reinterpret_cast<DFTPlanHandle*>(static_cast<uint64_t>(inputs[1][0]));
-        TypedArray<std::complex<double>> inputArray = inputs[2];
-        const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(inputArray);
-        TypedArray<double> outputArray = std::move(inputs[3]); // Necessary! Prevents a memory copy
-        const double * outPtr = getDataPtr<double>(outputArray); // Also necessary! Prevents a memory copy.
-        fftw_execute_dft_c2r(handle->planInverse, (fftw_complex *) inPtr, (double *) outPtr);
-        outputs[0] = outputArray;
     }
 
 public:
