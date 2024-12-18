@@ -36,6 +36,8 @@ private:
         fftw_plan planInverse;
         std::vector<size_t> realMatrixDims;
         std::vector<size_t> complexMatrixDims;
+        fftw_complex* complexMatrixBuffer;
+        size_t bufferLength;
     };
     
     struct R2RPlanHandle {
@@ -227,9 +229,9 @@ private:
         printDims(howmany_dims);
         fftw_plan planInverse = fftw_plan_guru_dft_c2r(iodims.size(), iodims.data(), howmany_dims.size(), howmany_dims.data(), out, in, planner);
         fftw_free(in);
-        fftw_free(out);
+//        fftw_free(out);
         
-        auto handle = new DFTPlanHandle{planForward, planInverse, realMatrixDims, complexMatrixDims};
+        auto handle = new DFTPlanHandle{planForward, planInverse, realMatrixDims, complexMatrixDims, out, sizeof(fftw_complex)*totalComplexSize};
 
         outputs[0] = factory.createScalar(reinterpret_cast<uint64_t>(handle));
         auto dimsArray = factory.createArray<double>({complexMatrixDims.size()});
@@ -243,6 +245,7 @@ private:
         if (handle) {
             fftw_destroy_plan(handle->planForward);
             fftw_destroy_plan(handle->planInverse);
+            fftw_free(handle->complexMatrixBuffer);
             delete handle;
         }
     }
@@ -293,18 +296,38 @@ private:
         if (inputs[inMatrixArg].getType() != matlab::data::ArrayType::COMPLEX_DOUBLE) {
             matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({ factory.createScalar("Input matrix must be a complex double") }));
         }
-        TypedArray<std::complex<double>> inputArray = inputs[inMatrixArg];
-        if (inputArray.getDimensions() != handle->complexMatrixDims) {
-            matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("Input matrix dimensions do not match expected dimensions")}));
-        }
         
-        if (inputs.size() == 3 && outputs.size() == 1) {
-            // in this scenario we have to copy memory, otherwise we'll destroy the input.
-            std::complex<double> * inPtr = &(*inputArray.begin());
-            auto outputArray = ArrayFactory().createArray<double>(handle->realMatrixDims);
-            fftw_execute_dft_c2r(handle->planInverse, (fftw_complex *) inPtr, outputArray.begin().operator->());
-            outputs[0] = outputArray;
-        } else if (inputs.size() == 4 && outputs.size() == 2) {
+        if ( outputs.size() == 1 ) {
+            TypedArray<std::complex<double>> inputArray = inputs[inMatrixArg];
+            if (inputArray.getDimensions() != handle->complexMatrixDims) {
+                matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("Input matrix dimensions do not match expected dimensions")}));
+            }
+            
+            if (inputs.size() == 3) {
+                // in this scenario we copy to our pre-allocated buffer, then create new memory for the output
+                const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(inputArray);
+                std::memcpy( (void *) inPtr, handle->complexMatrixBuffer, handle->bufferLength);
+                auto outputArray = ArrayFactory().createArray<double>(handle->realMatrixDims);
+                fftw_execute_dft_c2r(handle->planInverse, handle->complexMatrixBuffer, outputArray.begin().operator->());
+                outputs[0] = outputArray;
+            } else if (inputs.size() == 4) {
+                // copy to our pre-allocated buffer, then write to the user provided (pre-allocated) variable
+                const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(inputArray);
+                std::memcpy( (void *) inPtr, handle->complexMatrixBuffer, handle->bufferLength);
+                TypedArray<double> outputArray = std::move(inputs[inoutMatrixArg]); // Necessary! Prevents a memory copy
+                const double * outPtr = getDataPtr<double>(outputArray); // Also necessary! Prevents a memory copy.
+                fftw_execute_dft_c2r(handle->planInverse, handle->complexMatrixBuffer, (double *) outPtr);
+                outputs[0] = outputArray;
+            }
+        } else if ( inputs.size() == 4 && outputs.size() == 2 ) {
+            // No copies, input will be destroyed
+            TypedArray<std::complex<double>> outputComplexArray = std::move(inputs[inMatrixArg]);
+            TypedArray<double> outputRealArray = std::move(inputs[inoutMatrixArg]);
+            const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(outputComplexArray);
+            const double * outPtr = getDataPtr<double>(outputRealArray);
+            fftw_execute_dft_c2r(handle->planInverse, (fftw_complex *) inPtr, (double *) outPtr);
+            outputs[0] = outputComplexArray;
+            outputs[1] = outputRealArray;
         }
     }
     

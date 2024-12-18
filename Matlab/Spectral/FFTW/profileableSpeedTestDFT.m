@@ -52,6 +52,13 @@ end
 val = toc;
 fprintf('%.2fs: fftw out-of-place, preallocated c2r\n', val);
 
+tic
+for i=1:nLoops
+    [xout, xout2] = dft.transformBackIntoArrayDestructive(xout,xout2);
+end
+val = toc;
+fprintf('%.2fs: fftw out-of-place destructive, preallocated c2r\n', val);
+
 N = 1024;
 x = rand(N,N);
 nLoops = 1000;
