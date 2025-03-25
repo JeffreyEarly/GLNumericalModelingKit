@@ -342,7 +342,6 @@ public:
             else if (command == "free") freeDFTPlan(outputs, inputs);
             else if (command == "r2c") r2c(outputs, inputs);
             else if (command == "c2r") c2r(outputs, inputs);
-            else if (command == "c2r_inout") c2r_inout(outputs, inputs);
             else if (command == "createR2RPlan") createR2RPlan(outputs, inputs);
             else if (command == "r2r") {
                 r2r(outputs, inputs);
