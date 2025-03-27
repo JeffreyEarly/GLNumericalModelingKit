@@ -51,22 +51,22 @@ classdef RealToComplexTransform < handle
 
         function fbar = transformForwardIntoArray(self,f,fbar)
             % Need to multiply by the scaleFactor to match Matlab's output
-            fbar = fftw_dft2('r2c', self.plan,f,fbar);
+            fbar = fftw_dft2('r2c', self.plan,f,complex(fbar));
         end
 
         function x = transformBack(self,xbar)
-            x = fftw_dft2('c2r', self.plan, xbar);
+            x = fftw_dft2('c2r', self.plan, complex(xbar));
         end
 
         function x = transformBackIntoArray(self,xbar,x)
-            x = fftw_dft2('c2r', self.plan, xbar,x);
+            x = fftw_dft2('c2r', self.plan, complex(xbar),x);
         end
 
         function [xbar, x] = transformBackIntoArrayDestructive(self,xbar,x)
             % This function will apply the inverse fft to xbar to return x.
             % However, the values of xbar will be destroyed in the
             % processes.
-            [xbar, x] = fftw_dft2('c2r', self.plan, xbar,x);
+            [xbar, x] = fftw_dft2('c2r', self.plan, complex(xbar),x);
         end
 
         function delete(self)

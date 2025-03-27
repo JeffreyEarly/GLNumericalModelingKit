@@ -304,18 +304,20 @@ private:
             if (inputArray.getDimensions() != handle->complexMatrixDims) {
                 matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("Input matrix dimensions do not match expected dimensions")}));
             }
-            
             if (inputs.size() == 3) {
                 // in this scenario we copy to our pre-allocated buffer, then create new memory for the output
                 const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(inputArray);
-                std::memcpy( (void *) inPtr, handle->complexMatrixBuffer, handle->bufferLength);
+                std::memcpy( handle->complexMatrixBuffer, (void *) inPtr, handle->bufferLength);
                 auto outputArray = ArrayFactory().createArray<double>(handle->realMatrixDims);
+                // TypedArray<double>  outputArray = ArrayFactory().createArray<double>(handle->realMatrixDims);
+                // const double * outPtr = getDataPtr<double>(outputArray); // Also necessary! Prevents a memory copy.
+                // fftw_execute_dft_c2r(handle->planInverse, handle->complexMatrixBuffer, (double *) outPtr);
                 fftw_execute_dft_c2r(handle->planInverse, handle->complexMatrixBuffer, outputArray.begin().operator->());
                 outputs[0] = outputArray;
             } else if (inputs.size() == 4) {
                 // copy to our pre-allocated buffer, then write to the user provided (pre-allocated) variable
                 const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(inputArray);
-                std::memcpy( (void *) inPtr, handle->complexMatrixBuffer, handle->bufferLength);
+                std::memcpy(  handle->complexMatrixBuffer, (void *) inPtr, handle->bufferLength);
                 TypedArray<double> outputArray = std::move(inputs[inoutMatrixArg]); // Necessary! Prevents a memory copy
                 const double * outPtr = getDataPtr<double>(outputArray); // Also necessary! Prevents a memory copy.
                 fftw_execute_dft_c2r(handle->planInverse, handle->complexMatrixBuffer, (double *) outPtr);
