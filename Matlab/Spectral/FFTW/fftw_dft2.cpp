@@ -282,7 +282,8 @@ private:
             if (outputArray.getDimensions() != handle->complexMatrixDims) {
                 matlabPtr->feval(u"error", 0, std::vector<matlab::data::Array>({factory.createScalar("In/out matrix dimensions do not match expected dimensions")}));
             }
-            outPtr = (std::complex<double> *) getDataPtr<std::complex<double>>(outputArray); // Also necessary! Prevents a memory copy.
+            // outPtr = (std::complex<double> *) getDataPtr<std::complex<double>>(outputArray); // Also necessary! Prevents a memory copy.
+            outPtr = &(*outputArray.begin());
             fftw_execute_dft_r2c(handle->planForward, (double*) inPtr, (fftw_complex *) outPtr);
             outputs[0] = outputArray;
         }
@@ -319,16 +320,22 @@ private:
                 const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(inputArray);
                 std::memcpy(  handle->complexMatrixBuffer, (void *) inPtr, handle->bufferLength);
                 TypedArray<double> outputArray = std::move(inputs[inoutMatrixArg]); // Necessary! Prevents a memory copy
-                const double * outPtr = getDataPtr<double>(outputArray); // Also necessary! Prevents a memory copy.
+                // const double * outPtr = getDataPtr<double>(outputArray); // Also necessary! Prevents a memory copy.
+                const double * outPtr = &(*outputArray.begin()); // allow a memory copy of Matlab deems necessary
                 fftw_execute_dft_c2r(handle->planInverse, handle->complexMatrixBuffer, (double *) outPtr);
                 outputs[0] = outputArray;
             }
         } else if ( inputs.size() == 4 && outputs.size() == 2 ) {
-            // No copies, input will be destroyed
+            // No copies, input will be destroyed. Matlab should be able to avoid a memory copy, but doesn't seem to unless we use getDataPtr
             TypedArray<std::complex<double>> outputComplexArray = std::move(inputs[inMatrixArg]);
+            // const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(outputComplexArray);
+            std::complex<double> * inPtr = &(*outputComplexArray.begin());
+
+            // In this case it appears to be better to signal to Matlab that we will be writing to the output.
             TypedArray<double> outputRealArray = std::move(inputs[inoutMatrixArg]);
-            const std::complex<double> * inPtr = getDataPtr<std::complex<double>>(outputComplexArray);
-            const double * outPtr = getDataPtr<double>(outputRealArray);
+            // const double * outPtr = getDataPtr<double>(outputRealArray);
+            const double * outPtr = &(*outputRealArray.begin());
+
             fftw_execute_dft_c2r(handle->planInverse, (fftw_complex *) inPtr, (double *) outPtr);
             outputs[0] = outputComplexArray;
             outputs[1] = outputRealArray;
