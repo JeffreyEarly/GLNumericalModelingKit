@@ -5,7 +5,7 @@ x = rand(N,NyNz);
 nLoops = 10;
 
 % DCT = WVTransformConstantStratification.CosineTransformForwardMatrix(N);
-dft = RealToComplexTransform(size(x),dims=1,nCores=8,planner="measure");
+dft = RealToComplexTransform(size(x),dims=1,nCores=12,planner="estimate");
 % xout = zeros(size(x));
 
 tic
@@ -69,7 +69,8 @@ end
 val = toc;
 fprintf('%.2fs: matlab out-of-place, fft2\n', val);
 
-dft = RealToComplexTransform(size(x),dims=[1 2],nCores=8,planner="measure");
+dft = RealToComplexTransform(size(x),dims=[1 2],nCores=12,planner="measure");
+y2 = dft.transformForward(x);
 
 tic
 for i=1:nLoops
