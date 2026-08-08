@@ -33,3 +33,21 @@ Run the issue #38 smoke suite with:
 ```sh
 matlab -batch "addpath('Matlab/Spectral/FFTW'); results=runtests('Matlab/Spectral/FFTW/UnitTests/TestFFTWEngineLayoutBenchmark.m'); assertSuccess(results)"
 ```
+
+## Reproduce the issue #39 ownership and copy benchmark
+
+From the repository root, run:
+
+```sh
+matlab -batch "addpath('Matlab/Spectral/FFTW'); runFFTWMexOwnershipBenchmark"
+```
+
+The issue #39 benchmark imports the committed issue #38 winner for each workload and separates FFT execution, output allocation, buffer wrapping, explicit `memcpy`, mutable-array detachment, and MATLAB/MEX boundary time. It compares ordinary MATLAB-owned arrays, caller-preallocated arrays, MATLAB Data API buffers, and FFTW-owned buffers returned with a custom `fftw_free` deleter. Pointer tokens and lifetime counters verify whether each path actually crosses the MEX boundary without a spectrum copy.
+
+Each run writes `ownership-benchmark.json` and `summary.md` beneath a timestamped directory in `results/issue39/`. The report recommends an ownership contract but leaves the milestone's GO or NO-GO decision to issue #40.
+
+Run the issue #39 smoke suite with:
+
+```sh
+matlab -batch "addpath('Matlab/Spectral/FFTW'); results=runtests('Matlab/Spectral/FFTW/UnitTests/TestFFTWMexOwnershipBenchmark.m'); assertSuccess(results)"
+```
