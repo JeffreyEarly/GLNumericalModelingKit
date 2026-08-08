@@ -77,6 +77,7 @@ struct PlanHandle {
     size_t realElements = 0;
     size_t complexElements = 0;
     double planningSeconds = 0;
+    bool planningLimitReached = false;
     Metrics lastMetrics;
 };
 
@@ -224,7 +225,7 @@ class MexFunction : public matlab::mex::Function {
     }
 
     void create(ArgumentList outputs, ArgumentList inputs) {
-        require(inputs.size() == 8,"FFTWMexOwnership:InvalidInputCount","create expects dimensions, transform order, threads, planner flags, alignment mode, and real and spectrum templates.");
+        require(inputs.size() == 8 || inputs.size() == 9,"FFTWMexOwnership:InvalidInputCount","create expects dimensions, transform order, threads, planner flags, alignment mode, real and spectrum templates, and an optional planning time limit.");
         auto handle = std::make_unique<PlanHandle>();
         const auto realDimensions = numericVector(inputs[1]);
         handle->realDimensions.assign(realDimensions.begin(),realDimensions.end());
@@ -240,6 +241,9 @@ class MexFunction : public matlab::mex::Function {
         handle->complexElements = product(handle->complexDimensions);
         const int nThreads = static_cast<int>(static_cast<double>(inputs[3][0]));
         unsigned flags = static_cast<unsigned>(static_cast<double>(inputs[4][0]));
+        const double timeLimit = inputs.size() == 9 ? static_cast<double>(inputs[8][0]) : 10.0;
+        require(nThreads > 0,"FFTWMexOwnership:InvalidThreadCount","Thread count must be positive.");
+        require(timeLimit > 0 && std::isfinite(timeLimit),"FFTWMexOwnership:InvalidTimeLimit","Planning time limit must be finite and positive.");
         handle->alignmentMode = textValue(inputs[5]);
         require(handle->alignmentMode == "matched" || handle->alignmentMode == "unaligned","FFTWMexOwnership:InvalidAlignmentMode","Alignment mode must be matched or unaligned.");
         if (handle->alignmentMode == "unaligned") flags |= FFTW_UNALIGNED;
@@ -258,11 +262,17 @@ class MexFunction : public matlab::mex::Function {
             complexScratch = alignedBuffer(2*handle->complexElements,handle->forwardOutputAlignment);
             require(fftw_init_threads() != 0,"FFTWMexOwnership:ThreadInitializationFailed","FFTW thread initialization failed.");
             fftw_plan_with_nthreads(nThreads);
-            fftw_set_timelimit(10.0);
-            const auto start = Clock::now();
-            handle->forward = createPlan(*handle,realScratch.data,reinterpret_cast<fftw_complex*>(complexScratch.data),flags,true);
-            handle->inverse = createPlan(*handle,realScratch.data,reinterpret_cast<fftw_complex*>(complexScratch.data),flags,false);
-            handle->planningSeconds = elapsedSeconds(start,Clock::now());
+            fftw_set_timelimit(timeLimit);
+            auto createTimedPlan = [&](bool forward) {
+                const auto start = Clock::now();
+                fftw_plan plan = createPlan(*handle,realScratch.data,reinterpret_cast<fftw_complex*>(complexScratch.data),flags,forward);
+                const double elapsed = elapsedSeconds(start,Clock::now());
+                handle->planningSeconds += elapsed;
+                handle->planningLimitReached = handle->planningLimitReached || elapsed >= 0.95*timeLimit;
+                return plan;
+            };
+            handle->forward = createTimedPlan(true);
+            handle->inverse = createTimedPlan(false);
             fftw_set_timelimit(FFTW_NO_TIMELIMIT);
             require(handle->forward && handle->inverse,"FFTWMexOwnership:PlanCreationFailed","FFTW failed to create the ownership benchmark plans.");
             handle->complexScratchBase = complexScratch.base;
@@ -287,6 +297,7 @@ class MexFunction : public matlab::mex::Function {
         if (outputs.size() > 3) outputs[3] = factory.createScalar(raw->planningSeconds);
         if (outputs.size() > 4) outputs[4] = factory.createScalar(static_cast<double>(raw->forwardInputAlignment));
         if (outputs.size() > 5) outputs[5] = factory.createScalar(static_cast<double>(raw->forwardOutputAlignment));
+        if (outputs.size() > 6) outputs[6] = factory.createScalar(raw->planningLimitReached);
     }
 
     void freePlan(ArgumentList, ArgumentList inputs) {
@@ -565,6 +576,11 @@ class MexFunction : public matlab::mex::Function {
         if (outputs.size() > 2) outputs[2] = factory.createScalar(true);
     }
 
+    void forgetWisdom(ArgumentList inputs) {
+        require(inputs.size() == 1,"FFTWMexOwnership:InvalidInputCount","forgetWisdom accepts no additional inputs.");
+        fftw_forget_wisdom();
+    }
+
 public:
     MexFunction() { instance = this; }
     ~MexFunction() override { if (instance == this) instance = nullptr; }
@@ -584,6 +600,7 @@ public:
         else if (command == "info") info(outputs);
         else if (command == "memory") processMemory(outputs);
         else if (command == "alignmentSelfTest") alignmentSelfTest(outputs);
+        else if (command == "forgetWisdom") forgetWisdom(inputs);
         else if (command == "noop") return;
         else fail("FFTWMexOwnership:UnknownCommand","Unknown ownership benchmark command.");
     }
