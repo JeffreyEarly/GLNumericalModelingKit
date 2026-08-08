@@ -79,8 +79,10 @@ classdef RealToComplexTransform < handle
             arguments
                 fftwlibpath = fullfile(matlabroot,'bin',computer('arch'),'libmwfftw3.3.dylib')
             end
+            sourceDirectory = fileparts(mfilename('fullpath'));
+            sourcePath = fullfile(sourceDirectory,'fftw_dft2.cpp');
             ipath = ['-I' fullfile(matlabroot,'extern','include')];
-            mex(ipath,'fftw_dft2.cpp',fftwlibpath)
+            mex('-outdir',sourceDirectory,ipath,sourcePath,fftwlibpath)
         end
     end
 end
