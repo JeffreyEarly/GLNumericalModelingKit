@@ -118,6 +118,21 @@ inline ScratchBuffer alignedBuffer(size_t nDoubles, int targetAlignment) {
     throw std::runtime_error("Unable to manufacture the requested FFTW alignment class.");
 }
 
+inline ScratchBuffer alignedBufferWithOffset(size_t nDoubles, size_t offsetDoubles, int targetAlignment) {
+    constexpr size_t padding = 64;
+    ScratchBuffer buffer;
+    buffer.base = fftw_alloc_real(nDoubles + padding);
+    if (!buffer.base) throw std::bad_alloc();
+    for (size_t offset = 0; offset < padding; ++offset) {
+        if (fftw_alignment_of(buffer.base + offset + offsetDoubles) == targetAlignment) {
+            buffer.data = buffer.base + offset;
+            return buffer;
+        }
+    }
+    fftw_free(buffer.base);
+    throw std::runtime_error("Unable to manufacture the requested offset FFTW alignment class.");
+}
+
 inline double elapsedSeconds(const Clock::time_point& start, const Clock::time_point& end) {
     return std::chrono::duration<double>(end-start).count();
 }

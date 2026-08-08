@@ -5,7 +5,7 @@ x = rand(N,NyNz);
 nLoops = 10;
 
 DCT = WVTransformConstantStratification.CosineTransformForwardMatrix(N);
-dct = RealToRealTransformMexFFTW(size(x),dim=1,transform="cosine",nCores=8);
+dct = RealToRealTransform(size(x),dims=1,transform="cosine",nCores=8);
 xout = zeros(size(x));
 
 tic

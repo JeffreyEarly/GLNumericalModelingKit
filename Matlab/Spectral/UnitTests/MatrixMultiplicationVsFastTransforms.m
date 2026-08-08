@@ -13,12 +13,8 @@ iDCT = WVTransformConstantStratification.CosineTransformBackMatrix(N);
 NyNz = 256*256;
 x = rand(N,NyNz);
 nLoops = 20;
-% dct = RealToRealTransformLibPointerFFTW(size(x),dim=1,transform="cosine",planner="exhaustive",nCores=8);
-% dct = RealToRealTransformLibPointerFFTW(size(x),dim=1,transform="cosine",planner="measure",nCores=8,libname='libfftw3_omp',libpath='/opt/homebrew/opt/fftw/lib');
-
-% RealToRealTransformMexFFTW.makeMexFiles();
-% RealToRealTransformMexFFTW.makeOMPMexFiles();
-% dct = RealToRealTransformMexFFTW(size(x),dim=1,transform="cosine",planner="exhaustive",nCores=8);
+% RealToRealTransform.makeMexFiles();
+% dct = RealToRealTransform(size(x),dims=1,transform="cosine",planner="exhaustive",nCores=8);
 
 %%
 fprintf('%d point DCT/iDCT with matrix transform:\n\t', N)

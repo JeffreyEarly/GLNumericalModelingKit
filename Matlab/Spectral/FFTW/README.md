@@ -31,6 +31,35 @@ Run the production test suite with:
 matlab -batch "addpath('Matlab/Spectral/FFTW'); results=runtests('Matlab/Spectral/FFTW/UnitTests/TestRealToComplexTransform.m'); assertSuccess(results)"
 ```
 
+## Build and use the real-to-real backend
+
+RealToRealTransform is the production DCT-I/DST-I interface and follows the same constructor, ownership, alignment, and build conventions as RealToComplexTransform:
+
+~~~matlab
+RealToRealTransform.makeMexFiles
+transform = RealToRealTransform([65 33024],dims=1,transform="cosine",dataType="complex");
+coefficients = transform.transformForward(values);
+roundTrip = transform.transformBack(coefficients);
+~~~
+
+Cosine transforms retain the physical shape. Sine transforms omit the two physical endpoints from spectralSize; forward execution ignores their values and inverse execution restores exact zeros. Both directions are normalized to match the GL transform matrices, so scaleFactor is one. Complex arrays remain interleaved and are transformed as batched real and imaginary components without MATLAB packing arrays.
+
+Caller-preallocated outputs must be reassigned. The default unaligned plans accept arbitrary MATLAB arrays; matched alignment remains an explicit expert option.
+
+Run the issue #43 benchmark with:
+
+~~~sh
+matlab -batch "addpath('Matlab/Spectral'); addpath('Matlab/Spectral/FFTW'); runFFTWR2RBenchmark"
+~~~
+
+The benchmark compares complete allocating calls with the dense matrices and FFT-extension implementations at the validated vertical sizes and half-x batch anchors. It writes raw timings, winners, and bounded eligibility intervals beneath results/issue43/.
+
+Run the production and benchmark tests with:
+
+~~~sh
+matlab -batch "addpath('Matlab/Spectral'); addpath('Matlab/Spectral/FFTW'); results=runtests({'Matlab/Spectral/FFTW/UnitTests/TestRealToRealTransform.m','Matlab/Spectral/FFTW/UnitTests/TestFFTWR2RBenchmark.m'}); assertSuccess(results)"
+~~~
+
 ## Reproduce the issue #37 baseline
 
 From the repository root, run:
