@@ -2,14 +2,33 @@
 
 This directory contains the bundled-FFTW real-to-complex backend and the feasibility benchmarks that established its performance and ownership contracts. The benchmark gateways remain experimental and are not a WaveVortex integration commitment.
 
+## Discover and build the backend
+
+`FFTWBackend` is the release-aware entry point for normal use. A capability query never builds or warns, and expected availability failures are returned as structured status:
+
+```matlab
+capabilities = FFTWBackend.capabilities();
+if capabilities.build.isRequired && capabilities.build.isPossible
+    capabilities = FFTWBackend.build();
+end
+```
+
+The initial provider is `matlab-bundled`, supported on MATLAB R2026a updates for macOS `maca64`. The builder resolves the active installation's FFTW library, compiles both production gateways in a temporary directory, validates their loaded library, alignment, and numerical behavior, and installs both only after the staged modules pass. A failed replacement restores the previous ignored MEX files.
+
+The result has top-level `status`, `isAvailable`, and `isComplete` fields. Inspect `features.r2c`, `features.c2r`, `features.dct1`, and `features.dst1` individually; a partial backend can have only some usable features. Each module and feature contains a structured `reason` with a stable code, stage, module, identifier, and actionable message. The `eligibility` field contains the issue #41 horizontal readiness contract and issue #43's bounded DCT-I/DST-I table. Real-to-real eligibility applies only to an exact tested `Nz` and an inclusive recorded batch interval.
+
+Unsupported releases, architectures, missing compilers or libraries, locked modules, compilation failures, library mismatches, and failed self-tests are returned rather than thrown. No FFTW source, FFTW library, or precompiled MEX binary is distributed.
+
 ## Build and use the half-spectrum backend
 
 Build the production gateway against the active MATLAB installation's bundled FFTW library from any working directory:
 
 ```matlab
 addpath('/path/to/GLNumericalModelingKit/Matlab/Spectral/FFTW')
-RealToComplexTransform.makeMexFiles
+FFTWBackend.build()
 ```
+
+`RealToComplexTransform.makeMexFiles` remains available as a compatibility build entry point.
 
 `RealToComplexTransform` accepts a nonempty ordered list of distinct transform dimensions. The final entry is the compressed dimension: `[2 1]` produces half-x storage, `[1 2]` produces half-y storage, and `[3 1]` transforms z before storing half-x. If the real length of compressed dimension `d` is `N`, the complex output length in `d` is `floor(N/2)+1`; all other lengths are unchanged.
 
@@ -36,7 +55,7 @@ matlab -batch "addpath('Matlab/Spectral/FFTW'); results=runtests('Matlab/Spectra
 RealToRealTransform is the production DCT-I/DST-I interface and follows the same constructor, ownership, alignment, and build conventions as RealToComplexTransform:
 
 ~~~matlab
-RealToRealTransform.makeMexFiles
+FFTWBackend.build()
 transform = RealToRealTransform([65 33024],dims=1,transform="cosine",dataType="complex");
 coefficients = transform.transformForward(values);
 roundTrip = transform.transformBack(coefficients);
@@ -45,6 +64,8 @@ roundTrip = transform.transformBack(coefficients);
 Cosine transforms retain the physical shape. Sine transforms omit the two physical endpoints from spectralSize; forward execution ignores their values and inverse execution restores exact zeros. Both directions are normalized to match the GL transform matrices, so scaleFactor is one. Complex arrays remain interleaved and are transformed as batched real and imaginary components without MATLAB packing arrays.
 
 Caller-preallocated outputs must be reassigned. The default unaligned plans accept arbitrary MATLAB arrays; matched alignment remains an explicit expert option.
+
+`RealToRealTransform.makeMexFiles` remains available as a compatibility build entry point.
 
 Run the issue #43 benchmark with:
 

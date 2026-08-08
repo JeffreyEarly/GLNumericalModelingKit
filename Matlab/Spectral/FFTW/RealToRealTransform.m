@@ -186,6 +186,10 @@ classdef RealToRealTransform < handle
         function makeMexFiles(fftwlibpath)
             % Build the production backend against an FFTW library.
             %
+            % Prefer `FFTWBackend.build()` for release-aware bundled-library
+            % discovery, validation, and transactional installation. This
+            % method remains available for compatibility and experiments.
+            %
             % The default resolves MATLAB's bundled FFTW library. Source and
             % output paths are independent of the current working directory.
             %
