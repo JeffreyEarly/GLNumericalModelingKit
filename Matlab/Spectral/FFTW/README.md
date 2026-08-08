@@ -1,6 +1,35 @@
-# Experimental FFTW transforms
+# FFTW transforms
 
-This directory contains experimental MATLAB and MEX implementations for evaluating direct FFTW transforms. They are feasibility prototypes, not a supported GLNumericalModelingKit API or a WaveVortex integration commitment.
+This directory contains the bundled-FFTW real-to-complex backend and the feasibility benchmarks that established its performance and ownership contracts. The benchmark gateways remain experimental and are not a WaveVortex integration commitment.
+
+## Build and use the half-spectrum backend
+
+Build the production gateway against the active MATLAB installation's bundled FFTW library from any working directory:
+
+```matlab
+addpath('/path/to/GLNumericalModelingKit/Matlab/Spectral/FFTW')
+RealToComplexTransform.makeMexFiles
+```
+
+`RealToComplexTransform` accepts a nonempty ordered list of distinct transform dimensions. The final entry is the compressed dimension: `[2 1]` produces half-x storage, `[1 2]` produces half-y storage, and `[3 1]` transforms z before storing half-x. If the real length of compressed dimension `d` is `N`, the complex output length in `d` is `floor(N/2)+1`; all other lengths are unchanged.
+
+```matlab
+transform = RealToComplexTransform([128 128 32],dims=[2 1]);
+spectrum = transform.transformForward(realArray);
+roundTrip = transform.scaleFactor*transform.transformBack(spectrum);
+```
+
+FFTW's inverse is deliberately left unnormalized. `scaleFactor` is `1/prod(transform.realSize(transform.transformDimensions))`, allowing a caller to fuse normalization with later spectral operations.
+
+Allocating forward transforms return a MATLAB-managed half-spectrum buffer without a spectrum copy. Preserving inverse methods perform exactly one half-spectrum copy because multidimensional FFTW c2r execution destroys its input. `transformBackIntoArrayDestructive` avoids that explicit copy for uniquely owned arrays and returns both the destroyed spectrum and real output. Always reassign caller-preallocated and destructive outputs. If either destructive input has an alias, MATLAB may detach it through copy-on-write; the aliases remain unchanged, but that call is outside the zero-copy guarantee.
+
+The default `alignmentMode="unaligned"` accepts arbitrary MATLAB array alignment. `alignmentMode="matched"` is an explicit expert option: every execution must match the input and output alignment classes used to construct the plan, and incompatible arrays are rejected.
+
+Run the production test suite with:
+
+```sh
+matlab -batch "addpath('Matlab/Spectral/FFTW'); results=runtests('Matlab/Spectral/FFTW/UnitTests/TestRealToComplexTransform.m'); assertSuccess(results)"
+```
 
 ## Reproduce the issue #37 baseline
 

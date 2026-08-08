@@ -231,7 +231,7 @@ end
 preservingInputUnchanged = isequaln(halfSpectrumReference,preservingInputBefore);
 destructiveInputChanged = ~isequaln(destructiveSpectrum,halfSpectrumReference);
 
-storage = storageRecord(x,fullSpectrumReference,halfSpectrumReference,mexInversePreallocatedOutput,dft.scratch);
+storage = storageRecord(x,fullSpectrumReference,halfSpectrumReference,mexInversePreallocatedOutput,[]);
 operations = repmat(emptyOperation(),nOperations,1);
 operations(1) = operationRecord(operationIds(1),"MATLAB forward","forward","matlab","allocating","not-applicable",sampleTimes(1,:),matlabForwardOutput,fullSpectrumReference,storage,0,true,errorTolerance);
 operations(2) = operationRecord(operationIds(2),"MATLAB inverse","inverse","matlab","allocating","not-applicable",sampleTimes(2,:),matlabInverseOutput,x,storage,0,true,errorTolerance);
